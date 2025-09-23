@@ -1,0 +1,90 @@
+This project evolved and has 3 parts:
+1. stock data fetcher and db builder, also technical indicator calculator
+2. backtest engine for DCA with trailing stop loss
+3. front end to display stock chart with buy/sell markers and technical indicators
+
+Can you organize the requirements so far? make each spec numbered and with sub sections if needed.
+you did not copy the requirements doc. they are in the old project.
+
+This project probably have some git issues. In intellij project view, I can't even see directory backend and
+frontend, even though I can see them in finder.
+
+I like to start with a new project but with all useful code copied over. Can you help me to do that?
+
+
+
+1. can find a stock api provider that provides historical daily stock data for free
+
+2. let's make sure the algorithm is correct, we can do a backtest on TSLA  from 2021-11-01 to 2023-11-01
+
+3. the idea is that I can run backtest in command line by  cd /Users/kweng/AI/Stocks
+                                                            node backtest_dca_optimized.js, or by UI, and they
+                                                            should give the same result given I take the defult
+                                                            parameters. However in UI got what is the in the screen
+                                                             shot.
+
+
+                                                            can you compare the reuslt and fix the problem.
+
+should we precalculate the technical indicator and add to db or calcualte them on the fly
+
+can you add a front end to
+1 allow enter the back test info:
+ // --- Strategy Parameters ---
+ const SYMBOL = 'TSLA';
+ const START_DATE = '2021-11-01';
+ const END_DATE = '2023-11-01';
+ const LOT_SIZE_USD = 10000;
+ const MAX_LOTS = 5;
+ const GRID_INTERVAL_PERCENT = 0.10;
+ const REMAINING_LOTS_LOSS_TOLERANCE = 0.05;
+
+2 plot the stock chart for the backtest period with buy and sell markers
+3. please plot the technical indicators used in the backtest on the chart, pleaes add preceeding time period to the start date to allow for indicator calculation
+4. please plot the complete price chart for all available data in the db with ability to zoom in to the backtest period
+
+it says "No chart data available" when I select "All available data"
+
+
+API Requests and Data Requirements
+
+## Stock Data Requirements
+- Symbol: NVDA
+- Date Range: 2021-11-01 to 2023-11-01
+- Data Type: Daily OHLCV (Open, High, Low, Close, Volume)
+- Source: Database (backend/stocks.db)
+
+## Database Queries
+1. Get stock ID by symbol
+2. Fetch daily price data within date range
+3. Ensure data completeness for backtesting period
+
+## Backend API Endpoints
+- GET /api/stocks/:symbol - Get stock information
+- GET /api/stocks/:id/prices - Get historical price data
+- POST /api/data/fetch - Trigger data fetch from external APIs
+
+## External Data Sources (for reference)
+- Financial Modeling Prep (FMP)
+- Alpha Vantage
+- Tiingo
+- Twelve Data
+
+## Data Format
+```json
+{
+  "date": "YYYY-MM-DD",
+  "open": number,
+  "high": number,
+  "low": number,
+  "close": number,
+  "volume": number
+}
+```
+
+## Backtest Requirements
+- Process daily price data sequentially
+- Calculate PNL on each day
+- Track lot purchases and sales
+- Maintain transaction log
+- Generate performance summary
