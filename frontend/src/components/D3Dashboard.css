@@ -1,0 +1,128 @@
+.d3-dashboard {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 30px;
+  border-bottom: 1px solid #eee;
+  background: #f8f9fa;
+}
+
+.stock-info h2 {
+  color: #2c3e50;
+  font-size: 1.8rem;
+  margin-bottom: 5px;
+}
+
+.last-updated {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.dashboard-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.charts-container {
+  padding: 20px;
+  overflow-x: auto;
+}
+
+.d3-charts {
+  width: 100%;
+  height: auto;
+}
+
+.d3-charts .x-axis,
+.d3-charts .y-axis {
+  font-size: 12px;
+  color: #666;
+}
+
+.d3-charts .x-axis line,
+.d3-charts .y-axis line,
+.d3-charts .x-axis path,
+.d3-charts .y-axis path {
+  stroke: #ccc;
+  stroke-width: 1;
+}
+
+.d3-charts .grid line {
+  stroke: #e0e0e0;
+  stroke-width: 1;
+}
+
+.d3-charts .grid path {
+  stroke-width: 0;
+}
+
+.chart-title {
+  fill: #2c3e50;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.line {
+  fill: none;
+  stroke-width: 2;
+}
+
+.dot {
+  stroke: white;
+  stroke-width: 2;
+}
+
+.hover-line {
+  pointer-events: none;
+}
+
+.legend text {
+  fill: #333;
+  font-size: 12px;
+}
+
+.loading {
+  padding: 60px 20px;
+  text-align: center;
+  color: #666;
+  background: #f9f9f9;
+}
+
+.no-metrics {
+  padding: 60px 20px;
+  text-align: center;
+  color: #666;
+  background: #f9f9f9;
+}
+
+.no-metrics p {
+  font-size: 1.1rem;
+}
+
+@media (max-width: 768px) {
+  .dashboard-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
+  }
+  
+  .dashboard-controls {
+    justify-content: center;
+  }
+  
+  .charts-container {
+    padding: 15px;
+  }
+  
+  .d3-charts {
+    min-width: 800px; /* Allow horizontal scrolling on mobile */
+  }
+}

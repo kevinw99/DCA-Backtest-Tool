@@ -1,0 +1,90 @@
+.dashboard {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 30px;
+  border-bottom: 1px solid #eee;
+  background: #f8f9fa;
+}
+
+.stock-info h2 {
+  color: #2c3e50;
+  font-size: 1.8rem;
+  margin-bottom: 5px;
+}
+
+.last-updated {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.dashboard-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.charts-layout {
+  display: block;
+}
+
+.price-chart-fixed-section {
+  position: -webkit-sticky; /* Safari */
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: white;
+  border-bottom: 2px solid #e9ecef;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-bottom: 0;
+  width: 100%;
+}
+
+.price-chart-fixed-section .chart-container {
+  margin-bottom: 0;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+}
+
+.other-charts-scrollable-section {
+  padding: 20px;
+  padding-top: 0;
+}
+
+.charts-container {
+  padding: 20px;
+}
+
+.no-metrics {
+  padding: 60px 20px;
+  text-align: center;
+  color: #666;
+  background: #f9f9f9;
+}
+
+.no-metrics p {
+  font-size: 1.1rem;
+}
+
+@media (max-width: 768px) {
+  .dashboard-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
+  }
+  
+  .dashboard-controls {
+    justify-content: center;
+  }
+  
+  .charts-container {
+    padding: 15px;
+  }
+}

@@ -1,0 +1,55 @@
+.time-range-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.controls-label {
+  font-weight: 500;
+  color: #333;
+  white-space: nowrap;
+}
+
+.range-buttons {
+  display: flex;
+  gap: 5px;
+}
+
+.range-button {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+  min-width: 45px;
+}
+
+.range-button:hover {
+  background: #f8f9fa;
+  border-color: #adb5bd;
+}
+
+.range-button.active {
+  background: #3498db;
+  color: white;
+  border-color: #3498db;
+}
+
+.range-button.active:hover {
+  background: #2980b9;
+  border-color: #2980b9;
+}
+
+@media (max-width: 480px) {
+  .time-range-controls {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .range-buttons {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}

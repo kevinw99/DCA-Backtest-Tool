@@ -1,0 +1,281 @@
+.chart-container {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.chart-header h4 {
+  color: #2c3e50;
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.chart-info {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.data-points {
+  font-size: 0.8rem;
+  color: #6c757d;
+  background: #e9ecef;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.chart-type {
+  font-size: 0.8rem;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.split-indicator {
+  font-size: 0.8rem;
+  color: #e74c3c;
+  background: #fee;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+.chart-content {
+  position: relative;
+  height: 300px;
+  padding: 10px 0px 10px 0px; /* Standard padding for individual axes */
+}
+
+.chart-content canvas {
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.no-data {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  color: #6c757d;
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.no-data p {
+  font-style: italic;
+}
+
+.split-events {
+  margin-top: 15px;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  border-left: 3px solid #e74c3c;
+}
+
+.split-events-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 8px;
+}
+
+.split-events-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.split-event {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: white;
+  padding: 4px 8px;
+  border-radius: 3px;
+  border: 1px solid #dee2e6;
+  font-size: 0.8rem;
+}
+
+.split-date {
+  color: #6c757d;
+}
+
+.split-ratio {
+  color: #e74c3c;
+  font-weight: 600;
+}
+
+.earnings-events {
+  margin-top: 15px;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  border-left: 3px solid #9b59b6;
+}
+
+.earnings-events-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 8px;
+}
+
+.earnings-events-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.earnings-event {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: white;
+  padding: 4px 8px;
+  border-radius: 3px;
+  border: 1px solid #dee2e6;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.earnings-event:hover {
+  background: #f0f0f0;
+}
+
+.earnings-thumbnail {
+  background: #9b59b6;
+  color: white;
+  font-weight: bold;
+  font-size: 0.7rem;
+  padding: 2px 4px;
+  border-radius: 2px;
+}
+
+.earnings-date {
+  color: #6c757d;
+}
+
+.earnings-eps {
+  color: #9b59b6;
+  font-weight: 600;
+}
+
+.earnings-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.earnings-modal-content {
+  background: white;
+  border-radius: 8px;
+  padding: 0;
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.earnings-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #e9ecef;
+  background: #f8f9fa;
+}
+
+.earnings-modal-header h3 {
+  margin: 0;
+  color: #2c3e50;
+}
+
+.earnings-modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #6c757d;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.earnings-modal-close:hover {
+  color: #495057;
+}
+
+.earnings-modal-body {
+  padding: 20px;
+}
+
+.earnings-detail {
+  margin-bottom: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f3f4;
+}
+
+.earnings-detail:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.earnings-detail strong {
+  color: #495057;
+  display: inline-block;
+  min-width: 120px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .chart-header {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  
+  .chart-info {
+    align-self: flex-end;
+  }
+  
+  .chart-content {
+    height: 250px;
+    padding: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .chart-content {
+    height: 200px;
+    padding: 10px;
+  }
+  
+  .chart-header {
+    padding: 12px 15px;
+  }
+}
