@@ -199,6 +199,7 @@ async function runDCABacktest(params) {
     maxLots,
     gridIntervalPercent,
     remainingLotsLossTolerance,
+    remainingLotsUnrealizedLossTolerance = -0.5, // Default -50% loss tolerance for remaining lots
     verbose = true
   } = params;
 
@@ -249,24 +250,21 @@ async function runDCABacktest(params) {
     const attemptToSetStop = (currentPrice) => {
       if (lots.length > 0 && currentPrice > averageCost && !activeStop) {
         const sortedLots = [...lots].sort((a, b) => b.price - a.price);
-        const batchToSell = sortedLots.slice(0, 2);
-        const remainingLots = sortedLots.slice(2);
+        const lotToSell = sortedLots[0]; // Select only the highest-priced lot
+        const remainingLots = sortedLots.slice(1); // All other lots after removing the highest-priced one
 
         const remainingLotsCompliant = remainingLots.every(lot =>
           lot.price <= currentPrice * (1 + remainingLotsLossTolerance)
         );
 
         if (remainingLots.length === 0 || remainingLotsCompliant) {
-          const batchCost = batchToSell.reduce((sum, lot) => sum + lot.price * lot.shares, 0);
-          const batchShares = batchToSell.reduce((sum, lot) => sum + lot.shares, 0);
-          const batchWeightedAverage = batchCost / batchShares;
-          const limitPrice = batchWeightedAverage * (1 - remainingLotsLossTolerance);
+          const limitPrice = lotToSell.price * (1 - remainingLotsLossTolerance);
           const stopPrice = Math.max(limitPrice, currentPrice - trailingAmount);
-          const minStopPrice = limitPrice * 0.95;
+          const minStopPrice = limitPrice * (1 - remainingLotsLossTolerance);
 
-          if (stopPrice > minStopPrice && stopPrice < currentPrice && stopPrice <= currentPrice * 0.95) {
-            activeStop = { stopPrice: stopPrice, limitPrice: limitPrice, lotsToSell: batchToSell };
-            transactionLog.push(`  ACTION: INFO: New stop-limit order set for batch ${getLotsPrices(batchToSell)}. Stop: ${stopPrice.toFixed(2)}, Limit: ${limitPrice.toFixed(2)}`);
+          if (stopPrice > minStopPrice && stopPrice < currentPrice && stopPrice <= currentPrice * (1 - remainingLotsLossTolerance)) {
+            activeStop = { stopPrice: stopPrice, limitPrice: limitPrice, lotsToSell: [lotToSell] };
+            transactionLog.push(`  ACTION: STOP SET for lot ${lotToSell.price.toFixed(2)}. Stop: ${stopPrice.toFixed(2)}, Limit: ${limitPrice.toFixed(2)}`);
           }
         }
       }
@@ -287,14 +285,15 @@ async function runDCABacktest(params) {
       const unrealizedPNL = (totalSharesHeld * currentPrice) - totalCostOfHeldLots;
       const totalPNL = realizedPNL + unrealizedPNL;
 
-      // Portfolio risk management
+      // Portfolio tracking
       const currentPortfolioValue = totalCostOfHeldLots + realizedPNL + unrealizedPNL;
-      const portfolioDrawdown = calculatePortfolioDrawdown(dailyPortfolioValues);
-      const maxPortfolioDrawdown = 0.50;
-      const portfolioAtRisk = lots.length > 0 && portfolioDrawdown.maxDrawdownPercent > maxPortfolioDrawdown;
 
       dailyPortfolioValues.push(currentPortfolioValue);
       dailyCapitalDeployed.push(totalCostOfHeldLots);
+
+      // Remaining lots loss tolerance check
+      const remainingLotsLossPercent = lots.length > 0 ? unrealizedPNL / totalCostOfHeldLots : 0;
+      const remainingLotsAtRisk = lots.length > 0 && remainingLotsLossPercent < remainingLotsUnrealizedLossTolerance;
 
       const pad = (str, len) => String(str).padEnd(len);
       let actionsOccurred = false;
@@ -303,22 +302,12 @@ async function runDCABacktest(params) {
       // Stop mechanism
       if (activeStop && currentPrice <= activeStop.stopPrice) {
         const { stopPrice, limitPrice, lotsToSell } = activeStop;
-        const gapPercent = Math.abs(currentPrice - stopPrice) / stopPrice;
 
-        let executionPrice, executionType;
+        // Always use current price as execution price
+        const executionPrice = currentPrice;
 
-        if (gapPercent > 0.10) {
-          executionPrice = currentPrice;
-          executionType = "MARKET (Emergency)";
-        } else if (gapPercent > 0.05) {
-          executionPrice = currentPrice;
-          executionType = "MARKET (Gap)";
-        } else {
-          executionPrice = Math.max(currentPrice, limitPrice);
-          executionType = "LIMIT";
-        }
-
-        if (executionPrice > limitPrice * 0.90) {
+        // Execute only if execution price > limit price
+        if (executionPrice > limitPrice) {
           let totalSaleValue = 0;
           let costOfSoldLots = 0;
 
@@ -334,10 +323,14 @@ async function runDCABacktest(params) {
           averageCost = recalculateAverageCost();
 
           transactionLog.push(
-            `  ACTION: SELL (${executionType}): Trigger ${stopPrice.toFixed(2)} executed at ${executionPrice.toFixed(2)}. PNL: ${pnl.toFixed(2)}. Gap: ${(gapPercent*100).toFixed(1)}%. Lots: ${getLotsPrices(lots)}, New Avg Cost: ${averageCost.toFixed(2)}`
+            `  ACTION: SELL: Trigger ${stopPrice.toFixed(2)} executed at ${executionPrice.toFixed(2)}. PNL: ${pnl.toFixed(2)}. Lots: ${getLotsPrices(lots)}, New Avg Cost: ${averageCost.toFixed(2)}`
           );
           activeStop = null;
           actionsOccurred = true;
+        } else {
+          transactionLog.push(
+            `  INFO: Stop-loss execution BLOCKED - Execution price ${executionPrice.toFixed(2)} <= limit price ${limitPrice.toFixed(2)}`
+          );
         }
       }
 
@@ -359,23 +352,6 @@ async function runDCABacktest(params) {
             canBuy = true;
             buyReasons.push("Grid spacing");
 
-            // Post-sell recovery logic
-            if (transactionLog.some(t => t.includes('SELL'))) {
-              const recentSells = transactionLog.filter(t => t.includes('SELL'));
-              if (recentSells.length > 0) {
-                const lastSell = recentSells[recentSells.length - 1];
-                const triggerMatch = lastSell.match(/Trigger ([\d.]+)/);
-                if (triggerMatch) {
-                  const lastTriggerPrice = parseFloat(triggerMatch[1]);
-                  if (currentPrice <= lastTriggerPrice) {
-                    canBuy = false;
-                    skipReasons.push(`Price ${currentPrice.toFixed(2)} below last trigger ${lastTriggerPrice.toFixed(2)}`);
-                  } else {
-                    buyReasons.push("Above last trigger");
-                  }
-                }
-              }
-            }
           } else {
             skipReasons.push("Too close to existing lots");
           }
@@ -383,9 +359,9 @@ async function runDCABacktest(params) {
 
         // Apply trading filters for all lots (first and subsequent)
         if (canBuy) {
-          if (portfolioAtRisk) {
+          if (remainingLotsAtRisk) {
             canBuy = false;
-            skipReasons.push(`Portfolio drawdown ${portfolioDrawdown.maxDrawdownPercent.toFixed(1)}% > 50%`);
+            skipReasons.push(`Remaining lots loss ${(remainingLotsLossPercent * 100).toFixed(1)}% > ${(Math.abs(remainingLotsUnrealizedLossTolerance) * 100).toFixed(1)}%`);
           }
 
           if (dayData.ma_20 && currentPrice < dayData.ma_20 * 0.98) {
@@ -401,7 +377,7 @@ async function runDCABacktest(params) {
 
         if (canBuy) {
           const shares = lotSizeUsd / currentPrice;
-          lots.push({ price: currentPrice, shares: shares });
+          lots.push({ price: currentPrice, shares: shares, date: dayData.date });
           averageCost = recalculateAverageCost();
 
           const reasonsText = buyReasons.length > 0 ? ` (${buyReasons.join(', ')})` : '';
@@ -418,7 +394,10 @@ async function runDCABacktest(params) {
             }
           }
 
-          activeStop = null;
+          if (activeStop) {
+            transactionLog.push(`  ACTION: STOP CANCELLED due to new buy. Previous stop: ${activeStop.stopPrice.toFixed(2)}`);
+            activeStop = null;
+          }
           didBuy = true;
           actionsOccurred = true;
         } else if (skipReasons.length > 0) {

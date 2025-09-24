@@ -1,13 +1,13 @@
 const { runDCABacktest } = require('./backend/services/dcaBacktestService');
 
 // --- Strategy Parameters ---
-const SYMBOL = 'TSLA';
-const START_DATE = '2021-11-01';
-const END_DATE = '2023-11-01';
+const SYMBOL = 'NVDA';
+const START_DATE = '2021-09-01';
+const END_DATE = '2025-09-01';
 const LOT_SIZE_USD = 10000;
 const MAX_LOTS = 5;
 const GRID_INTERVAL_PERCENT = 0.10;
-const REMAINING_LOTS_LOSS_TOLERANCE = 0.05;
+const REMAINING_LOTS_LOSS_TOLERANCE = 0.00;
 
 // Wrapper function for backward compatibility
 async function runBacktest() {

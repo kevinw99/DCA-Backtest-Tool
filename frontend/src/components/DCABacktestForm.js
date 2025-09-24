@@ -3,13 +3,13 @@ import { Play, DollarSign, TrendingUp, Settings, Info } from 'lucide-react';
 
 const DCABacktestForm = ({ onSubmit, loading }) => {
   const [parameters, setParameters] = useState({
-    symbol: 'TSLA',
-    startDate: '2021-11-01',
-    endDate: '2023-11-01',
+    symbol: 'NVDA',
+    startDate: '2021-09-01',
+    endDate: '2025-09-01',
     lotSizeUsd: 10000,
     maxLots: 5,
     gridIntervalPercent: 10,
-    remainingLotsLossTolerance: 5
+    remainingLotsLossTolerance: 0
   });
 
   const handleSubmit = (e) => {
@@ -40,7 +40,7 @@ const DCABacktestForm = ({ onSubmit, loading }) => {
               type="text"
               value={parameters.symbol}
               onChange={(e) => handleChange('symbol', e.target.value.toUpperCase())}
-              placeholder="TSLA"
+              placeholder="NVDA"
               required
             />
             <span className="form-help">Enter a valid stock ticker symbol</span>
@@ -129,12 +129,12 @@ const DCABacktestForm = ({ onSubmit, loading }) => {
               type="number"
               value={parameters.remainingLotsLossTolerance}
               onChange={(e) => handleChange('remainingLotsLossTolerance', parseFloat(e.target.value))}
-              min="1"
+              min="-10"
               max="20"
               step="0.1"
               required
             />
-            <span className="form-help">Maximum loss tolerance for remaining lots</span>
+            <span className="form-help">Loss tolerance: positive = allow loss, 0 = break-even, negative = require gain</span>
           </div>
         </div>
       </div>
