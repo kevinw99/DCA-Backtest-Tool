@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, Target, BarChart3, Clock, Eye, EyeOff } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Target, BarChart3, Clock, Eye, EyeOff, AlertTriangle, Settings } from 'lucide-react';
 import {
   LineChart,
   Line,
@@ -27,7 +27,8 @@ const BacktestResults = ({ data, chartData: priceData }) => {
   const processedChartData = useMemo(() => {
     if (!data || !priceData?.dailyPrices) return [];
 
-    const { transactions, enhancedTransactions } = data;
+    const { transactions, enhancedTransactions, buyAndHoldResults } = data;
+    const lotSizeUsd = priceData?.backtestParameters?.lotSizeUsd || 10000;
 
     // Debug the available transactions
     console.log('🔍 BacktestResults Debug - Available transactions:', {
@@ -46,12 +47,64 @@ const BacktestResults = ({ data, chartData: priceData }) => {
       return acc;
     }, {});
 
+    // Get start price for Buy & Hold calculation
+    const startPrice = parseFloat(priceData.dailyPrices[0]?.adjusted_close || priceData.dailyPrices[0]?.close || 0);
+
     return priceData.dailyPrices.map(day => {
       const transaction = transactionMap[day.date];
+      const currentPrice = parseFloat(day.adjusted_close || day.close || 0);
+
+      // Calculate Total P&L % and capital deployed for this day
+      let totalPNLPercent = null;
+      let totalCapitalDeployed = 0;
+
+      if (transaction) {
+        // Use transaction's portfolio state
+        const currentLots = transaction.lotsAfterTransaction ? transaction.lotsAfterTransaction.length : 0;
+        totalCapitalDeployed = currentLots * lotSizeUsd;
+
+        if (totalCapitalDeployed > 0) {
+          totalPNLPercent = (transaction.totalPNL / totalCapitalDeployed) * 100;
+        }
+      } else {
+        // Find most recent transaction for capital deployed calculation
+        let mostRecentTransaction = null;
+        for (let i = transactionsToUse.length - 1; i >= 0; i--) {
+          if (new Date(transactionsToUse[i].date) <= new Date(day.date)) {
+            mostRecentTransaction = transactionsToUse[i];
+            break;
+          }
+        }
+
+        if (mostRecentTransaction) {
+          const currentLots = mostRecentTransaction.lotsAfterTransaction ? mostRecentTransaction.lotsAfterTransaction.length : 0;
+          totalCapitalDeployed = currentLots * lotSizeUsd;
+
+          // Calculate current portfolio state for non-transaction days
+          let holdingsMarketValue = 0;
+          if (mostRecentTransaction.lotsAfterTransaction) {
+            holdingsMarketValue = mostRecentTransaction.lotsAfterTransaction.reduce((total, lot) => {
+              const shares = lotSizeUsd / lot.price;
+              return total + (shares * currentPrice);
+            }, 0);
+          }
+
+          const breakEvenValue = currentLots * lotSizeUsd;
+          const unrealizedPNL = holdingsMarketValue - breakEvenValue;
+          const totalPNL = unrealizedPNL + (mostRecentTransaction.realizedPNL || 0);
+
+          if (totalCapitalDeployed > 0) {
+            totalPNLPercent = (totalPNL / totalCapitalDeployed) * 100;
+          }
+        }
+      }
+
+      // Calculate Buy & Hold P&L % (simple percentage change from start)
+      const buyAndHoldPercent = startPrice > 0 ? ((currentPrice - startPrice) / startPrice) * 100 : 0;
 
       return {
         date: day.date,
-        price: parseFloat(day.adjusted_close || day.close || 0),
+        price: currentPrice,
         ma20: day.ma_20,
         ma50: day.ma_50,
         ma200: day.ma_200,
@@ -59,12 +112,16 @@ const BacktestResults = ({ data, chartData: priceData }) => {
         volatility: day.volatility_20 ? day.volatility_20 * 100 : null,
         transaction: transaction,
 
+        // P&L percentages for dual Y-axis
+        totalPNLPercent: totalPNLPercent,
+        buyAndHoldPercent: buyAndHoldPercent,
+
         // Different buy markers based on transaction type
-        regularBuyMarker: (transaction?.type === 'BUY' && !transaction?.ocoOrderDetail && !transaction?.trailingStopDetail) ? parseFloat(day.adjusted_close || day.close || 0) : null,
-        trailingStopBuyMarker: (transaction?.type === 'TRAILING_STOP_LIMIT_BUY') ? parseFloat(day.adjusted_close || day.close || 0) : null,
-        ocoLimitBuyMarker: (transaction?.type === 'OCO_LIMIT_BUY' || (transaction?.type === 'BUY' && transaction?.ocoOrderDetail?.type === 'LIMIT_BUY')) ? parseFloat(day.adjusted_close || day.close || 0) : null,
-        ocoTrailingBuyMarker: (transaction?.type === 'OCO_TRAILING_BUY' || (transaction?.type === 'BUY' && transaction?.ocoOrderDetail?.type === 'TRAILING_BUY')) ? parseFloat(day.adjusted_close || day.close || 0) : null,
-        sellMarker: transaction?.type === 'SELL' ? parseFloat(day.adjusted_close || day.close || 0) : null
+        regularBuyMarker: (transaction?.type === 'BUY' && !transaction?.ocoOrderDetail && !transaction?.trailingStopDetail) ? currentPrice : null,
+        trailingStopBuyMarker: (transaction?.type === 'TRAILING_STOP_LIMIT_BUY') ? currentPrice : null,
+        ocoLimitBuyMarker: (transaction?.type === 'OCO_LIMIT_BUY' || (transaction?.type === 'BUY' && transaction?.ocoOrderDetail?.type === 'LIMIT_BUY')) ? currentPrice : null,
+        ocoTrailingBuyMarker: (transaction?.type === 'OCO_TRAILING_BUY' || (transaction?.type === 'BUY' && transaction?.ocoOrderDetail?.type === 'TRAILING_BUY')) ? currentPrice : null,
+        sellMarker: transaction?.type === 'SELL' ? currentPrice : null
       };
     });
   }, [data, priceData]);
@@ -73,7 +130,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
     return <div>No backtest results available</div>;
   }
 
-  const { summary, transactions, dailyPrices, lots, transactionLog, enhancedTransactions, tradeAnalysis, buyAndHoldResults, outperformance, outperformancePercent } = data;
+  const { summary, transactions, dailyPrices, lots, transactionLog, enhancedTransactions, tradeAnalysis, buyAndHoldResults, outperformance, outperformancePercent, questionableEvents } = data;
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('en-US', {
@@ -111,6 +168,16 @@ const BacktestResults = ({ data, chartData: priceData }) => {
         <div className="chart-tooltip">
           <p className="tooltip-date">{formatDate(label)}</p>
           <p className="tooltip-price">Price: {formatCurrency(parseFloat(data.price) || 0)}</p>
+
+          {data.totalPNLPercent !== null && (
+            <p className={`tooltip-pnl ${data.totalPNLPercent >= 0 ? 'positive' : 'negative'}`}>
+              Total P&L %: {data.totalPNLPercent.toFixed(2)}%
+            </p>
+          )}
+
+          <p className={`tooltip-bnh ${data.buyAndHoldPercent >= 0 ? 'positive' : 'negative'}`}>
+            Buy & Hold %: {data.buyAndHoldPercent.toFixed(2)}%
+          </p>
 
           {data.transaction && (
             <div>
@@ -224,54 +291,118 @@ const BacktestResults = ({ data, chartData: priceData }) => {
   const prepareChartData = () => {
     if (!dailyPrices || dailyPrices.length === 0) return [];
 
-    // Create a map of transaction dates for marking buy/sell points
+    // Use enhanced transactions which have complete portfolio state
+    const transactionsToUse = enhancedTransactions?.length > 0 ? enhancedTransactions : transactions || [];
+
+    // Get parameters from backtest data
+    const maxLots = priceData?.backtestParameters?.maxLots || summary?.maxLots || 10;
+    const lotSizeUsd = priceData?.backtestParameters?.lotSizeUsd || summary?.lotSizeUsd || 10000;
+
+    // Create a map of transaction dates to get the enhanced transaction data for each day
     const transactionMap = new Map();
-    transactions.forEach(transaction => {
-      const date = transaction.date;
-      if (!transactionMap.has(date)) {
-        transactionMap.set(date, []);
-      }
-      transactionMap.get(date).push(transaction);
+    transactionsToUse.forEach(transaction => {
+      transactionMap.set(transaction.date, transaction);
     });
 
-    // For now, we'll create a simple portfolio value simulation
-    // In a real implementation, this would come from the backend
-    let portfolioValue = 0;
-    let investedAmount = 0;
-
-    return dailyPrices.map((daily, index) => {
+    return dailyPrices.map((daily) => {
       const date = daily.date;
-      const price = daily.price;
+      const currentPrice = parseFloat(daily.adjusted_close || daily.close || 0);
+      const transaction = transactionMap.get(date);
 
-      // Simulate portfolio value based on transactions
-      const dayTransactions = transactionMap.get(date) || [];
-      dayTransactions.forEach(transaction => {
-        if (transaction.type === 'BUY') {
-          investedAmount += transaction.value;
-          portfolioValue += transaction.value;
-        } else if (transaction.type === 'SELL') {
-          // For sells, adjust portfolio value based on current price
-          portfolioValue = portfolioValue * (price / (portfolioValue / investedAmount));
+      // If there's a transaction on this date, use its calculated portfolio state
+      if (transaction) {
+        // Get the number of lots from lotsAfterTransaction
+        const currentLots = transaction.lotsAfterTransaction ? transaction.lotsAfterTransaction.length : 0;
+
+        // Calculate holdings value by summing each lot's current value
+        let holdingsMarketValue = 0;
+        if (transaction.lotsAfterTransaction) {
+          holdingsMarketValue = transaction.lotsAfterTransaction.reduce((total, lot) => {
+            const shares = lotSizeUsd / lot.price; // shares = $10,000 / purchase price
+            return total + (shares * currentPrice); // current value = shares × current price
+          }, 0);
         }
-      });
 
-      // For dates without transactions, update portfolio value based on price changes
-      if (index > 0 && portfolioValue > 0) {
-        const previousPrice = dailyPrices[index - 1].price;
-        const priceChange = price / previousPrice;
-        portfolioValue = portfolioValue * priceChange;
+        // Available cash = (maxLots - currentLots) × $10,000
+        const availableCash = (maxLots - currentLots) * lotSizeUsd;
+
+        // Break-even value = currentLots × $10,000
+        const breakEvenValue = currentLots * lotSizeUsd;
+
+        // Calculate smooth Total P&L = unrealized + realized P&L
+        const cumulativeRealizedPNL = transaction.realizedPNL || 0;
+        const unrealizedPNL = holdingsMarketValue - breakEvenValue;
+        const totalPNL = unrealizedPNL + cumulativeRealizedPNL;
+
+        return {
+          date: new Date(date).toLocaleDateString(),
+          totalPNL: totalPNL,
+          holdingsValue: holdingsMarketValue,
+          realizedPNL: cumulativeRealizedPNL,
+          breakEvenValue: breakEvenValue,
+          stockPrice: currentPrice,
+          currentLots: currentLots,
+          hasBuy: transaction && ['BUY', 'INITIAL_BUY', 'TRAILING_STOP_LIMIT_BUY'].includes(transaction.type),
+          hasSell: transaction && transaction.type === 'SELL'
+        };
       }
 
-      const hasBuy = dayTransactions.some(t => t.type === 'BUY');
-      const hasSell = dayTransactions.some(t => t.type === 'SELL');
+      // For days without transactions, we need to calculate using the most recent transaction state
+      // Find the most recent transaction before this date
+      let mostRecentTransaction = null;
+      for (let i = transactionsToUse.length - 1; i >= 0; i--) {
+        if (new Date(transactionsToUse[i].date) <= new Date(date)) {
+          mostRecentTransaction = transactionsToUse[i];
+          break;
+        }
+      }
+
+      if (mostRecentTransaction) {
+        const currentLots = mostRecentTransaction.lotsAfterTransaction ? mostRecentTransaction.lotsAfterTransaction.length : 0;
+
+        // Calculate holdings value using current price but most recent lot configuration
+        let holdingsMarketValue = 0;
+        if (mostRecentTransaction.lotsAfterTransaction) {
+          holdingsMarketValue = mostRecentTransaction.lotsAfterTransaction.reduce((total, lot) => {
+            const shares = lotSizeUsd / lot.price;
+            return total + (shares * currentPrice);
+          }, 0);
+        }
+
+        const breakEvenValue = currentLots * lotSizeUsd;
+        const cumulativeRealizedPNL = mostRecentTransaction.realizedPNL || 0;
+        // Calculate smooth Total P&L = unrealized + realized P&L
+        const unrealizedPNL = holdingsMarketValue - breakEvenValue;
+        const totalPNL = unrealizedPNL + cumulativeRealizedPNL;
+
+        return {
+          date: new Date(date).toLocaleDateString(),
+          totalPNL: totalPNL,
+          holdingsValue: holdingsMarketValue,
+          realizedPNL: cumulativeRealizedPNL,
+          breakEvenValue: breakEvenValue,
+          stockPrice: currentPrice,
+          currentLots: currentLots,
+          hasBuy: false,
+          hasSell: false
+        };
+      }
+
+      // If no transactions have occurred yet, start with initial state
+
+      const hasBuy = transaction && ['BUY', 'INITIAL_BUY', 'TRAILING_STOP_LIMIT_BUY'].includes(transaction.type);
+      const hasSell = transaction && transaction.type === 'SELL';
 
       return {
         date: new Date(date).toLocaleDateString(),
-        portfolioValue: portfolioValue || summary.finalValue / dailyPrices.length * (index + 1), // Fallback calculation
-        stockPrice: price,
-        investedAmount,
-        hasBuy,
-        hasSell
+        totalPNL: 0,
+        holdingsValue: 0,
+        realizedPNL: 0,
+        breakEvenValue: 0,
+        stockPrice: currentPrice,
+        currentLots: 0,
+        hasBuy: false,
+        hasSell: false
       };
     });
   };
@@ -284,6 +415,64 @@ const BacktestResults = ({ data, chartData: priceData }) => {
         <BarChart3 size={24} />
         Backtest Results for {summary.symbol}
       </h2>
+
+      {/* Backtest Parameters Section */}
+      {priceData?.backtestParameters && (
+        <div className="parameters-section">
+          <h3>
+            <Settings size={20} />
+            Backtest Parameters
+          </h3>
+          <div className="parameters-grid">
+            <div className="parameter-card">
+              <span className="parameter-label">Symbol</span>
+              <span className="parameter-value">{priceData.backtestParameters.symbol}</span>
+            </div>
+            <div className="parameter-card">
+              <span className="parameter-label">Date Range</span>
+              <span className="parameter-value">
+                {priceData.backtestParameters.startDate} to {priceData.backtestParameters.endDate}
+              </span>
+            </div>
+            <div className="parameter-card">
+              <span className="parameter-label">Lot Size (USD)</span>
+              <span className="parameter-value">{formatCurrency(priceData.backtestParameters.lotSizeUsd)}</span>
+            </div>
+            <div className="parameter-card">
+              <span className="parameter-label">Max Lots</span>
+              <span className="parameter-value">{priceData.backtestParameters.maxLots}</span>
+            </div>
+            <div className="parameter-card">
+              <span className="parameter-label">Max Lots to Sell</span>
+              <span className="parameter-value">{priceData.backtestParameters.maxLotsToSell}</span>
+            </div>
+            <div className="parameter-card">
+              <span className="parameter-label">Grid Interval</span>
+              <span className="parameter-value">{formatPercent(priceData.backtestParameters.gridIntervalPercent * 100)}</span>
+            </div>
+            <div className="parameter-card">
+              <span className="parameter-label">Profit Requirement</span>
+              <span className="parameter-value">{formatPercent(priceData.backtestParameters.profitRequirement * 100)}</span>
+            </div>
+            <div className="parameter-card">
+              <span className="parameter-label">Trailing Buy Activation</span>
+              <span className="parameter-value">{formatPercent(priceData.backtestParameters.trailingBuyActivationPercent * 100)}</span>
+            </div>
+            <div className="parameter-card">
+              <span className="parameter-label">Trailing Buy Rebound</span>
+              <span className="parameter-value">{formatPercent(priceData.backtestParameters.trailingBuyReboundPercent * 100)}</span>
+            </div>
+            <div className="parameter-card">
+              <span className="parameter-label">Trailing Sell Activation</span>
+              <span className="parameter-value">{formatPercent(priceData.backtestParameters.trailingSellActivationPercent * 100)}</span>
+            </div>
+            <div className="parameter-card">
+              <span className="parameter-label">Trailing Sell Pullback</span>
+              <span className="parameter-value">{formatPercent(priceData.backtestParameters.trailingSellPullbackPercent * 100)}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Price Chart Section */}
       {processedChartData.length > 0 && (
@@ -319,23 +508,39 @@ const BacktestResults = ({ data, chartData: priceData }) => {
           </div>
 
           <ResponsiveContainer width="100%" height={400}>
-            <ComposedChart data={processedChartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <ComposedChart data={processedChartData} margin={{ top: 20, right: 80, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis
                 dataKey="date"
                 tickFormatter={formatDate}
                 stroke="#666"
               />
+
+              {/* Left Y-axis for Price */}
               <YAxis
+                yAxisId="price"
                 domain={['dataMin - 10', 'dataMax + 10']}
                 tickFormatter={(value) => `$${value.toFixed(2)}`}
                 stroke="#666"
+                label={{ value: 'Price ($)', angle: -90, position: 'insideLeft' }}
               />
+
+              {/* Right Y-axis for Percentages */}
+              <YAxis
+                yAxisId="percent"
+                orientation="right"
+                domain={['auto', 'auto']}
+                tickFormatter={(value) => `${value.toFixed(0)}%`}
+                stroke="#0066cc"
+                label={{ value: 'P&L (%)', angle: 90, position: 'insideRight' }}
+              />
+
               <Tooltip content={<CustomTooltip />} />
               <Legend />
 
               {/* Price line */}
               <Line
+                yAxisId="price"
                 type="monotone"
                 dataKey="price"
                 stroke="#2d3748"
@@ -344,9 +549,33 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                 name="Stock Price"
               />
 
-              {/* Moving averages */}
+              {/* P&L Percentage lines on right Y-axis */}
+              <Line
+                yAxisId="percent"
+                type="monotone"
+                dataKey="totalPNLPercent"
+                stroke="#dc2626"
+                strokeWidth={3}
+                dot={false}
+                name="Total P&L %"
+                connectNulls={false}
+              />
+
+              <Line
+                yAxisId="percent"
+                type="monotone"
+                dataKey="buyAndHoldPercent"
+                stroke="#059669"
+                strokeWidth={2}
+                dot={false}
+                strokeDasharray="5 5"
+                name="Buy & Hold %"
+              />
+
+              {/* Moving averages on price axis */}
               {visibleIndicators.ma20 && (
                 <Line
+                  yAxisId="price"
                   type="monotone"
                   dataKey="ma20"
                   stroke="#f56565"
@@ -358,6 +587,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
               )}
               {visibleIndicators.ma50 && (
                 <Line
+                  yAxisId="price"
                   type="monotone"
                   dataKey="ma50"
                   stroke="#ed8936"
@@ -369,6 +599,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
               )}
               {visibleIndicators.ma200 && (
                 <Line
+                  yAxisId="price"
                   type="monotone"
                   dataKey="ma200"
                   stroke="#9f7aea"
@@ -379,32 +610,37 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                 />
               )}
 
-              {/* Transaction markers */}
+              {/* Transaction markers on price axis */}
               <Scatter
+                yAxisId="price"
                 dataKey="regularBuyMarker"
                 fill="#38a169"
                 shape="triangle"
                 name="Regular Buy"
               />
               <Scatter
+                yAxisId="price"
                 dataKey="trailingStopBuyMarker"
                 fill="#0891b2"
                 shape="star"
                 name="Trailing Stop Buy"
               />
               <Scatter
+                yAxisId="price"
                 dataKey="ocoLimitBuyMarker"
                 fill="#7c3aed"
                 shape="square"
                 name="OCO Limit Buy"
               />
               <Scatter
+                yAxisId="price"
                 dataKey="ocoTrailingBuyMarker"
                 fill="#2563eb"
                 shape="diamond"
                 name="OCO Trailing Buy"
               />
               <Scatter
+                yAxisId="price"
                 dataKey="sellMarker"
                 fill="#e53e3e"
                 shape="triangleDown"
@@ -428,7 +664,44 @@ const BacktestResults = ({ data, chartData: priceData }) => {
             {formatCurrency(summary.totalReturn)}
           </p>
           <small className={getMetricClass(summary.totalReturnPercent)}>
-            {formatPercent(summary.totalReturnPercent)}
+            {(() => {
+              // Calculate total return % using average capital deployed
+              if (enhancedTransactions && enhancedTransactions.length > 0) {
+                const lotSizeUsd = priceData?.backtestParameters?.lotSizeUsd || 10000;
+                let totalCapitalDeployed = 0;
+                let dayCount = 0;
+
+                // Calculate average capital deployed over time
+                enhancedTransactions.forEach(transaction => {
+                  if (transaction.lotsAfterTransaction) {
+                    const capitalDeployed = transaction.lotsAfterTransaction.length * lotSizeUsd;
+                    totalCapitalDeployed += capitalDeployed;
+                    dayCount += 1;
+                  }
+                });
+
+                const averageCapitalDeployed = dayCount > 0 ? totalCapitalDeployed / dayCount : 0;
+                if (averageCapitalDeployed > 0) {
+                  const returnPercent = (summary.totalReturn / averageCapitalDeployed) * 100;
+
+                  // Calculate annualized return (CAGR) based on backtest period
+                  const startDate = new Date(summary.startDate);
+                  const endDate = new Date(summary.endDate);
+                  const years = (endDate - startDate) / (1000 * 60 * 60 * 24 * 365.25);
+
+                  let annualizedReturnText = '';
+                  if (years > 0 && returnPercent > 0) {
+                    const finalValue = 1 + (returnPercent / 100);
+                    const cagr = Math.pow(finalValue, 1 / years) - 1;
+                    const cagrPercent = cagr * 100;
+                    annualizedReturnText = ` | CAGR: ${cagrPercent.toFixed(2)}%`;
+                  }
+
+                  return `${formatPercent(returnPercent)} | Avg Capital: ${formatCurrency(averageCapitalDeployed)}${annualizedReturnText}`;
+                }
+              }
+              return formatPercent(summary.totalReturnPercent);
+            })()}
           </small>
         </div>
 
@@ -543,14 +816,14 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                   tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
                 />
                 <Tooltip
-                  formatter={(value, name) => [
-                    name === 'portfolioValue' ? formatCurrency(value) :
-                    name === 'stockPrice' ? formatCurrency(value) :
-                    formatCurrency(value),
-                    name === 'portfolioValue' ? 'Portfolio Value' :
-                    name === 'stockPrice' ? 'Stock Price' :
-                    'Invested Amount'
-                  ]}
+                  formatter={(value, name, props) => {
+                    const label = name === 'totalPNL' ? 'Total P&L' :
+                                name === 'holdingsValue' ? 'Current Holdings Value' :
+                                name === 'realizedPNL' ? 'Cumulative Realized P&L' :
+                                name === 'breakEvenValue' ? 'Break-even Value (Dynamic)' :
+                                name;
+                    return [formatCurrency(value), label];
+                  }}
                   labelStyle={{ color: '#333' }}
                   contentStyle={{
                     backgroundColor: '#fff',
@@ -559,48 +832,47 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                   }}
                 />
 
-                {/* Portfolio Value Line */}
+                {/* Total P&L Line */}
                 <Line
                   type="monotone"
-                  dataKey="portfolioValue"
+                  dataKey="totalPNL"
                   stroke="#2563eb"
-                  strokeWidth={2}
+                  strokeWidth={3}
                   dot={false}
-                  name="Portfolio Value"
+                  name="Total P&L"
                 />
 
-                {/* Stock Price Line (normalized to portfolio scale for comparison) */}
+                {/* Holdings Market Value Line */}
                 <Line
                   type="monotone"
-                  dataKey="stockPrice"
+                  dataKey="holdingsValue"
+                  stroke="#059669"
+                  strokeWidth={2}
+                  dot={false}
+                  name="Current Holdings Value"
+                />
+
+                {/* Cumulative Realized P&L Line */}
+                <Line
+                  type="monotone"
+                  dataKey="realizedPNL"
                   stroke="#dc2626"
-                  strokeWidth={1}
-                  strokeDasharray="5 5"
+                  strokeWidth={2}
                   dot={false}
-                  name="Stock Price"
-                  hide={true} // Hide by default since scales might be very different
+                  name="Cumulative Realized P&L"
                 />
 
-                {/* Invested Amount Line */}
+
+                {/* Dynamic Break-even Line (Average Cost of Holdings) */}
                 <Line
                   type="monotone"
-                  dataKey="investedAmount"
-                  stroke="#16a34a"
-                  strokeWidth={2}
-                  strokeDasharray="2 2"
+                  dataKey="breakEvenValue"
+                  stroke="#f97316"
+                  strokeWidth={3}
+                  strokeDasharray="10 6"
                   dot={false}
-                  name="Invested Amount"
+                  name="Break-even Value (Dynamic)"
                 />
-
-                {/* Reference line for break-even */}
-                {summary.totalCost && (
-                  <ReferenceLine
-                    y={summary.totalCost}
-                    stroke="#666"
-                    strokeDasharray="1 1"
-                    label={{ value: "Break-even", position: "topRight" }}
-                  />
-                )}
               </LineChart>
             </ResponsiveContainer>
           ) : (
@@ -612,15 +884,51 @@ const BacktestResults = ({ data, chartData: priceData }) => {
           <div className="chart-legend">
             <div className="legend-item">
               <span className="legend-color" style={{ backgroundColor: '#2563eb' }}></span>
-              <span>Portfolio Value</span>
+              <span>Total P&L</span>
             </div>
             <div className="legend-item">
-              <span className="legend-color" style={{ backgroundColor: '#16a34a', borderStyle: 'dashed' }}></span>
-              <span>Invested Amount</span>
+              <span className="legend-color" style={{ backgroundColor: '#059669' }}></span>
+              <span>Current Holdings Value</span>
+            </div>
+            <div className="legend-item">
+              <span className="legend-color" style={{ backgroundColor: '#dc2626' }}></span>
+              <span>Cumulative Realized P&L</span>
+            </div>
+            <div className="legend-item">
+              <span className="legend-color" style={{ backgroundColor: '#f97316', borderStyle: 'dashed' }}></span>
+              <span>Break-even Value (Dynamic)</span>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Questionable Events Section */}
+      {questionableEvents && questionableEvents.length > 0 && (
+        <div className="questionable-events-section">
+          <h3>
+            <AlertTriangle size={20} />
+            Questionable Events ({questionableEvents.length})
+          </h3>
+          <div className="questionable-events-table">
+            <div className="table-header">
+              <div>Date</div>
+              <div>Event Type</div>
+              <div>Description</div>
+              <div>Severity</div>
+            </div>
+            {questionableEvents.map((event, index) => (
+              <div key={index} className={`table-row ${event.severity.toLowerCase()}`}>
+                <div>{event.date}</div>
+                <div>{event.type}</div>
+                <div>{event.description}</div>
+                <div className={`severity ${event.severity.toLowerCase()}`}>
+                  {event.severity}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Enhanced Transaction History */}
       <div className="transactions-section">
@@ -641,10 +949,11 @@ const BacktestResults = ({ data, chartData: priceData }) => {
               <div>Value</div>
               <div>Lots</div>
               <div>Avg Cost</div>
+              <div>Holdings Value</div>
               <div>Unrealized P&L</div>
               <div>Realized P&L</div>
+              <div>Annual Return</div>
               <div>Total P&L</div>
-              <div>Ann. Return</div>
             </div>
 
             {enhancedTransactions.map((transaction, index) => {
@@ -678,6 +987,23 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                     }
                   </div>
                   <div>{transaction.averageCost ? formatCurrency(transaction.averageCost) : 'N/A'}</div>
+                  <div>
+                    {(() => {
+                      // Calculate holdings value by summing each lot's current value
+                      const currentPrice = parseFloat(priceData?.dailyPrices?.find(d => d.date === transaction.date)?.adjusted_close ||
+                                                     priceData?.dailyPrices?.find(d => d.date === transaction.date)?.close || transaction.price);
+                      const lotSizeUsd = priceData?.backtestParameters?.lotSizeUsd || 10000;
+
+                      if (transaction.lotsAfterTransaction) {
+                        const holdingsValue = transaction.lotsAfterTransaction.reduce((total, lot) => {
+                          const shares = lotSizeUsd / lot.price; // shares = $10,000 / purchase price
+                          return total + (shares * currentPrice); // current value = shares × current price
+                        }, 0);
+                        return formatCurrency(holdingsValue);
+                      }
+                      return formatCurrency(0);
+                    })()}
+                  </div>
                   <div className={getMetricClass(transaction.unrealizedPNL)}>
                     {formatCurrency(transaction.unrealizedPNL)}
                   </div>
@@ -687,14 +1013,28 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                       <small> (+{formatCurrency(transaction.realizedPNLFromTrade)})</small>
                     )}
                   </div>
+                  <div className={transaction.type === 'SELL' ? (transaction.annualizedReturnPercent > 0 ? 'positive' : 'negative') : ''}>
+                    {(() => {
+                      if (transaction.type === 'SELL') {
+                        if (transaction.lotsDetails && transaction.lotsDetails.length > 0) {
+                          const soldLot = transaction.lotsDetails[0];
+                          const purchaseDate = new Date(soldLot.date);
+                          const saleDate = new Date(transaction.date);
+                          const daysBetween = (saleDate - purchaseDate) / (1000 * 60 * 60 * 24);
+                          const yearsBetween = daysBetween / 365.25;
+
+                          if (yearsBetween > 0) {
+                            const totalReturn = (transaction.price - soldLot.price) / soldLot.price;
+                            const annualizedReturn = totalReturn / yearsBetween * 100;
+                            return `${annualizedReturn.toFixed(2)}%`;
+                          }
+                        }
+                      }
+                      return 'N/A';
+                    })()}
+                  </div>
                   <div className={getMetricClass(transaction.totalPNL)}>
                     {formatCurrency(transaction.totalPNL)}
-                  </div>
-                  <div className={transaction.type === 'SELL' ? (transaction.annualizedReturnPercent > 0 ? 'positive' : 'negative') : ''}>
-                    {transaction.type === 'SELL' && transaction.annualizedReturnPercent !== undefined
-                      ? `${transaction.annualizedReturnPercent.toFixed(2)}%`
-                      : 'N/A'
-                    }
                   </div>
                 </div>
               );
@@ -750,8 +1090,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
               <div>Current Price</div>
               <div>Current Value</div>
               <div>P&L</div>
-              <div>Ann. Return (Compound)</div>
-              <div>Ann. Return (Simple)</div>
+              <div>Ann. Return</div>
             </div>
 
             {lots.map((lot, index) => {
@@ -764,18 +1103,9 @@ const BacktestResults = ({ data, chartData: priceData }) => {
               const actualDaysHeld = Math.max(1, Math.ceil((new Date(summary.endDate) - new Date(lot.date)) / (1000 * 60 * 60 * 24)));
               const totalReturn = purchaseValue > 0 ? pnl / purchaseValue : 0;
 
-              // Method 1: Compound (Math.pow) - correct compound interest formula
-              let compoundAnnualizedReturn;
-              if (totalReturn < 0) {
-                compoundAnnualizedReturn = Math.pow(1 - Math.abs(totalReturn), 365 / actualDaysHeld) - 1;
-              } else {
-                compoundAnnualizedReturn = Math.pow(1 + totalReturn, 365 / actualDaysHeld) - 1;
-              }
-              const compoundAnnualizedReturnPercent = compoundAnnualizedReturn * 100;
-
-              // Method 2: Simple multiplication - linear approximation
-              const simpleAnnualizedReturn = totalReturn * (365 / actualDaysHeld);
-              const simpleAnnualizedReturnPercent = simpleAnnualizedReturn * 100;
+              // Simple linear annualization (matches backend calculation)
+              const annualizedReturn = totalReturn * (365 / actualDaysHeld);
+              const annualizedReturnPercent = annualizedReturn * 100;
 
               return (
                 <div key={index} className="table-row">
@@ -787,11 +1117,8 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                   <div className={getMetricClass(pnl)}>
                     {formatCurrency(pnl)}
                   </div>
-                  <div className={compoundAnnualizedReturnPercent > 0 ? 'positive' : 'negative'}>
-                    {compoundAnnualizedReturnPercent.toFixed(2)}%
-                  </div>
-                  <div className={simpleAnnualizedReturnPercent > 0 ? 'positive' : 'negative'}>
-                    {simpleAnnualizedReturnPercent.toFixed(2)}%
+                  <div className={annualizedReturnPercent > 0 ? 'positive' : 'negative'}>
+                    {annualizedReturnPercent.toFixed(2)}%
                   </div>
                 </div>
               );
