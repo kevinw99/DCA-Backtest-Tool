@@ -2,80 +2,129 @@ import React, { useState, useEffect } from 'react';
 import './App.css';
 import DCABacktestForm from './components/DCABacktestForm';
 import BacktestResults from './components/BacktestResults';
-import { Play, TrendingUp, Settings } from 'lucide-react';
+import BatchResults from './components/BatchResults';
+import { Play, TrendingUp, Settings, Zap } from 'lucide-react';
 
 function App() {
   const [backtestData, setBacktestData] = useState(null);
+  const [batchData, setBatchData] = useState(null);
   const [chartData, setChartData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('parameters');
+  const [testMode, setTestMode] = useState('single'); // 'single' or 'batch'
+  const [urlParams, setUrlParams] = useState(null); // Store URL parameters
 
-  const handleBacktestSubmit = async (parameters) => {
-    console.log('🚀 Starting DCA Backtest with parameters:', parameters);
+  // Handle URL parameters on component mount
+  useEffect(() => {
+    const urlSearchParams = new URLSearchParams(window.location.search);
+    const params = Object.fromEntries(urlSearchParams.entries());
+
+    if (Object.keys(params).length > 0) {
+      setUrlParams(params);
+      if (params.mode === 'single') {
+        setTestMode('single');
+        setActiveTab('parameters');
+      } else if (params.mode === 'batch') {
+        setTestMode('batch');
+        setActiveTab('parameters');
+      }
+    }
+
+    // Load persisted state from localStorage
+    try {
+      const persistedTab = localStorage.getItem('dca-active-tab');
+      const persistedMode = localStorage.getItem('dca-test-mode');
+      if (persistedTab && !params.mode) setActiveTab(persistedTab);
+      if (persistedMode && !params.mode) setTestMode(persistedMode);
+    } catch (err) {
+      console.warn('Failed to load persisted state:', err);
+    }
+  }, []);
+
+  // Persist state changes to localStorage
+  useEffect(() => {
+    localStorage.setItem('dca-active-tab', activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
+    localStorage.setItem('dca-test-mode', testMode);
+  }, [testMode]);
+
+  const handleBacktestSubmit = async (parameters, isBatchMode = false) => {
+    console.log(`Starting ${isBatchMode ? 'batch optimization' : 'single backtest'} for ${parameters.symbol}`);
+
     setLoading(true);
     setError(null);
+    setTestMode(isBatchMode ? 'batch' : 'single');
+
+    // Clear previous results
+    if (isBatchMode) {
+      setBatchData(null);
+      setBacktestData(null);
+      setChartData(null);
+    } else {
+      setBacktestData(null);
+      setBatchData(null);
+      setChartData(null);
+    }
 
     try {
-      // Run backtest
-      console.log('📊 Step 1: Running DCA backtest...');
-      const backtestResponse = await fetch('http://localhost:3001/api/backtest/dca', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(parameters),
-      });
+      if (isBatchMode) {
+        const batchResponse = await fetch('http://localhost:3001/api/backtest/batch', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(parameters),
+        });
 
-      console.log('📊 Backtest response status:', backtestResponse.status);
+        if (!batchResponse.ok) {
+          throw new Error(`Batch backtest failed: ${batchResponse.statusText}`);
+        }
 
-      if (!backtestResponse.ok) {
-        throw new Error(`Backtest failed: ${backtestResponse.statusText}`);
+        const batchResult = await batchResponse.json();
+        setBatchData({ ...batchResult.data, executionTimeMs: batchResult.executionTimeMs });
+        setActiveTab('results');
+      } else {
+        const backtestResponse = await fetch('http://localhost:3001/api/backtest/dca', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(parameters),
+        });
+
+        if (!backtestResponse.ok) {
+          throw new Error(`Backtest failed: ${backtestResponse.statusText}`);
+        }
+
+        const backtestResult = await backtestResponse.json();
+        setBacktestData(backtestResult.data);
+
+        const chartResponse = await fetch(
+          `http://localhost:3001/api/stocks/${parameters.symbol}?startDate=${parameters.startDate}&endDate=${parameters.endDate}`
+        );
+
+        if (!chartResponse.ok) {
+          throw new Error(`Chart data failed: ${chartResponse.statusText}`);
+        }
+
+        const chartResult = await chartResponse.json();
+        const finalChartData = {
+          ...chartResult,
+          backtestParameters: parameters,
+          transactions: backtestResult.data.transactions
+        };
+
+        setChartData(finalChartData);
+        setActiveTab('chart');
       }
-
-      const backtestResult = await backtestResponse.json();
-      console.log('✅ Backtest result received:', backtestResult);
-      setBacktestData(backtestResult.data);
-
-      // Get chart data with extended period for technical indicators
-      console.log('📈 Step 2: Fetching chart data...');
-      const chartResponse = await fetch(
-        `http://localhost:3001/api/stocks/${parameters.symbol}?startDate=${parameters.startDate}&endDate=${parameters.endDate}`
-      );
-
-      console.log('📈 Chart response status:', chartResponse.status);
-
-      if (!chartResponse.ok) {
-        throw new Error(`Chart data failed: ${chartResponse.statusText}`);
-      }
-
-      const chartResult = await chartResponse.json();
-      console.log('✅ Chart result received:', chartResult);
-      console.log('📊 Daily prices count:', chartResult.dailyPrices?.length || 0);
-
-      const finalChartData = {
-        ...chartResult,
-        backtestParameters: parameters,
-        transactions: backtestResult.data.transactions
-      };
-
-      console.log('🎯 Final chart data structure:', {
-        symbol: finalChartData.symbol,
-        dailyPricesCount: finalChartData.dailyPrices?.length || 0,
-        transactionsCount: finalChartData.transactions?.length || 0,
-        backtestParameters: finalChartData.backtestParameters
-      });
-
-      setChartData(finalChartData);
-
-      console.log('🎉 Switching to chart tab');
-      setActiveTab('chart');
     } catch (err) {
-      console.error('❌ Error in backtest:', err);
+      console.error('Error in', isBatchMode ? 'batch optimization' : 'backtest', ':', err);
       setError(err.message);
     } finally {
       setLoading(false);
-      console.log('🏁 Backtest process completed');
     }
   };
 
@@ -94,7 +143,14 @@ function App() {
       <nav className="tab-navigation">
         <button
           className={`tab-button ${activeTab === 'parameters' ? 'active' : ''}`}
-          onClick={() => setActiveTab('parameters')}
+          onClick={() => {
+            setActiveTab('parameters');
+            // Clear URL parameters when switching to parameters tab to prevent auto-run
+            if (window.location.search) {
+              window.history.replaceState({}, '', window.location.pathname);
+              setUrlParams(null);
+            }
+          }}
         >
           <Settings size={18} />
           Parameters
@@ -102,10 +158,18 @@ function App() {
         <button
           className={`tab-button ${activeTab === 'chart' ? 'active' : ''}`}
           onClick={() => setActiveTab('chart')}
-          disabled={!chartData}
+          disabled={!chartData || testMode === 'batch'}
         >
           <TrendingUp size={18} />
           Chart & Analysis
+        </button>
+        <button
+          className={`tab-button ${activeTab === 'results' ? 'active' : ''}`}
+          onClick={() => setActiveTab('results')}
+          disabled={!batchData && !backtestData}
+        >
+          <Zap size={18} />
+          {testMode === 'batch' ? 'Batch Results' : 'Results'}
         </button>
       </nav>
 
@@ -119,17 +183,35 @@ function App() {
         {loading && (
           <div className="loading-banner">
             <div className="loading-spinner"></div>
-            Running backtest analysis...
+            {testMode === 'batch' ? 'Running batch optimization analysis...' : 'Running backtest analysis...'}
           </div>
         )}
 
         {activeTab === 'parameters' && (
           <div className="tab-content">
-            <DCABacktestForm onSubmit={handleBacktestSubmit} loading={loading} />
+            <DCABacktestForm
+              onSubmit={handleBacktestSubmit}
+              loading={loading}
+              urlParams={urlParams}
+              currentTestMode={testMode}
+              setAppTestMode={setTestMode}
+            />
           </div>
         )}
 
-        {activeTab === 'chart' && chartData && backtestData && (
+        {activeTab === 'chart' && chartData && backtestData && testMode === 'single' && (
+          <div className="tab-content">
+            <BacktestResults data={backtestData} chartData={chartData} />
+          </div>
+        )}
+
+        {activeTab === 'results' && testMode === 'batch' && batchData && (
+          <div className="tab-content">
+            <BatchResults data={batchData} />
+          </div>
+        )}
+
+        {activeTab === 'results' && testMode === 'single' && backtestData && (
           <div className="tab-content">
             <BacktestResults data={backtestData} chartData={chartData} />
           </div>

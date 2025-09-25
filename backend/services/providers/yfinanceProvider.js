@@ -29,7 +29,7 @@ try:
             "low": float(row['Low']),
             "close": float(row['Close']),
             "volume": int(row['Volume']),
-            "adjusted_close": float(row['Adj Close'])
+            "adjusted_close": float(row['Close'])  # Use Close as adjusted_close since Adj Close is not available
         })
 
     print(json.dumps(prices))

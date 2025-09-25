@@ -1,29 +1,18 @@
 const { runDCABacktest } = require('./backend/services/dcaBacktestService');
+const backtestConfig = require('./backend/config/backtestConfig');
 
-// --- Strategy Parameters ---
-const SYMBOL = 'NVDA';
-const START_DATE = '2021-09-01';
-const END_DATE = '2025-09-01';
-const LOT_SIZE_USD = 10000;
-const MAX_LOTS = 5;
-const GRID_INTERVAL_PERCENT = 0.10;
-const REMAINING_LOTS_LOSS_TOLERANCE = 0.00;
+// Get default parameters from shared config
+const defaults = backtestConfig.getDefaults();
 
 // Wrapper function for backward compatibility
 async function runBacktest() {
-  console.log(`Starting OPTIMIZED DCA backtest for ${SYMBOL}...`);
-  console.log(`Remaining lots loss tolerance: ${(REMAINING_LOTS_LOSS_TOLERANCE * 100).toFixed(1)}%`);
+  console.log(`Starting OPTIMIZED DCA backtest for ${defaults.symbol}...`);
+  console.log(`📊 Using parameters from shared config:`, defaults);
 
   try {
-    // Use the shared core algorithm
+    // Use the shared core algorithm with shared defaults
     const results = await runDCABacktest({
-      symbol: SYMBOL,
-      startDate: START_DATE,
-      endDate: END_DATE,
-      lotSizeUsd: LOT_SIZE_USD,
-      maxLots: MAX_LOTS,
-      gridIntervalPercent: GRID_INTERVAL_PERCENT,
-      remainingLotsLossTolerance: REMAINING_LOTS_LOSS_TOLERANCE,
+      ...defaults,
       verbose: true // Enable detailed logging for command line
     });
 

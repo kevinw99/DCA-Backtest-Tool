@@ -1,0 +1,85 @@
+DCA Strategy Implementation with Numbered Requirements
+
+## Core Requirements
+
+### 1.0 PORTFOLIO STRUCTURE
+1.1 Maximum 5 lots per symbol
+1.2 Each lot = $10,000 USD
+1.3 Grid-based buying with 10% price separation minimum
+
+### 2.0 BUYING RULES
+2.1 First lot: Buy immediately when starting
+2.2 Subsequent lots: Only when price is 10%+ away from ALL existing lot prices
+2.3 Post-sell buying: Enhanced recovery-based logic
+    2.3.1 If lots < MAX_LOTS after stop-limit execution
+    2.3.2 Allow buying when current price > last trigger price that caused stop
+    2.3.3 Fallback: traditional rule (price < average cost)
+
+### 3.0 STOP-LIMIT MECHANISM
+3.1 Trigger condition: Price > average cost AND no active stop
+3.2 Batch selection: Top 2 highest-priced lots
+3.3 Remaining lots compliance: Must have ≤5% loss tolerance
+3.4 Limit price: 95% of batch weighted average
+3.5 Stop price: Max(limit price, current price - trailing amount)
+3.6 Stop validation: Stop > 95% of limit price AND Stop < current price AND Stop ≤ 95% of current price
+
+### 4.0 EXECUTION RULES
+4.1 Daily price evaluation and action execution
+4.2 Transaction logging with detailed P&L tracking
+4.3 Portfolio value monitoring throughout backtest period
+
+### 5.0 TRAILING AMOUNT LOGIC
+5.1 Trailing amount = 10% of initial stock price
+5.2 Used in stop price calculation: Max(limit price, current price - trailing amount)
+5.3 Provides dynamic stop adjustment based on market volatility
+
+### 6.0 BACKTESTING METRICS & ANALYSIS
+6.1 Standard Backtesting Metrics:
+    6.1.1 Total Return (absolute USD and percentage)
+    6.1.2 Maximum Drawdown (absolute USD and percentage)
+    6.1.3 Sharpe Ratio (risk-adjusted return)
+    6.1.4 Win Rate (percentage of profitable trades)
+    6.1.5 Volatility (annualized standard deviation)
+    6.1.6 Total number of trades executed
+
+6.2 Custom DCA-Specific Metrics:
+    6.2.1 Combined Weighted Return on Capital Deployed
+          6.2.1.1 Calculation: (Total Return / Avg Capital Deployed) × (Avg Capital Deployed / Max Capital Deployed) × 100%
+          6.2.1.2 Purpose: Measures efficiency of capital utilization over time
+          6.2.1.3 Rationale: Unlike buy-and-hold which deploys all capital immediately,
+                             DCA deploys capital gradually. This metric weighs returns by
+                             actual deployment efficiency.
+    6.2.2 Average Capital Deployed (daily average of invested capital)
+    6.2.3 Maximum Capital Deployed (peak investment amount)
+
+6.3 Buy-and-Hold Comparison Baseline:
+    6.3.1 Calculate equivalent buy-and-hold strategy using MAX_LOTS × LOT_SIZE_USD
+    6.3.2 Apply same metrics: Total Return, Max Drawdown, Sharpe Ratio, Volatility
+    6.3.3 Direct comparison reporting showing outperformance/underperformance
+
+6.4 Strategy Comparison Output:
+    6.4.1 Side-by-side metric comparison
+    6.4.2 Outperformance calculation (absolute USD and percentage)
+    6.4.3 Risk-adjusted performance analysis
+    6.4.4 Capital efficiency analysis using Combined Weighted Return
+
+### 7.0 COMBINED WEIGHTED RETURN EXPLANATION
+7.1 The Combined Weighted Return on Capital Deployed is calculated as follows:
+
+7.2 **Formula:** (Total Return / Average Capital Deployed) × (Average Capital Deployed / Maximum Capital Deployed) × 100%
+
+7.3 **Components:**
+    7.3.1 Total Return: Final portfolio value minus initial invested amount
+    7.3.2 Average Capital Deployed: Daily average of capital actually invested in positions
+    7.3.3 Maximum Capital Deployed: Peak amount of capital that could be invested (MAX_LOTS × LOT_SIZE_USD)
+
+7.4 **Purpose:**
+    This metric addresses the key difference between DCA and buy-and-hold strategies. While buy-and-hold deploys all capital immediately, DCA gradually increases exposure. This metric:
+    7.4.1 Measures return efficiency relative to capital actually deployed (not max possible)
+    7.4.2 Adjusts for capital deployment efficiency compared to maximum possible deployment
+    7.4.3 Provides a fair comparison metric that accounts for DCA's staged capital deployment
+
+7.5 **Interpretation:**
+    7.5.1 Higher values indicate better capital efficiency
+    7.5.2 Accounts for both return generation and capital utilization timing
+    7.5.3 Enables fair comparison between strategies with different capital deployment patterns

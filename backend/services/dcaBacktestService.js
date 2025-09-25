@@ -8,7 +8,7 @@ const database = require('../database');
  */
 
 // --- Utility Functions ---
-function calculateMetrics(dailyValues, capitalDeployed, transactionLog, prices) {
+function calculateMetrics(dailyValues, capitalDeployed, transactionLog, prices, enhancedTransactions = []) {
   const returns = [];
   const portfolioValues = [];
   let peakValue = 0;
@@ -42,12 +42,12 @@ function calculateMetrics(dailyValues, capitalDeployed, transactionLog, prices) 
   const returnStdDev = returns.length > 1 ? Math.sqrt(returns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / (returns.length - 1)) : 0;
   const sharpeRatio = returnStdDev > 0 ? (avgReturn * 252) / (returnStdDev * Math.sqrt(252)) : 0;
 
-  const transactions = transactionLog.filter(log => log.includes('ACTION: SELL'));
-  const winningTrades = transactions.filter(log => {
-    const pnlMatch = log.match(/PNL: ([-\d.]+)/);
-    return pnlMatch && parseFloat(pnlMatch[1]) > 0;
-  });
-  const winRate = transactions.length > 0 ? (winningTrades.length / transactions.length) * 100 : 0;
+  // Use enhanced transactions for more accurate metrics
+  const sellTransactions = enhancedTransactions.filter(t => t.type === 'SELL');
+  const buyTransactions = enhancedTransactions.filter(t => t.type === 'TRAILING_STOP_LIMIT_BUY' || t.type === 'INITIAL_BUY');
+  const winningTrades = sellTransactions.filter(t => t.realizedPNLFromTrade > 0);
+  const winRate = sellTransactions.length > 0 ? (winningTrades.length / sellTransactions.length) * 100 : 0;
+  const totalTrades = sellTransactions.length; // Count sells as completed trades
 
   const totalCapitalDeployed = Math.max(...capitalDeployed, 0);
   const avgCapitalDeployed = capitalDeployed.reduce((a, b) => a + b, 0) / capitalDeployed.length;
@@ -62,7 +62,7 @@ function calculateMetrics(dailyValues, capitalDeployed, transactionLog, prices) 
   const totalReturnDecimal = initialValue > 0 ? (finalValue - initialValue) / initialValue : 0;
   const totalDays = portfolioValues.length;
   const dcaAnnualizedReturn = totalDays > 0 ?
-    Math.pow(1 + totalReturnDecimal, 365 / totalDays) - 1 : 0;
+    totalReturnDecimal * 365 / totalDays : 0;
   const dcaAnnualizedReturnPercent = dcaAnnualizedReturn * 100;
 
   return {
@@ -74,7 +74,7 @@ function calculateMetrics(dailyValues, capitalDeployed, transactionLog, prices) 
     maxDrawdownPercent: maxDrawdownPercent,
     sharpeRatio: sharpeRatio,
     winRate: winRate,
-    totalTrades: transactions.length,
+    totalTrades: totalTrades,
     avgCapitalDeployed: avgCapitalDeployed,
     maxCapitalDeployed: totalCapitalDeployed,
     combinedWeightedReturn: combinedWeightedReturn,
@@ -83,7 +83,7 @@ function calculateMetrics(dailyValues, capitalDeployed, transactionLog, prices) 
 }
 
 // Calculate annualized return for individual trades and current holdings
-function calculateTradeAnnualizedReturns(enhancedTransactions, startDate, endDate, currentHoldings, finalPrice) {
+function calculateTradeAnnualizedReturns(enhancedTransactions, startDate, endDate, currentHoldings, finalPrice, lotSizeUsd) {
   const tradeReturns = [];
   const holdingReturns = [];
   const buyTransactions = enhancedTransactions.filter(t => t.type === 'TRAILING_STOP_LIMIT_BUY');
@@ -110,8 +110,8 @@ function calculateTradeAnnualizedReturns(enhancedTransactions, startDate, endDat
           // Calculate actual days held for this specific trade
           const actualDaysHeld = Math.max(1, Math.ceil((new Date(sellTx.date) - new Date(buyTx.date)) / (1000 * 60 * 60 * 24)));
 
-          // Calculate annualized return: (1 + total return) ^ (365 / actual days held) - 1
-          const annualizedReturn = Math.pow(1 + returnPercent, 365 / actualDaysHeld) - 1;
+          // Calculate annualized return: simple linear annualization
+          const annualizedReturn = returnPercent * 365 / actualDaysHeld;
 
           tradeReturns.push({
             type: 'COMPLETED_TRADE',
@@ -143,14 +143,8 @@ function calculateTradeAnnualizedReturns(enhancedTransactions, startDate, endDat
       // Calculate actual days held for this specific holding
       const actualDaysHeld = Math.max(1, Math.ceil((new Date(endDate) - new Date(holding.date)) / (1000 * 60 * 60 * 24)));
 
-      // For negative returns, use: (1 - abs(total_return)) ^ (365 / days) - 1
-      // For positive returns, use: (1 + total_return) ^ (365 / days) - 1
-      let annualizedReturn;
-      if (returnPercent < 0) {
-        annualizedReturn = Math.pow(1 - Math.abs(returnPercent), 365 / actualDaysHeld) - 1;
-      } else {
-        annualizedReturn = Math.pow(1 + returnPercent, 365 / actualDaysHeld) - 1;
-      }
+      // Simple linear annualization for current holdings
+      const annualizedReturn = returnPercent * 365 / actualDaysHeld;
 
       holdingReturns.push({
         type: 'CURRENT_HOLDING',
@@ -169,17 +163,33 @@ function calculateTradeAnnualizedReturns(enhancedTransactions, startDate, endDat
     }
   }
 
-  // Combine all returns for overall average
+  // Combine all returns for overall weighted average
   const allReturns = [...tradeReturns, ...holdingReturns];
-  const avgAnnualizedReturn = allReturns.length > 0 ?
-    allReturns.reduce((sum, trade) => sum + trade.annualizedReturn, 0) / allReturns.length : 0;
+
+  // Calculate weighted average (each lot is weighted by its actual dollar investment)
+  // For DCA, each lot is worth lotSizeUsd, so this is a proper weighted average
+  const totalWeight = allReturns.length * lotSizeUsd;
+  const weightedSum = allReturns.length > 0 ?
+    allReturns.reduce((sum, position) => sum + (position.annualizedReturn * lotSizeUsd), 0) : 0;
+  const avgAnnualizedReturn = allReturns.length > 0 ? weightedSum / totalWeight : 0;
   const avgAnnualizedReturnPercent = avgAnnualizedReturn * 100;
 
-  // Separate averages for completed trades and holdings
+  // Single consolidated logging for all individual trade returns
+  console.log(`📊 All Individual Trade Returns for Average Calculation:`,
+    allReturns.map((pos, i) =>
+      `${i+1}. ${(pos.annualizedReturn * 100).toFixed(2)}% (weight: $${lotSizeUsd.toLocaleString()})`
+    ).join('\n')
+  );
+  console.log(`📈 Weighted Average Result: ${avgAnnualizedReturnPercent.toFixed(2)}% (${allReturns.length} positions)`);
+
+  // Separate weighted averages for completed trades and holdings
+  const tradeOnlyTotalWeight = tradeReturns.length * lotSizeUsd;
   const tradeOnlyAvg = tradeReturns.length > 0 ?
-    tradeReturns.reduce((sum, trade) => sum + trade.annualizedReturn, 0) / tradeReturns.length : 0;
+    tradeReturns.reduce((sum, trade) => sum + (trade.annualizedReturn * lotSizeUsd), 0) / tradeOnlyTotalWeight : 0;
+
+  const holdingOnlyTotalWeight = holdingReturns.length * lotSizeUsd;
   const holdingOnlyAvg = holdingReturns.length > 0 ?
-    holdingReturns.reduce((sum, holding) => sum + holding.annualizedReturn, 0) / holdingReturns.length : 0;
+    holdingReturns.reduce((sum, holding) => sum + (holding.annualizedReturn * lotSizeUsd), 0) / holdingOnlyTotalWeight : 0;
 
   return {
     individualTradeReturns: tradeReturns,
@@ -326,21 +336,40 @@ async function runDCABacktest(params) {
     maxLots,
     maxLotsToSell = 1, // Default to 1 lot for backward compatibility
     gridIntervalPercent,
-    remainingLotsLossTolerance,
-    remainingLotsUnrealizedLossTolerance = -0.5, // Default -50% loss tolerance for remaining lots
+    profitRequirement = 0.05, // Default 5% profit requirement
+    trailingBuyActivationPercent = 0.1, // Default 10% drop to activate trailing buy
+    trailingBuyReboundPercent = 0.05, // Default 5% rebound for trailing buy stop price
+    trailingSellActivationPercent = 0.2, // Default 20% rise to activate trailing sell
+    trailingSellPullbackPercent = 0.1, // Default 10% pullback for trailing sell stop price
     verbose = true
   } = params;
 
   if (verbose) {
     console.log(`🎯 Starting DCA backtest for ${symbol}...`);
-    console.log(`📊 Parameters: ${lotSizeUsd} USD/lot, ${maxLots} max lots, ${(gridIntervalPercent*100).toFixed(1)}% grid`);
+    console.log(`📊 Parameters: ${lotSizeUsd} USD/lot, ${maxLots} max lots, ${maxLotsToSell} max lots per sell, ${(gridIntervalPercent*100).toFixed(1)}% grid`);
   }
 
   try {
-    // 1. Get Stock ID
-    const stock = await database.getStock(symbol);
+    // 1. Get or create Stock ID
+    let stock = await database.getStock(symbol);
     if (!stock) {
-      throw new Error(`Stock symbol ${symbol} not found in the database.`);
+      console.log(`🆕 Creating new stock record for backtest: ${symbol}`);
+      try {
+        const stockDataService = require('./stockDataService');
+        const stockId = await database.createStock(symbol);
+        stock = await database.getStock(symbol);
+
+        // Fetch data for new stock
+        console.log(`📡 Fetching initial data for ${symbol}...`);
+        await stockDataService.updateStockData(stock.id, symbol, {
+          updatePrices: true,
+          updateFundamentals: true,
+          updateCorporateActions: true
+        });
+        await database.updateStockTimestamp(stock.id);
+      } catch (fetchError) {
+        throw new Error(`Stock symbol ${symbol} not found and could not fetch data: ${fetchError.message}`);
+      }
     }
 
     // 2. Get Combined Price and Technical Indicator Data
@@ -358,11 +387,15 @@ async function runDCABacktest(params) {
     let realizedPNL = 0;
     let averageCost = 0;
     let initialPrice = pricesWithIndicators[0].adjusted_close;
-    let trailingAmount = initialPrice * 0.10;
+    let trailingAmount = initialPrice * gridIntervalPercent;
     let transactionLog = [];
     let activeStop = null;
     let dailyPortfolioValues = [];
     let dailyCapitalDeployed = [];
+
+    // Questionable events monitoring
+    let questionableEvents = [];
+    let dailyTransactionTypes = new Map(); // Track transaction types per date
 
     // Recent Peak/Bottom Tracking System (simplified approach)
     let recentPeak = null;  // Highest price since last transaction
@@ -396,6 +429,41 @@ async function runDCABacktest(params) {
 
     const colorize = (text, color) => `${colors[color]}${text}${colors.reset}`;
 
+    // Track transactions for questionable event detection
+    const trackTransaction = (date, type, price, details) => {
+      if (!dailyTransactionTypes.has(date)) {
+        dailyTransactionTypes.set(date, []);
+      }
+      dailyTransactionTypes.get(date).push({ type, price, details, time: new Date().toISOString() });
+
+      // Check for questionable same-day events
+      const dayTransactions = dailyTransactionTypes.get(date);
+      const hasSell = dayTransactions.some(tx => tx.type === 'SELL');
+      const hasBuy = dayTransactions.some(tx => tx.type === 'BUY');
+
+      if (hasSell && hasBuy && dayTransactions.length >= 2) {
+        const sellTx = dayTransactions.find(tx => tx.type === 'SELL');
+        const buyTx = dayTransactions.find(tx => tx.type === 'BUY');
+
+        questionableEvents.push({
+          date: date,
+          type: 'SAME_DAY_SELL_BUY',
+          description: 'Both trailing sell and buy orders executed on the same day',
+          severity: 'WARNING',
+          sellPrice: sellTx.price,
+          buyPrice: buyTx.price,
+          priceChange: ((buyTx.price - sellTx.price) / sellTx.price * 100).toFixed(2),
+          sellDetails: sellTx.details,
+          buyDetails: buyTx.details,
+          allTransactions: dayTransactions
+        });
+
+        transactionLog.push(
+          colorize(`⚠️  QUESTIONABLE EVENT: Same-day sell ($${sellTx.price.toFixed(2)}) and buy ($${buyTx.price.toFixed(2)}) execution - Price change: ${((buyTx.price - sellTx.price) / sellTx.price * 100).toFixed(2)}%`, 'yellow')
+        );
+      }
+    };
+
     // Reset peak/bottom tracking after any transaction
     const resetPeakBottomTracking = (currentPrice, currentDate) => {
       recentPeak = currentPrice;
@@ -416,23 +484,23 @@ async function runDCABacktest(params) {
 
     // Check if trailing stop buy should be activated
     const checkTrailingStopBuyActivation = (currentPrice, currentDate) => {
-      if (!trailingStopBuy && recentPeak && currentPrice <= recentPeak * 0.9) {
-        // Price dropped 10% from recent peak - activate trailing stop buy
+      if (!trailingStopBuy && recentPeak && currentPrice <= recentPeak * (1 - trailingBuyActivationPercent)) {
+        // Price dropped {trailingBuyActivationPercent}% from recent peak - activate trailing stop buy
         trailingStopBuy = {
-          stopPrice: currentPrice * 1.05, // 5% above current price
+          stopPrice: currentPrice * (1 + trailingBuyReboundPercent), // {trailingBuyReboundPercent}% above current price
           triggeredAt: currentPrice,
           activatedDate: currentDate,
           recentPeakReference: recentPeak,
           lastUpdatePrice: currentPrice  // Track the actual bottom price (price when order was last updated)
         };
-        transactionLog.push(colorize(`  ACTION: TRAILING STOP BUY ACTIVATED - Stop: ${trailingStopBuy.stopPrice.toFixed(2)}, Triggered by 10% drop from peak ${recentPeak.toFixed(2)}`, 'blue'));
+        transactionLog.push(colorize(`  ACTION: TRAILING STOP BUY ACTIVATED - Stop: ${trailingStopBuy.stopPrice.toFixed(2)}, Triggered by ${(trailingBuyActivationPercent*100).toFixed(1)}% drop from peak ${recentPeak.toFixed(2)}`, 'blue'));
       }
     };
 
     // Update trailing stop buy (move stop down if price goes down further)
     const updateTrailingStopBuy = (currentPrice) => {
       if (trailingStopBuy) {
-        const newStopPrice = currentPrice * 1.05; // Always 5% above current price
+        const newStopPrice = currentPrice * (1 + trailingBuyReboundPercent); // Always {trailingBuyReboundPercent}% above current price
         if (newStopPrice < trailingStopBuy.stopPrice) {
           const oldStopPrice = trailingStopBuy.stopPrice;
           trailingStopBuy.stopPrice = newStopPrice;
@@ -472,6 +540,13 @@ async function runDCABacktest(params) {
             const unrealizedPNLAfterBuy = (totalSharesHeldAfterBuy * currentPrice) - totalCostOfHeldLotsAfterBuy;
             const totalPNLAfterBuy = realizedPNL + unrealizedPNLAfterBuy;
 
+            const buyDetails = {
+              shares: shares,
+              lotValue: lotSizeUsd,
+              stopPrice: trailingStopBuy.stopPrice,
+              peakReference: trailingStopBuy.recentPeakReference
+            };
+
             // Record enhanced transaction
             enhancedTransactions.push({
               date: currentDate,
@@ -499,6 +574,9 @@ async function runDCABacktest(params) {
               }
             });
 
+            // Track this buy transaction for questionable event detection
+            trackTransaction(currentDate, 'BUY', currentPrice, buyDetails);
+
             transactionLog.push(colorize(`  ACTION: TRAILING STOP BUY EXECUTED at ${currentPrice.toFixed(2)} (stop: ${trailingStopBuy.stopPrice.toFixed(2)}). Lots: ${getLotsPrices(lots)}, New Avg Cost: ${averageCost.toFixed(2)}`, 'green'));
 
             // Clear trailing stop buy and reset peak/bottom tracking
@@ -521,10 +599,10 @@ async function runDCABacktest(params) {
       return false; // No transaction
     };
 
-    // Check if trailing stop sell should be activated (when price rises 20% from recent bottom)
+    // Check if trailing stop sell should be activated (when price rises from recent bottom)
     const checkTrailingStopSellActivation = (currentPrice) => {
-      if (lots.length > 0 && currentPrice > averageCost && !activeStop && recentBottom && currentPrice >= recentBottom * 1.2) {
-        // Price rose 20% from recent bottom - activate trailing stop sell
+      if (lots.length > 0 && currentPrice > averageCost && !activeStop && recentBottom && currentPrice >= recentBottom * (1 + trailingSellActivationPercent)) {
+        // Price rose {trailingSellActivationPercent}% from recent bottom - activate trailing stop sell
         // Calculate current unrealized P&L
         const totalSharesHeld = lots.reduce((sum, lot) => sum + lot.shares, 0);
         const totalCostOfHeldLots = lots.reduce((sum, lot) => sum + lot.price * lot.shares, 0);
@@ -533,33 +611,35 @@ async function runDCABacktest(params) {
         // Only set trailing stop if unrealized P&L > 0
         if (unrealizedPNL > 0) {
           // Find the highest-priced lot that is eligible for selling
-          // Eligible lots are those with price < stop price * (1 - loss_tolerance)
-          const stopPrice = currentPrice * 0.90;
-          const maxEligiblePrice = stopPrice * (1 - remainingLotsLossTolerance);
+          // Calculate stop price using parameterized pullback percentage
+          const stopPrice = currentPrice * (1 - trailingSellPullbackPercent);
+          const minProfitablePrice = averageCost * (1 + profitRequirement);
 
-          transactionLog.push(colorize(`DEBUG LOT SELECTION: currentPrice=${currentPrice.toFixed(2)}, stopPrice=${stopPrice.toFixed(2)}, remainingLotsLossTolerance=${remainingLotsLossTolerance}, maxEligiblePrice=${maxEligiblePrice.toFixed(2)}`, 'cyan'));
+          transactionLog.push(colorize(`DEBUG LOT SELECTION: currentPrice=${currentPrice.toFixed(2)}, stopPrice=${stopPrice.toFixed(2)}, profitRequirement=${profitRequirement}, averageCost=${averageCost.toFixed(2)}, minProfitablePrice=${minProfitablePrice.toFixed(2)}`, 'cyan'));
           transactionLog.push(colorize(`DEBUG ALL LOTS: ${lots.map(lot => `$${lot.price.toFixed(2)}`).join(', ')}`, 'cyan'));
 
-          const eligibleLots = lots.filter(lot => lot.price < maxEligiblePrice);
+          // Select lots that would be profitable to sell (meeting profit requirement)
+          const eligibleLots = lots.filter(lot => currentPrice > lot.price * (1 + profitRequirement));
 
           transactionLog.push(colorize(`DEBUG ELIGIBLE LOTS: ${eligibleLots.map(lot => `$${lot.price.toFixed(2)}`).join(', ')} (${eligibleLots.length} eligible)`, 'cyan'));
 
           if (eligibleLots.length > 0) {
             const sortedEligibleLots = eligibleLots.sort((a, b) => b.price - a.price);
-            const lotToSell = sortedEligibleLots[0]; // Select highest-priced eligible lot
+            // Select up to maxLotsToSell highest-priced eligible lots
+            const lotsToSell = sortedEligibleLots.slice(0, Math.min(maxLotsToSell, sortedEligibleLots.length));
 
-            transactionLog.push(colorize(`DEBUG SELECTED LOT: $${lotToSell.price.toFixed(2)} (highest among eligible)`, 'cyan'));
+            transactionLog.push(colorize(`DEBUG SELECTED LOTS: ${lotsToSell.map(lot => `$${lot.price.toFixed(2)}`).join(', ')} (${lotsToSell.length} of ${eligibleLots.length} eligible, max ${maxLotsToSell})`, 'cyan'));
 
             // New pricing logic based on requirements:
-            // Stop Price: current price * 0.90 (10% below current price)
-            // Limit Price: the targeted lot price
-            const stopPrice = currentPrice * 0.90;
-            const limitPrice = lotToSell.price;
+            // Stop Price: current price * (1 - trailingSellPullbackPercent) below current price
+            // Limit Price: the highest-priced lot among selected lots
+            const stopPrice = currentPrice * (1 - trailingSellPullbackPercent);
+            const limitPrice = lotsToSell[0].price; // Highest price among selected lots
 
             activeStop = {
               stopPrice: stopPrice,
               limitPrice: limitPrice,
-              lotsToSell: [lotToSell],
+              lotsToSell: lotsToSell, // Now supports multiple lots
               highestPrice: currentPrice,  // Track highest price for trailing
               recentBottomReference: recentBottom,
               triggerCondition: 'recent_bottom_10pct_rise',
@@ -575,29 +655,29 @@ async function runDCABacktest(params) {
     // Update trailing stop when price moves higher (maintains 10% below current price)
     const updateTrailingStop = (currentPrice) => {
       if (activeStop && currentPrice > activeStop.highestPrice) {
-        // Keep stop price at current price * 0.90 (10% below current price per new requirements)
-        const newStopPrice = currentPrice * 0.90;
+        // Keep stop price at current price * (1 - trailingSellPullbackPercent) below current price
+        const newStopPrice = currentPrice * (1 - trailingSellPullbackPercent);
 
         if (newStopPrice > activeStop.stopPrice) {
           const oldStopPrice = activeStop.stopPrice;
           const oldLimitPrice = activeStop.limitPrice;
 
-          // Recalculate lot selection with new stop price
-          const maxEligiblePrice = newStopPrice * (1 - remainingLotsLossTolerance);
-          const eligibleLots = lots.filter(lot => lot.price < maxEligiblePrice);
+          // Recalculate lot selection with new stop price using profit requirement
+          const eligibleLots = lots.filter(lot => currentPrice > lot.price * (1 + profitRequirement));
 
           if (eligibleLots.length > 0) {
             const sortedEligibleLots = eligibleLots.sort((a, b) => b.price - a.price);
-            const newLotToSell = sortedEligibleLots[0]; // Select highest-priced eligible lot
+            // Select up to maxLotsToSell highest-priced eligible lots
+            const newLotsToSell = sortedEligibleLots.slice(0, Math.min(maxLotsToSell, sortedEligibleLots.length));
 
             activeStop.stopPrice = newStopPrice;
-            activeStop.limitPrice = newLotToSell.price;
-            activeStop.lotsToSell = [newLotToSell];
+            activeStop.limitPrice = newLotsToSell[0].price; // Highest price among selected lots
+            activeStop.lotsToSell = newLotsToSell; // Now supports multiple lots
             activeStop.highestPrice = currentPrice;
             activeStop.lastUpdatePrice = currentPrice;
 
-            transactionLog.push(colorize(`  ACTION: TRAILING STOP SELL UPDATED from stop ${oldStopPrice.toFixed(2)} to ${newStopPrice.toFixed(2)}, limit ${oldLimitPrice.toFixed(2)} to ${newLotToSell.price.toFixed(2)} (High: ${currentPrice.toFixed(2)})`, 'cyan'));
-            transactionLog.push(colorize(`  DEBUG: Updated eligible lots: ${eligibleLots.map(lot => `$${lot.price.toFixed(2)}`).join(', ')}, selected: $${newLotToSell.price.toFixed(2)}`, 'cyan'));
+            transactionLog.push(colorize(`  ACTION: TRAILING STOP SELL UPDATED from stop ${oldStopPrice.toFixed(2)} to ${newStopPrice.toFixed(2)}, limit ${oldLimitPrice.toFixed(2)} to ${newLotsToSell[0].price.toFixed(2)}, lots: ${newLotsToSell.map(lot => `$${lot.price.toFixed(2)}`).join(', ')} (High: ${currentPrice.toFixed(2)})`, 'cyan'));
+            transactionLog.push(colorize(`  DEBUG: Updated eligible lots: ${eligibleLots.map(lot => `$${lot.price.toFixed(2)}`).join(', ')}, selected: ${newLotsToSell.map(lot => `$${lot.price.toFixed(2)}`).join(', ')}`, 'cyan'));
           } else {
             // No eligible lots, cancel the stop
             activeStop = null;
@@ -607,12 +687,13 @@ async function runDCABacktest(params) {
       }
     };
 
-    // Cancel trailing stop if price falls below average cost (no longer profitable)
+    // Cancel trailing stop if price falls below profit requirement threshold
     const cancelTrailingStopIfUnprofitable = (currentPrice) => {
-      if (activeStop && currentPrice <= averageCost) {
+      const minProfitablePrice = averageCost * (1 + profitRequirement);
+      if (activeStop && currentPrice <= minProfitablePrice) {
         const cancelledStopPrice = activeStop.stopPrice;
         activeStop = null;
-        transactionLog.push(colorize(`  ACTION: TRAILING STOP CANCELLED - Price ${currentPrice.toFixed(2)} <= average cost ${averageCost.toFixed(2)} (stop was ${cancelledStopPrice.toFixed(2)})`, 'yellow'));
+        transactionLog.push(colorize(`  ACTION: TRAILING STOP CANCELLED - Price ${currentPrice.toFixed(2)} <= min profitable price ${minProfitablePrice.toFixed(2)} (avg cost ${averageCost.toFixed(2)}, profit requirement ${(profitRequirement*100).toFixed(1)}%, stop was ${cancelledStopPrice.toFixed(2)})`, 'yellow'));
       }
     };
 
@@ -636,14 +717,16 @@ async function runDCABacktest(params) {
       const totalPNL = realizedPNL + unrealizedPNL;
 
       // Portfolio tracking
-      const currentPortfolioValue = totalCostOfHeldLots + realizedPNL + unrealizedPNL;
+      // When no positions are held, show the available capital as baseline
+      const maxExposure = maxLots * lotSizeUsd;
+      const deployedCapital = totalCostOfHeldLots;
+      const availableCapital = maxExposure - deployedCapital;
+      const currentPortfolioValue = availableCapital + totalCostOfHeldLots + unrealizedPNL + realizedPNL;
 
       dailyPortfolioValues.push(currentPortfolioValue);
       dailyCapitalDeployed.push(totalCostOfHeldLots);
 
-      // Remaining lots loss tolerance check
-      const remainingLotsLossPercent = lots.length > 0 ? unrealizedPNL / totalCostOfHeldLots : 0;
-      const remainingLotsAtRisk = lots.length > 0 && remainingLotsLossPercent < remainingLotsUnrealizedLossTolerance;
+      // Removed remaining lots loss tolerance check as per requirements
 
       const pad = (str, len) => String(str).padEnd(len);
       let actionsOccurred = false;
@@ -675,8 +758,9 @@ async function runDCABacktest(params) {
         // Always use current price as execution price
         const executionPrice = currentPrice;
 
-        // Execute only if execution price > limit price AND execution price > average cost (to ensure profitable sell)
-        if (executionPrice > limitPrice && executionPrice > averageCost) {
+        // Execute only if execution price > limit price AND execution price > average cost * (1 + profitRequirement)
+        const minProfitablePrice = averageCost * (1 + profitRequirement);
+        if (executionPrice > limitPrice && executionPrice > minProfitablePrice) {
           let totalSaleValue = 0;
           let costOfSoldLots = 0;
 
@@ -720,37 +804,102 @@ async function runDCABacktest(params) {
             Math.pow(1 + totalReturnPercent, 365 / actualDaysHeld) - 1 : 0;
           const annualizedReturnPercent = annualizedReturn * 100;
 
-          // Record enhanced transaction
-          enhancedTransactions.push({
-            date: dayData.date,
-            type: 'SELL',
-            price: executionPrice,
-            shares: lotsToSell.reduce((sum, lot) => sum + lot.shares, 0),
-            value: totalSaleValue,
-            lotsDetails: lotsToSell.map(lot => ({ price: lot.price, shares: lot.shares })),
-            lotsAfterTransaction: [...lots],
-            averageCost: averageCost,
-            unrealizedPNL: unrealizedPNLAfterSell,
-            realizedPNL: realizedPNL,
-            totalPNL: totalPNLAfterSell,
-            realizedPNLFromTrade: pnl,
-            annualizedReturn: annualizedReturn,
-            annualizedReturnPercent: annualizedReturnPercent,
-            ocoOrderDetail: null,
-            trailingStopDetail: {
-              triggered: true,
-              stopPrice: stopPrice,
-              limitPrice: limitPrice,
-              executionPrice: executionPrice,
-              highestPriceBeforeStop: activeStop.highestPrice,
-              recentBottomReference: activeStop.recentBottomReference,
-              priceWhenOrderSet: activeStop.priceWhenOrderSet,
-              lastUpdatePrice: activeStop.lastUpdatePrice  // Actual peak price when order was last updated
-            }
+          // Record separate enhanced transactions for each lot sold
+          lotsToSell.forEach((soldLot, index) => {
+            // Calculate individual lot metrics
+            const lotSaleValue = soldLot.shares * executionPrice;
+            const lotCost = soldLot.price * soldLot.shares;
+            const lotPNL = lotSaleValue - lotCost;
+            const lotTotalReturn = lotCost > 0 ? lotPNL / lotCost : 0;
+
+            // Calculate holding period for this specific lot (from when it was bought to when it's sold)
+            const buyTransaction = enhancedTransactions.find(tx =>
+              (tx.type === 'BUY' || tx.type === 'INITIAL_BUY' || tx.type === 'TRAILING_STOP_LIMIT_BUY') &&
+              tx.price === soldLot.price &&
+              tx.date <= dayData.date
+            );
+            const actualDaysHeldForLot = buyTransaction ?
+              Math.max(1, Math.ceil((new Date(dayData.date) - new Date(buyTransaction.date)) / (1000 * 60 * 60 * 24))) :
+              actualDaysHeld;
+
+            const lotAnnualizedReturn = actualDaysHeldForLot > 0 ?
+              Math.pow(1 + lotTotalReturn, 365 / actualDaysHeldForLot) - 1 : 0;
+
+            const transactionDetails = {
+              lotPrice: soldLot.price,
+              shares: soldLot.shares,
+              pnl: lotPNL,
+              annualizedReturn: lotAnnualizedReturn * 100,
+              daysHeld: actualDaysHeldForLot
+            };
+
+            enhancedTransactions.push({
+              date: dayData.date,
+              type: 'SELL',
+              price: executionPrice,
+              shares: soldLot.shares,
+              value: lotSaleValue,
+              lotPrice: soldLot.price, // Original purchase price of this specific lot
+              lotsDetails: [{ price: soldLot.price, shares: soldLot.shares, date: buyTransaction?.date || dayData.date }], // Individual lot details
+              lotsAfterTransaction: [...lots], // Portfolio state after all lots are sold
+              averageCost: averageCost,
+              unrealizedPNL: unrealizedPNLAfterSell,
+              realizedPNL: realizedPNL,
+              totalPNL: totalPNLAfterSell,
+              realizedPNLFromTrade: lotPNL, // Individual lot P&L
+              annualizedReturn: lotAnnualizedReturn, // Individual lot annualized return
+              annualizedReturnPercent: lotAnnualizedReturn * 100,
+              actualDaysHeld: actualDaysHeldForLot, // Individual lot holding period
+              ocoOrderDetail: null,
+              trailingStopDetail: {
+                triggered: true,
+                stopPrice: stopPrice,
+                limitPrice: limitPrice,
+                executionPrice: executionPrice,
+                highestPriceBeforeStop: activeStop.highestPrice,
+                recentBottomReference: activeStop.recentBottomReference,
+                priceWhenOrderSet: activeStop.priceWhenOrderSet,
+                lastUpdatePrice: activeStop.lastUpdatePrice,
+                batchSellIndex: index, // Indicates this was part of a batch sell
+                batchSellTotal: lotsToSell.length // Total lots sold in this batch
+              }
+            });
+
+            // Track this sell transaction for questionable event detection
+            trackTransaction(dayData.date, 'SELL', executionPrice, transactionDetails);
+          });
+
+          // Log overall batch sale summary
+          transactionLog.push(
+            colorize(`  ACTION: TRAILING STOP SELL EXECUTED - ${lotsToSell.length} lots at ${executionPrice.toFixed(2)} (stop: ${stopPrice.toFixed(2)})`, 'red')
+          );
+
+          // Log individual lot sales
+          lotsToSell.forEach((soldLot, index) => {
+            const lotSaleValue = soldLot.shares * executionPrice;
+            const lotCost = soldLot.price * soldLot.shares;
+            const lotPNL = lotSaleValue - lotCost;
+            const lotTotalReturn = lotCost > 0 ? lotPNL / lotCost : 0;
+
+            const buyTransaction = enhancedTransactions.find(tx =>
+              tx.type === 'BUY' &&
+              tx.price === soldLot.price &&
+              tx.date <= dayData.date
+            );
+            const actualDaysHeldForLot = buyTransaction ?
+              Math.max(1, Math.ceil((new Date(dayData.date) - new Date(buyTransaction.date)) / (1000 * 60 * 60 * 24))) :
+              actualDaysHeld;
+
+            const lotAnnualizedReturn = actualDaysHeldForLot > 0 ?
+              Math.pow(1 + lotTotalReturn, 365 / actualDaysHeldForLot) - 1 : 0;
+
+            transactionLog.push(
+              colorize(`    Lot ${index + 1}/${lotsToSell.length}: Sold ${soldLot.shares.toFixed(4)} shares @ $${soldLot.price.toFixed(2)} -> $${executionPrice.toFixed(2)}, PNL: ${lotPNL.toFixed(2)}, Ann.Return: ${(lotAnnualizedReturn * 100).toFixed(2)}% (${actualDaysHeldForLot} days)`, 'red')
+            );
           });
 
           transactionLog.push(
-            colorize(`  ACTION: TRAILING STOP SELL EXECUTED at ${executionPrice.toFixed(2)} (stop: ${stopPrice.toFixed(2)}). PNL: ${pnl.toFixed(2)}, Ann.Return: ${annualizedReturnPercent.toFixed(2)}% (${actualDaysHeld} days). Lots: ${getLotsPrices(lots)}, New Avg Cost: ${averageCost.toFixed(2)}`, 'red')
+            colorize(`    Total PNL: ${pnl.toFixed(2)}, Remaining lots: ${getLotsPrices(lots)}, New Avg Cost: ${averageCost.toFixed(2)}`, 'red')
           );
 
           // Clear active stop and reset peak/bottom tracking after sell
@@ -788,8 +937,46 @@ async function runDCABacktest(params) {
         updateTrailingStopBuy(currentPrice);
       }
 
-      // NO REGULAR BUYING - All purchases are exclusively through trailing stop buy orders
-      // Regular grid-based buying logic has been completely removed
+      // INITIAL PURCHASE - Buy first lot on the first day to start DCA process
+      if (lots.length === 0 && i === 0) {
+        // Make initial purchase on first day
+        const shares = lotSizeUsd / currentPrice;
+        lots.push({ price: currentPrice, shares: shares, date: dayData.date });
+        averageCost = recalculateAverageCost();
+
+        // Calculate P&L values after initial buy
+        const totalSharesHeldAfterBuy = lots.reduce((sum, lot) => sum + lot.shares, 0);
+        const totalCostOfHeldLotsAfterBuy = lots.reduce((sum, lot) => sum + lot.price * lot.shares, 0);
+        const unrealizedPNLAfterBuy = (totalSharesHeldAfterBuy * currentPrice) - totalCostOfHeldLotsAfterBuy;
+        const totalPNLAfterBuy = realizedPNL + unrealizedPNLAfterBuy;
+
+        // Record enhanced transaction
+        enhancedTransactions.push({
+          date: dayData.date,
+          type: 'INITIAL_BUY',
+          price: currentPrice,
+          shares: shares,
+          value: lotSizeUsd,
+          lotsDetails: null,
+          lotsAfterTransaction: [...lots],
+          averageCost: averageCost,
+          unrealizedPNL: unrealizedPNLAfterBuy,
+          realizedPNL: realizedPNL,
+          totalPNL: totalPNLAfterBuy,
+          realizedPNLFromTrade: 0,
+          ocoOrderDetail: null,
+          trailingStopDetail: null
+        });
+
+        transactionLog.push(colorize(`  ACTION: INITIAL BUY at ${currentPrice.toFixed(2)} - First lot to start DCA strategy. Shares: ${shares.toFixed(4)}, Value: ${lotSizeUsd}`, 'green'));
+
+        // Reset peak/bottom tracking after initial buy
+        resetPeakBottomTracking(currentPrice, dayData.date);
+
+        actionsOccurred = true;
+      }
+
+      // ADDITIONAL BUYING - Only through trailing stop buy orders after initial purchase
 
       if (transactionLog.length > dayStartLogLength) {
         actionsOccurred = true;
@@ -823,7 +1010,7 @@ async function runDCABacktest(params) {
     const returnOnMaxExposure = (totalPNL / maxExposure) * 100;
 
     // Calculate metrics
-    const metrics = calculateMetrics(dailyPortfolioValues, dailyCapitalDeployed, transactionLog, pricesWithIndicators);
+    const metrics = calculateMetrics(dailyPortfolioValues, dailyCapitalDeployed, transactionLog, pricesWithIndicators, enhancedTransactions);
     const initialCapital = lotSizeUsd * maxLots;
     const buyAndHoldResults = calculateBuyAndHold(pricesWithIndicators, initialCapital);
     const dcaFinalValue = totalCostOfHeldLots + realizedPNL + unrealizedPNL;
@@ -831,7 +1018,7 @@ async function runDCABacktest(params) {
     const outperformancePercent = (outperformance / buyAndHoldResults.finalValue) * 100;
 
     // Calculate individual trade annualized returns including current holdings
-    const tradeAnalysis = calculateTradeAnnualizedReturns(enhancedTransactions, startDate, endDate, lots, finalPrice);
+    const tradeAnalysis = calculateTradeAnnualizedReturns(enhancedTransactions, startDate, endDate, lots, finalPrice, lotSizeUsd);
 
     // Print summary if verbose
     if (verbose) {
@@ -882,6 +1069,14 @@ async function runDCABacktest(params) {
       console.log(`DCA Annualized Return: ${metrics.annualizedReturnPercent.toFixed(2)}% vs B&H: ${buyAndHoldResults.annualizedReturnPercent.toFixed(2)}%`);
       console.log(`Outperformance: ${outperformance.toFixed(2)} USD (${outperformancePercent.toFixed(2)}%)`);
       console.log(`DCA Max Drawdown: ${metrics.maxDrawdownPercent.toFixed(2)}% vs B&H: ${buyAndHoldResults.maxDrawdownPercent.toFixed(2)}%`);
+
+      // Report questionable events
+      if (questionableEvents.length > 0) {
+        console.log(`\n--- Questionable Events (${questionableEvents.length}) ---`);
+        questionableEvents.forEach((event, index) => {
+          console.log(`${index + 1}. ${event.date}: ${event.description} [${event.severity}]`);
+        });
+      }
     }
 
     return {
@@ -918,7 +1113,8 @@ async function runDCABacktest(params) {
       outperformancePercent: outperformancePercent,
       transactionLog: transactionLog,
       lots: lots,
-      enhancedTransactions: enhancedTransactions
+      enhancedTransactions: enhancedTransactions,
+      questionableEvents: questionableEvents
     };
 
     console.log(`🔍 DCA Backtest Debug - Enhanced Transactions: ${enhancedTransactions.length} total`);

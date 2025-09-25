@@ -68,18 +68,18 @@ Daily processing follows this strict priority hierarchy:
 
 ### 2.3 Trailing Stop Sell System
 - **2.3.1** **Activation Conditions**:
-  - **Trigger**: Price rises 20% from recent bottom
+  - **Trigger**: Price rises by `trailingSellActivationPercent` (default 20%) from recent bottom
   - **Recent Bottom Definition**: Lowest price observed after the last buy or sell transaction
 - **2.3.2** **Stop Management**:
-  - **Initial Stop Price**: current price * 0.90 (10% below current price)
+  - **Initial Stop Price**: current price * (1 - `trailingSellPullbackPercent`) (default 10% below current price)
   - **Limit Price**: targeted lot price (highest-priced eligible lot)
-  - **Lot Selection**: Eligible lots are those with lot price < stop price × (1 - remainingLotsLossTolerance), then select highest-priced among eligible lots
-  - **Trailing Logic**: If price goes up further, stop price adjusts upward to maintain 10% below current price
+  - **Lot Selection**: Select highest-priced eligible lots that meet profit requirement
+  - **Trailing Logic**: If price goes up further, stop price adjusts upward to maintain `trailingSellPullbackPercent` below current price
   - **No Downward Adjustment**: If price goes down, stop price remains fixed
-  - **Cancellation**: Cancel when current price ≤ average cost (no longer profitable)
+  - **Cancellation**: Cancel when current price ≤ average cost * (1 + `profitRequirement`) (no longer meets profit requirement)
 - **2.3.3** **Execution Conditions**:
   - **Trigger**: current price ≤ stop price
-  - **Execute**: only if execution price > limit price AND execution price > average cost
+  - **Execute**: only if execution price > limit price AND execution price > average cost * (1 + `profitRequirement`)
   - **Execution Price**: always use current close price
 - **2.3.4** **Post-Sell Actions**:
   - Remove sold lots, recalculate average cost, clear active stop
@@ -87,24 +87,24 @@ Daily processing follows this strict priority hierarchy:
 
 ### 2.4 Trailing Stop Limit Buy System
 - **2.4.1** **Activation Conditions**:
-  - **Trigger**: Price drops 10% from recent peak
+  - **Trigger**: Price drops by `trailingBuyActivationPercent` (default 10%) from recent peak
   - **Recent Peak Definition**: Highest price observed after the last buy or sell transaction
 - **2.4.2** **Order Structure** (Trailing Stop Limit Buy):
   - **Limit Price**: Set to the original peak price (maximum buy price)
-  - **Initial Stop Price**: current price * 1.05 (5% above current price)
+  - **Initial Stop Price**: current price * (1 + `trailingBuyReboundPercent`) (default 5% above current price)
   - **Order Type**: Trailing stop limit order (NOT market order)
 - **2.4.3** **Trailing Logic**:
-  - **Downward Adjustment**: If price goes down further, stop price adjusts downward to maintain 5% above current price
+  - **Downward Adjustment**: If price goes down further, stop price adjusts downward to maintain `trailingBuyReboundPercent` above current price
   - **No Upward Adjustment**: If price goes up, stop price remains fixed
   - **Execution Trigger**: Buy when current price ≥ stop price
   - **Execution Condition**: Execute ONLY if execution price ≤ limit price (original peak)
 - **2.4.4** **Cancellation Logic**:
   - **Auto-Cancel**: Order cancelled when current price > limit price (exceeds original peak)
-  - **Re-activation**: After cancellation, new order can be created when 10% drop conditions are met again
+  - **Re-activation**: After cancellation, new order can be created when activation conditions are met again
   - **Prevents Invalid Execution**: Ensures buy price never exceeds the original peak reference
 - **2.4.5** **Execution Conditions**:
   - **Price Validation**: Execution price must be ≤ limit price (original peak)
-  - **Grid Spacing**: Must respect 10% spacing from ALL existing lots
+  - **Grid Spacing**: Must respect `gridIntervalPercent` spacing from ALL existing lots
   - **Portfolio Limits**: Must not exceed maximum lot count
   - **Limit Order**: Execute at current market price only if within limit constraints
 
@@ -117,12 +117,12 @@ Daily processing follows this strict priority hierarchy:
 - **2.5.6** **Price Protection**: Limit price prevents execution above original peak reference price
 
 ### 2.6 Risk Management
-- **2.6.1** **Remaining Lots Loss Tolerance**: Parameter `remainingLotsUnrealizedLossTolerance` (default -0.5)
-  - **2.6.1.1** **Definition**: Negative values represent loss percentages (-0.5 = 50% loss threshold)
-  - **2.6.1.2** **Calculation**: Unrealized PNL ÷ Total Cost of Held Lots
-  - **2.6.1.3** **Action**: Pause buying when loss percentage < tolerance threshold
-  - **2.6.1.4** **Example**: -0.3 allows up to 30% loss, -0.7 allows up to 70% loss
-- **2.6.2** **Remaining Lots Protection**: Ensure remaining lots after stop execution don't exceed stop-loss tolerance
+- **2.6.1** **Profit Requirement**: Parameter `profitRequirement` (default 0.05 = 5% profit requirement)
+  - **2.6.1.1** **Definition**: Positive values represent minimum profit percentages required for selling
+  - **2.6.1.2** **Calculation**: Execution must exceed average cost * (1 + profitRequirement)
+  - **2.6.1.3** **Action**: Only execute sells when profit requirement is met
+  - **2.6.1.4** **Example**: 0.05 requires 5% profit, 0.1 requires 10% profit
+- **2.6.2** **Grid Spacing Protection**: Ensure adequate spacing between lot purchase prices
 - **2.6.3** **Stop Validation**: Multiple checks to prevent invalid stop prices
 
 ### 2.7 Performance Metrics
@@ -160,6 +160,29 @@ Daily processing follows this strict priority hierarchy:
 - **2.9.2** Command-line interface via `backtest_dca_optimized.js`
 - **2.9.3** Results consistency between UI and CLI
 - **2.9.4** Automatic stock data creation and fetching for new symbols
+
+### 2.10 Questionable Events Detection System
+- **2.10.1** **Purpose**: Monitor and flag potentially problematic trading scenarios during backtesting
+- **2.10.2** **Same-Day Sell/Buy Detection**:
+  - **Detection Logic**: Flag when both trailing stop sell and trailing stop buy orders execute on the same trading day
+  - **Rationale**: Same-day execution of both order types may indicate:
+    - Algorithm instability or oscillation
+    - Inappropriate parameter settings
+    - Market volatility exceeding strategy assumptions
+    - Potential loss of intended strategy behavior
+- **2.10.3** **Event Data Structure**:
+  - **Date**: Trading date when event occurred
+  - **Event Type**: Category of questionable behavior (e.g., "SAME_DAY_SELL_BUY")
+  - **Description**: Human-readable explanation of the detected issue
+  - **Severity**: Risk level classification ("WARNING", "ERROR")
+- **2.10.4** **Implementation**:
+  - **Backend**: Events tracked in `questionableEvents` array and logged during backtest execution
+  - **Frontend**: Dedicated "Questionable Events" section displayed before transaction history
+  - **Console Output**: Events listed in backtest summary when verbose logging enabled
+- **2.10.5** **User Benefits**:
+  - **Strategy Validation**: Identify when trading logic may be working incorrectly
+  - **Parameter Tuning**: Discover parameter combinations that lead to unstable behavior
+  - **Risk Assessment**: Understand potential issues with strategy implementation
 
 ---
 
@@ -271,10 +294,14 @@ Daily processing follows this strict priority hierarchy:
   "startDate": "2021-11-01",
   "endDate": "2023-11-01",
   "lotSizeUsd": 10000,
-  "maxLots": 5,
+  "maxLots": 10,
+  "maxLotsToSell": 1,
   "gridIntervalPercent": 0.10,
-  "remainingLotsLossTolerance": 0.05,
-  "remainingLotsUnrealizedLossTolerance": -0.5
+  "profitRequirement": 0.05,
+  "trailingBuyActivationPercent": 0.10,
+  "trailingBuyReboundPercent": 0.05,
+  "trailingSellActivationPercent": 0.20,
+  "trailingSellPullbackPercent": 0.10
 }
 ```
 
@@ -343,7 +370,124 @@ Daily processing follows this strict priority hierarchy:
 
 ### 7.2 Additional Features
 - **7.2.1** Multiple strategy comparison
-- **7.2.2** Parameter optimization tools
+- **7.2.2** ✅ **IMPLEMENTED**: Parameter optimization tools (Batch Testing Engine)
 - **7.2.3** Real-time trading integration
 - **7.2.4** Portfolio management for multiple symbols
 - **7.2.5** Advanced charting with drawing tools
+
+---
+
+## 8. BATCH OPTIMIZATION ENGINE (IMPLEMENTED)
+
+### 8.1 Overview
+The Batch Optimization Engine allows users to run multiple DCA backtests with different parameter combinations to identify optimal settings for maximum returns.
+
+### 8.2 Core Features
+
+#### 8.2.1 Parameter Optimization
+- **Multi-Stock Testing**: Test across 16 predefined stocks (TSLA, NVDA, AAPL, MSFT, AMZN, PLTR, U, META, SHOP, TDOC, JD, BABA, LMND, NIO, KNDI, API)
+- **Parameter Ranges**:
+  - `profitRequirement`: 0-50% in 5% intervals (default: 5%)
+  - `gridIntervalPercent`: 5-20% in 5% intervals (default: 10%)
+  - `trailingBuyActivationPercent`: 5-20% in 5% intervals (default: 10%)
+  - `trailingBuyReboundPercent`: 0-10% in 5% intervals (default: 5%)
+  - `trailingSellActivationPercent`: 10-50% in 10% intervals (default: 20%)
+  - `trailingSellPullbackPercent`: 0-10% in 5% intervals (default: 10%)
+
+#### 8.2.2 Fixed Parameters
+- `lotSizeUsd`: $10,000
+- `maxLots`: 10
+- `startDate`: 2021-09-01
+- `endDate`: 2025-09-01
+
+### 8.3 User Interface Components
+
+#### 8.3.1 Mode Selection
+- **Single Backtest Mode**: Test one specific parameter combination
+- **Batch Optimization Mode**: Test multiple parameter combinations
+
+#### 8.3.2 Parameter Configuration
+- **Single Mode**: Individual input fields for each parameter
+- **Batch Mode**: Checkbox grids for selecting parameter ranges
+- **Symbol Selection**: Multi-select checkboxes for stock symbols
+- **Combination Counter**: Real-time display of total combinations
+
+#### 8.3.3 Results Display
+Three main tabs:
+1. **Parameters**: Input configuration
+2. **Chart & Analysis**: Single backtest visualization (single mode only)
+3. **Batch Results**: Comprehensive optimization results (batch mode only)
+
+### 8.4 Batch Results Report
+
+#### 8.4.1 Executive Summary
+- **Overall Statistics**: Average returns, win rates across all tests
+- **Execution Metrics**: Success/failure rates, processing time
+- **Best Overall Performance**: Top-performing parameter combination
+
+#### 8.4.2 Best Parameters by Stock
+For each tested stock:
+- **Best for Total Return**: Parameters yielding highest total return
+- **Best for Annualized Return**: Parameters yielding highest annualized return
+- **Performance Comparison**: Side-by-side comparison of both approaches
+
+#### 8.4.3 Detailed Results Table
+Sortable table showing all results with:
+- **Performance Metrics**:
+  - Total Return (calculated as: (Final Value - Initial Investment) / Initial Investment)
+  - Annualized Return (calculated as: (1 + Total Return)^(365/Days) - 1)
+  - Total number of buy and sell trades
+  - Win Rate (profitable trades / total trades)
+  - Average profit per trade
+  - Maximum drawdown (peak-to-trough decline)
+  - Capital utilization rate (average deployed / total available)
+
+- **Parameter Details**: All tested parameter combinations
+- **Stock Filtering**: Filter results by specific stocks
+- **Top Results Highlighting**: Visual emphasis on best-performing combinations
+
+#### 8.4.4 Metrics Explanation
+Comprehensive documentation of how each metric is calculated:
+- **Total Return**: (Final Portfolio Value - Initial Investment) / Initial Investment
+- **Annualized Return**: (1 + Total Return)^(365 / Days in Period) - 1
+- **Win Rate**: Number of profitable trades / Total number of trades
+- **Capital Utilization**: Average capital deployed / Total available capital
+- **Maximum Drawdown**: Largest peak-to-trough decline in portfolio value
+
+### 8.5 Technical Implementation
+
+#### 8.5.1 Backend Services
+- **`batchBacktestService.js`**: Core batch processing engine
+- **Parameter Generation**: Automatic combination generation
+- **Progress Tracking**: Real-time progress monitoring
+- **Error Handling**: Individual test failure isolation
+- **Performance Metrics**: Comprehensive calculation suite
+
+#### 8.5.2 API Endpoints
+- **`POST /api/backtest/batch`**: Execute batch optimization
+- **Request Format**: Parameter ranges and options
+- **Response Format**: Complete results with summary statistics
+
+#### 8.5.3 Frontend Components
+- **`DCABacktestForm.js`**: Enhanced form with batch mode support
+- **`BatchResults.js`**: Comprehensive results visualization
+- **`App.js`**: Mode management and routing
+- **CSS Styling**: Complete UI styling for batch features
+
+### 8.6 Performance Characteristics
+- **Parallel Processing**: Multiple backtests run concurrently
+- **Memory Efficient**: Optimized for large parameter spaces
+- **Progress Reporting**: Real-time status updates
+- **Error Resilience**: Continue processing despite individual failures
+- **Result Caching**: Efficient data handling for large result sets
+
+### 8.7 Usage Workflow
+1. **Select Batch Mode**: Choose "Batch Optimization" in mode selection
+2. **Configure Stocks**: Select one or more stocks to test
+3. **Set Parameter Ranges**: Choose parameter values using checkboxes
+4. **Review Combinations**: Check total combination count
+5. **Execute Batch**: Start optimization process
+6. **Analyze Results**: Review comprehensive report
+7. **Identify Optimal Parameters**: Use best parameters for single backtests
+
+This implementation provides users with powerful optimization capabilities to find the best DCA strategy parameters for their specific needs and market conditions.

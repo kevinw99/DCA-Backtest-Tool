@@ -444,9 +444,14 @@ app.post('/api/backtest/dca', async (req, res) => {
       endDate,
       lotSizeUsd,
       maxLots,
+      maxLotsToSell,
       gridIntervalPercent,
       remainingLotsLossTolerance,
-      remainingLotsUnrealizedLossTolerance
+      profitRequirement,
+      trailingBuyActivationPercent,
+      trailingBuyReboundPercent,
+      trailingSellActivationPercent,
+      trailingSellPullbackPercent
     } = params;
 
     // Save updated parameters to config (for consistency between CLI and UI)
@@ -460,6 +465,58 @@ app.post('/api/backtest/dca', async (req, res) => {
         error: 'Missing required parameters',
         message: 'Symbol, startDate, and endDate are required for backtesting',
         received: { symbol, startDate, endDate }
+      });
+    }
+
+    // Validate strategy parameters to prevent 0 trades scenario
+    const paramValidationErrors = [];
+
+    if (trailingBuyReboundPercent <= 0) {
+      paramValidationErrors.push(`trailingBuyReboundPercent must be greater than 0 (received: ${trailingBuyReboundPercent}). A value of 0 prevents trailing stop buy orders from executing.`);
+    }
+
+    if (trailingSellPullbackPercent <= 0) {
+      paramValidationErrors.push(`trailingSellPullbackPercent must be greater than 0 (received: ${trailingSellPullbackPercent}). A value of 0 prevents trailing stop sell orders from executing.`);
+    }
+
+    if (profitRequirement <= 0) {
+      paramValidationErrors.push(`profitRequirement must be greater than 0 (received: ${profitRequirement}). A value of 0 or less prevents profitable sales.`);
+    }
+
+    if (trailingBuyActivationPercent <= 0) {
+      paramValidationErrors.push(`trailingBuyActivationPercent must be greater than 0 (received: ${trailingBuyActivationPercent}). A value of 0 prevents trailing stop buy activation.`);
+    }
+
+    if (trailingSellActivationPercent <= 0) {
+      paramValidationErrors.push(`trailingSellActivationPercent must be greater than 0 (received: ${trailingSellActivationPercent}). A value of 0 prevents trailing stop sell activation.`);
+    }
+
+    if (gridIntervalPercent <= 0) {
+      paramValidationErrors.push(`gridIntervalPercent must be greater than 0 (received: ${gridIntervalPercent}). A value of 0 prevents grid spacing validation.`);
+    }
+
+    // Check for unreasonably large values that could cause issues
+    if (trailingBuyReboundPercent >= 1) {
+      paramValidationErrors.push(`trailingBuyReboundPercent should be less than 100% (received: ${trailingBuyReboundPercent * 100}%). Values >= 100% may cause unexpected behavior.`);
+    }
+
+    if (trailingSellPullbackPercent >= 1) {
+      paramValidationErrors.push(`trailingSellPullbackPercent should be less than 100% (received: ${trailingSellPullbackPercent * 100}%). Values >= 100% may cause unexpected behavior.`);
+    }
+
+    if (paramValidationErrors.length > 0) {
+      return res.status(400).json({
+        error: 'Invalid strategy parameters',
+        message: 'The provided parameters would likely result in 0 trades. Please adjust the parameters.',
+        validationErrors: paramValidationErrors,
+        receivedParameters: {
+          trailingBuyReboundPercent,
+          trailingSellPullbackPercent,
+          profitRequirement,
+          trailingBuyActivationPercent,
+          trailingSellActivationPercent,
+          gridIntervalPercent
+        }
       });
     }
 
@@ -547,9 +604,14 @@ app.post('/api/backtest/dca', async (req, res) => {
       endDate,
       lotSizeUsd,
       maxLots,
+      maxLotsToSell,
       gridIntervalPercent, // Already in decimal format from config
       remainingLotsLossTolerance, // Already in decimal format from config
-      remainingLotsUnrealizedLossTolerance, // Include this parameter
+      profitRequirement,
+      trailingBuyActivationPercent,
+      trailingBuyReboundPercent,
+      trailingSellActivationPercent,
+      trailingSellPullbackPercent,
       verbose: false // Don't log to console for API calls
     });
 
@@ -631,6 +693,54 @@ app.post('/api/backtest/dca', async (req, res) => {
   } catch (error) {
     console.error('DCA backtest error:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Batch Backtest API endpoint - Run multiple backtests with different parameters
+app.post('/api/backtest/batch', async (req, res) => {
+  try {
+    console.log('📊 Received batch backtest request');
+
+    const { runBatchBacktest } = require('./services/batchBacktestService');
+
+    const options = req.body;
+
+    // Validate required fields
+    if (!options.parameterRanges) {
+      return res.status(400).json({
+        success: false,
+        error: 'parameterRanges is required'
+      });
+    }
+
+    // Set up progress tracking for long-running batch tests
+    let progressData = null;
+    const progressCallback = (progress) => {
+      progressData = progress;
+      // Could implement WebSocket or Server-Sent Events here for real-time updates
+    };
+
+    console.log('🚀 Starting batch backtest with options:', options);
+
+    const startTime = Date.now();
+    const results = await runBatchBacktest(options, progressCallback);
+    const executionTime = Date.now() - startTime;
+
+    console.log(`✅ Batch backtest completed in ${(executionTime / 1000).toFixed(1)}s`);
+    console.log(`📈 Best result: ${results.summary?.overallBest?.summary?.annualizedReturn.toFixed(2)}% annualized return`);
+
+    res.json({
+      success: true,
+      executionTimeMs: executionTime,
+      data: results
+    });
+
+  } catch (error) {
+    console.error('Batch backtest error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 });
 

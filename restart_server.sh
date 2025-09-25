@@ -1,25 +1,41 @@
 #!/bin/bash
 
-echo "🔄 Restarting backend server on port 3001..."
+# Get the script directory
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-# Kill any existing Node.js processes running on port 3001
+echo "🔄 Restarting both backend and frontend servers..."
+
+# Kill any existing processes
 echo "📴 Stopping existing server processes..."
-lsof -ti:3001 | xargs kill -9 2>/dev/null || true
+lsof -ti:3001 | xargs kill -9 2>/dev/null || true  # Backend port
+lsof -ti:3000 | xargs kill -9 2>/dev/null || true  # Frontend port
 pkill -f "node server.js" 2>/dev/null || true
+pkill -f "react-scripts start" 2>/dev/null || true
 
 # Wait a moment for processes to terminate
-sleep 1
+sleep 2
 
 # Start the backend server
-echo "🚀 Starting backend server..."
-cd backend && npm start &
+echo "🚀 Starting backend server on port 3001..."
+cd "$SCRIPT_DIR/backend" && npm start &
+BACKEND_PID=$!
 
-# Get the process ID
-SERVER_PID=$!
+# Wait for backend to start
+sleep 3
 
-echo "✅ Backend server started with PID: $SERVER_PID"
-echo "🌐 Server running at: http://localhost:3001"
+# Start the frontend server
+echo "🚀 Starting frontend server on port 3000..."
+cd "$SCRIPT_DIR/frontend" && npm start &
+FRONTEND_PID=$!
+
+echo "✅ Backend server started with PID: $BACKEND_PID"
+echo "✅ Frontend server started with PID: $FRONTEND_PID"
+echo ""
+echo "🌐 Backend API: http://localhost:3001"
+echo "🌐 Frontend UI: http://localhost:3000"
 echo "📊 Health check: http://localhost:3001/api/health"
 echo ""
-echo "To stop the server, run: kill $SERVER_PID"
-echo "Or use: pkill -f 'node server.js'"
+echo "To stop servers, run:"
+echo "  Backend: kill $BACKEND_PID"
+echo "  Frontend: kill $FRONTEND_PID"
+echo "Or use: pkill -f 'node server.js' && pkill -f 'react-scripts'"
