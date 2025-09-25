@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import DCABacktestForm from './components/DCABacktestForm';
-import BacktestChart from './components/BacktestChart';
 import BacktestResults from './components/BacktestResults';
 import { Play, TrendingUp, Settings } from 'lucide-react';
 
@@ -108,14 +107,6 @@ function App() {
           <TrendingUp size={18} />
           Chart & Analysis
         </button>
-        <button
-          className={`tab-button ${activeTab === 'results' ? 'active' : ''}`}
-          onClick={() => setActiveTab('results')}
-          disabled={!backtestData}
-        >
-          <Play size={18} />
-          Results
-        </button>
       </nav>
 
       <main className="app-main">
@@ -138,17 +129,12 @@ function App() {
           </div>
         )}
 
-        {activeTab === 'chart' && chartData && (
+        {activeTab === 'chart' && chartData && backtestData && (
           <div className="tab-content">
-            <BacktestChart data={chartData} />
+            <BacktestResults data={backtestData} chartData={chartData} />
           </div>
         )}
 
-        {activeTab === 'results' && backtestData && (
-          <div className="tab-content">
-            <BacktestResults data={backtestData} />
-          </div>
-        )}
       </main>
     </div>
   );

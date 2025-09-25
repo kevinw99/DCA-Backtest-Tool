@@ -32,11 +32,20 @@ A complete Dollar Cost Averaging (DCA) trading platform with three main componen
 - **1.3.4** Bear market regime detection
 - **1.3.5** Calculate on-demand vs pre-calculated storage
 
-### 1.4 API Endpoints
-- **1.4.1** `GET /api/stocks/:symbol` - Get stock data with metrics
-- **1.4.2** `GET /api/stocks` - List available stocks with autocomplete
-- **1.4.3** `GET /api/metrics` - Available chart metrics
-- **1.4.4** `DELETE /api/clear-all-data` - Development endpoint
+### 1.4 Data Validation and Auto-Population
+- **1.4.1** **Automatic Stock Data Fetching**: When requesting data for a new symbol, automatically fetch from data provider
+- **1.4.2** **5-Year Data Range Validation**: Enforce 5-year historical data limit for all requests
+- **1.4.3** **Out-of-Range Request Handling**: Provide clear error messages for dates outside available range
+- **1.4.4** **Minimum Data Requirements**: Validate sufficient data (30+ days) for reliable backtesting
+- **1.4.5** **Data Availability Checks**: Verify data exists before processing requests
+- **1.4.6** **Graceful Error Handling**: Provide detailed error messages with suggestions for resolution
+
+### 1.5 API Endpoints
+- **1.5.1** `GET /api/stocks/:symbol` - Get stock data with metrics and automatic data population
+- **1.5.2** `GET /api/stocks` - List available stocks with autocomplete
+- **1.5.3** `GET /api/metrics` - Available chart metrics
+- **1.5.4** `DELETE /api/clear-all-data` - Development endpoint
+- **1.5.5** `POST /api/backtest/dca` - Run DCA backtest with comprehensive validation
 
 ---
 
@@ -47,53 +56,110 @@ A complete Dollar Cost Averaging (DCA) trading platform with three main componen
 - **2.1.2** Each lot = $10,000 USD (configurable)
 - **2.1.3** Grid-based buying with 10% price separation minimum
 
-### 2.2 Buying Rules
-- **2.2.1** **Initial Purchase**: Buy first lot immediately when starting
-- **2.2.2** **Grid-Based Buying**: Buy additional lots only when current price is 10%+ away from ALL existing lot prices
-- **2.2.3** **Post-Stop Recovery**: After stop-limit execution, allow buying when price recovers above the trigger price that caused the stop
-- **2.2.4** **Technical Filters**:
-  - **2.2.4.1** MA20 filter: Only buy when above 20-day moving average
-  - **2.2.4.2** Bear market regime filter: Pause buying in extended downtrends
+### 2.2 Daily Execution Priority Order
+Daily processing follows this strict priority hierarchy:
+- **2.2.1** **HIGHEST PRIORITY: Trailing Stop Sales** - Execute trailing stop sell orders first
+- **2.2.2** **SECOND PRIORITY: Trailing Stop Limit Buy Management** - Process trailing stop limit buy orders in this sequence:
+  - **2.2.2.1** **Cancellation Check**: Cancel orders where current price > limit price (exceeds original peak)
+  - **2.2.2.2** **Execution Check**: Execute orders where current price ≥ stop price AND ≤ limit price
+  - **2.2.2.3** **Activation Check**: Create new orders when price drops 10% from recent peak (if no active order)
+  - **2.2.2.4** **Update Check**: Adjust stop price downward when active order exists and price continues falling
+- **2.2.3** **NO REGULAR BUYING** - All purchases are exclusively through trailing stop limit buy orders
 
-### 2.3 Stop-Limit Mechanism
-- **2.3.1** **Activation**: Set stop when price > average cost AND no active stop exists
-- **2.3.2** **Batch Selection**: Always sell the 2 highest-priced lots
-- **2.3.3** **Limit Price**: Set at 95% of the batch's weighted average cost
-- **2.3.4** **Stop Price**: Max(limit price, current price - 10% of initial price)
-- **2.3.5** **Stop Validation**: Stop must be > 95% of limit price, < current price, and ≤ 95% of current price
-- **2.3.6** **Remaining Lots Compliance**: Must have ≤5% loss tolerance
+### 2.3 Trailing Stop Sell System
+- **2.3.1** **Activation Conditions**:
+  - **Trigger**: Price rises 20% from recent bottom
+  - **Recent Bottom Definition**: Lowest price observed after the last buy or sell transaction
+- **2.3.2** **Stop Management**:
+  - **Initial Stop Price**: current price * 0.90 (10% below current price)
+  - **Limit Price**: targeted lot price (highest-priced eligible lot)
+  - **Lot Selection**: Eligible lots are those with lot price < stop price × (1 - remainingLotsLossTolerance), then select highest-priced among eligible lots
+  - **Trailing Logic**: If price goes up further, stop price adjusts upward to maintain 10% below current price
+  - **No Downward Adjustment**: If price goes down, stop price remains fixed
+  - **Cancellation**: Cancel when current price ≤ average cost (no longer profitable)
+- **2.3.3** **Execution Conditions**:
+  - **Trigger**: current price ≤ stop price
+  - **Execute**: only if execution price > limit price AND execution price > average cost
+  - **Execution Price**: always use current close price
+- **2.3.4** **Post-Sell Actions**:
+  - Remove sold lots, recalculate average cost, clear active stop
+  - Reset trailing buy system state
 
-### 2.4 Execution Rules
-- **2.4.1** Daily price evaluation and action execution
-- **2.4.2** **Trigger**: Execute when current price ≤ stop price
-- **2.4.3** **Condition**: Only execute if execution price > limit price
-- **2.4.4** **Post-Execution**: Remove sold lots, recalculate average cost, clear active stop
-- **2.4.5** Transaction logging with detailed P&L tracking
+### 2.4 Trailing Stop Limit Buy System
+- **2.4.1** **Activation Conditions**:
+  - **Trigger**: Price drops 10% from recent peak
+  - **Recent Peak Definition**: Highest price observed after the last buy or sell transaction
+- **2.4.2** **Order Structure** (Trailing Stop Limit Buy):
+  - **Limit Price**: Set to the original peak price (maximum buy price)
+  - **Initial Stop Price**: current price * 1.05 (5% above current price)
+  - **Order Type**: Trailing stop limit order (NOT market order)
+- **2.4.3** **Trailing Logic**:
+  - **Downward Adjustment**: If price goes down further, stop price adjusts downward to maintain 5% above current price
+  - **No Upward Adjustment**: If price goes up, stop price remains fixed
+  - **Execution Trigger**: Buy when current price ≥ stop price
+  - **Execution Condition**: Execute ONLY if execution price ≤ limit price (original peak)
+- **2.4.4** **Cancellation Logic**:
+  - **Auto-Cancel**: Order cancelled when current price > limit price (exceeds original peak)
+  - **Re-activation**: After cancellation, new order can be created when 10% drop conditions are met again
+  - **Prevents Invalid Execution**: Ensures buy price never exceeds the original peak reference
+- **2.4.5** **Execution Conditions**:
+  - **Price Validation**: Execution price must be ≤ limit price (original peak)
+  - **Grid Spacing**: Must respect 10% spacing from ALL existing lots
+  - **Portfolio Limits**: Must not exceed maximum lot count
+  - **Limit Order**: Execute at current market price only if within limit constraints
 
-### 2.5 Risk Management
-- **2.5.1** **Remaining Lots Protection**: Ensure remaining lots after stop execution don't exceed 5% loss
-- **2.5.2** **Stop Validation**: Multiple checks to prevent invalid stop prices
-- **2.5.3** **Recovery Logic**: Smart re-entry based on market recovery above stop trigger levels
+### 2.5 Buying Rules Summary
+- **2.5.1** **EXCLUSIVE TRAILING STOP LIMIT BUYING**: All purchases are made exclusively through trailing stop limit buy orders
+- **2.5.2** **NO REGULAR GRID BUYING**: Traditional grid-based buying is completely removed
+- **2.5.3** **NO INITIAL PURCHASE**: No automatic first lot - must wait for trailing stop limit buy trigger
+- **2.5.4** **Portfolio Limits**: Maximum 5 lots per symbol, $10,000 per lot (configurable)
+- **2.5.5** **Grid Spacing**: Trailing stop limit buys must still respect 10% spacing from existing lots
+- **2.5.6** **Price Protection**: Limit price prevents execution above original peak reference price
 
-### 2.6 Performance Metrics
-- **2.6.1** **Standard Metrics**:
-  - **2.6.1.1** Total Return (absolute USD and percentage)
-  - **2.6.1.2** Maximum Drawdown (absolute USD and percentage)
-  - **2.6.1.3** Sharpe Ratio (risk-adjusted return)
-  - **2.6.1.4** Win Rate (percentage of profitable trades)
-  - **2.6.1.5** Volatility (annualized standard deviation)
-  - **2.6.1.6** Total number of trades executed
+### 2.6 Risk Management
+- **2.6.1** **Remaining Lots Loss Tolerance**: Parameter `remainingLotsUnrealizedLossTolerance` (default -0.5)
+  - **2.6.1.1** **Definition**: Negative values represent loss percentages (-0.5 = 50% loss threshold)
+  - **2.6.1.2** **Calculation**: Unrealized PNL ÷ Total Cost of Held Lots
+  - **2.6.1.3** **Action**: Pause buying when loss percentage < tolerance threshold
+  - **2.6.1.4** **Example**: -0.3 allows up to 30% loss, -0.7 allows up to 70% loss
+- **2.6.2** **Remaining Lots Protection**: Ensure remaining lots after stop execution don't exceed stop-loss tolerance
+- **2.6.3** **Stop Validation**: Multiple checks to prevent invalid stop prices
 
-- **2.6.2** **DCA-Specific Metrics**:
-  - **2.6.2.1** Combined Weighted Return on Capital Deployed
-  - **2.6.2.2** Average Capital Deployed (daily average of invested capital)
-  - **2.6.2.3** Maximum Capital Deployed (peak investment amount)
-  - **2.6.2.4** Buy-and-Hold comparison baseline
+### 2.7 Performance Metrics
+- **2.7.1** **Standard Metrics**:
+  - **2.7.1.1** Total Return (absolute USD and percentage)
+  - **2.7.1.2** Annualized Return (portfolio-level): (1 + total return) ^ (365 / total days) - 1
+  - **2.7.1.3** Maximum Drawdown (absolute USD and percentage)
+  - **2.7.1.4** Sharpe Ratio (risk-adjusted return)
+  - **2.7.1.5** Win Rate (percentage of profitable trades)
+  - **2.7.1.6** Volatility (annualized standard deviation)
+  - **2.7.1.7** Total number of trades executed
 
-### 2.7 API Integration
-- **2.7.1** `POST /api/backtest/dca` - Run backtest with parameters
-- **2.7.2** Command-line interface via `backtest_dca_optimized.js`
-- **2.7.3** Results consistency between UI and CLI
+- **2.7.2** **DCA-Specific Metrics**:
+  - **2.7.2.1** Combined Weighted Return on Capital Deployed
+  - **2.7.2.2** Average Capital Deployed (daily average of invested capital)
+  - **2.7.2.3** Maximum Capital Deployed (peak investment amount)
+  - **2.7.2.4** Buy-and-Hold comparison baseline with annualized return
+
+- **2.7.3** **Trade-Level Annualized Return Analysis**:
+  - **2.7.3.1** Individual trade annualized return: (1 + trade return) ^ (365 / backtest days) - 1
+  - **2.7.3.2** Average annualized return across all trades
+  - **2.7.3.3** Trade-by-trade return analysis with buy/sell dates and prices
+  - **2.7.3.4** Comparison of average trade annualized return vs buy-and-hold annualized return
+
+### 2.8 Data Validation and Error Handling
+- **2.8.1** **Backtest Parameter Validation**: Comprehensive validation of all input parameters
+- **2.8.2** **Date Range Validation**: Enforce 5-year data limit and logical date ordering
+- **2.8.3** **Data Availability Checks**: Verify sufficient data exists for requested backtest period
+- **2.8.4** **Minimum Data Requirements**: Require minimum 30 trading days for reliable backtesting
+- **2.8.5** **Auto-Population for New Symbols**: Automatically fetch data when backtesting new symbols
+- **2.8.6** **Error Response Standards**: Structured error responses with actionable suggestions
+
+### 2.9 API Integration
+- **2.9.1** `POST /api/backtest/dca` - Run backtest with comprehensive validation and auto-population
+- **2.9.2** Command-line interface via `backtest_dca_optimized.js`
+- **2.9.3** Results consistency between UI and CLI
+- **2.9.4** Automatic stock data creation and fetching for new symbols
 
 ---
 
@@ -106,7 +172,8 @@ A complete Dollar Cost Averaging (DCA) trading platform with three main componen
   - **3.1.1.3** Lot size ($10,000 default)
   - **3.1.1.4** Maximum lots (5 default)
   - **3.1.1.5** Grid interval percentage (10% default)
-  - **3.1.1.6** Remaining lots loss tolerance (5% default)
+  - **3.1.1.6** Remaining lots loss tolerance (5% default) - for stop-loss mechanism
+  - **3.1.1.7** Remaining lots unrealized loss tolerance (50% default) - for buying pause
 
 ### 3.2 Chart Visualization
 - **3.2.1** **Primary Chart**: Stock price with buy/sell markers
@@ -206,7 +273,8 @@ A complete Dollar Cost Averaging (DCA) trading platform with three main componen
   "lotSizeUsd": 10000,
   "maxLots": 5,
   "gridIntervalPercent": 0.10,
-  "remainingLotsLossTolerance": 0.05
+  "remainingLotsLossTolerance": 0.05,
+  "remainingLotsUnrealizedLossTolerance": -0.5
 }
 ```
 
@@ -243,13 +311,26 @@ A complete Dollar Cost Averaging (DCA) trading platform with three main componen
 - **6.2.3** Stop-limit execution logic
 - **6.2.4** Technical indicator correctness
 
-### 6.3 Error Handling
-- **6.3.1** API failure graceful degradation
-- **6.3.2** Database connection error recovery
-- **6.3.3** Invalid parameter validation
-- **6.3.4** Data availability checks
+### 6.3 Error Handling and Data Validation
+- **6.3.1** **API Failure Graceful Degradation**: Continue with cached data when provider fails
+- **6.3.2** **Database Connection Error Recovery**: Automatic reconnection and error reporting
+- **6.3.3** **Comprehensive Parameter Validation**: Validate all input parameters with detailed error messages
+- **6.3.4** **Data Availability Checks**: Pre-validate data existence before processing
+- **6.3.5** **Date Range Validation**: Enforce 5-year limit and logical date constraints
+- **6.3.6** **Symbol Validation**: Verify symbol exists and can be fetched from data providers
+- **6.3.7** **Minimum Data Requirements**: Ensure sufficient data for reliable analysis
+- **6.3.8** **Structured Error Responses**: Consistent error format with actionable suggestions
+- **6.3.9** **Auto-Recovery Mechanisms**: Automatically fetch missing data when possible
 
 ---
+
+### 6.4 Data Management Improvements
+- **6.4.1** **Automatic Stock Discovery**: Auto-populate database when new symbols are requested
+- **6.4.2** **Intelligent Data Fetching**: Only fetch missing data segments to optimize API usage
+- **6.4.3** **Data Quality Monitoring**: Track and report data completeness and quality metrics
+- **6.4.4** **Provider Failover**: Automatically switch providers when primary source fails
+- **6.4.5** **Cache Management**: Intelligent caching with expiration and refresh strategies
+- **6.4.6** **Data Range Optimization**: Provide optimal date range suggestions based on available data
 
 ## 7. FUTURE ENHANCEMENTS
 

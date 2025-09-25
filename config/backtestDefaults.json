@@ -1,0 +1,11 @@
+{
+  "symbol": "TSLA",
+  "startDate": "2021-09-01",
+  "endDate": "2025-09-01",
+  "lotSizeUsd": 10000,
+  "maxLots": 20,
+  "maxLotsToSell": 1,
+  "gridIntervalPercent": 0.1,
+  "remainingLotsLossTolerance": 0,
+  "remainingLotsUnrealizedLossTolerance": -0.5
+}

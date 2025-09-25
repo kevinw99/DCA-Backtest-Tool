@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Play, DollarSign, TrendingUp, Settings, Info } from 'lucide-react';
 
 const DCABacktestForm = ({ onSubmit, loading }) => {
@@ -11,10 +11,45 @@ const DCABacktestForm = ({ onSubmit, loading }) => {
     gridIntervalPercent: 10,
     remainingLotsLossTolerance: 0
   });
+  const [loadingDefaults, setLoadingDefaults] = useState(true);
+
+  // Load default parameters from backend on component mount
+  useEffect(() => {
+    const loadDefaults = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/backtest/defaults');
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            // Convert gridIntervalPercent from decimal to percentage for UI
+            const uiParams = {
+              ...result.data,
+              gridIntervalPercent: result.data.gridIntervalPercent * 100
+            };
+            setParameters(uiParams);
+            console.log('✅ Loaded default parameters from backend:', uiParams);
+          }
+        } else {
+          console.warn('Failed to load defaults from backend, using hardcoded defaults');
+        }
+      } catch (error) {
+        console.warn('Error loading defaults from backend:', error);
+      } finally {
+        setLoadingDefaults(false);
+      }
+    };
+
+    loadDefaults();
+  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(parameters);
+    // Convert gridIntervalPercent from percentage back to decimal for backend
+    const backendParams = {
+      ...parameters,
+      gridIntervalPercent: parameters.gridIntervalPercent / 100
+    };
+    onSubmit(backendParams);
   };
 
   const handleChange = (field, value) => {
@@ -23,6 +58,15 @@ const DCABacktestForm = ({ onSubmit, loading }) => {
       [field]: value
     }));
   };
+
+  if (loadingDefaults) {
+    return (
+      <div className="loading-banner">
+        <div className="loading-spinner"></div>
+        Loading default parameters...
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit}>

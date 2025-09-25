@@ -17,8 +17,9 @@ import {
   AreaChart
 } from 'recharts';
 import { TrendingUp, Eye, EyeOff, ZoomIn, ZoomOut, RotateCcw, Calendar } from 'lucide-react';
+import BacktestResults from './BacktestResults';
 
-const BacktestChart = ({ data }) => {
+const BacktestChart = ({ data, backtestResults }) => {
   const [visibleIndicators, setVisibleIndicators] = useState({
     ma20: true,
     ma50: true,
@@ -67,10 +68,21 @@ const BacktestChart = ({ data }) => {
     const sourceData = chartView === 'full' ? fullData?.dailyPrices : data?.dailyPrices;
     if (!sourceData) return [];
 
-    const { actualStartDate, transactions = [] } = data || {};
+    const { actualStartDate, enhancedTransactions = [], transactions = [] } = data || {};
+
+    // Use transactions array (API returns regular transactions, enhanced transactions are empty)
+    const transactionsToUse = transactions.length > 0 ? transactions : enhancedTransactions;
+
+    // Debug logging
+    console.log('🔍 BacktestChart Debug:', {
+      transactionsCount: transactions.length,
+      enhancedTransactionsCount: enhancedTransactions.length,
+      usingTransactionsArray: transactions.length > 0 ? 'transactions' : 'enhancedTransactions',
+      transactionTypes: transactionsToUse.map(t => ({ date: t.date, type: t.type, hasOCO: !!t.ocoOrderDetail }))
+    });
 
     // Create a map of transactions by date for quick lookup
-    const transactionMap = transactions.reduce((acc, transaction) => {
+    const transactionMap = transactionsToUse.reduce((acc, transaction) => {
       acc[transaction.date] = transaction;
       return acc;
     }, {});
@@ -79,10 +91,10 @@ const BacktestChart = ({ data }) => {
       const transaction = transactionMap[day.date];
       const isInBacktestPeriod = actualStartDate ? day.date >= actualStartDate : false;
 
-      return {
+      const chartDataPoint = {
         date: day.date,
         timestamp: new Date(day.date).getTime(),
-        price: day.adjusted_close,
+        price: parseFloat(day.adjusted_close || day.price || 0),
         ma20: day.ma_20,
         ma50: day.ma_50,
         ma200: day.ma_200,
@@ -91,9 +103,33 @@ const BacktestChart = ({ data }) => {
         volume: day.volume,
         isInBacktestPeriod,
         transaction: transaction,
-        buyMarker: transaction?.type === 'BUY' ? day.adjusted_close : null,
-        sellMarker: transaction?.type === 'SELL' ? day.adjusted_close : null
+        // Separate markers for different buy types
+        regularBuyMarker: (transaction?.type === 'BUY' && !transaction?.ocoOrderDetail) ? parseFloat(day.adjusted_close || day.price || 0) : null,
+        ocoTrailingBuyMarker: (transaction?.type === 'OCO_TRAILING_BUY' || (transaction?.type === 'BUY' && transaction?.ocoOrderDetail?.type === 'TRAILING_BUY')) ? parseFloat(day.adjusted_close || day.price || 0) : null,
+        ocoLimitBuyMarker: (transaction?.type === 'OCO_LIMIT_BUY' || (transaction?.type === 'BUY' && transaction?.ocoOrderDetail?.type === 'LIMIT_BUY')) ? parseFloat(day.adjusted_close || day.price || 0) : null,
+        sellMarker: transaction?.type === 'SELL' ? parseFloat(day.adjusted_close || day.price || 0) : null,
+
+        // Peak price for trailing stop visualization
+        peakPrice: transaction?.trailingStopDetail?.triggered ? transaction.trailingStopDetail.highestPriceBeforeStop : null
       };
+
+      // Log when we have transaction markers
+      if (transaction) {
+        console.log('📍 Transaction Marker:', {
+          date: day.date,
+          type: transaction.type,
+          price: transaction.price,
+          ocoOrderDetail: transaction.ocoOrderDetail,
+          regularBuy: chartDataPoint.regularBuyMarker,
+          ocoTrailing: chartDataPoint.ocoTrailingBuyMarker,
+          ocoLimit: chartDataPoint.ocoLimitBuyMarker,
+          sell: chartDataPoint.sellMarker,
+          peak: chartDataPoint.peakPrice,
+          trailingStopDetail: transaction.trailingStopDetail
+        });
+      }
+
+      return chartDataPoint;
     });
   }, [data, fullData, chartView]);
 
@@ -139,24 +175,27 @@ const BacktestChart = ({ data }) => {
       return (
         <div className="chart-tooltip">
           <p className="tooltip-date">{formatDate(label)}</p>
-          <p className="tooltip-price">Price: {formatCurrency(data.price)}</p>
+          <p className="tooltip-price">Price: {formatCurrency(parseFloat(data.price) || 0)}</p>
 
           {data.transaction && (
             <p className={`tooltip-transaction ${data.transaction.type.toLowerCase()}`}>
-              {data.transaction.type}: {formatCurrency(data.transaction.price)}
+              {data.transaction.type === 'OCO_TRAILING_BUY' ? 'OCO Trailing Buy' :
+               data.transaction.type === 'OCO_LIMIT_BUY' ? 'OCO Limit Buy' :
+               data.transaction.type === 'BUY' ? 'Regular Buy' :
+               data.transaction.type}: {formatCurrency(parseFloat(data.transaction.price) || 0)}
             </p>
           )}
 
           {visibleIndicators.ma20 && data.ma20 && (
-            <p className="tooltip-indicator">MA20: {formatCurrency(data.ma20)}</p>
+            <p className="tooltip-indicator">MA20: {formatCurrency(parseFloat(data.ma20) || 0)}</p>
           )}
 
           {visibleIndicators.ma50 && data.ma50 && (
-            <p className="tooltip-indicator">MA50: {formatCurrency(data.ma50)}</p>
+            <p className="tooltip-indicator">MA50: {formatCurrency(parseFloat(data.ma50) || 0)}</p>
           )}
 
           {visibleIndicators.ma200 && data.ma200 && (
-            <p className="tooltip-indicator">MA200: {formatCurrency(data.ma200)}</p>
+            <p className="tooltip-indicator">MA200: {formatCurrency(parseFloat(data.ma200) || 0)}</p>
           )}
 
           {visibleIndicators.rsi && data.rsi && (
@@ -312,7 +351,7 @@ const BacktestChart = ({ data }) => {
             />
             <YAxis
               domain={['dataMin - 20', 'dataMax + 20']}
-              tickFormatter={(value) => `$${value.toFixed(0)}`}
+              tickFormatter={(value) => `$${value.toFixed(2)}`}
               stroke="#666"
             />
             <Tooltip content={<CustomTooltip />} />
@@ -385,23 +424,37 @@ const BacktestChart = ({ data }) => {
               />
             )}
 
-            {/* Buy/Sell markers only for backtest view or when zoomed to backtest period */}
-            {(chartView === 'backtest' || zoomRange) && (
-              <>
-                <Scatter
-                  dataKey="buyMarker"
-                  fill="#38a169"
-                  shape="triangle"
-                  name="Buy Signal"
-                />
-                <Scatter
-                  dataKey="sellMarker"
-                  fill="#e53e3e"
-                  shape="triangleDown"
-                  name="Sell Signal"
-                />
-              </>
-            )}
+            {/* Buy/Sell markers with different types - show in all views */}
+            <Scatter
+              dataKey="regularBuyMarker"
+              fill="#38a169"
+              shape="triangle"
+              name="Regular Buy"
+            />
+            <Scatter
+              dataKey="ocoTrailingBuyMarker"
+              fill="#2563eb"
+              shape="diamond"
+              name="OCO Trailing Buy"
+            />
+            <Scatter
+              dataKey="ocoLimitBuyMarker"
+              fill="#7c3aed"
+              shape="square"
+              name="OCO Limit Buy"
+            />
+            <Scatter
+              dataKey="sellMarker"
+              fill="#e53e3e"
+              shape="triangleDown"
+              name="Sell Signal"
+            />
+            <Scatter
+              dataKey="peakPrice"
+              fill="#f59e0b"
+              shape="star"
+              name="Peak Price (Stop Set)"
+            />
 
             {/* Brush for zooming - only in full view */}
             {chartView === 'full' && (
@@ -551,6 +604,13 @@ const BacktestChart = ({ data }) => {
               />
             </ComposedChart>
           </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Backtest Results Section */}
+      {backtestResults && (
+        <div className="results-section">
+          <BacktestResults data={backtestResults} />
         </div>
       )}
     </div>

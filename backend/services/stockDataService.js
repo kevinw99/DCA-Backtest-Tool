@@ -108,7 +108,16 @@ class StockDataService {
 
   async fetchAndStoreCorporateActions(stockId, symbol) {
     try {
-      const corporateActions = await this.provider.fetchCorporateActions(symbol);
+      const rawCorporateActions = await this.provider.fetchCorporateActions(symbol);
+
+      // Transform YFinance data format to database format
+      const corporateActions = rawCorporateActions.map(action => ({
+        action_date: action.date,
+        action_type: action.action === 'split' ? 'SPLIT' : action.action === 'dividend' ? 'DIVIDEND' : action.action_type,
+        split_ratio: action.action === 'split' ? `${action.ratio}:1` : action.split_ratio,
+        adjustment_factor: action.action === 'split' ? (1 / action.ratio) : action.adjustment_factor,
+        description: action.description || `${action.action} event`
+      })).filter(action => action.action_date); // Filter out actions with null dates
 
       // Also detect splits from price data (gap analysis)
       const detectedSplits = await this.detectSplitsFromPriceData(stockId, symbol);
@@ -328,7 +337,7 @@ class StockDataService {
     return quarterlyData.sort((a, b) => new Date(a.fiscal_date_ending) - new Date(b.fiscal_date_ending));
   }
 
-  calculateMetrics(dailyPrices, quarterlyFundamentals, corporateActions = []) {
+  calculateMetrics(dailyPrices, quarterlyFundamentals, corporateActions = [], symbol = null) {
     const metrics = {};
 
     // Price metrics - use Alpha Vantage's adjusted_close for split-adjusted prices
@@ -433,7 +442,7 @@ class StockDataService {
       // Revenue (only include records with actual announcement dates)
       const revenueData = uniqueFundamentals.filter(f => f.revenue !== null && f.reported_date);
       if (revenueData.length === 0 && uniqueFundamentals.filter(f => f.revenue !== null).length > 0) {
-        console.error(`❌ No revenue data with announcement dates available for ${symbol}`);
+        console.error(`❌ No revenue data with announcement dates available for ${symbol || 'stock'}`);
       }
       metrics.revenue = revenueData.map(f => ({
         date: f.reported_date,

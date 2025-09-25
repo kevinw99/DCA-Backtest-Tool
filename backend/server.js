@@ -21,43 +21,94 @@ app.get('/api/stocks/:symbol', async (req, res) => {
   try {
     const { symbol } = req.params;
     const { startDate, endDate } = req.query;
-    
+
     console.log(`\n🔍 API REQUEST: /api/stocks/${symbol.toUpperCase()}`);
     if (req.query.force) console.log(`   🔄 FORCE REFRESH requested`);
-    
+
+    // Validate requested date range for backtesting
+    let dataValidationErrors = [];
+
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const today = new Date();
+      const fiveYearsAgo = new Date(today.getFullYear() - 5, today.getMonth(), today.getDate());
+
+      if (start < fiveYearsAgo) {
+        dataValidationErrors.push(`Start date ${startDate} is older than 5 years. Available data limited to ${fiveYearsAgo.toISOString().split('T')[0]} onwards.`);
+      }
+
+      if (end > today) {
+        dataValidationErrors.push(`End date ${endDate} is in the future. Latest available data is ${today.toISOString().split('T')[0]}.`);
+      }
+
+      if (start >= end) {
+        dataValidationErrors.push(`Start date ${startDate} must be before end date ${endDate}.`);
+      }
+    }
+
     // Get or create stock record
     let stock = await database.getStock(symbol);
     if (!stock) {
+      console.log(`🆕 Creating new stock record for ${symbol}`);
       const stockId = await database.createStock(symbol);
       stock = await database.getStock(symbol);
     }
 
-    // Check if we need to update data
+    // Check existing data availability
     const lastPriceDate = await database.getLastPriceDate(stock.id);
     const lastFundamentalDate = await database.getLastFundamentalDate(stock.id);
     const lastCorporateActionDate = await database.getLastCorporateActionDate(stock.id);
-    
+
     const today = new Date().toISOString().split('T')[0];
     const forceUpdate = req.query.force === 'true';
 
-    // Update prices if no existing data or force requested
+    // Determine if we need to fetch data
     const needsPriceUpdate = !lastPriceDate || forceUpdate;
     const needsFundamentalUpdate = !lastFundamentalDate || forceUpdate;
     const needsCorporateActionUpdate = !lastCorporateActionDate || forceUpdate;
 
-    // Update data if needed
+    // If no data exists, force update regardless of user request
+    const autoFetchRequired = !lastPriceDate;
+    if (autoFetchRequired) {
+      console.log(`📡 No data found for ${symbol}, automatically fetching from provider...`);
+    }
+
+    // Update data if needed or required
     if (needsPriceUpdate || needsFundamentalUpdate || needsCorporateActionUpdate) {
       console.log(`📡 FETCHING from provider for ${symbol}:`);
       console.log(`   Prices: ${needsPriceUpdate} | Fundamentals: ${needsFundamentalUpdate} | Corporate Actions: ${needsCorporateActionUpdate}`);
-      
-      await stockDataService.updateStockData(stock.id, symbol, {
-        updatePrices: needsPriceUpdate,
-        updateFundamentals: needsFundamentalUpdate,
-        updateCorporateActions: needsCorporateActionUpdate,
-        fromDate: forceUpdate ? null : lastPriceDate, // Don't use fromDate when force refreshing
-        forceRefresh: forceUpdate
-      });
-      await database.updateStockTimestamp(stock.id);
+
+      try {
+        await stockDataService.updateStockData(stock.id, symbol, {
+          updatePrices: needsPriceUpdate,
+          updateFundamentals: needsFundamentalUpdate,
+          updateCorporateActions: needsCorporateActionUpdate,
+          fromDate: forceUpdate ? null : lastPriceDate,
+          forceRefresh: forceUpdate
+        });
+        await database.updateStockTimestamp(stock.id);
+        console.log(`✅ Successfully updated data for ${symbol}`);
+      } catch (dataError) {
+        console.error(`❌ Failed to fetch data for ${symbol}:`, dataError.message);
+
+        // If we have no data at all, return an error
+        if (!lastPriceDate) {
+          return res.status(503).json({
+            error: 'Stock data unavailable',
+            message: `Unable to fetch data for symbol ${symbol}. The symbol may not exist or the data provider may be temporarily unavailable.`,
+            details: dataError.message,
+            suggestions: [
+              'Verify the stock symbol is correct',
+              'Try again in a few minutes',
+              'Check if the symbol is listed on a major exchange'
+            ]
+          });
+        }
+
+        // If we have some cached data, proceed with warning
+        dataValidationErrors.push(`Warning: Unable to fetch latest data for ${symbol}. Using cached data from ${lastPriceDate}.`);
+      }
     } else {
       console.log(`💾 Using cached data for ${symbol}`);
     }
@@ -69,14 +120,35 @@ app.get('/api/stocks/:symbol', async (req, res) => {
     // which already handles splits and dividends properly
     const providerType = process.env.DATA_PROVIDER || 'alphavantage';
     
-    // Fetch data from database - always get raw data first
+    // Fetch data from database with validation
     const dailyPrices = await database.getDailyPrices(stock.id, startDate, endDate);
-    
     const quarterlyFundamentals = await database.getQuarterlyFundamentals(stock.id, startDate, endDate);
     const corporateActions = await database.getCorporateActions(stock.id, startDate, endDate);
 
+    // Validate data availability for requested period
+    if (startDate && endDate && dailyPrices.length === 0) {
+      return res.status(404).json({
+        error: 'No data available for requested period',
+        message: `No price data found for ${symbol} between ${startDate} and ${endDate}.`,
+        availableDataRange: lastPriceDate ? {
+          earliestDate: dailyPrices.length > 0 ? dailyPrices[dailyPrices.length - 1].date : null,
+          latestDate: lastPriceDate
+        } : null,
+        suggestions: [
+          'Adjust your date range to include available data',
+          'Try a more recent date range',
+          'Check if the symbol was listed during this period'
+        ]
+      });
+    }
+
+    // Validate sufficient data for backtesting
+    if (startDate && endDate && dailyPrices.length < 30) {
+      dataValidationErrors.push(`Limited data available: Only ${dailyPrices.length} trading days found for the requested period. Minimum 30 days recommended for reliable backtesting.`);
+    }
+
     // Calculate derived metrics
-    const metrics = stockDataService.calculateMetrics(dailyPrices, quarterlyFundamentals, corporateActions);
+    const metrics = stockDataService.calculateMetrics(dailyPrices, quarterlyFundamentals, corporateActions, symbol);
 
     // Check data quality for earnings announcement dates
     const totalQuarterlyRecords = quarterlyFundamentals.length;
@@ -87,6 +159,13 @@ app.get('/api/stocks/:symbol', async (req, res) => {
     if (missingAnnouncementDates > 0) {
       console.warn(`⚠️  ${missingAnnouncementDates}/${totalQuarterlyRecords} quarterly records missing announcement dates`);
     }
+
+    // Determine data coverage for the available period
+    const dataRange = dailyPrices.length > 0 ? {
+      startDate: dailyPrices[dailyPrices.length - 1].date,
+      endDate: dailyPrices[0].date,
+      totalDays: dailyPrices.length
+    } : null;
 
     res.json({
       symbol: symbol.toUpperCase(),
@@ -101,7 +180,10 @@ app.get('/api/stocks/:symbol', async (req, res) => {
         recordsWithAnnouncementDates,
         missingAnnouncementDates,
         announcementDateCoverage: totalQuarterlyRecords > 0 ? Math.round((recordsWithAnnouncementDates / totalQuarterlyRecords) * 100) : 0
-      }
+      },
+      dataRange,
+      validationErrors: dataValidationErrors.length > 0 ? dataValidationErrors : undefined,
+      autoFetched: autoFetchRequired
     });
 
   } catch (error) {
@@ -111,6 +193,66 @@ app.get('/api/stocks/:symbol', async (req, res) => {
     res.status(500).json({ 
       error: 'Failed to fetch stock data', 
       message: error.message 
+    });
+  }
+});
+
+// Full chart data endpoint for technical analysis
+app.get('/api/stocks/:symbol/full-chart-data', async (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const { includeIndicators } = req.query;
+
+    console.log(`\n📊 API REQUEST: /api/stocks/${symbol}/full-chart-data`);
+
+    // Get stock record
+    const stock = await database.getStock(symbol);
+    if (!stock) {
+      return res.status(404).json({ error: `Stock ${symbol} not found` });
+    }
+
+    // Get all daily prices with technical indicators
+    const dailyPrices = await database.getDailyPrices(stock.id);
+
+    if (includeIndicators === 'true') {
+      // Calculate technical indicators for all data
+      const stockDataService = require('./services/stockDataService');
+      const metrics = stockDataService.calculateMetrics(dailyPrices, [], [], symbol);
+
+      // Merge price data with calculated indicators
+      const dataWithIndicators = dailyPrices.map(price => ({
+        ...price,
+        ma_20: metrics.technicalIndicators?.find(t => t.date === price.date)?.ma20 || null,
+        ma_50: metrics.technicalIndicators?.find(t => t.date === price.date)?.ma50 || null,
+        ma_200: metrics.technicalIndicators?.find(t => t.date === price.date)?.ma200 || null,
+        rsi_14: metrics.technicalIndicators?.find(t => t.date === price.date)?.rsi || null,
+        volatility_20: metrics.technicalIndicators?.find(t => t.date === price.date)?.volatility || null
+      }));
+
+      const dateRange = dailyPrices.length > 0 ? {
+        min: dailyPrices[0].date,
+        max: dailyPrices[dailyPrices.length - 1].date,
+        totalDays: dailyPrices.length
+      } : null;
+
+      res.json({
+        symbol: symbol.toUpperCase(),
+        dailyPrices: dataWithIndicators,
+        metrics: metrics,
+        dateRange: dateRange
+      });
+    } else {
+      res.json({
+        symbol: symbol.toUpperCase(),
+        dailyPrices: dailyPrices
+      });
+    }
+
+  } catch (error) {
+    console.error('❌ ERROR in /api/stocks/:symbol/full-chart-data:', error);
+    res.status(500).json({
+      error: 'Failed to fetch chart data',
+      message: error.message
     });
   }
 });
@@ -270,9 +412,32 @@ app.delete('/api/clear-all-data', async (req, res) => {
   }
 });
 
+// Import shared config
+const backtestConfig = require('./config/backtestConfig');
+
+// Get default parameters endpoint
+app.get('/api/backtest/defaults', (req, res) => {
+  try {
+    const defaults = backtestConfig.getDefaults();
+    res.json({
+      success: true,
+      data: defaults
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to load default parameters',
+      message: error.message
+    });
+  }
+});
+
 // DCA Backtesting API endpoints
 app.post('/api/backtest/dca', async (req, res) => {
   try {
+    // Merge request parameters with shared defaults
+    const params = backtestConfig.mergeWithDefaults(req.body);
+
     const {
       symbol,
       startDate,
@@ -280,15 +445,97 @@ app.post('/api/backtest/dca', async (req, res) => {
       lotSizeUsd,
       maxLots,
       gridIntervalPercent,
-      remainingLotsLossTolerance
-    } = req.body;
+      remainingLotsLossTolerance,
+      remainingLotsUnrealizedLossTolerance
+    } = params;
 
-    console.log(`🔄 DCA Backtest request for ${symbol}`);
+    // Save updated parameters to config (for consistency between CLI and UI)
+    backtestConfig.saveDefaults(params);
 
-    // Get stock
-    const stock = await database.getStock(symbol);
+    console.log(`🔄 DCA Backtest request for ${symbol} (${startDate} to ${endDate})`);
+
+    // Validate backtest parameters
+    if (!symbol || !startDate || !endDate) {
+      return res.status(400).json({
+        error: 'Missing required parameters',
+        message: 'Symbol, startDate, and endDate are required for backtesting',
+        received: { symbol, startDate, endDate }
+      });
+    }
+
+    // Validate date range (5-year limit and logical dates)
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const today = new Date();
+    const fiveYearsAgo = new Date(today.getFullYear() - 5, today.getMonth(), today.getDate());
+
+    if (start < fiveYearsAgo) {
+      return res.status(400).json({
+        error: 'Date range out of bounds',
+        message: `Start date ${startDate} is older than 5 years. Backtesting limited to data from ${fiveYearsAgo.toISOString().split('T')[0]} onwards.`,
+        availableFrom: fiveYearsAgo.toISOString().split('T')[0]
+      });
+    }
+
+    if (end > today) {
+      return res.status(400).json({
+        error: 'Date range out of bounds',
+        message: `End date ${endDate} is in the future. Latest available date is ${today.toISOString().split('T')[0]}.`,
+        availableTo: today.toISOString().split('T')[0]
+      });
+    }
+
+    if (start >= end) {
+      return res.status(400).json({
+        error: 'Invalid date range',
+        message: `Start date ${startDate} must be before end date ${endDate}.`
+      });
+    }
+
+    // Get or create stock record and ensure data is available
+    let stock = await database.getStock(symbol);
     if (!stock) {
-      return res.status(404).json({ error: `Stock ${symbol} not found` });
+      console.log(`🆕 Creating new stock record for backtest: ${symbol}`);
+      try {
+        const stockId = await database.createStock(symbol);
+        stock = await database.getStock(symbol);
+
+        // Fetch data for new stock
+        console.log(`📡 Fetching initial data for ${symbol}...`);
+        await stockDataService.updateStockData(stock.id, symbol, {
+          updatePrices: true,
+          updateFundamentals: true,
+          updateCorporateActions: true
+        });
+        await database.updateStockTimestamp(stock.id);
+      } catch (fetchError) {
+        return res.status(503).json({
+          error: 'Unable to fetch stock data',
+          message: `Could not retrieve data for symbol ${symbol}. The symbol may not exist or the data provider may be temporarily unavailable.`,
+          details: fetchError.message
+        });
+      }
+    }
+
+    // Get daily prices for the backtest period
+    const dailyPrices = await database.getDailyPrices(stock.id, startDate, endDate);
+
+    // Validate sufficient data for backtesting
+    if (!dailyPrices || dailyPrices.length === 0) {
+      return res.status(404).json({
+        error: 'No data available for backtest period',
+        message: `No price data found for ${symbol} between ${startDate} and ${endDate}.`,
+        suggestion: 'Try a different date range or ensure the symbol was listed during this period.'
+      });
+    }
+
+    if (dailyPrices.length < 30) {
+      return res.status(400).json({
+        error: 'Insufficient data for backtesting',
+        message: `Only ${dailyPrices.length} trading days found for the requested period. Minimum 30 days required for reliable backtesting.`,
+        availableDays: dailyPrices.length,
+        minimumRequired: 30
+      });
     }
 
     // Use the shared core algorithm
@@ -300,8 +547,9 @@ app.post('/api/backtest/dca', async (req, res) => {
       endDate,
       lotSizeUsd,
       maxLots,
-      gridIntervalPercent: gridIntervalPercent / 100, // Convert to decimal
-      remainingLotsLossTolerance: remainingLotsLossTolerance / 100,
+      gridIntervalPercent, // Already in decimal format from config
+      remainingLotsLossTolerance, // Already in decimal format from config
+      remainingLotsUnrealizedLossTolerance, // Include this parameter
       verbose: false // Don't log to console for API calls
     });
 
@@ -369,8 +617,14 @@ app.post('/api/backtest/dca', async (req, res) => {
 
           return transactions;
         })(),
-        dailyValues: [], // Would need to extract from results
-        lots: results.lots
+        enhancedTransactions: results.enhancedTransactions,
+        dailyPrices: dailyPrices,
+        lots: results.lots,
+        transactionLog: results.transactionLog,
+        tradeAnalysis: results.tradeAnalysis,
+        buyAndHoldResults: results.buyAndHoldResults,
+        outperformance: results.outperformance,
+        outperformancePercent: results.outperformancePercent
       }
     });
 
