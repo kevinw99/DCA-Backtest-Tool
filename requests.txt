@@ -1,3 +1,16 @@
+can you create a REQUIREMENT_SHORT.md for the short selling algo, similar to REQUIREMENT.md but with opposite
+details?  1. please
+
+identify the
+common part
+for
+exsiting
+ long algo
+  and this new short algo
+2,. also use multi lots and grid system
+
+
+
 The current algo is Long only, no short selling. can you devise a short selling algo with trailing stop loss?
 Some of the parameters need to be changed, as short selling is more risky, so in general the parameters should be more
 conservative, e.g., larger profit requirement, larger grid interval, larger trailing short sell activation and
