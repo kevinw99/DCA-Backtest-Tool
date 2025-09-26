@@ -697,6 +697,117 @@ app.post('/api/backtest/dca', async (req, res) => {
 });
 
 // Batch Backtest API endpoint - Run multiple backtests with different parameters
+// Short Selling DCA Backtest endpoint
+app.post('/api/backtest/short-dca', async (req, res) => {
+  try {
+    console.log('\n📊 RECEIVED SHORT SELLING DCA BACKTEST REQUEST');
+    const startTime = Date.now();
+
+    const { runShortDCABacktest } = require('./services/shortDCABacktestService');
+    const params = req.body;
+
+    console.log('Request parameters:', JSON.stringify(params, null, 2));
+
+    // Convert percentage parameters from frontend (e.g., 3 -> 0.03)
+    const normalizedParams = {
+      symbol: params.symbol,
+      startDate: params.startDate,
+      endDate: params.endDate,
+      lotSizeUsd: parseFloat(params.lotSizeUsd) || 1000,
+      maxShorts: parseFloat(params.maxShorts) || 6,
+      maxShortsToCovers: parseFloat(params.maxShortsToCovers) || 3,
+      gridIntervalPercent: parseFloat(params.gridIntervalPercent) / 100,
+      profitRequirement: parseFloat(params.profitRequirementPercent) / 100,
+      trailingShortActivationPercent: parseFloat(params.trailingShortActivationPercent) / 100,
+      trailingShortPullbackPercent: parseFloat(params.trailingShortPullbackPercent) / 100,
+      trailingCoverActivationPercent: parseFloat(params.trailingCoverActivationPercent) / 100,
+      trailingCoverReboundPercent: parseFloat(params.trailingCoverReboundPercent) / 100,
+      hardStopLossPercent: parseFloat(params.hardStopLossPercent) / 100,
+      portfolioStopLossPercent: parseFloat(params.portfolioStopLossPercent) / 100,
+      cascadeStopLossPercent: parseFloat(params.cascadeStopLossPercent) / 100
+    };
+
+    console.log('Normalized parameters:', JSON.stringify(normalizedParams, null, 2));
+
+    const results = await runShortDCABacktest(normalizedParams);
+    const executionTime = Date.now() - startTime;
+
+    console.log(`\n✅ Short DCA backtest completed in ${(executionTime/1000).toFixed(1)}s`);
+    console.log(`📈 Final Value: $${results.shortDCAFinalValue?.toFixed(2) || 'N/A'}`);
+    console.log(`💰 Max Capital Deployed: $${results.maxCapitalDeployed?.toFixed(2) || 'N/A'}`);
+
+    // Create response format compatible with frontend
+    const response = {
+      success: true,
+      executionTimeMs: executionTime,
+      data: {
+        symbol: results.symbol,
+        strategy: results.strategy,
+        backtestParameters: {
+          symbol: params.symbol,
+          startDate: params.startDate,
+          endDate: params.endDate,
+          gridIntervalPercent: params.gridIntervalPercent,
+          profitRequirementPercent: params.profitRequirementPercent,
+          trailingShortActivationPercent: params.trailingShortActivationPercent,
+          trailingShortPullbackPercent: params.trailingShortPullbackPercent,
+          trailingCoverActivationPercent: params.trailingCoverActivationPercent || 0.2,
+          trailingCoverReboundPercent: params.trailingCoverReboundPercent || 0.1,
+          lotSizeUsd: params.lotSizeUsd,
+          maxShorts: params.maxShorts || 6,
+          maxShortsToCovers: params.maxShortsToCovers || 3,
+          hardStopLossPercent: params.hardStopLossPercent || 30,
+          portfolioStopLossPercent: params.portfolioStopLossPercent || 25,
+          cascadeStopLossPercent: params.cascadeStopLossPercent || 35
+        },
+        transactions: results.enhancedTransactions || [],
+        enhancedTransactions: results.enhancedTransactions || [],
+        transactionLog: results.transactionLog || [],
+        summary: {
+          strategy: results.strategy,
+          symbol: results.symbol,
+          finalValue: results.shortDCAFinalValue,
+          totalCost: results.maxCapitalDeployed || (results.finalShorts * params.lotSizeUsd),
+          lotsHeld: results.finalShorts,
+          totalReturn: results.totalReturn,
+          totalReturnPercent: results.totalReturnPercent,
+          annualizedReturn: results.annualizedReturn,
+          maxDrawdown: results.maxDrawdown,
+          maxDrawdownPercent: results.maxDrawdownPercent,
+          sharpeRatio: results.sharpeRatio,
+          winRate: results.winRate,
+          profitFactor: results.profitFactor || 0,
+          avgWin: results.avgWin || 0,
+          avgLoss: results.avgLoss || 0,
+          totalTrades: results.totalTrades,
+          executionTimeMs: executionTime
+        }
+      }
+    };
+
+    res.json(response);
+
+  } catch (error) {
+    console.error('\n❌ SHORT DCA BACKTEST ERROR:', error);
+
+    if (error.message && error.message.includes('validation')) {
+      res.status(400).json({
+        success: false,
+        error: error.message || 'Invalid short selling strategy parameters',
+        message: error.details || 'The provided parameters would likely result in 0 trades or unsafe risk levels. Please adjust the parameters.',
+        validationErrors: error.validationErrors || [],
+        receivedParameters: error.receivedParameters || {}
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: 'Short DCA backtest failed',
+        message: error.message || 'An unexpected error occurred during backtesting'
+      });
+    }
+  }
+});
+
 app.post('/api/backtest/batch', async (req, res) => {
   try {
     console.log('📊 Received batch backtest request');
