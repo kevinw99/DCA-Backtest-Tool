@@ -28,5 +28,18 @@
     "NIO",
     "KNDI",
     "API"
-  ]
+  ],
+  "maxShorts": 6,
+  "maxShortsToCovers": 3,
+  "trailingShortActivationPercent": 0.25,
+  "trailingShortPullbackPercent": 0.15,
+  "trailingCoverActivationPercent": 0.2,
+  "trailingCoverReboundPercent": 0.1,
+  "hardStopLossPercent": 0.3,
+  "portfolioStopLossPercent": 0.25,
+  "cascadeStopLossPercent": 0.35,
+  "beta": 1,
+  "enableBetaScaling": false,
+  "isManualBetaOverride": false,
+  "strategyMode": "short"
 }

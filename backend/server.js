@@ -329,6 +329,50 @@ app.get('/api/test-av/:symbol', async (req, res) => {
   }
 });
 
+// Get beta data for a specific stock symbol
+app.get('/api/stocks/:symbol/beta', async (req, res) => {
+  try {
+    const { symbol } = req.params;
+
+    // Get stock record
+    const stock = await database.getStock(symbol);
+    if (!stock) {
+      return res.status(404).json({
+        error: `Stock ${symbol} not found`,
+        message: 'Stock symbol not found in database. Please run a backtest first to fetch stock data.'
+      });
+    }
+
+    // Get the most recent fundamental data to extract beta
+    const fundamentals = await database.getQuarterlyFundamentals(stock.id);
+
+    if (fundamentals.length === 0) {
+      return res.status(404).json({
+        error: 'No fundamental data available',
+        message: `No fundamental data found for ${symbol}. Beta calculation requires fundamental data.`
+      });
+    }
+
+    // For now, return a default beta of 1.0 since beta isn't directly stored
+    // In a real implementation, this would calculate beta from price correlation with market
+    const defaultBeta = 1.0;
+
+    res.json({
+      symbol: symbol.toUpperCase(),
+      beta: defaultBeta,
+      source: 'default',
+      note: 'Beta calculation not yet implemented. Using default value of 1.0.'
+    });
+
+  } catch (error) {
+    console.error(`Error fetching beta for ${req.params.symbol}:`, error.message);
+    res.status(500).json({
+      error: 'Failed to fetch beta data',
+      message: error.message
+    });
+  }
+});
+
 // Get list of previously entered stocks for autocomplete
 app.get('/api/stocks', async (req, res) => {
   try {
@@ -435,6 +479,11 @@ app.get('/api/backtest/defaults', (req, res) => {
 // DCA Backtesting API endpoints
 app.post('/api/backtest/dca', async (req, res) => {
   try {
+    console.log('=== DEBUG: LONG DCA ENDPOINT CALLED ===');
+    console.log('Strategy Mode in request:', req.body.strategyMode);
+    console.log('Full request body:', req.body);
+    console.log('=====================================');
+
     // Merge request parameters with shared defaults
     const params = backtestConfig.mergeWithDefaults(req.body);
 
@@ -455,7 +504,7 @@ app.post('/api/backtest/dca', async (req, res) => {
     } = params;
 
     // Save updated parameters to config (for consistency between CLI and UI)
-    backtestConfig.saveDefaults(params);
+    backtestConfig.saveDefaults({ ...params, strategyMode: 'long' });
 
     console.log(`🔄 DCA Backtest request for ${symbol} (${startDate} to ${endDate})`);
 
@@ -479,8 +528,8 @@ app.post('/api/backtest/dca', async (req, res) => {
       paramValidationErrors.push(`trailingSellPullbackPercent must be greater than 0 (received: ${trailingSellPullbackPercent}). A value of 0 prevents trailing stop sell orders from executing.`);
     }
 
-    if (profitRequirement <= 0) {
-      paramValidationErrors.push(`profitRequirement must be greater than 0 (received: ${profitRequirement}). A value of 0 or less prevents profitable sales.`);
+    if (profitRequirement < 0) {
+      paramValidationErrors.push(`profitRequirement must be greater than or equal to 0 (received: ${profitRequirement}). Negative values prevent profitable sales.`);
     }
 
     if (trailingBuyActivationPercent <= 0) {
@@ -700,34 +749,24 @@ app.post('/api/backtest/dca', async (req, res) => {
 // Short Selling DCA Backtest endpoint
 app.post('/api/backtest/short-dca', async (req, res) => {
   try {
+    console.log('=== DEBUG: SHORT DCA ENDPOINT CALLED ===');
     console.log('\n📊 RECEIVED SHORT SELLING DCA BACKTEST REQUEST');
+    console.log('Strategy Mode in request:', req.body.strategyMode);
+    console.log('Full request body:', req.body);
+    console.log('========================================');
     const startTime = Date.now();
 
     const { runShortDCABacktest } = require('./services/shortDCABacktestService');
-    const params = req.body;
 
-    console.log('Request parameters:', JSON.stringify(params, null, 2));
+    console.log('Request parameters:', JSON.stringify(req.body, null, 2));
 
-    // Convert percentage parameters from frontend (e.g., 3 -> 0.03)
-    const normalizedParams = {
-      symbol: params.symbol,
-      startDate: params.startDate,
-      endDate: params.endDate,
-      lotSizeUsd: parseFloat(params.lotSizeUsd) || 1000,
-      maxShorts: parseFloat(params.maxShorts) || 6,
-      maxShortsToCovers: parseFloat(params.maxShortsToCovers) || 3,
-      gridIntervalPercent: parseFloat(params.gridIntervalPercent) / 100,
-      profitRequirement: parseFloat(params.profitRequirementPercent) / 100,
-      trailingShortActivationPercent: parseFloat(params.trailingShortActivationPercent) / 100,
-      trailingShortPullbackPercent: parseFloat(params.trailingShortPullbackPercent) / 100,
-      trailingCoverActivationPercent: parseFloat(params.trailingCoverActivationPercent) / 100,
-      trailingCoverReboundPercent: parseFloat(params.trailingCoverReboundPercent) / 100,
-      hardStopLossPercent: parseFloat(params.hardStopLossPercent) / 100,
-      portfolioStopLossPercent: parseFloat(params.portfolioStopLossPercent) / 100,
-      cascadeStopLossPercent: parseFloat(params.cascadeStopLossPercent) / 100
-    };
+    // Use the config system to merge with defaults (same as long DCA)
+    const normalizedParams = backtestConfig.mergeWithDefaults(req.body);
 
     console.log('Normalized parameters:', JSON.stringify(normalizedParams, null, 2));
+
+    // Save updated parameters to config (for consistency between CLI and UI)
+    backtestConfig.saveDefaults({ ...normalizedParams, strategyMode: 'short' });
 
     const results = await runShortDCABacktest(normalizedParams);
     const executionTime = Date.now() - startTime;
@@ -744,30 +783,36 @@ app.post('/api/backtest/short-dca', async (req, res) => {
         symbol: results.symbol,
         strategy: results.strategy,
         backtestParameters: {
-          symbol: params.symbol,
-          startDate: params.startDate,
-          endDate: params.endDate,
-          gridIntervalPercent: params.gridIntervalPercent,
-          profitRequirementPercent: params.profitRequirementPercent,
-          trailingShortActivationPercent: params.trailingShortActivationPercent,
-          trailingShortPullbackPercent: params.trailingShortPullbackPercent,
-          trailingCoverActivationPercent: params.trailingCoverActivationPercent || 0.2,
-          trailingCoverReboundPercent: params.trailingCoverReboundPercent || 0.1,
-          lotSizeUsd: params.lotSizeUsd,
-          maxShorts: params.maxShorts || 6,
-          maxShortsToCovers: params.maxShortsToCovers || 3,
-          hardStopLossPercent: params.hardStopLossPercent || 30,
-          portfolioStopLossPercent: params.portfolioStopLossPercent || 25,
-          cascadeStopLossPercent: params.cascadeStopLossPercent || 35
+          symbol: normalizedParams.symbol,
+          startDate: normalizedParams.startDate,
+          endDate: normalizedParams.endDate,
+          gridIntervalPercent: normalizedParams.gridIntervalPercent,
+          profitRequirement: normalizedParams.profitRequirement,
+          trailingShortActivationPercent: normalizedParams.trailingShortActivationPercent,
+          trailingShortPullbackPercent: normalizedParams.trailingShortPullbackPercent,
+          trailingCoverActivationPercent: normalizedParams.trailingCoverActivationPercent,
+          trailingCoverReboundPercent: normalizedParams.trailingCoverReboundPercent,
+          lotSizeUsd: normalizedParams.lotSizeUsd,
+          maxShorts: normalizedParams.maxShorts,
+          maxShortsToCovers: normalizedParams.maxShortsToCovers,
+          hardStopLossPercent: normalizedParams.hardStopLossPercent,
+          portfolioStopLossPercent: normalizedParams.portfolioStopLossPercent,
+          cascadeStopLossPercent: normalizedParams.cascadeStopLossPercent
         },
         transactions: results.enhancedTransactions || [],
         enhancedTransactions: results.enhancedTransactions || [],
         transactionLog: results.transactionLog || [],
+        tradeAnalysis: results.tradeAnalysis || {},
+        shortAndHoldResults: results.shortAndHoldResults || {},
+        outperformance: results.outperformance || 0,
+        outperformancePercent: results.outperformancePercent || 0,
+        questionableEvents: results.questionableEvents || [],
+        shorts: results.shorts || [],
         summary: {
           strategy: results.strategy,
           symbol: results.symbol,
           finalValue: results.shortDCAFinalValue,
-          totalCost: results.maxCapitalDeployed || (results.finalShorts * params.lotSizeUsd),
+          totalCost: results.maxCapitalDeployed || (results.finalShorts * normalizedParams.lotSizeUsd),
           lotsHeld: results.finalShorts,
           totalReturn: results.totalReturn,
           totalReturnPercent: results.totalReturnPercent,
@@ -848,6 +893,54 @@ app.post('/api/backtest/batch', async (req, res) => {
 
   } catch (error) {
     console.error('Batch backtest error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Short Selling Batch Backtest API endpoint
+app.post('/api/backtest/short-batch', async (req, res) => {
+  try {
+    console.log('📊 Received short selling batch backtest request');
+
+    const { runShortBatchBacktest } = require('./services/shortBatchBacktestService');
+
+    const options = req.body;
+
+    // Validate required fields
+    if (!options.parameterRanges) {
+      return res.status(400).json({
+        success: false,
+        error: 'parameterRanges is required'
+      });
+    }
+
+    // Set up progress tracking for long-running batch tests
+    let progressData = null;
+    const progressCallback = (progress) => {
+      progressData = progress;
+      // Could implement WebSocket or Server-Sent Events here for real-time updates
+    };
+
+    console.log('🚀 Starting short selling batch backtest with options:', options);
+
+    const startTime = Date.now();
+    const results = await runShortBatchBacktest(options, progressCallback);
+    const executionTime = Date.now() - startTime;
+
+    console.log(`✅ Short selling batch backtest completed in ${(executionTime / 1000).toFixed(1)}s`);
+    console.log(`📈 Best result: ${results.summary?.overallBest?.summary?.annualizedReturn.toFixed(2)}% annualized return`);
+
+    res.json({
+      success: true,
+      executionTimeMs: executionTime,
+      data: results
+    });
+
+  } catch (error) {
+    console.error('Short selling batch backtest error:', error);
     res.status(500).json({
       success: false,
       error: error.message

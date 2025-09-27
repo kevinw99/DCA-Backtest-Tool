@@ -71,7 +71,19 @@ function App() {
 
     try {
       if (isBatchMode) {
-        const batchResponse = await fetch('http://localhost:3001/api/backtest/batch', {
+        // Determine the batch endpoint based on strategy mode
+        // For short batch, strategyMode is at top level; for long batch, check parameterRanges
+        const strategyMode = parameters.strategyMode || parameters.parameterRanges?.strategyMode;
+        const batchEndpoint = strategyMode === 'short'
+          ? 'http://localhost:3001/api/backtest/short-batch'
+          : 'http://localhost:3001/api/backtest/batch';
+
+        console.log('=== DEBUG: Batch API Call Info ===');
+        console.log('Strategy Mode:', strategyMode);
+        console.log('Batch Endpoint:', batchEndpoint);
+        console.log('===================================');
+
+        const batchResponse = await fetch(batchEndpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -87,7 +99,18 @@ function App() {
         setBatchData({ ...batchResult.data, executionTimeMs: batchResult.executionTimeMs });
         setActiveTab('results');
       } else {
-        const backtestResponse = await fetch('http://localhost:3001/api/backtest/dca', {
+        // Determine the endpoint based on strategy mode
+        const endpoint = parameters.strategyMode === 'short'
+          ? 'http://localhost:3001/api/backtest/short-dca'
+          : 'http://localhost:3001/api/backtest/dca';
+
+        console.log('=== DEBUG: API Call Info ===');
+        console.log('Strategy Mode:', parameters.strategyMode);
+        console.log('Selected Endpoint:', endpoint);
+        console.log('Full Parameters:', parameters);
+        console.log('============================');
+
+        const backtestResponse = await fetch(endpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

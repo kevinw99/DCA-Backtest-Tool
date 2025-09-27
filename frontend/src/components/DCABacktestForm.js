@@ -3,67 +3,92 @@ import { Play, DollarSign, TrendingUp, Settings, Info, Zap, Target, ArrowUpDown 
 
 const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setAppTestMode }) => {
 
-  const [strategyMode, setStrategyMode] = useState('long'); // 'long' or 'short'
+  const [strategyMode, setStrategyMode] = useState(() => {
+    // Initialize strategy mode from localStorage or default to 'long'
+    const savedStrategy = localStorage.getItem('dca-strategy-mode');
+    return savedStrategy || 'long';
+  }); // 'long' or 'short'
 
-  const [parameters, setParameters] = useState({
-    symbol: 'TSLA',
-    startDate: '2021-09-01',
-    endDate: '2025-09-01',
-    lotSizeUsd: 10000,
-    maxLots: 10,
-    maxLotsToSell: 1,
-    gridIntervalPercent: 10,
-    profitRequirement: 5,
-    trailingBuyActivationPercent: 10,
-    trailingBuyReboundPercent: 5,
-    trailingSellActivationPercent: 20,
-    trailingSellPullbackPercent: 10
+  const [parameters, setParameters] = useState(() => {
+    // Initialize from localStorage just like strategyMode, with fallback defaults
+    const saved = localStorage.getItem('dca-single-parameters');
+    return saved ? JSON.parse(saved) : {
+      symbol: 'TSLA',
+      startDate: '2021-09-01',
+      endDate: '2025-09-01',
+      lotSizeUsd: 10000,
+      maxLots: 10,
+      maxLotsToSell: 1,
+      gridIntervalPercent: 10,
+      profitRequirement: 5,
+      trailingBuyActivationPercent: 10,
+      trailingBuyReboundPercent: 5,
+      trailingSellActivationPercent: 20,
+      trailingSellPullbackPercent: 10
+    };
   });
 
   // Short selling specific parameters
-  const [shortParameters, setShortParameters] = useState({
-    symbol: 'TSLA',
-    startDate: '2021-09-01',
-    endDate: '2025-09-01',
-    lotSizeUsd: 10000,
-    maxShorts: 6,
-    maxShortsToCovers: 3,
-    gridIntervalPercent: 15,
-    profitRequirement: 8,
-    trailingShortActivationPercent: 25,
-    trailingShortPullbackPercent: 15,
-    trailingCoverActivationPercent: 20,
-    trailingCoverReboundPercent: 10,
-    hardStopLossPercent: 30,
-    portfolioStopLossPercent: 25,
-    cascadeStopLossPercent: 35
+  const [shortParameters, setShortParameters] = useState(() => {
+    // Initialize from localStorage just like strategyMode, with fallback defaults
+    const saved = localStorage.getItem('dca-short-single-parameters');
+    return saved ? JSON.parse(saved) : {
+      symbol: 'TSLA',
+      startDate: '2021-09-01',
+      endDate: '2025-09-01',
+      lotSizeUsd: 10000,
+      maxShorts: 6,
+      maxShortsToCovers: 3,
+      gridIntervalPercent: 15,
+      profitRequirement: 0,
+      trailingShortActivationPercent: 20,
+      trailingShortPullbackPercent: 9.8,
+      trailingCoverActivationPercent: 20,
+      trailingCoverReboundPercent: 10,
+      hardStopLossPercent: 30,
+      portfolioStopLossPercent: 25,
+      cascadeStopLossPercent: 35
+    };
   });
 
-  const [batchMode, setBatchMode] = useState(false);
-  const [batchParameters, setBatchParameters] = useState({
-    symbols: ['TSLA'],
-    betaValues: [1.0],
-    enableBetaScaling: false,
-    profitRequirement: [5],
-    gridIntervalPercent: [10],
-    trailingBuyActivationPercent: [10],
-    trailingBuyReboundPercent: [5],
-    trailingSellActivationPercent: [20],
-    trailingSellPullbackPercent: [10]
+  const [batchMode, setBatchMode] = useState(() => {
+    // Initialize batch mode from localStorage or default to false
+    const savedBatchMode = localStorage.getItem('dca-batch-mode');
+    return savedBatchMode === 'true';
+  });
+
+  const [batchParameters, setBatchParameters] = useState(() => {
+    // Initialize from localStorage just like other parameters, with fallback defaults
+    const saved = localStorage.getItem('dca-batch-parameters');
+    return saved ? JSON.parse(saved) : {
+      symbols: ['TSLA'],
+      betaValues: [1.0],
+      enableBetaScaling: false,
+      profitRequirement: [5],
+      gridIntervalPercent: [10],
+      trailingBuyActivationPercent: [10],
+      trailingBuyReboundPercent: [5],
+      trailingSellActivationPercent: [20],
+      trailingSellPullbackPercent: [10]
+    };
   });
 
   // Short selling batch parameters
-  const [shortBatchParameters, setShortBatchParameters] = useState({
-    symbols: ['TSLA'],
-    profitRequirement: [8],
-    gridIntervalPercent: [15],
-    trailingShortActivationPercent: [25],
-    trailingShortPullbackPercent: [15],
-    trailingCoverActivationPercent: [20],
-    trailingCoverReboundPercent: [10],
-    hardStopLossPercent: [30],
-    portfolioStopLossPercent: [25],
-    cascadeStopLossPercent: [35]
+  const [shortBatchParameters, setShortBatchParameters] = useState(() => {
+    // Initialize from localStorage just like other parameters, with fallback defaults
+    const saved = localStorage.getItem('dca-short-batch-parameters');
+    return saved ? JSON.parse(saved) : {
+      symbols: ['TSLA'],
+      profitRequirement: [8],
+      gridIntervalPercent: [15],
+      trailingShortActivationPercent: [25],
+      trailingShortPullbackPercent: [15],
+      trailingCoverActivationPercent: [20],
+      trailingCoverReboundPercent: [10],
+      hardStopLossPercent: [30],
+      portfolioStopLossPercent: [25],
+      cascadeStopLossPercent: [35]
+    };
   });
 
   const [availableSymbols, setAvailableSymbols] = useState([
@@ -88,51 +113,15 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
   // Add validation state
   const [validationErrors, setValidationErrors] = useState({});
 
-  // Load persisted batch mode and parameters from localStorage
-  useEffect(() => {
-    try {
-      const persistedStrategyMode = localStorage.getItem('dca-strategy-mode');
-      const persistedBatchMode = localStorage.getItem('dca-batch-mode');
-      const persistedBatchParameters = localStorage.getItem('dca-batch-parameters');
-      const persistedShortBatchParameters = localStorage.getItem('dca-short-batch-parameters');
-      const persistedParameters = localStorage.getItem('dca-single-parameters');
-      const persistedShortParameters = localStorage.getItem('dca-short-single-parameters');
+  // Local input states to prevent NaN validation errors during typing
+  const [localInputValues, setLocalInputValues] = useState({});
 
-      if (persistedStrategyMode) {
-        setStrategyMode(persistedStrategyMode);
-      }
-
-      if (persistedBatchMode !== null) {
-        setBatchMode(persistedBatchMode === 'true');
-      }
-
-      if (persistedBatchParameters) {
-        setBatchParameters(JSON.parse(persistedBatchParameters));
-      }
-
-      if (persistedShortBatchParameters) {
-        setShortBatchParameters(JSON.parse(persistedShortBatchParameters));
-      }
-
-      // Only restore persisted parameters if no URL parameters are present
-      // URL parameters should always take priority over localStorage
-      if (persistedParameters && (!urlParams || Object.keys(urlParams).length === 0)) {
-        setParameters(JSON.parse(persistedParameters));
-      }
-
-      if (persistedShortParameters && (!urlParams || Object.keys(urlParams).length === 0)) {
-        setShortParameters(JSON.parse(persistedShortParameters));
-      }
-    } catch (err) {
-      console.warn('Failed to load persisted form state:', err);
-    }
-  }, [urlParams]); // Add urlParams dependency so this runs after URL params are available
 
   // Load default parameters from backend on component mount
   useEffect(() => {
     const loadDefaults = async () => {
       try {
-        const response = await fetch('http://localhost:3003/api/backtest/defaults');
+        const response = await fetch('http://localhost:3001/api/backtest/defaults');
         if (response.ok) {
           const result = await response.json();
           if (result.success && result.data) {
@@ -140,21 +129,53 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
             const uiParams = {
               ...result.data,
               gridIntervalPercent: (result.data.gridIntervalPercent || 0.1) * 100,
-              profitRequirement: (result.data.profitRequirement || 0.05) * 100,
+              profitRequirement: (result.data.profitRequirement ?? 0.05) * 100,
               trailingBuyActivationPercent: (result.data.trailingBuyActivationPercent || 0.1) * 100,
               trailingBuyReboundPercent: (result.data.trailingBuyReboundPercent || 0.05) * 100,
               trailingSellActivationPercent: (result.data.trailingSellActivationPercent || 0.2) * 100,
               trailingSellPullbackPercent: (result.data.trailingSellPullbackPercent || 0.1) * 100
             };
+            console.log('📥 Backend defaults loaded:', result.data);
+            console.log('📊 UI params after conversion:', uiParams);
 
-            // Always set defaults first, then URL parameters will override them
-            setParameters(uiParams);
+            // Backend defaults are only used if localStorage is completely empty
+            // This respects the localStorage-first pattern like strategyMode
+            const savedParams = localStorage.getItem('dca-single-parameters');
+            const savedShortParams = localStorage.getItem('dca-short-single-parameters');
+
+            // Only apply backend defaults if no localStorage data exists (fresh user)
+            if (!savedParams) {
+              console.log('📥 No localStorage found, applying backend defaults for long parameters');
+              setParameters(prev => ({ ...prev, ...uiParams }));
+            }
+
+            // Handle short parameters if they exist in backend defaults
+            if (result.data.maxShorts !== undefined && !savedShortParams) {
+              console.log('📥 No localStorage found, applying backend defaults for short parameters');
+              const shortUiParams = {
+                ...result.data,
+                gridIntervalPercent: (result.data.gridIntervalPercent || 0.15) * 100,
+                profitRequirement: (result.data.profitRequirement !== undefined ? result.data.profitRequirement : 0) * 100,
+                trailingShortActivationPercent: (result.data.trailingShortActivationPercent || 0.25) * 100,
+                trailingShortPullbackPercent: (result.data.trailingShortPullbackPercent || 0.15) * 100,
+                trailingCoverActivationPercent: (result.data.trailingCoverActivationPercent || 0.2) * 100,
+                trailingCoverReboundPercent: (result.data.trailingCoverReboundPercent || 0.1) * 100,
+                hardStopLossPercent: (result.data.hardStopLossPercent || 0.3) * 100,
+                portfolioStopLossPercent: (result.data.portfolioStopLossPercent || 0.25) * 100,
+                cascadeStopLossPercent: (result.data.cascadeStopLossPercent || 0.35) * 100
+              };
+              setShortParameters(prev => ({ ...prev, ...shortUiParams }));
+            }
+
+            // Set strategy mode from backend defaults only if not already set by localStorage
+            const localStorageStrategy = localStorage.getItem('dca-strategy-mode');
+            if (result.data.strategyMode && !localStorageStrategy) {
+              setStrategyMode(result.data.strategyMode);
+            }
           }
-        } else {
-          console.warn('Failed to load defaults from backend, using hardcoded defaults');
         }
       } catch (error) {
-        console.warn('Error loading defaults from backend:', error);
+        console.error('Error loading defaults from backend:', error);
       } finally {
         setLoadingDefaults(false);
       }
@@ -173,35 +194,88 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
 
     // Only process URL parameters after defaults have finished loading
     if (urlParams && Object.keys(urlParams).length > 0 && !loadingDefaults) {
+      // Handle strategy mode from URL first (so we know which parameters to map)
+      if (urlParams.strategyMode && urlParams.strategyMode !== strategyMode) {
+        console.log(`🔄 Setting strategy mode from URL: ${urlParams.strategyMode}`);
+        setStrategyMode(urlParams.strategyMode);
+      }
+
       // Map URL parameter names to form field names and convert types
+      // Include both long and short strategy parameters (only relevant ones will be used)
       const urlParamMapping = {
+        // Common parameters
         symbol: (value) => value,
         startDate: (value) => value,
         endDate: (value) => value,
         lotSizeUsd: (value) => parseInt(value) || 10000,
+        gridIntervalPercent: (value) => parseFloat(value) || 10, // Values from BatchResults are already in percentage format
+        profitRequirement: (value) => parseFloat(value) ?? 5, // Values from BatchResults are already in percentage format
+
+        // Long strategy parameters
         maxLots: (value) => parseInt(value) || 10,
         maxLotsToSell: (value) => parseInt(value) || 1,
-        gridIntervalPercent: (value) => parseFloat(value) || 10, // Values from BatchResults are already in percentage format
-        profitRequirement: (value) => parseFloat(value) || 5, // Values from BatchResults are already in percentage format
         trailingBuyActivationPercent: (value) => parseFloat(value) || 10, // Values from BatchResults are already in percentage format
         trailingBuyReboundPercent: (value) => parseFloat(value) || 5, // Values from BatchResults are already in percentage format
         trailingSellActivationPercent: (value) => parseFloat(value) || 20, // Values from BatchResults are already in percentage format
-        trailingSellPullbackPercent: (value) => parseFloat(value) || 10 // Values from BatchResults are already in percentage format
+        trailingSellPullbackPercent: (value) => parseFloat(value) || 10, // Values from BatchResults are already in percentage format
+
+        // Short strategy parameters
+        maxShorts: (value) => parseInt(value) || 6,
+        maxShortsToCovers: (value) => parseInt(value) || 3,
+        trailingShortActivationPercent: (value) => parseFloat(value) || 25,
+        trailingShortPullbackPercent: (value) => parseFloat(value) || 15,
+        trailingCoverActivationPercent: (value) => parseFloat(value) || 20,
+        trailingCoverReboundPercent: (value) => parseFloat(value) || 10
       };
 
-      // Build updated parameters object
+      // Build updated parameters object - handle both long and short parameters appropriately
       const updatedParams = { ...parameters };
+      const updatedShortParams = { ...shortParameters };
       let hasChanges = false;
+      let hasShortChanges = false;
+
+      // Determine which strategy we're setting parameters for
+      const targetStrategy = urlParams.strategyMode || strategyMode;
+      console.log(`🔄 Applying URL parameters for strategy: ${targetStrategy}`);
 
       Object.keys(urlParamMapping).forEach(key => {
         if (urlParams[key] !== undefined && urlParams[key] !== null && urlParams[key] !== '') {
-          updatedParams[key] = urlParamMapping[key](urlParams[key]);
-          hasChanges = true;
+          const value = urlParamMapping[key](urlParams[key]);
+
+          // Common parameters apply to both strategies
+          const commonParams = ['symbol', 'startDate', 'endDate', 'lotSizeUsd', 'gridIntervalPercent', 'profitRequirement'];
+
+          // Long strategy specific parameters
+          const longParams = ['maxLots', 'maxLotsToSell', 'trailingBuyActivationPercent', 'trailingBuyReboundPercent', 'trailingSellActivationPercent', 'trailingSellPullbackPercent'];
+
+          // Short strategy specific parameters
+          const shortParams = ['maxShorts', 'maxShortsToCovers', 'trailingShortActivationPercent', 'trailingShortPullbackPercent', 'trailingCoverActivationPercent', 'trailingCoverReboundPercent'];
+
+          if (commonParams.includes(key)) {
+            // Apply common parameters to both long and short parameter sets
+            if (targetStrategy === 'long' || targetStrategy === 'short') {
+              updatedParams[key] = value;
+              updatedShortParams[key] = value;
+              hasChanges = true;
+              hasShortChanges = true;
+            }
+          } else if (longParams.includes(key) && targetStrategy === 'long') {
+            // Apply long-specific parameters only to long parameter set
+            updatedParams[key] = value;
+            hasChanges = true;
+          } else if (shortParams.includes(key) && targetStrategy === 'short') {
+            // Apply short-specific parameters only to short parameter set
+            updatedShortParams[key] = value;
+            hasShortChanges = true;
+          }
         }
       });
 
       if (hasChanges) {
         setParameters(updatedParams);
+      }
+      if (hasShortChanges) {
+        setShortParameters(updatedShortParams);
       }
 
       // Set test mode based on URL parameter (only if explicitly provided)
@@ -216,7 +290,6 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
   // Handle autoRun functionality
   useEffect(() => {
     if (urlParams && urlParams.autoRun === 'true' && !loadingDefaults && !loading && !autoRunExecuted) {
-      console.log('Auto-run triggered');
       // Mark auto-run as executed to prevent multiple triggers
       setAutoRunExecuted(true);
 
@@ -232,7 +305,9 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
             trailingBuyActivationPercent: parameters.trailingBuyActivationPercent / 100,
             trailingBuyReboundPercent: parameters.trailingBuyReboundPercent / 100,
             trailingSellActivationPercent: parameters.trailingSellActivationPercent / 100,
-            trailingSellPullbackPercent: parameters.trailingSellPullbackPercent / 100
+            trailingSellPullbackPercent: parameters.trailingSellPullbackPercent / 100,
+            // Add strategy mode
+            strategyMode: strategyMode
           };
           onSubmit(backendParams, false); // false indicates single mode
         } else {
@@ -240,7 +315,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
         }
       }, 500); // 500ms delay to ensure form is ready
     }
-  }, [urlParams, loadingDefaults, loading, parameters, batchMode, onSubmit]); // Run when these values change
+  }, [urlParams, loadingDefaults, loading, parameters, batchMode, strategyMode, onSubmit]); // Run when these values change
 
   // Persist strategy mode to localStorage
   useEffect(() => {
@@ -267,13 +342,15 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
     localStorage.setItem('dca-short-batch-parameters', JSON.stringify(shortBatchParameters));
   }, [shortBatchParameters]);
 
-  // Persist single parameters to localStorage
+  // Persist single parameters to localStorage - same pattern as strategyMode
   useEffect(() => {
+    console.log('💾 Saving parameters to localStorage:', parameters);
     localStorage.setItem('dca-single-parameters', JSON.stringify(parameters));
   }, [parameters]);
 
-  // Persist short single parameters to localStorage
+  // Persist short single parameters to localStorage - same pattern as strategyMode
   useEffect(() => {
+    console.log('💾 Saving shortParameters to localStorage:', shortParameters);
     localStorage.setItem('dca-short-single-parameters', JSON.stringify(shortParameters));
   }, [shortParameters]);
 
@@ -360,6 +437,11 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
   const handleSubmit = (e) => {
     e.preventDefault();
 
+    console.log('=== DEBUG: Form Submission ===');
+    console.log('Strategy Mode:', strategyMode);
+    console.log('Batch Mode:', batchMode);
+    console.log('==============================');
+
     // Validate parameters before submission
     if (!validateParameters()) {
       return; // Don't submit if validation fails
@@ -368,8 +450,31 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
     if (strategyMode === 'short') {
       // Short selling strategy
       if (batchMode) {
-        // Short batch mode - not yet implemented
-        console.log('Short batch mode not yet implemented');
+        // Short batch mode - use shortBatchParameters like long batch mode uses batchParameters
+        const shortBatchOptions = {
+          parameterRanges: {
+            symbols: shortBatchParameters.symbols,
+            profitRequirement: shortBatchParameters.profitRequirement.map(p => p / 100),
+            gridIntervalPercent: shortBatchParameters.gridIntervalPercent.map(p => p / 100),
+            trailingShortActivationPercent: shortBatchParameters.trailingShortActivationPercent.map(p => p / 100),
+            trailingShortPullbackPercent: shortBatchParameters.trailingShortPullbackPercent.map(p => p / 100),
+            trailingCoverActivationPercent: shortBatchParameters.trailingCoverActivationPercent.map(p => p / 100),
+            trailingCoverReboundPercent: shortBatchParameters.trailingCoverReboundPercent.map(p => p / 100),
+            hardStopLossPercent: shortBatchParameters.hardStopLossPercent.map(p => p / 100),
+            portfolioStopLossPercent: shortBatchParameters.portfolioStopLossPercent.map(p => p / 100),
+            cascadeStopLossPercent: shortBatchParameters.cascadeStopLossPercent.map(p => p / 100),
+            // Fixed parameters from single mode
+            startDate: shortParameters.startDate,
+            endDate: shortParameters.endDate,
+            lotSizeUsd: shortParameters.lotSizeUsd,
+            maxShorts: shortParameters.maxShorts,
+            maxShortsToCovers: shortParameters.maxShortsToCovers
+          },
+          sortBy: 'annualizedReturn',
+          strategyMode: 'short'
+        };
+        console.log('Running short batch optimization with params:', shortBatchOptions);
+        onSubmit(shortBatchOptions, true);
         return;
       } else {
         // Short single mode
@@ -383,9 +488,11 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
           trailingCoverReboundPercent: shortParameters.trailingCoverReboundPercent / 100,
           hardStopLossPercent: shortParameters.hardStopLossPercent / 100,
           portfolioStopLossPercent: shortParameters.portfolioStopLossPercent / 100,
-          cascadeStopLossPercent: shortParameters.cascadeStopLossPercent / 100
+          cascadeStopLossPercent: shortParameters.cascadeStopLossPercent / 100,
+          // Add strategy mode to parameters
+          strategyMode: 'short'
         };
-        onSubmit(shortBackendParams, false, 'short'); // Third parameter indicates short mode
+        onSubmit(shortBackendParams, false); // Short mode is indicated by strategyMode field
         return;
       }
     }
@@ -427,7 +534,9 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
         // Add Beta information
         beta: beta,
         enableBetaScaling: enableBetaScaling,
-        isManualBetaOverride: isManualBetaOverride
+        isManualBetaOverride: isManualBetaOverride,
+        // Add strategy mode
+        strategyMode: strategyMode
       };
       onSubmit(backendParams, false); // false indicates single mode
     }
@@ -482,6 +591,13 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
     }));
   };
 
+  const handleShortBatchParameterChange = (field, values) => {
+    setShortBatchParameters(prev => ({
+      ...prev,
+      [field]: values
+    }));
+  };
+
   const handleSelectAll = (field, allValues) => {
     setBatchParameters(prev => ({
       ...prev,
@@ -505,38 +621,68 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
   };
 
   const handleSymbolToggle = (symbol) => {
-    setBatchParameters(prev => ({
-      ...prev,
-      symbols: prev.symbols.includes(symbol)
-        ? prev.symbols.filter(s => s !== symbol)
-        : [...prev.symbols, symbol]
-    }));
+    if (strategyMode === 'short') {
+      setShortBatchParameters(prev => ({
+        ...prev,
+        symbols: prev.symbols.includes(symbol)
+          ? prev.symbols.filter(s => s !== symbol)
+          : [...prev.symbols, symbol]
+      }));
+    } else {
+      setBatchParameters(prev => ({
+        ...prev,
+        symbols: prev.symbols.includes(symbol)
+          ? prev.symbols.filter(s => s !== symbol)
+          : [...prev.symbols, symbol]
+      }));
+    }
   };
 
   const handleAddSymbol = () => {
     const symbol = newSymbol.trim().toUpperCase();
     if (symbol && !availableSymbols.includes(symbol)) {
       setAvailableSymbols(prev => [...prev, symbol]);
-      setBatchParameters(prev => ({
-        ...prev,
-        symbols: [...prev.symbols, symbol]
-      }));
+      if (strategyMode === 'short') {
+        setShortBatchParameters(prev => ({
+          ...prev,
+          symbols: [...prev.symbols, symbol]
+        }));
+      } else {
+        setBatchParameters(prev => ({
+          ...prev,
+          symbols: [...prev.symbols, symbol]
+        }));
+      }
       setNewSymbol('');
     }
   };
 
   const handleSelectAllSymbols = () => {
-    setBatchParameters(prev => ({
-      ...prev,
-      symbols: [...availableSymbols]
-    }));
+    if (strategyMode === 'short') {
+      setShortBatchParameters(prev => ({
+        ...prev,
+        symbols: [...availableSymbols]
+      }));
+    } else {
+      setBatchParameters(prev => ({
+        ...prev,
+        symbols: [...availableSymbols]
+      }));
+    }
   };
 
   const handleDeselectAllSymbols = () => {
-    setBatchParameters(prev => ({
-      ...prev,
-      symbols: []
-    }));
+    if (strategyMode === 'short') {
+      setShortBatchParameters(prev => ({
+        ...prev,
+        symbols: []
+      }));
+    } else {
+      setBatchParameters(prev => ({
+        ...prev,
+        symbols: []
+      }));
+    }
   };
 
   // Beta-related functions
@@ -593,7 +739,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
     setBaseParameters(baseParams);
 
     try {
-      const response = await fetch('http://localhost:3003/api/backtest/beta-parameters', {
+      const response = await fetch('http://localhost:3001/api/backtest/beta-parameters', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -857,14 +1003,14 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                   <label key={symbol} className="checkbox-item">
                     <input
                       type="checkbox"
-                      checked={batchParameters.symbols.includes(symbol)}
+                      checked={strategyMode === 'short' ? shortBatchParameters.symbols.includes(symbol) : batchParameters.symbols.includes(symbol)}
                       onChange={() => handleSymbolToggle(symbol)}
                     />
                     <span>{symbol}</span>
                   </label>
                 ))}
               </div>
-              <span className="form-help">Selected: {batchParameters.symbols.join(', ')}</span>
+              <span className="form-help">Selected: {strategyMode === 'short' ? shortBatchParameters.symbols.join(', ') : batchParameters.symbols.join(', ')}</span>
 
               {/* Add Custom Symbol - Batch Mode */}
               <div className="form-group" style={{ marginTop: '1rem' }}>
@@ -1029,8 +1175,19 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                   <input
                     id="profitRequirement"
                     type="number"
-                    value={shortParameters.profitRequirement}
-                    onChange={(e) => handleChange('profitRequirement', parseFloat(e.target.value))}
+                    value={localInputValues.shortProfitRequirement !== undefined ? localInputValues.shortProfitRequirement : shortParameters.profitRequirement}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setLocalInputValues(prev => ({ ...prev, shortProfitRequirement: value }));
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value;
+                      const numValue = value === '' ? 0 : parseFloat(value);
+                      if (!isNaN(numValue)) {
+                        handleChange('profitRequirement', numValue);
+                        setLocalInputValues(prev => ({ ...prev, shortProfitRequirement: undefined }));
+                      }
+                    }}
                     min="0"
                     max="50"
                     step="0.1"
@@ -1190,8 +1347,19 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                   <input
                     id="profitRequirement"
                     type="number"
-                    value={parameters.profitRequirement}
-                    onChange={(e) => handleChange('profitRequirement', parseFloat(e.target.value))}
+                    value={localInputValues.longProfitRequirement !== undefined ? localInputValues.longProfitRequirement : parameters.profitRequirement}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setLocalInputValues(prev => ({ ...prev, longProfitRequirement: value }));
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value;
+                      const numValue = value === '' ? 0 : parseFloat(value);
+                      if (!isNaN(numValue)) {
+                        handleChange('profitRequirement', numValue);
+                        setLocalInputValues(prev => ({ ...prev, longProfitRequirement: undefined }));
+                      }
+                    }}
                     min="0"
                     max="50"
                     step="0.1"
@@ -1199,7 +1367,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                     disabled={enableBetaScaling}
                   />
                   <span className="form-help">
-                    {enableBetaScaling 
+                    {enableBetaScaling
                       ? `Automatically calculated: ${(0.05 * beta * 100).toFixed(1)}% (5% × ${beta.toFixed(1)} Beta)`
                       : 'Minimum profit required before selling'
                     }
@@ -1369,329 +1537,565 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
         ) : (
           // Batch mode - range selections
           <div className="batch-parameters">
-            {/* Beta Configuration Section */}
-            <div className="form-section">
-              <h3 className="section-title">
-                <TrendingUp size={20} />
-                Beta Configuration
-              </h3>
-              
-              <div className="beta-batch-controls">
-                <div className="form-group">
-                  <label className="toggle-label">
-                    <input
-                      type="checkbox"
-                      checked={batchParameters.enableBetaScaling}
-                      onChange={(e) => handleBatchParameterChange('enableBetaScaling', e.target.checked)}
-                    />
-                    <span className="toggle-slider"></span>
-                    <span>Enable Beta-based Parameter Scaling</span>
-                  </label>
-                  <span className="form-help">
-                    When enabled, parameters will be automatically adjusted based on each stock's volatility (Beta)
-                  </span>
-                </div>
-
+            {strategyMode === 'short' ? (
+              // Short batch parameters
+              <>
                 <div className="parameter-range">
-                  <label>Beta Values - Test different volatility scenarios</label>
+                  <label>Profit Requirement (%) - Range: 0 to 50, step 5</label>
                   <div className="selection-controls">
                     <button
                       type="button"
                       className="control-button"
-                      onClick={() => handleSelectAll('betaValues', [0.25, 0.5, 1.0, 1.5, 2.0, 3.0])}
+                      onClick={() => handleShortBatchParameterChange('profitRequirement', generateRange(0, 50, 5))}
                     >
                       Select All
                     </button>
                     <button
                       type="button"
                       className="control-button"
-                      onClick={() => handleDeselectAll('betaValues')}
+                      onClick={() => handleShortBatchParameterChange('profitRequirement', [])}
                     >
                       Deselect All
                     </button>
                   </div>
                   <div className="checkbox-grid">
-                    {[0.25, 0.5, 1.0, 1.5, 2.0, 3.0].map(val => (
+                    {generateRange(0, 50, 5).map(val => (
                       <label key={val} className="checkbox-item">
                         <input
                           type="checkbox"
-                          checked={batchParameters.betaValues.includes(val)}
+                          checked={shortBatchParameters.profitRequirement.includes(val)}
                           onChange={(e) => {
                             if (e.target.checked) {
-                              handleBatchParameterChange('betaValues', [...batchParameters.betaValues, val]);
+                              handleShortBatchParameterChange('profitRequirement', [...shortBatchParameters.profitRequirement, val]);
                             } else {
-                              handleBatchParameterChange('betaValues', batchParameters.betaValues.filter(b => b !== val));
+                              handleShortBatchParameterChange('profitRequirement', shortBatchParameters.profitRequirement.filter(p => p !== val));
                             }
                           }}
                         />
-                        <span>
-                          {val} 
-                          <small style={{color: '#666', marginLeft: '4px'}}>
-                            ({val < 1 ? 'Low Vol' : val === 1 ? 'Market' : 'High Vol'})
-                          </small>
-                        </span>
+                        <span>{val}%</span>
                       </label>
                     ))}
                   </div>
-                  <span className="form-help">
-                    Selected: {batchParameters.betaValues.join(', ')} | 
-                    {batchParameters.enableBetaScaling 
-                      ? ' Parameters will be scaled by these Beta values' 
-                      : ' These Beta values will be tested with fixed parameters'
-                    }
-                  </span>
                 </div>
 
-                {batchParameters.enableBetaScaling && (
-                  <div className="beta-scaling-info">
-                    <div className="info-card">
-                      <Info size={16} />
-                      <div>
-                        <h4>Beta Scaling Formula</h4>
-                        <ul style={{fontSize: '0.875rem', margin: '0.5rem 0', paddingLeft: '1.25rem'}}>
-                          <li>Profit Requirement = 5% × Beta</li>
-                          <li>Grid Interval = 10% × Beta</li>
-                          <li>Trailing Buy Activation = 10% × Beta</li>
-                          <li>Trailing Buy Rebound = 5% × Beta</li>
-                          <li>Trailing Sell Activation = 20% × Beta</li>
-                          <li>Trailing Sell Pullback = 10% × Beta</li>
-                        </ul>
-                        <p style={{fontSize: '0.875rem', margin: '0.5rem 0', color: '#666'}}>
-                          Example: Beta 1.5 → Profit Req: 7.5%, Grid: 15%, Trailing Sell: 30%
-                        </p>
-                      </div>
-                    </div>
+                <div className="parameter-range">
+                  <label>Grid Interval (%) - Range: 10 to 30, step 5</label>
+                  <div className="selection-controls">
+                    <button
+                      type="button"
+                      className="control-button"
+                      onClick={() => handleShortBatchParameterChange('gridIntervalPercent', generateRange(10, 30, 5))}
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      className="control-button"
+                      onClick={() => handleShortBatchParameterChange('gridIntervalPercent', [])}
+                    >
+                      Deselect All
+                    </button>
                   </div>
-                )}
-              </div>
-            </div>
-            <div className="parameter-range">
-              <label>Profit Requirement (%) - Range: 0 to 50, step 5</label>
-              <div className="selection-controls">
-                <button
-                  type="button"
-                  className="control-button"
-                  onClick={() => handleSelectAll('profitRequirement', generateRange(0, 50, 5))}
-                >
-                  Select All
-                </button>
-                <button
-                  type="button"
-                  className="control-button"
-                  onClick={() => handleDeselectAll('profitRequirement')}
-                >
-                  Deselect All
-                </button>
-              </div>
-              <div className="checkbox-grid">
-                {generateRange(0, 50, 5).map(val => (
-                  <label key={val} className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      checked={batchParameters.profitRequirement.includes(val)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          handleBatchParameterChange('profitRequirement', [...batchParameters.profitRequirement, val]);
-                        } else {
-                          handleBatchParameterChange('profitRequirement', batchParameters.profitRequirement.filter(p => p !== val));
-                        }
-                      }}
-                    />
-                    <span>{val}%</span>
-                  </label>
-                ))}
-              </div>
-            </div>
+                  <div className="checkbox-grid">
+                    {generateRange(10, 30, 5).map(val => (
+                      <label key={val} className="checkbox-item">
+                        <input
+                          type="checkbox"
+                          checked={shortBatchParameters.gridIntervalPercent.includes(val)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              handleShortBatchParameterChange('gridIntervalPercent', [...shortBatchParameters.gridIntervalPercent, val]);
+                            } else {
+                              handleShortBatchParameterChange('gridIntervalPercent', shortBatchParameters.gridIntervalPercent.filter(p => p !== val));
+                            }
+                          }}
+                        />
+                        <span>{val}%</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
 
-            <div className="parameter-range">
-              <label>Grid Interval (%) - Range: 5 to 20, step 5</label>
-              <div className="selection-controls">
-                <button
-                  type="button"
-                  className="control-button"
-                  onClick={() => handleSelectAll('gridIntervalPercent', generateRange(5, 20, 5))}
-                >
-                  Select All
-                </button>
-                <button
-                  type="button"
-                  className="control-button"
-                  onClick={() => handleDeselectAll('gridIntervalPercent')}
-                >
-                  Deselect All
-                </button>
-              </div>
-              <div className="checkbox-grid">
-                {generateRange(5, 20, 5).map(val => (
-                  <label key={val} className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      checked={batchParameters.gridIntervalPercent.includes(val)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          handleBatchParameterChange('gridIntervalPercent', [...batchParameters.gridIntervalPercent, val]);
-                        } else {
-                          handleBatchParameterChange('gridIntervalPercent', batchParameters.gridIntervalPercent.filter(p => p !== val));
-                        }
-                      }}
-                    />
-                    <span>{val}%</span>
-                  </label>
-                ))}
-              </div>
-            </div>
+                <div className="parameter-range">
+                  <label>Trailing Short Activation (%) - Range: 15 to 40, step 5</label>
+                  <div className="selection-controls">
+                    <button
+                      type="button"
+                      className="control-button"
+                      onClick={() => handleShortBatchParameterChange('trailingShortActivationPercent', generateRange(15, 40, 5))}
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      className="control-button"
+                      onClick={() => handleShortBatchParameterChange('trailingShortActivationPercent', [])}
+                    >
+                      Deselect All
+                    </button>
+                  </div>
+                  <div className="checkbox-grid">
+                    {generateRange(15, 40, 5).map(val => (
+                      <label key={val} className="checkbox-item">
+                        <input
+                          type="checkbox"
+                          checked={shortBatchParameters.trailingShortActivationPercent.includes(val)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              handleShortBatchParameterChange('trailingShortActivationPercent', [...shortBatchParameters.trailingShortActivationPercent, val]);
+                            } else {
+                              handleShortBatchParameterChange('trailingShortActivationPercent', shortBatchParameters.trailingShortActivationPercent.filter(p => p !== val));
+                            }
+                          }}
+                        />
+                        <span>{val}%</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
 
-            <div className="parameter-range">
-              <label>Trailing Buy Activation (%) - Range: 5 to 20, step 5</label>
-              <div className="selection-controls">
-                <button
-                  type="button"
-                  className="control-button"
-                  onClick={() => handleSelectAll('trailingBuyActivationPercent', generateRange(5, 20, 5))}
-                >
-                  Select All
-                </button>
-                <button
-                  type="button"
-                  className="control-button"
-                  onClick={() => handleDeselectAll('trailingBuyActivationPercent')}
-                >
-                  Deselect All
-                </button>
-              </div>
-              <div className="checkbox-grid">
-                {generateRange(5, 20, 5).map(val => (
-                  <label key={val} className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      checked={batchParameters.trailingBuyActivationPercent.includes(val)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          handleBatchParameterChange('trailingBuyActivationPercent', [...batchParameters.trailingBuyActivationPercent, val]);
-                        } else {
-                          handleBatchParameterChange('trailingBuyActivationPercent', batchParameters.trailingBuyActivationPercent.filter(p => p !== val));
-                        }
-                      }}
-                    />
-                    <span>{val}%</span>
-                  </label>
-                ))}
-              </div>
-            </div>
+                <div className="parameter-range">
+                  <label>Trailing Short Pullback (%) - Range: 5 to 25, step 5</label>
+                  <div className="selection-controls">
+                    <button
+                      type="button"
+                      className="control-button"
+                      onClick={() => handleShortBatchParameterChange('trailingShortPullbackPercent', generateRange(5, 25, 5))}
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      className="control-button"
+                      onClick={() => handleShortBatchParameterChange('trailingShortPullbackPercent', [])}
+                    >
+                      Deselect All
+                    </button>
+                  </div>
+                  <div className="checkbox-grid">
+                    {generateRange(5, 25, 5).map(val => (
+                      <label key={val} className="checkbox-item">
+                        <input
+                          type="checkbox"
+                          checked={shortBatchParameters.trailingShortPullbackPercent.includes(val)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              handleShortBatchParameterChange('trailingShortPullbackPercent', [...shortBatchParameters.trailingShortPullbackPercent, val]);
+                            } else {
+                              handleShortBatchParameterChange('trailingShortPullbackPercent', shortBatchParameters.trailingShortPullbackPercent.filter(p => p !== val));
+                            }
+                          }}
+                        />
+                        <span>{val}%</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
 
-            <div className="parameter-range">
-              <label>Trailing Buy Rebound (%) - Range: 0 to 10, step 5</label>
-              <div className="selection-controls">
-                <button
-                  type="button"
-                  className="control-button"
-                  onClick={() => handleSelectAll('trailingBuyReboundPercent', generateRange(0, 10, 5))}
-                >
-                  Select All
-                </button>
-                <button
-                  type="button"
-                  className="control-button"
-                  onClick={() => handleDeselectAll('trailingBuyReboundPercent')}
-                >
-                  Deselect All
-                </button>
-              </div>
-              <div className="checkbox-grid">
-                {generateRange(0, 10, 5).map(val => (
-                  <label key={val} className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      checked={batchParameters.trailingBuyReboundPercent.includes(val)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          handleBatchParameterChange('trailingBuyReboundPercent', [...batchParameters.trailingBuyReboundPercent, val]);
-                        } else {
-                          handleBatchParameterChange('trailingBuyReboundPercent', batchParameters.trailingBuyReboundPercent.filter(p => p !== val));
-                        }
-                      }}
-                    />
-                    <span>{val}%</span>
-                  </label>
-                ))}
-              </div>
-            </div>
+                <div className="parameter-range">
+                  <label>Trailing Cover Activation (%) - Range: 10 to 35, step 5</label>
+                  <div className="selection-controls">
+                    <button
+                      type="button"
+                      className="control-button"
+                      onClick={() => handleShortBatchParameterChange('trailingCoverActivationPercent', generateRange(10, 35, 5))}
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      className="control-button"
+                      onClick={() => handleShortBatchParameterChange('trailingCoverActivationPercent', [])}
+                    >
+                      Deselect All
+                    </button>
+                  </div>
+                  <div className="checkbox-grid">
+                    {generateRange(10, 35, 5).map(val => (
+                      <label key={val} className="checkbox-item">
+                        <input
+                          type="checkbox"
+                          checked={shortBatchParameters.trailingCoverActivationPercent.includes(val)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              handleShortBatchParameterChange('trailingCoverActivationPercent', [...shortBatchParameters.trailingCoverActivationPercent, val]);
+                            } else {
+                              handleShortBatchParameterChange('trailingCoverActivationPercent', shortBatchParameters.trailingCoverActivationPercent.filter(p => p !== val));
+                            }
+                          }}
+                        />
+                        <span>{val}%</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
 
-            <div className="parameter-range">
-              <label>Trailing Sell Activation (%) - Range: 10 to 50, step 10</label>
-              <div className="selection-controls">
-                <button
-                  type="button"
-                  className="control-button"
-                  onClick={() => handleSelectAll('trailingSellActivationPercent', generateRange(10, 50, 10))}
-                >
-                  Select All
-                </button>
-                <button
-                  type="button"
-                  className="control-button"
-                  onClick={() => handleDeselectAll('trailingSellActivationPercent')}
-                >
-                  Deselect All
-                </button>
-              </div>
-              <div className="checkbox-grid">
-                {generateRange(10, 50, 10).map(val => (
-                  <label key={val} className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      checked={batchParameters.trailingSellActivationPercent.includes(val)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          handleBatchParameterChange('trailingSellActivationPercent', [...batchParameters.trailingSellActivationPercent, val]);
-                        } else {
-                          handleBatchParameterChange('trailingSellActivationPercent', batchParameters.trailingSellActivationPercent.filter(p => p !== val));
-                        }
-                      }}
-                    />
-                    <span>{val}%</span>
-                  </label>
-                ))}
-              </div>
-            </div>
+                <div className="parameter-range">
+                  <label>Trailing Cover Rebound (%) - Range: 5 to 20, step 5</label>
+                  <div className="selection-controls">
+                    <button
+                      type="button"
+                      className="control-button"
+                      onClick={() => handleShortBatchParameterChange('trailingCoverReboundPercent', generateRange(5, 20, 5))}
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      className="control-button"
+                      onClick={() => handleShortBatchParameterChange('trailingCoverReboundPercent', [])}
+                    >
+                      Deselect All
+                    </button>
+                  </div>
+                  <div className="checkbox-grid">
+                    {generateRange(5, 20, 5).map(val => (
+                      <label key={val} className="checkbox-item">
+                        <input
+                          type="checkbox"
+                          checked={shortBatchParameters.trailingCoverReboundPercent.includes(val)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              handleShortBatchParameterChange('trailingCoverReboundPercent', [...shortBatchParameters.trailingCoverReboundPercent, val]);
+                            } else {
+                              handleShortBatchParameterChange('trailingCoverReboundPercent', shortBatchParameters.trailingCoverReboundPercent.filter(p => p !== val));
+                            }
+                          }}
+                        />
+                        <span>{val}%</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : (
+              // Long batch parameters
+              <>
+                {/* Beta Configuration Section */}
+                <div className="form-section">
+                  <h3 className="section-title">
+                    <TrendingUp size={20} />
+                    Beta Configuration
+                  </h3>
 
-            <div className="parameter-range">
-              <label>Trailing Sell Pullback (%) - Range: 0 to 10, step 5</label>
-              <div className="selection-controls">
-                <button
-                  type="button"
-                  className="control-button"
-                  onClick={() => handleSelectAll('trailingSellPullbackPercent', generateRange(0, 10, 5))}
-                >
-                  Select All
-                </button>
-                <button
-                  type="button"
-                  className="control-button"
-                  onClick={() => handleDeselectAll('trailingSellPullbackPercent')}
-                >
-                  Deselect All
-                </button>
-              </div>
-              <div className="checkbox-grid">
-                {generateRange(0, 10, 5).map(val => (
-                  <label key={val} className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      checked={batchParameters.trailingSellPullbackPercent.includes(val)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          handleBatchParameterChange('trailingSellPullbackPercent', [...batchParameters.trailingSellPullbackPercent, val]);
-                        } else {
-                          handleBatchParameterChange('trailingSellPullbackPercent', batchParameters.trailingSellPullbackPercent.filter(p => p !== val));
+                  <div className="beta-batch-controls">
+                    <div className="form-group">
+                      <label className="toggle-label">
+                        <input
+                          type="checkbox"
+                          checked={batchParameters.enableBetaScaling}
+                          onChange={(e) => handleBatchParameterChange('enableBetaScaling', e.target.checked)}
+                        />
+                        <span className="toggle-slider"></span>
+                        <span>Enable Beta-based Parameter Scaling</span>
+                      </label>
+                      <span className="form-help">
+                        When enabled, parameters will be automatically adjusted based on each stock's volatility (Beta)
+                      </span>
+                    </div>
+
+                    <div className="parameter-range">
+                      <label>Beta Values - Test different volatility scenarios</label>
+                      <div className="selection-controls">
+                        <button
+                          type="button"
+                          className="control-button"
+                          onClick={() => handleSelectAll('betaValues', [0.25, 0.5, 1.0, 1.5, 2.0, 3.0])}
+                        >
+                          Select All
+                        </button>
+                        <button
+                          type="button"
+                          className="control-button"
+                          onClick={() => handleDeselectAll('betaValues')}
+                        >
+                          Deselect All
+                        </button>
+                      </div>
+                      <div className="checkbox-grid">
+                        {[0.25, 0.5, 1.0, 1.5, 2.0, 3.0].map(val => (
+                          <label key={val} className="checkbox-item">
+                            <input
+                              type="checkbox"
+                              checked={batchParameters.betaValues.includes(val)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  handleBatchParameterChange('betaValues', [...batchParameters.betaValues, val]);
+                                } else {
+                                  handleBatchParameterChange('betaValues', batchParameters.betaValues.filter(b => b !== val));
+                                }
+                              }}
+                            />
+                            <span>
+                              {val}
+                              <small style={{color: '#666', marginLeft: '4px'}}>
+                                ({val < 1 ? 'Low Vol' : val === 1 ? 'Market' : 'High Vol'})
+                              </small>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                      <span className="form-help">
+                        Selected: {batchParameters.betaValues.join(', ')} |
+                        {batchParameters.enableBetaScaling
+                          ? ' Parameters will be scaled by these Beta values'
+                          : ' These Beta values will be tested with fixed parameters'
                         }
-                      }}
-                    />
-                    <span>{val}%</span>
-                  </label>
-                ))}
-              </div>
-            </div>
+                      </span>
+                    </div>
+
+                    {batchParameters.enableBetaScaling && (
+                      <div className="beta-scaling-info">
+                        <div className="info-card">
+                          <Info size={16} />
+                          <div>
+                            <h4>Beta Scaling Formula</h4>
+                            <ul style={{fontSize: '0.875rem', margin: '0.5rem 0', paddingLeft: '1.25rem'}}>
+                              <li>Profit Requirement = 5% × Beta</li>
+                              <li>Grid Interval = 10% × Beta</li>
+                              <li>Trailing Buy Activation = 10% × Beta</li>
+                              <li>Trailing Buy Rebound = 5% × Beta</li>
+                              <li>Trailing Sell Activation = 20% × Beta</li>
+                              <li>Trailing Sell Pullback = 10% × Beta</li>
+                            </ul>
+                            <p style={{fontSize: '0.875rem', margin: '0.5rem 0', color: '#666'}}>
+                              Example: Beta 1.5 → Profit Req: 7.5%, Grid: 15%, Trailing Sell: 30%
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="parameter-range">
+                  <label>Profit Requirement (%) - Range: 0 to 50, step 5</label>
+                  <div className="selection-controls">
+                    <button
+                      type="button"
+                      className="control-button"
+                      onClick={() => handleSelectAll('profitRequirement', generateRange(0, 50, 5))}
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      className="control-button"
+                      onClick={() => handleDeselectAll('profitRequirement')}
+                    >
+                      Deselect All
+                    </button>
+                  </div>
+                  <div className="checkbox-grid">
+                    {generateRange(0, 50, 5).map(val => (
+                      <label key={val} className="checkbox-item">
+                        <input
+                          type="checkbox"
+                          checked={batchParameters.profitRequirement.includes(val)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              handleBatchParameterChange('profitRequirement', [...batchParameters.profitRequirement, val]);
+                            } else {
+                              handleBatchParameterChange('profitRequirement', batchParameters.profitRequirement.filter(p => p !== val));
+                            }
+                          }}
+                        />
+                        <span>{val}%</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="parameter-range">
+                  <label>Grid Interval (%) - Range: 5 to 20, step 5</label>
+                  <div className="selection-controls">
+                    <button
+                      type="button"
+                      className="control-button"
+                      onClick={() => handleSelectAll('gridIntervalPercent', generateRange(5, 20, 5))}
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      className="control-button"
+                      onClick={() => handleDeselectAll('gridIntervalPercent')}
+                    >
+                      Deselect All
+                    </button>
+                  </div>
+                  <div className="checkbox-grid">
+                    {generateRange(5, 20, 5).map(val => (
+                      <label key={val} className="checkbox-item">
+                        <input
+                          type="checkbox"
+                          checked={batchParameters.gridIntervalPercent.includes(val)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              handleBatchParameterChange('gridIntervalPercent', [...batchParameters.gridIntervalPercent, val]);
+                            } else {
+                              handleBatchParameterChange('gridIntervalPercent', batchParameters.gridIntervalPercent.filter(p => p !== val));
+                            }
+                          }}
+                        />
+                        <span>{val}%</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="parameter-range">
+                  <label>Trailing Buy Activation (%) - Range: 5 to 20, step 5</label>
+                  <div className="selection-controls">
+                    <button
+                      type="button"
+                      className="control-button"
+                      onClick={() => handleSelectAll('trailingBuyActivationPercent', generateRange(5, 20, 5))}
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      className="control-button"
+                      onClick={() => handleDeselectAll('trailingBuyActivationPercent')}
+                    >
+                      Deselect All
+                    </button>
+                  </div>
+                  <div className="checkbox-grid">
+                    {generateRange(5, 20, 5).map(val => (
+                      <label key={val} className="checkbox-item">
+                        <input
+                          type="checkbox"
+                          checked={batchParameters.trailingBuyActivationPercent.includes(val)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              handleBatchParameterChange('trailingBuyActivationPercent', [...batchParameters.trailingBuyActivationPercent, val]);
+                            } else {
+                              handleBatchParameterChange('trailingBuyActivationPercent', batchParameters.trailingBuyActivationPercent.filter(p => p !== val));
+                            }
+                          }}
+                        />
+                        <span>{val}%</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="parameter-range">
+                  <label>Trailing Buy Rebound (%) - Range: 0 to 10, step 5</label>
+                  <div className="selection-controls">
+                    <button
+                      type="button"
+                      className="control-button"
+                      onClick={() => handleSelectAll('trailingBuyReboundPercent', generateRange(0, 10, 5))}
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      className="control-button"
+                      onClick={() => handleDeselectAll('trailingBuyReboundPercent')}
+                    >
+                      Deselect All
+                    </button>
+                  </div>
+                  <div className="checkbox-grid">
+                    {generateRange(0, 10, 5).map(val => (
+                      <label key={val} className="checkbox-item">
+                        <input
+                          type="checkbox"
+                          checked={batchParameters.trailingBuyReboundPercent.includes(val)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              handleBatchParameterChange('trailingBuyReboundPercent', [...batchParameters.trailingBuyReboundPercent, val]);
+                            } else {
+                              handleBatchParameterChange('trailingBuyReboundPercent', batchParameters.trailingBuyReboundPercent.filter(p => p !== val));
+                            }
+                          }}
+                        />
+                        <span>{val}%</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="parameter-range">
+                  <label>Trailing Sell Activation (%) - Range: 10 to 50, step 10</label>
+                  <div className="selection-controls">
+                    <button
+                      type="button"
+                      className="control-button"
+                      onClick={() => handleSelectAll('trailingSellActivationPercent', generateRange(10, 50, 10))}
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      className="control-button"
+                      onClick={() => handleDeselectAll('trailingSellActivationPercent')}
+                    >
+                      Deselect All
+                    </button>
+                  </div>
+                  <div className="checkbox-grid">
+                    {generateRange(10, 50, 10).map(val => (
+                      <label key={val} className="checkbox-item">
+                        <input
+                          type="checkbox"
+                          checked={batchParameters.trailingSellActivationPercent.includes(val)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              handleBatchParameterChange('trailingSellActivationPercent', [...batchParameters.trailingSellActivationPercent, val]);
+                            } else {
+                              handleBatchParameterChange('trailingSellActivationPercent', batchParameters.trailingSellActivationPercent.filter(p => p !== val));
+                            }
+                          }}
+                        />
+                        <span>{val}%</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="parameter-range">
+                  <label>Trailing Sell Pullback (%) - Range: 0 to 10, step 5</label>
+                  <div className="selection-controls">
+                    <button
+                      type="button"
+                      className="control-button"
+                      onClick={() => handleSelectAll('trailingSellPullbackPercent', generateRange(0, 10, 5))}
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      className="control-button"
+                      onClick={() => handleDeselectAll('trailingSellPullbackPercent')}
+                    >
+                      Deselect All
+                    </button>
+                  </div>
+                  <div className="checkbox-grid">
+                    {generateRange(0, 10, 5).map(val => (
+                      <label key={val} className="checkbox-item">
+                        <input
+                          type="checkbox"
+                          checked={batchParameters.trailingSellPullbackPercent.includes(val)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              handleBatchParameterChange('trailingSellPullbackPercent', [...batchParameters.trailingSellPullbackPercent, val]);
+                            } else {
+                              handleBatchParameterChange('trailingSellPullbackPercent', batchParameters.trailingSellPullbackPercent.filter(p => p !== val));
+                            }
+                          }}
+                        />
+                        <span>{val}%</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -1704,14 +2108,24 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
               <h4>Batch Testing Overview</h4>
               <p>
                 Total combinations: {
-                  batchParameters.symbols.length *
-                  (batchParameters.betaValues.length || 1) *
-                  batchParameters.profitRequirement.length *
-                  batchParameters.gridIntervalPercent.length *
-                  batchParameters.trailingBuyActivationPercent.length *
-                  batchParameters.trailingBuyReboundPercent.length *
-                  batchParameters.trailingSellActivationPercent.length *
-                  batchParameters.trailingSellPullbackPercent.length
+                  strategyMode === 'short' ? (
+                    shortBatchParameters.symbols.length *
+                    shortBatchParameters.profitRequirement.length *
+                    shortBatchParameters.gridIntervalPercent.length *
+                    shortBatchParameters.trailingShortActivationPercent.length *
+                    shortBatchParameters.trailingShortPullbackPercent.length *
+                    shortBatchParameters.trailingCoverActivationPercent.length *
+                    shortBatchParameters.trailingCoverReboundPercent.length
+                  ) : (
+                    batchParameters.symbols.length *
+                    (batchParameters.betaValues.length || 1) *
+                    batchParameters.profitRequirement.length *
+                    batchParameters.gridIntervalPercent.length *
+                    batchParameters.trailingBuyActivationPercent.length *
+                    batchParameters.trailingBuyReboundPercent.length *
+                    batchParameters.trailingSellActivationPercent.length *
+                    batchParameters.trailingSellPullbackPercent.length
+                  )
                 }
               </p>
               <p>
@@ -1771,26 +2185,23 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
       <button
         type="submit"
         className="submit-button"
-        disabled={loading || (batchMode && batchParameters.symbols.length === 0) || (strategyMode === 'short' && batchMode)}
+        disabled={loading || (batchMode && ((strategyMode === 'short' && shortBatchParameters.symbols.length === 0) || (strategyMode === 'long' && batchParameters.symbols.length === 0)))}
       >
         {loading ? (
           <>
             <div className="loading-spinner"></div>
-            {strategyMode === 'short' ? 'Running Short Backtest...' : (batchMode ? 'Running Batch Tests...' : 'Running Backtest...')}
+            {strategyMode === 'short' ?
+              (batchMode ? 'Running Short Batch Tests...' : 'Running Short Backtest...') :
+              (batchMode ? 'Running Batch Tests...' : 'Running Backtest...')
+            }
           </>
         ) : (
           <>
-            {strategyMode === 'short' && batchMode ? (
-              <span style={{color: '#666'}}>
-                <Zap size={20} />
-                Short Batch Mode (Coming Soon)
-              </span>
-            ) : (
-              <>
-                {batchMode ? <Zap size={20} /> : <Play size={20} />}
-                {strategyMode === 'short' ? 'Run Short DCA Backtest' : (batchMode ? 'Run Batch Optimization' : 'Run DCA Backtest')}
-              </>
-            )}
+            {batchMode ? <Zap size={20} /> : <Play size={20} />}
+            {strategyMode === 'short' ?
+              (batchMode ? 'Run Short Batch Optimization' : 'Run Short DCA Backtest') :
+              (batchMode ? 'Run Batch Optimization' : 'Run DCA Backtest')
+            }
           </>
         )}
       </button>

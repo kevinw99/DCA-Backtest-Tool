@@ -1,3 +1,375 @@
+2.4.1 Activation Conditions:
+Trigger: Price rises by trailingShortActivationPercent (default 25%) from recent bottom
+
+
+
+
+HOw is this calculated? "Short DCA vs Short & Hold
+                         -78.08%"
+
+no it is not correct.  it should compare the P/L of the short DCA vs short and hold, not the portfolio position value.
+For example, if short and hold is -20%, while short DCA is -10%, then Short DCA vs Short & Hold = (-10% - (-20%) = +10%
+
+
+
+,
+In Portfolio Value Over Time
+1. it seems Total P&L is not correct, it should be the same as in Portfolio Value Over Time chart, please use the
+same value
+2. current holdings value is tricky as they short position, what is the proper way to calculate it?
+3. Accumulated Realized P&L should use the "Realized P&L" in  "Enhanced Transaction History" table
+4. Breakeven Line : how should it be calculated for short position?
+
+
+
+in "Current Short Positions
+Short Date
+Short Price
+Shares
+Current Price
+Current Value
+P&L
+Ann. Return
+6/4/2025
+$284.70
+35.1247
+$0.00
+$10,000.00
+$0.00
+NaN%", current value should be based on current price of last day of backtest, not 0.00, right?
+Please fix other numbers accordingly like 0 and N./A
+
+
+
+
+In short scenario,  Please add CAGR number to  "Total Return
+             -$1,640.42
+
+             -17.43% | Avg Capital: $9,411.76"
+ like in the long scenario: "Total Return
+                             $34,341.38
+
+                             +129.59% | Avg Capital: $26,500.00 | CAGR: 23.09%"
+
+May I remind you if something does not work properly for short scenario, please check how it is implemented for long scenario, and make sure short scenario follow the same pattern.
+
+
+
+1. tell me how you handle Price Chart with Transaction Markers in long scenario, list the steps and code snippet.
+2. tell me how you handle Price Chart with Transaction Markers in short scenario, list the steps and code snippet.
+
+It seems the marker types are the same for both long and short scenario, but it should be different, right?
+"Stock PriceTotal P&LBuy & Hold %BuyTrailing Stop Sell",
+
+in price chart with transaction markers for short scenario:
+1 The correct markers to show should be Trailing Short, Cover, Emergency Cover, which are missing. not Buy,
+Trailing Buy, which should be removed.
+
+
+
+
+Anyway you should look at how long batch mode is implemented and how parameters sets are captured and passed, make
+sure short batch mode follow the same pattern.
+Also make sure to handel all parameters the same way, so it won't be like some parameteres are captured and passed
+but some are not.,
+
+
+I see a problem we need to change code now.
+I select MSFT for short batch mode, and run the batch backtest, it shows result for TSLA. In the console log, it shows:
+Batch Mode: true
+DCABacktestForm.js:443 ==============================
+DCABacktestForm.js:469 Running short batch optimization with params: {symbol: 'TSLA', startDate: '2021-09-01', endDate: '2025-09-01', lotSizeUsd: 10000, maxShorts: 6, …}
+App.js:55 Starting batch optimization for undefined
+App.js:79 === DEBUG: Batch API Call Info ===
+App.js:80 Strategy Mode: undefined
+App.js:81 Batch Endpoint: http://localhost:3001/api/backtest/batch
+App.js:82 ===================================
+BatchResults.js:8
+It is alreay wrong.
+
+
+I thought I already request long time ago to remove immediate buy for the first lot. All buys should be trailing
+buy only. Please update the doc and code if not otherwise.
+
+
+1. Tell me how you handle long batch mode, list the steps.
+2. Tell me how you handle short batch mode, list the steps.
+
+
+
+1.  in long backtest, in Enhanced Transaction History table, it shows two types of buy order: Buy and Trail Buy, but it should be just
+ one type as there is no special treatment for the first buy order, right?
+ if so, let's call all buying in the long scenario as Buy.
+
+2. in long backtest, there is no Trailing short, but in Price Chart with Transaction Markers
+ it is called Trailing Stop Sell, right? if so, Trailing
+Stop
+Sell is not shown on the chart.
+
+
+3 please update the Price Chart with Transaction Markers chart to use Buy and Trailing Stop Sell markers only.
+
+DCABacktestForm.js:440 === DEBUG: Form Submission ===
+DCABacktestForm.js:441 Strategy Mode: short
+DCABacktestForm.js:442 Batch Mode: true
+DCABacktestForm.js:443 ==============================
+DCABacktestForm.js:469 Running short batch optimization with params: {symbol: 'TSLA', startDate: '2021-09-01', endDate: '2025-09-01', lotSizeUsd: 10000, maxShorts: 6, …}endDate: "2025-09-01"gridIntervalPercent: [0.1]lotSizeUsd: 10000maxShorts: 6maxShortsToCovers: 3profitRequirement: [0]startDate: "2021-09-01"strategyMode: "short"symbol: "TSLA"trailingCoverActivationPercent: [0.1]0: 0.1length: 1[[Prototype]]: Array(0)trailingCoverReboundPercent: [0.05]trailingShortActivationPercent: [0.2]trailingShortPullbackPercent: [0.1][[Prototype]]: Object
+App.js:55 Starting batch optimization for undefined
+App.js:79 === DEBUG: Batch API Call Info ===
+App.js:80 Strategy Mode: undefined
+App.js:81 Batch Endpoint: http://localhost:3001/api/backtest/batch
+App.js:82 ===================================
+BatchResults.js:8 🐛 BatchResults received data: {summary: {…}, results: Array(1), errors: Array(0), totalCombinations: 1, successfulRuns: 1, …}errors: []executionTimeMs: 32failedRuns: 0results: [{…}]sortedBy: "annualizedReturn"successfulRuns: 1summary: {overallBest: {…}, bestParametersBySymbol: {…}, statistics: {…}, parameterRanges: {…}}totalCombinations: 1[[Prototype]]: Object
+BatchResults.js:10 🐛 First result details: {strategy: 'SHARED_CORE', symbol: 'TSLA', startDate: '2021-09-01', endDate: '2025-09-01', finalLots: 9, …}
+BatchResults.js:11 🐛 First result summary: {totalReturn: 0.5735404439380584, annualizedReturn: 0.1559850485095731, totalReturnPercent: 57.354044393805836, annualizedReturnPercent: 15.59850485095731, winRate: 1, …}
+BatchResults.js:21 🎯 BatchResults Strategy Detection: {dataStrategy: undefined, firstResultStrategyMode: undefined, hasMaxShorts: false, hasShortActivation: false, finalDecision: 'LONG_DCA'}
+BatchResults.js:8 🐛 BatchResults received data: {summary: {…}, results: Array(1), errors: Array(0), totalCombinations: 1, successfulRuns: 1, …}
+BatchResults.js:10 🐛 First result details: {strategy: 'SHARED_CORE', symbol: 'TSLA', startDate: '2021-09-01', endDate: '2025-09-01', finalLots: 9, …}
+BatchResults.js:11 🐛 First result summary: {totalReturn: 0.5735404439380584, annualizedReturn: 0.1559850485095731, totalReturnPercent: 57.354044393805836, annualizedReturnPercent: 15.59850485095731, winRate: 1, …}
+BatchResults.js:21 🎯 BatchResults Strategy Detection: {dataStrategy: undefined, firstResultStrategyMode: undefined, hasMaxShorts: false, hasShortActivation: false, finalDecision: 'LONG_DCA'}
+
+
+
+
+1. is short bactch mode working? it seems it is fake, not doing real backtest, but show this fake result:
+Actions	Rank	Stock	Total Return	Annual Return	Total Trades	Win Rate	Avg Profit/Trade	Max Drawdown	Capital Util.	Profit Req.	Grid Int.	Buy Act.	Buy Rebound	Sell Act.	Sell Pullback
+   📊 Run	1	TSLA	57.35%	15.60%	2	100.00%	$2,879.67	48.90%	67.70%	0.00%	10.00%	10.00%	5.00%	20.00%	10.00%
+The result does not seem right, can you
+
+From a short batch run result table,
+1. the run button point to this URL:
+http://localhost:3000/?mode=single&strategyMode=long&symbol=TSLA&startDate=2021-09-01&endDate=2025-09-01&lotSizeUsd=10000&gridIntervalPercent=10&profitRequirement=0&autoRun=true&maxLots=10&maxLotsToSell=1&trailingBuyActivationPercent=10&trailingBuyReboundPercent=5&trailingSellActivationPercent=20&trailingSellPullbackPercent=10
+
+But strategyMode=long is wrong, it should be strategyMode=short
+
+2. Actions	Rank	Stock	Total Return	Annual Return	Total Trades	Win Rate	Avg Profit/Trade	Max Drawdown	Capital Util.	Profit Req.	Grid Int.	Buy Act.	Buy Rebound	Sell Act.	Sell Pullback
+   📊 Run	1	TSLA	57.35%	15.60%	2	100.00%	$2,879.67	48.90%	67.70%	0.00%	10.00%	10.00%	5.00%	20.00%	10.00%
+The result does not seem right, can you
+
+http://localhost:3000/?mode=single&strategyMode=short&symbol=TSLA&startDate=2021-09-01&endDate=2025-09-01
+&lotSizeUsd=10000&gridIntervalPercent=10&profitRequirement=0&autoRun=true&maxLots=10&maxLotsToSell=1&trailingBuyActivationPercent=10&trailingBuyReboundPercent=5&trailingSellActivationPercent=20&trailingSellPullbackPercent=10
+
+
+Has "Run Batch Optimization" been implimented for short selling algo?
+1.
+In the Enhanced Transaction History table for short selling scenario, it has record for  1/24/2022,
+Date
+Type
+Price
+Trailing Stop Buy
+Trailing Stop Sell
+Shares
+Value
+Lots
+Avg Cost
+Holdings Value
+Unrealized P&L
+Realized P&L
+Annual Return
+Total P&L
+Total P&L %
+
+"
+1/24/2022
+TRAIL SHORT
+$306.13
+32.6655
+$10,000.00
+Shorted: $341.17, $306.13
+N/A
+$1,026.87
+$1,026.87
+$0.00
+N/A
+$1,026.87
++5.13%
+"
+Total P&L = $1,026.87
+
+That is different from the Price Chart with Transaction Markers for shot selling scenario, which shows negative
+value.
+
+2.
+
+
+"Total Return
+ -$14,605.49
+
+ -235.31% | Avg Capital: $6,206.90" how average capital is calculated for short selling scenario?
+
+
+
+Don't change the stop and limit price definition. But we need to add one more rule for the trailing stop
+cover order to be
+ activated:
+ Only when limit price > stop price, i.e. the short position is profitable enough to meet the profit requirement
+
+
+In requirement doc, I will change this section
+2.3 Trailing Stop Cover System (OPPOSITE OF LONG TRAILING SELL)
+2.3.1 Activation Conditions:
+Trigger: Price falls by trailingCoverActivationPercent (default 20%) from recent peak
+Recent Peak Definition: Highest price observed after the last short or cover transaction
+2.3.2 Stop Management:
+Initial Stop Price: current price * (1 + trailingCoverReboundPercent) (default 10% above current price)
+Limit Price: targeted short position price (lowest-priced eligible short)
+Position Selection: Select lowest-priced eligible shorts that meet profit requirement
+Trailing Logic: If price goes down further, stop price adjusts downward to maintain trailingCoverReboundPercent above current price
+No Upward Adjustment: If price goes up, stop price remains fixed
+Cancellation: Cancel when current price ≥ average short price * (1 - profitRequirement) (no longer meets profit requirement)
+
+To:
+"
+2.3 Trailing Stop Cover System (OPPOSITE OF LONG TRAILING SELL)
+2.3.1 Activation Conditions:
+Trigger: Price falls by trailingCoverActivationPercent (default 20%) from recent peak
+Recent Peak Definition: Highest price observed after the last short or cover transaction
+2.3.2 Stop Management:
+Initial Stop Price: current price * (1 + trailingCoverReboundPercent) (default 10% above current price)
+Limit Price: targeted short position price (lowest-priced eligible short) with profit requirement
+ = lowest-priced eligible short * (1 - profitRequirement)
+
+Position Selection: Select lowest-priced eligible shorts that meet profit requirement
+Trailing Logic: If price goes down further, stop price adjusts downward to maintain trailingCoverReboundPercent above current price
+No Upward Adjustment: If price goes up, stop price remains fixed
+Cancellation: Cancel when current price ≥ average short price * (1 - profitRequirement) (no longer meets profit requirement)
+"
+Please make adjustment as needed in wording.
+Also the Cancellation logic may not be correct. Please make suggestion.
+
+
+
+in the code "
+            // Correct pricing logic for trailing stop covers:
+            // Stop Price: when price rises to this level, trigger the cover order (should be the short price or slightly above)
+            // Limit Price: maximum price we're willing to pay to cover (should be higher than stop price)
+            const stopPrice = shortsToCover[0].price; // Trigger when price rises to short position price
+            const limitPrice = currentPrice * (1 + trailingCoverReboundPercent); // Max price we'll pay (above current)
+"
+It is incorrect. in requirement doc, it is
+
+
+
+"Price: 338.32     | R.PNL: 0          | U.PNL: 83         | T.PNL: 83         | Shorts: [341.17]
+ [36mDEBUG SHORT SELECTION: currentPrice=338.32, stopPrice=355.24, profitRequirement=0, averageShortCost=341.17, minProfitablePrice=341.17[0m
+ [36mDEBUG ALL SHORTS: $341.17[0m
+ [36mDEBUG ELIGIBLE SHORTS: $341.17 (1 eligible)[0m
+ [36mDEBUG SELECTED SHORTS: $341.17 (1 of 1 eligible, max 3)[0m
+ [33m  ACTION: TRAILING STOP COVER ACTIVATED - Stop: 355.24, Limit: 341.17, Triggered by 10.0% fall from peak 385.62 (Unrealized P&L: 83.34)[0m"
+ does it make sense that Stop: 355.24 > Limit: 341.17, it should be the other way round, right?
+
+Current  Price: 338.32
+ACTION: TRAILING STOP COVER - buy order ACTIVATED - Stop: 355.24, Limit: 341.17
+ does it make sense that Stop: 355.24 > Limit: 341.17, it should be the other way round, right?
+
+
+
+1. "react-dom.development.js:1661 The specified value "NaN" cannot be parsed, or is out of range." is too fast. It
+should wait till the user click the "Run Backtest" button, then validate, or user leave the input box, not validate
+ as soon as user remove existing value.
+ 2. I changed profitRequirement : 8 to profitRequirement : 0, when click Run Backtest, and come back to the
+ parameter page, it still shows 8, not 0. Please fix it.
+
+
+
+Parameters change are still not persisted when navigate back and forth between pages.
+"Backtest Parameters
+ SymbolTSLA
+ Date Range2021-09-01 to 2025-09-01
+ Lot Size (USD)$10,000.00
+ Max Shorts6
+ Max Shorts to Cover3
+ Grid Interval+15.00%
+ Profit Requirement+8.00%
+ Trailing Short Activation+20.00%
+ Trailing Short Pullback+10.00%
+ Trailing Cover Activation+10.00%
+ Trailing Cover Rebound+5.00%
+ Hard Stop Loss+30.00%
+ Portfolio Stop Loss+25.00%"
+ can you please fix or add console log to see where the problem is?. First simply exisiting log as we don't need
+ them. Just keep the important one.
+
+
+please update doc and code.
+1. Update For short selling algo,
+in "
+EMERGENCY COVER logic should be:
+When a short sell order executed, remember the peak price associated with this order. After short sell order
+executed,  if price rise Trailing Cover rebound(%) above the last peak price, then cover 1 lot at market price."
+Let use a new parameter Emergency Cover rebound(%), default to 0. If price rise Emergency Cover rebound(%) > than the last peak price, then cover 1 lot at market price.
+
+2.Enhanced Transaction History table for short selling scenario,
+  This still not fixed:
+  3. "3/30/2023
+      EMERGENCY COVER
+      $207.46
+      54.9451
+      $11,398.90
+      Shorted: None
+      N/A
+      $0.00
+      $0.00
+      $2,589.43 (+-$1,398.90)
+      N/A
+      $2,589.43
+  " ,   $2,589.43 (+-$1,398.90) should be   $2,589.43 (-$1,398.90), and mark (-$1,398.90) in red color, since it is a loss
+
+4. The annualized return is  shown as N/A in the table, please fix.
+do you have problem with the calculation for the short selling scenario?
+
+5. Price Chart with Transaction Markers for shot selling scenario
+
+let's plot Total P/L instead of Total P/L %. Use the Total P/L in the Enhanced Transaction History table to plot
+the. Make sure it is a curve, not a stair step line. refer to the calculation for the long scenario.
+
+
+
+
+
+
+Resluts page:
+make it more responsive, so when I maximize the window, the chart and table can expand to use more space,
+especially more width.
+
+Lets fix the Enhanced Transaction History table for short selling scenario,
+
+3. "3/30/2023
+    EMERGENCY COVER
+    $207.46
+    54.9451
+    $11,398.90
+    Shorted: None
+    N/A
+    $0.00
+    $0.00
+    $2,589.43 (+-$1,398.90)
+    N/A
+    $2,589.43
+" ,   $2,589.43 (+-$1,398.90) should be   $2,589.43 (-$1,398.90), and mark (-$1,398.90) in red color, since it is a loss
+4. Add calculation of total P/L % = Total P/L / total capital deployed at the time, and show it in the last column,
+ make sure it is included in the css.
+total capital deployed at the time = sum of all short sell lot value , it should be positive number, even though
+ it is cash received from short selling.
+
+Let fix the Price Chart with Transaction Markers for shot selling scenario,
+1. remove irrelevant markers in short selling scenario:
+Buy & Hold %MA20MA50Regular BuyTrailing Stop BuyOCO Limit BuyOCO Trailing Buy Sell Short  Trailing Stop ShortCover
+shold only have these markers as in Enchanced Transaction History table:
+Trailing Short, Cover, emergency Cover
+2. remove "Buy & Hold %"
+5. remove "MA20 MA50" in both long and short selling scenario as they are not used in the algo
+
+
+
+
+The parameters page should also persist the selection of long or short choice
+
+1 please make sure if changes require restarting of backend server,  restart it and let me know.
+2 monitor server log for errors and fix them
+
+
+
 can you create a REQUIREMENT_SHORT.md for the short selling algo, similar to REQUIREMENT.md but with opposite
 details?  1. please
 
@@ -713,3 +1085,192 @@ API Requests and Data Requirements
 - Track lot purchases and sales
 - Maintain transaction log
 - Generate performance summary
+
+
+ting single backtest for TSLA
+App.js:105 === DEBUG: API Call Info ===
+App.js:106 Strategy Mode: long
+App.js:107 Selected Endpoint: http://localhost:3001/api/backtest/dca
+App.js:108 Full Parameters: {symbol: 'TSLA', startDate: '2021-09-01', endDate: '2025-09-01', lotSizeUsd: 10000, maxLots: 10, …}
+App.js:109 ============================
+App.js:55 Starting single backtest for TSLA
+App.js:105 === DEBUG: API Call Info ===
+App.js:106 Strategy Mode: long
+App.js:107 Selected Endpoint: http://localhost:3001/api/backtest/dca
+App.js:108 Full Parameters: {symbol: 'TSLA', startDate: '2021-09-01', endDate: '2025-09-01', lotSizeUsd: 10000, maxLots: 10, …}
+App.js:109 ============================
+App.js:111  POST http://localhost:3001/api/backtest/dca 400 (Bad Request)
+handleBacktestSubmit @ App.js:111
+(anonymous) @ DCABacktestForm.js:312
+setTimeout
+(anonymous) @ DCABacktestForm.js:297
+commitHookEffectListMount @ react-dom.development.js:23189
+commitPassiveMountOnFiber @ react-dom.development.js:24965
+commitPassiveMountEffects_complete @ react-dom.development.js:24930
+commitPassiveMountEffects_begin @ react-dom.development.js:24917
+commitPassiveMountEffects @ react-dom.development.js:24905
+flushPassiveEffectsImpl @ react-dom.development.js:27078
+flushPassiveEffects @ react-dom.development.js:27023
+(anonymous) @ react-dom.development.js:26808
+workLoop @ scheduler.development.js:266
+flushWork @ scheduler.development.js:239
+performWorkUntilDeadline @ scheduler.development.js:533Understand this error
+App.js:145 Error in backtest : Error: Backtest failed: Bad Request
+    at handleBacktestSubmit (App.js:120:1)
+overrideMethod @ hook.js:608
+handleBacktestSubmit @ App.js:145
+await in handleBacktestSubmit
+(anonymous) @ DCABacktestForm.js:312
+setTimeout
+(anonymous) @ DCABacktestForm.js:297
+commitHookEffectListMount @ react-dom.development.js:23189
+commitPassiveMountOnFiber @ react-dom.development.js:24965
+commitPassiveMountEffects_complete @ react-dom.development.js:24930
+commitPassiveMountEffects_begin @ react-dom.development.js:24917
+commitPassiveMountEffects @ react-dom.development.js:24905
+flushPassiveEffectsImpl @ react-dom.development.js:27078
+flushPassiveEffects @ react-dom.development.js:27023
+(anonymous) @ react-dom.development.js:26808
+workLoop @ scheduler.development.js:266
+flushWork @ scheduler.development.js:239
+performWorkUntilDeadline @ scheduler.development.js:533Understand this error
+App.js:111  POST http://localhost:3001/api/backtest/dca 400 (Bad Request)
+handleBacktestSubmit @ App.js:111
+(anonymous) @ DCABacktestForm.js:312
+setTimeout
+(anonymous) @ DCABacktestForm.js:297
+commitHookEffectListMount @ react-dom.development.js:23189
+commitPassiveMountOnFiber @ react-dom.development.js:24965
+commitPassiveMountEffects_complete @ react-dom.development.js:24930
+commitPassiveMountEffects_begin @ react-dom.development.js:24917
+commitPassiveMountEffects @ react-dom.development.js:24905
+flushPassiveEffectsImpl @ react-dom.development.js:27078
+flushPassiveEffects @ react-dom.development.js:27023
+(anonymous) @ react-dom.development.js:26808
+workLoop @ scheduler.development.js:266
+flushWork @ scheduler.development.js:239
+performWorkUntilDeadline @ scheduler.development.js:533Understand this error
+App.js:145 Error in backtest : Error: Backtest failed: Bad Request
+    at handleBacktestSubmit (App.js:120:1)
+overrideMethod @ hook.js:608
+handleBacktestSubmit @ App.js:145
+await in handleBacktestSubmit
+(anonymous) @ DCABacktestForm.js:312
+setTimeout
+(anonymous) @ DCABacktestForm.js:297
+commitHookEffectListMount @ react-dom.development.js:23189
+commitPassiveMountOnFiber @ react-dom.development.js:24965
+commitPassiveMountEffects_complete @ react-dom.development.js:24930
+commitPassiveMountEffects_begin @ react-dom.development.js:24917
+commitPassiveMountEffects @ react-dom.development.js:24905
+flushPassiveEffectsImpl @ react-dom.development.js:27078
+flushPassiveEffects @ react-dom.development.js:27023
+(anonymous) @ react-dom.development.js:26808
+workLoop @ scheduler.development.js:266
+flushWork @ scheduler.development.js:239
+performWorkUntilDeadline @ scheduler.development.js:533Understand this error
+App.js:111  POST http://localhost:3001/api/backtest/dca 400 (Bad Request)
+handleBacktestSubmit @ App.js:111
+(anonymous) @ DCABacktestForm.js:312
+setTimeout
+(anonymous) @ DCABacktestForm.js:297
+commitHookEffectListMount @ react-dom.development.js:23189
+commitPassiveMountOnFiber @ react-dom.development.js:24965
+commitPassiveMountEffects_complete @ react-dom.development.js:24930
+commitPassiveMountEffects_begin @ react-dom.development.js:24917
+commitPassiveMountEffects @ react-dom.development.js:24905
+flushPassiveEffectsImpl @ react-dom.development.js:27078
+flushPassiveEffects @ react-dom.development.js:27023
+(anonymous) @ react-dom.development.js:26808
+workLoop @ scheduler.development.js:266
+flushWork @ scheduler.development.js:239
+performWorkUntilDeadline @ scheduler.development.js:533Understand this error
+App.js:145 Error in backtest : Error: Backtest failed: Bad Request
+    at handleBacktestSubmit (App.js:120:1)
+overrideMethod @ hook.js:608
+handleBacktestSubmit @ App.js:145
+await in handleBacktestSubmit
+(anonymous) @ DCABacktestForm.js:312
+setTimeout
+(anonymous) @ DCABacktestForm.js:297
+commitHookEffectListMount @ react-dom.development.js:23189
+commitPassiveMountOnFiber @ react-dom.development.js:24965
+commitPassiveMountEffects_complete @ react-dom.development.js:24930
+commitPassiveMountEffects_begin @ react-dom.development.js:24917
+commitPassiveMountEffects @ react-dom.development.js:24905
+flushPassiveEffectsImpl @ react-dom.development.js:27078
+flushPassiveEffects @ react-dom.development.js:27023
+(anonymous) @ react-dom.development.js:26808
+workLoop @ scheduler.development.js:266
+flushWork @ scheduler.development.js:239
+performWorkUntilDeadline @ scheduler.development.js:533Understand this error
+App.js:111  POST http://localhost:3001/api/backtest/dca 400 (Bad Request)
+handleBacktestSubmit @ App.js:111
+(anonymous) @ DCABacktestForm.js:312
+setTimeout
+(anonymous) @ DCABacktestForm.js:297
+commitHookEffectListMount @ react-dom.development.js:23189
+commitPassiveMountOnFiber @ react-dom.development.js:24965
+commitPassiveMountEffects_complete @ react-dom.development.js:24930
+commitPassiveMountEffects_begin @ react-dom.development.js:24917
+commitPassiveMountEffects @ react-dom.development.js:24905
+flushPassiveEffectsImpl @ react-dom.development.js:27078
+flushPassiveEffects @ react-dom.development.js:27023
+(anonymous) @ react-dom.development.js:26808
+workLoop @ scheduler.development.js:266
+flushWork @ scheduler.development.js:239
+performWorkUntilDeadline @ scheduler.development.js:533Understand this error
+App.js:145 Error in backtest : Error: Backtest failed: Bad Request
+    at handleBacktestSubmit (App.js:120:1)
+overrideMethod @ hook.js:608
+handleBacktestSubmit @ App.js:145
+await in handleBacktestSubmit
+(anonymous) @ DCABacktestForm.js:312
+setTimeout
+(anonymous) @ DCABacktestForm.js:297
+commitHookEffectListMount @ react-dom.development.js:23189
+commitPassiveMountOnFiber @ react-dom.development.js:24965
+commitPassiveMountEffects_complete @ react-dom.development.js:24930
+commitPassiveMountEffects_begin @ react-dom.development.js:24917
+commitPassiveMountEffects @ react-dom.development.js:24905
+flushPassiveEffectsImpl @ react-dom.development.js:27078
+flushPassiveEffects @ react-dom.development.js:27023
+(anonymous) @ react-dom.development.js:26808
+workLoop @ scheduler.development.js:266
+flushWork @ scheduler.development.js:239
+performWorkUntilDeadline @ scheduler.development.js:533Understand this error
+App.js:111  POST http://localhost:3001/api/backtest/dca 400 (Bad Request)
+handleBacktestSubmit @ App.js:111
+(anonymous) @ DCABacktestForm.js:312
+setTimeout
+(anonymous) @ DCABacktestForm.js:297
+commitHookEffectListMount @ react-dom.development.js:23189
+commitPassiveMountOnFiber @ react-dom.development.js:24965
+commitPassiveMountEffects_complete @ react-dom.development.js:24930
+commitPassiveMountEffects_begin @ react-dom.development.js:24917
+commitPassiveMountEffects @ react-dom.development.js:24905
+flushPassiveEffectsImpl @ react-dom.development.js:27078
+flushPassiveEffects @ react-dom.development.js:27023
+(anonymous) @ react-dom.development.js:26808
+workLoop @ scheduler.development.js:266
+flushWork @ scheduler.development.js:239
+performWorkUntilDeadline @ scheduler.development.js:533Understand this error
+App.js:145 Error in backtest : Error: Backtest failed: Bad Request
+    at handleBacktestSubmit (App.js:120:1)
+overrideMethod @ hook.js:608
+handleBacktestSubmit @ App.js:145
+await in handleBacktestSubmit
+(anonymous) @ DCABacktestForm.js:312
+setTimeout
+(anonymous) @ DCABacktestForm.js:297
+commitHookEffectListMount @ react-dom.development.js:23189
+commitPassiveMountOnFiber @ react-dom.development.js:24965
+commitPassiveMountEffects_complete @ react-dom.development.js:24930
+commitPassiveMountEffects_begin @ react-dom.development.js:24917
+commitPassiveMountEffects @ react-dom.development.js:24905
+flushPassiveEffectsImpl @ react-dom.development.js:27078
+flushPassiveEffects @ react-dom.development.js:27023
+(anonymous) @ react-dom.development.js:26808
+workLoop @ scheduler.development.js:266
+flushWork @ scheduler.development.js:239
+performWorkUntilDeadline @ scheduler.development.js:533Understand this error

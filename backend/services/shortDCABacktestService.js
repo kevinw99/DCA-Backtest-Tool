@@ -3,11 +3,16 @@ const database = require('../database');
 /**
  * Short Selling DCA Backtesting Service
  * This service implements inverted DCA logic for short selling with enhanced risk management:
- * 1. Short on rises (inverted logic from long DCA)
- * 2. Cover on falls
+ * 1. Short on rises (inverted logic from long DCA) - UPDATED: Multi-lots only allowed in strictly descending price order
+ * 2. Cover on falls - UPDATED: Emergency cover logic when price rises above most recent short
  * 3. Multi-layer risk management (individual, portfolio, cascade)
- * 4. Enhanced transaction tracking
+ * 4. Enhanced transaction tracking - UPDATED: Includes emergency cover events
  * 5. Compatible API response format
+ *
+ * NEW FEATURES:
+ * - Multi-lot restriction: Only allow new shorts when price is lower than previous short by grid interval
+ * - Emergency cover: Automatically cover 1 lot when price rises by trailing cover rebound % above most recent short
+ * - Most recent short price tracking: Updates trigger price after each emergency cover
  */
 
 // --- Utility Functions ---
@@ -70,7 +75,7 @@ function calculateShortMetrics(dailyValues, capitalDeployed, transactionLog, pri
 
   return {
     totalReturn: finalValue - initialValue,
-    totalReturnPercent: initialValue > 0 ? ((finalValue - initialValue) / initialValue) * 100 : 0,
+    totalReturnPercent: avgCapitalDeployed > 0 ? ((finalValue - initialValue) / avgCapitalDeployed) * 100 : 0,
     annualizedReturn: dcaAnnualizedReturn,
     annualizedReturnPercent: dcaAnnualizedReturnPercent,
     maxDrawdown: maxDrawdown,
@@ -256,7 +261,7 @@ function assessMarketCondition(indicators) {
   };
 }
 
-function calculateShortAndHold(prices, initialCapital) {
+function calculateShortAndHold(prices, initialCapital, avgCapitalForComparison = null) {
   const startPrice = prices[0].adjusted_close;
   const endPrice = prices[prices.length - 1].adjusted_close;
   const shares = initialCapital / startPrice;
@@ -264,7 +269,10 @@ function calculateShortAndHold(prices, initialCapital) {
   // Short and hold: profit when price falls
   const finalValue = initialCapital + (shares * (startPrice - endPrice)); // Profit = shares * (short_price - cover_price)
   const totalReturn = finalValue - initialCapital;
-  const totalReturnPercent = (totalReturn / initialCapital) * 100;
+
+  // Use average capital for comparison if provided, otherwise use initial capital
+  const denominator = avgCapitalForComparison || initialCapital;
+  const totalReturnPercent = (totalReturn / denominator) * 100;
 
   // Calculate annualized return: (1 + total return) ^ (365 / days) - 1
   const totalDays = prices.length;
@@ -321,6 +329,8 @@ function calculateShortAndHold(prices, initialCapital) {
 
 /**
  * Core Short Selling DCA Backtest Algorithm
+ * UPDATED with new multi-lot ordering and emergency cover logic
+ *
  * @param {Object} params - Backtest parameters
  * @param {string} params.symbol - Stock symbol
  * @param {string} params.startDate - Start date (YYYY-MM-DD)
@@ -329,16 +339,24 @@ function calculateShortAndHold(prices, initialCapital) {
  * @param {number} params.maxShorts - Maximum number of short positions (default: 6)
  * @param {number} params.maxShortsToCovers - Maximum shorts to cover per transaction (default: 3)
  * @param {number} params.gridIntervalPercent - Grid interval as decimal (default: 0.15 for 15%)
+ *                 NEW: Used to enforce descending order - new shorts must be gridIntervalPercent below previous minimum
  * @param {number} params.profitRequirement - Profit requirement as decimal (default: 0.08 for 8%)
  * @param {number} params.trailingShortActivationPercent - Activation threshold (default: 0.25 for 25%)
  * @param {number} params.trailingShortPullbackPercent - Pullback for short stop (default: 0.15 for 15%)
  * @param {number} params.trailingCoverActivationPercent - Cover activation (default: 0.20 for 20%)
  * @param {number} params.trailingCoverReboundPercent - Rebound for cover stop (default: 0.10 for 10%)
+ *                 NEW: Also used for emergency cover trigger - when price rises this % above most recent short
  * @param {number} params.hardStopLossPercent - Individual position stop loss (default: 0.30 for 30%)
  * @param {number} params.portfolioStopLossPercent - Portfolio stop loss (default: 0.25 for 25%)
  * @param {number} params.cascadeStopLossPercent - Cascade liquidation trigger (default: 0.35 for 35%)
  * @param {boolean} params.verbose - Whether to log detailed output (default: true)
  * @returns {Promise<Object>} Backtest results
+ *
+ * NEW ALGORITHM FEATURES:
+ * 1. Multi-lot ordering restriction: New shorts only allowed when price < min(existing_shorts) * (1 - gridIntervalPercent)
+ * 2. Emergency cover logic: Auto-cover 1 lot when price rises trailingCoverReboundPercent above most recent short
+ * 3. Most recent short price tracking: Updates after each emergency cover to maintain proper trigger levels
+ * 4. Enhanced transaction logging: All new events logged with detailed context
  */
 async function runShortDCABacktest(params) {
   const {
@@ -418,6 +436,11 @@ async function runShortDCABacktest(params) {
     let recentBottom = null; // Lowest price since last transaction
     let trailingStopShort = null; // Active trailing stop short order
     let lastTransactionDate = null; // Track when peak/bottom tracking started
+
+    // NEW: Most recent short price tracking for emergency cover
+    let mostRecentShortPrice = null; // Tracks the highest (most recent) short price for emergency cover triggers
+    let mostRecentShortPeakPrice = null; // Tracks the peak price associated with the most recent short position
+    let emergencyCoverTriggerPrice = null; // Emergency cover trigger price to prevent scope issues
 
     const recalculateAverageShortCost = () => {
       if (shorts.length > 0) {
@@ -572,6 +595,7 @@ async function runShortDCABacktest(params) {
           activeStop = null;
           stopLossTriggered = true;
           emergencyCoverExecuted = true;
+          mostRecentShortPrice = null; // Clear tracking when liquidated
 
           resetPeakBottomTracking(currentPrice, currentDate);
         }
@@ -613,6 +637,7 @@ async function runShortDCABacktest(params) {
 
         if (shorts.length === 0) {
           activeStop = null;
+          mostRecentShortPrice = null; // Clear tracking when no shorts remain
           resetPeakBottomTracking(currentPrice, currentDate);
         }
       }
@@ -666,12 +691,19 @@ async function runShortDCABacktest(params) {
         if (currentPrice >= trailingStopShort.limitPrice) {
           // Trailing stop short triggered - check if we can execute
           if (shorts.length < maxShorts) {
-            const respectsGridSpacing = shorts.every(short => Math.abs(currentPrice - short.price) / short.price >= gridIntervalPercent);
-            if (respectsGridSpacing) {
+            // NEW REQUIREMENT: Multi-lots only allowed when price is lower than previous short by grid interval
+            // All shorted prices must be in strictly descending order
+            const respectsDescendingOrder = shorts.length === 0 || currentPrice < Math.min(...shorts.map(s => s.price)) * (1 - gridIntervalPercent);
+            if (respectsDescendingOrder) {
               // Execute the trailing stop short
               const shares = lotSizeUsd / currentPrice;
-              shorts.push({ price: currentPrice, shares: shares, date: currentDate });
+              const peakPriceAtExecution = trailingStopShort.lastUpdatePrice;
+              shorts.push({ price: currentPrice, shares: shares, date: currentDate, peakPrice: peakPriceAtExecution });
               averageShortCost = recalculateAverageShortCost();
+
+              // Update most recent short price tracking and associated peak price
+              mostRecentShortPrice = currentPrice;
+              mostRecentShortPeakPrice = peakPriceAtExecution; // Peak price when this short order was executed
 
               // Calculate P&L values after trailing stop short
               const totalSharesShortAfterShort = shorts.reduce((sum, short) => sum + short.shares, 0);
@@ -714,9 +746,16 @@ async function runShortDCABacktest(params) {
               });
 
               // Track this short transaction for questionable event detection
-              trackTransaction(currentDate, 'SHORT', currentPrice, shortDetails);
+              trackTransaction(currentDate, 'SHORT', currentPrice, {
+                ...shortDetails,
+                orderType: 'TRAILING_STOP_LIMIT_SHORT',
+                descendingOrderEnforced: true,
+                previousMinPrice: shorts.length > 1 ? Math.min(...shorts.slice(0, -1).map(s => s.price)) : null
+              });
 
-              transactionLog.push(colorize(`  ACTION: TRAILING STOP SHORT EXECUTED at ${currentPrice.toFixed(2)} (stop: ${trailingStopShort.stopPrice.toFixed(2)}). Shorts: ${getShortsPrices(shorts)}, New Avg Cost: ${averageShortCost.toFixed(2)}`, 'red'));
+              transactionLog.push(colorize(`  ACTION: TRAILING STOP SHORT EXECUTED at ${currentPrice.toFixed(2)} (stop: ${trailingStopShort.stopPrice.toFixed(2)}). Descending order maintained.`, 'red'));
+              transactionLog.push(colorize(`  New Short Position: ${shares.toFixed(4)} shares @ $${currentPrice.toFixed(2)}, Value: $${lotSizeUsd.toFixed(2)}`, 'red'));
+              transactionLog.push(colorize(`  All Shorts (descending): ${getShortsPrices(shorts)}, New Avg Cost: ${averageShortCost.toFixed(2)}`, 'red'));
 
               // Clear trailing stop short and reset peak/bottom tracking
               trailingStopShort = null;
@@ -724,7 +763,7 @@ async function runShortDCABacktest(params) {
 
               return true; // Transaction occurred
             } else {
-              transactionLog.push(colorize(`  INFO: TRAILING STOP SHORT blocked at ${currentPrice.toFixed(2)} - violates grid spacing rule`, 'yellow'));
+              transactionLog.push(colorize(`  INFO: TRAILING STOP SHORT blocked at ${currentPrice.toFixed(2)} - violates descending order rule (must be < ${(Math.min(...shorts.map(s => s.price)) * (1 - gridIntervalPercent)).toFixed(2)})`, 'yellow'));
             }
           } else {
             transactionLog.push(colorize(`  INFO: TRAILING STOP SHORT blocked at ${currentPrice.toFixed(2)} - max shorts reached`, 'yellow'));
@@ -768,11 +807,17 @@ async function runShortDCABacktest(params) {
 
             transactionLog.push(colorize(`DEBUG SELECTED SHORTS: ${shortsToCover.map(short => `$${short.price.toFixed(2)}`).join(', ')} (${shortsToCover.length} of ${eligibleShorts.length} eligible, max ${maxShortsToCovers})`, 'cyan'));
 
-            // New pricing logic based on requirements:
-            // Stop Price: current price * (1 + trailingCoverReboundPercent) above current price
-            // Limit Price: the lowest-priced short among selected shorts
+            // Pricing logic as per requirements:
+            // Stop Price: current price * (1 + trailingCoverReboundPercent) (default 10% above current price)
+            // Limit Price: targeted short position price * (1 - profitRequirement) (lowest-priced eligible short with profit requirement)
             const stopPrice = currentPrice * (1 + trailingCoverReboundPercent);
-            const limitPrice = shortsToCover[0].price; // Lowest price among selected shorts
+            const limitPrice = shortsToCover[0].price * (1 - profitRequirement);
+
+            // VALIDATION: Only activate when limit price > stop price (profitable enough to meet profit requirement)
+            if (limitPrice <= stopPrice) {
+              transactionLog.push(colorize(`  INFO: TRAILING STOP COVER blocked - not profitable enough (limit ${limitPrice.toFixed(2)} <= stop ${stopPrice.toFixed(2)})`, 'yellow'));
+              return; // Don't activate trailing stop
+            }
 
             activeStop = {
               stopPrice: stopPrice,
@@ -793,8 +838,8 @@ async function runShortDCABacktest(params) {
     // Update trailing stop when price moves lower (maintains rebound percent above current price)
     const updateTrailingStop = (currentPrice) => {
       if (activeStop && currentPrice < activeStop.lowestPrice) {
-        // Keep stop price at current price * (1 + trailingCoverReboundPercent) above current price
-        const newStopPrice = currentPrice * (1 + trailingCoverReboundPercent);
+        // Keep stop price following the lowest-priced short position (tracks downward movement)
+        const newStopPrice = Math.min(...shorts.map(s => s.price)); // Use lowest short price as stop trigger
 
         if (newStopPrice < activeStop.stopPrice) {
           const oldStopPrice = activeStop.stopPrice;
@@ -808,13 +853,22 @@ async function runShortDCABacktest(params) {
             // Select up to maxShortsToCovers lowest-priced eligible shorts
             const newShortsToCover = sortedEligibleShorts.slice(0, Math.min(maxShortsToCovers, sortedEligibleShorts.length));
 
+            const newStopPrice = currentPrice * (1 + trailingCoverReboundPercent);
+            const newLimitPrice = newShortsToCover[0].price * (1 - profitRequirement);
+
+            // VALIDATION: Only update when limit price > stop price (profitable enough)
+            if (newLimitPrice <= newStopPrice) {
+              transactionLog.push(colorize(`  INFO: TRAILING STOP COVER update blocked - not profitable enough (limit ${newLimitPrice.toFixed(2)} <= stop ${newStopPrice.toFixed(2)})`, 'yellow'));
+              return; // Don't update trailing stop
+            }
+
             activeStop.stopPrice = newStopPrice;
-            activeStop.limitPrice = newShortsToCover[0].price; // Lowest price among selected shorts
+            activeStop.limitPrice = newLimitPrice;
             activeStop.shortsToCover = newShortsToCover; // Now supports multiple shorts
             activeStop.lowestPrice = currentPrice;
             activeStop.lastUpdatePrice = currentPrice;
 
-            transactionLog.push(colorize(`  ACTION: TRAILING STOP COVER UPDATED from stop ${oldStopPrice.toFixed(2)} to ${newStopPrice.toFixed(2)}, limit ${oldLimitPrice.toFixed(2)} to ${newShortsToCover[0].price.toFixed(2)}, shorts: ${newShortsToCover.map(short => `$${short.price.toFixed(2)}`).join(', ')} (Low: ${currentPrice.toFixed(2)})`, 'cyan'));
+            transactionLog.push(colorize(`  ACTION: TRAILING STOP COVER UPDATED from stop ${oldStopPrice.toFixed(2)} to ${newStopPrice.toFixed(2)}, limit ${oldLimitPrice.toFixed(2)} to ${newLimitPrice.toFixed(2)}, shorts: ${newShortsToCover.map(short => `$${short.price.toFixed(2)}`).join(', ')} (Low: ${currentPrice.toFixed(2)})`, 'cyan'));
             transactionLog.push(colorize(`  DEBUG: Updated eligible shorts: ${eligibleShorts.map(short => `$${short.price.toFixed(2)}`).join(', ')}, selected: ${newShortsToCover.map(short => `$${short.price.toFixed(2)}`).join(', ')}`, 'cyan'));
           } else {
             // No eligible shorts, cancel the stop
@@ -842,6 +896,7 @@ async function runShortDCABacktest(params) {
     for (let i = 0; i < pricesWithIndicators.length; i++) {
       const dayData = pricesWithIndicators[i];
       const currentPrice = dayData.adjusted_close;
+      const currentDate = dayData.date;
       const shortsAtStartOfDay = [...shorts];
       averageShortCost = recalculateAverageShortCost();
 
@@ -890,7 +945,90 @@ async function runShortDCABacktest(params) {
           actionsOccurred = true;
         }
       } else {
-        // SECOND PRIORITY: Execute trailing stop covers first
+        // NEW PRIORITY: Emergency Cover Logic
+        // If price rises Trailing Cover Rebound % above the peak price associated with the most recent short, cover 1 lot at market price
+        if (shorts.length > 0 && mostRecentShortPrice !== null && mostRecentShortPeakPrice !== null) {
+          emergencyCoverTriggerPrice = mostRecentShortPeakPrice * (1 + trailingCoverReboundPercent);
+
+          if (currentPrice >= emergencyCoverTriggerPrice) {
+            // Execute emergency cover of 1 lot at market price
+            const shortToCover = shorts.find(s => s.price === mostRecentShortPrice);
+
+            if (shortToCover) {
+              const coverValue = shortToCover.shares * currentPrice;
+              const shortCost = shortToCover.price * shortToCover.shares;
+              const pnl = shortCost - coverValue; // Short PNL = short_value - cover_value
+
+              realizedPNL += pnl;
+
+              // Store values before updating for transaction logging
+              const originalMostRecentShortPrice = mostRecentShortPrice;
+              const originalMostRecentShortPeakPrice = mostRecentShortPeakPrice;
+
+              // Remove the covered short
+              shorts = shorts.filter(s => s !== shortToCover);
+
+              // Update most recent short price and peak price for next trigger
+              if (shorts.length > 0) {
+                const newMostRecentShort = shorts.reduce((prev, current) => (prev.price > current.price) ? prev : current);
+                mostRecentShortPrice = newMostRecentShort.price;
+                mostRecentShortPeakPrice = newMostRecentShort.peakPrice;
+              } else {
+                mostRecentShortPrice = null;
+                mostRecentShortPeakPrice = null;
+              }
+
+              // Calculate values after emergency cover
+              const totalSharesShortAfterCover = shorts.reduce((sum, short) => sum + short.shares, 0);
+              const totalValueOfShortsAfterCover = shorts.reduce((sum, short) => sum + short.price * short.shares, 0);
+              const unrealizedPNLAfterCover = totalValueOfShortsAfterCover - (totalSharesShortAfterCover * currentPrice);
+              const totalPNLAfterCover = realizedPNL + unrealizedPNLAfterCover;
+
+              averageShortCost = recalculateAverageShortCost();
+
+              // Record enhanced transaction for emergency cover
+              enhancedTransactions.push({
+                date: currentDate,
+                type: 'EMERGENCY_COVER',
+                price: currentPrice,
+                shares: shortToCover.shares,
+                value: coverValue,
+                shortPrice: shortToCover.price,
+                shortsDetails: [{ price: shortToCover.price, shares: shortToCover.shares, date: shortToCover.date }],
+                shortsAfterTransaction: [...shorts],
+                averageShortCost: averageShortCost,
+                unrealizedPNL: unrealizedPNLAfterCover,
+                realizedPNL: realizedPNL,
+                totalPNL: totalPNLAfterCover,
+                realizedPNLFromTrade: pnl,
+                emergencyLiquidation: false,
+                liquidationReason: 'EMERGENCY_COVER_REBOUND',
+                triggerPrice: emergencyCoverTriggerPrice,
+                peakPriceReference: originalMostRecentShortPeakPrice,
+                mostRecentShortPrice: originalMostRecentShortPrice,
+                newMostRecentShortPrice: mostRecentShortPrice, // Updated to the new value after emergency cover
+                newMostRecentShortPeakPrice: mostRecentShortPeakPrice,
+                remainingLots: shorts.length
+              });
+
+              transactionLog.push(colorize(`🚨 EMERGENCY COVER: Price ${currentPrice.toFixed(2)} rose ${(trailingCoverReboundPercent*100).toFixed(1)}% above peak ${(originalMostRecentShortPeakPrice || 0).toFixed(2)} from most recent short ${(originalMostRecentShortPrice || 0).toFixed(2)} (trigger: ${emergencyCoverTriggerPrice.toFixed(2)})`, 'red'));
+              transactionLog.push(colorize(`  Emergency Cover: 1 lot @ ${shortToCover.price.toFixed(2)} -> ${currentPrice.toFixed(2)}, PNL: ${pnl.toFixed(2)}`, 'red'));
+              transactionLog.push(colorize(`  Remaining shorts: ${getShortsPrices(shorts)} (${shorts.length} lots)`, 'red'));
+
+              if (shorts.length > 0) {
+                transactionLog.push(colorize(`  Updated most recent short price to: ${(mostRecentShortPrice || 0).toFixed(2)} (peak: ${(mostRecentShortPeakPrice || 0).toFixed(2)})`, 'cyan'));
+              } else {
+                transactionLog.push(colorize(`  No remaining lots - cleared most recent short price and peak price, waiting for next short signal`, 'cyan'));
+                // Reset peak/bottom tracking when no shorts remain
+                resetPeakBottomTracking(currentPrice, currentDate);
+              }
+
+              actionsOccurred = true;
+            }
+          }
+        }
+
+        // SECOND PRIORITY: Execute trailing stop covers
         if (activeStop && currentPrice >= activeStop.stopPrice) {
           const { stopPrice, limitPrice, shortsToCover } = activeStop;
 
@@ -987,7 +1125,13 @@ async function runShortDCABacktest(params) {
               });
 
               // Track this cover transaction for questionable event detection
-              trackTransaction(dayData.date, 'COVER', executionPrice, transactionDetails);
+              trackTransaction(dayData.date, 'COVER', executionPrice, {
+                ...transactionDetails,
+                orderType: 'TRAILING_STOP_COVER',
+                triggerType: 'TRAILING_STOP_ACTIVATED',
+                stopPrice: stopPrice,
+                limitPrice: limitPrice
+              });
             });
 
             // Log overall batch cover summary
@@ -1102,10 +1246,12 @@ async function runShortDCABacktest(params) {
     // Calculate metrics
     const metrics = calculateShortMetrics(dailyPortfolioValues, dailyCapitalDeployed, transactionLog, pricesWithIndicators, enhancedTransactions);
     const initialCapital = lotSizeUsd * maxShorts;
-    const shortAndHoldResults = calculateShortAndHold(pricesWithIndicators, initialCapital);
+    const shortAndHoldResults = calculateShortAndHold(pricesWithIndicators, initialCapital, metrics.avgCapitalDeployed);
     const shortDCAFinalValue = totalValueOfShorts + realizedPNL + unrealizedPNL;
+    // Compare P&L percentages: Short DCA return % - Short & Hold return %
+    // Example: if Short DCA = -10% and Short & Hold = -20%, then outperformance = -10% - (-20%) = +10%
+    const outperformancePercent = metrics.totalReturnPercent - shortAndHoldResults.totalReturnPercent;
     const outperformance = shortDCAFinalValue - shortAndHoldResults.finalValue;
-    const outperformancePercent = shortAndHoldResults.finalValue !== 0 ? (outperformance / shortAndHoldResults.finalValue) * 100 : 0;
 
     // Calculate individual trade annualized returns including current shorts
     const tradeAnalysis = calculateShortTradeAnnualizedReturns(enhancedTransactions, startDate, endDate, shorts, finalPrice, lotSizeUsd);
@@ -1159,7 +1305,7 @@ async function runShortDCABacktest(params) {
     }
 
     return {
-      strategy: 'SHORT_SELLING_DCA',
+      strategy: 'SHORT_DCA',
       symbol: symbol,
       startDate: startDate,
       endDate: endDate,

@@ -27,7 +27,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
   const processedChartData = useMemo(() => {
     if (!data || !priceData?.dailyPrices) return [];
 
-    const { transactions, enhancedTransactions, buyAndHoldResults } = data;
+    const { transactions, enhancedTransactions, buyAndHoldResults, summary } = data;
     const lotSizeUsd = priceData?.backtestParameters?.lotSizeUsd || 10000;
 
     // Debug the available transactions
@@ -50,21 +50,29 @@ const BacktestResults = ({ data, chartData: priceData }) => {
     // Get start price for Buy & Hold calculation
     const startPrice = parseFloat(priceData.dailyPrices[0]?.adjusted_close || priceData.dailyPrices[0]?.close || 0);
 
+    // Check if this is short selling strategy
+    const isShortSelling = summary?.strategy === 'SHORT_DCA';
+
     return priceData.dailyPrices.map(day => {
       const transaction = transactionMap[day.date];
       const currentPrice = parseFloat(day.adjusted_close || day.close || 0);
 
-      // Calculate Total P&L % and capital deployed for this day
+      // Calculate Total P&L % and Total P&L for this day
       let totalPNLPercent = null;
+      let totalPNL = null;
       let totalCapitalDeployed = 0;
 
       if (transaction) {
-        // Use transaction's portfolio state
-        const currentLots = transaction.lotsAfterTransaction ? transaction.lotsAfterTransaction.length : 0;
+        // Use transaction's portfolio state - handle both long and short positions
+        const currentLots = transaction.lotsAfterTransaction ? transaction.lotsAfterTransaction.length :
+                           (transaction.shortsAfterTransaction ? transaction.shortsAfterTransaction.length : 0);
         totalCapitalDeployed = currentLots * lotSizeUsd;
 
+        // Use totalPNL directly from transaction (matches Enhanced Transaction History table)
+        totalPNL = transaction.totalPNL || 0;
+
         if (totalCapitalDeployed > 0) {
-          totalPNLPercent = (transaction.totalPNL / totalCapitalDeployed) * 100;
+          totalPNLPercent = (totalPNL / totalCapitalDeployed) * 100;
         }
       } else {
         // Find most recent transaction for capital deployed calculation
@@ -77,21 +85,29 @@ const BacktestResults = ({ data, chartData: priceData }) => {
         }
 
         if (mostRecentTransaction) {
-          const currentLots = mostRecentTransaction.lotsAfterTransaction ? mostRecentTransaction.lotsAfterTransaction.length : 0;
+          const currentLots = mostRecentTransaction.lotsAfterTransaction ? mostRecentTransaction.lotsAfterTransaction.length :
+                             (mostRecentTransaction.shortsAfterTransaction ? mostRecentTransaction.shortsAfterTransaction.length : 0);
           totalCapitalDeployed = currentLots * lotSizeUsd;
 
           // Calculate current portfolio state for non-transaction days
-          let holdingsMarketValue = 0;
-          if (mostRecentTransaction.lotsAfterTransaction) {
-            holdingsMarketValue = mostRecentTransaction.lotsAfterTransaction.reduce((total, lot) => {
-              const shares = lotSizeUsd / lot.price;
-              return total + (shares * currentPrice);
+          let unrealizedPNL = 0;
+          const positions = mostRecentTransaction.lotsAfterTransaction || mostRecentTransaction.shortsAfterTransaction;
+          if (positions) {
+            unrealizedPNL = positions.reduce((total, position) => {
+              const shares = lotSizeUsd / position.price;
+              if (mostRecentTransaction.shortsAfterTransaction) {
+                // Short position P&L = (short price - current price) * shares
+                const positionPNL = (position.price - currentPrice) * shares;
+                return total + positionPNL;
+              } else {
+                // Long position P&L = (current price - purchase price) * shares
+                const positionPNL = (currentPrice - position.price) * shares;
+                return total + positionPNL;
+              }
             }, 0);
           }
 
-          const breakEvenValue = currentLots * lotSizeUsd;
-          const unrealizedPNL = holdingsMarketValue - breakEvenValue;
-          const totalPNL = unrealizedPNL + (mostRecentTransaction.realizedPNL || 0);
+          totalPNL = unrealizedPNL + (mostRecentTransaction.realizedPNL || 0);
 
           if (totalCapitalDeployed > 0) {
             totalPNLPercent = (totalPNL / totalCapitalDeployed) * 100;
@@ -114,14 +130,19 @@ const BacktestResults = ({ data, chartData: priceData }) => {
 
         // P&L percentages for dual Y-axis
         totalPNLPercent: totalPNLPercent,
+        totalPNL: totalPNL,
         buyAndHoldPercent: buyAndHoldPercent,
 
         // Different buy markers based on transaction type
-        regularBuyMarker: (transaction?.type === 'BUY' && !transaction?.ocoOrderDetail && !transaction?.trailingStopDetail) ? currentPrice : null,
+        // Transaction markers - only relevant ones based on strategy mode
+        // For short selling: Short entry (SHORT + TRAILING_STOP_LIMIT_SHORT), Cover, Emergency Cover
+        trailingStopShortMarker: (transaction?.type === 'TRAILING_STOP_LIMIT_SHORT' || transaction?.type === 'SHORT') ? currentPrice : null,
+        coverMarker: (transaction?.type === 'COVER') ? currentPrice : null,
+        emergencyCoverMarker: (transaction?.type === 'EMERGENCY_COVER') ? currentPrice : null,
+
+        // For long DCA: only relevant markers
         trailingStopBuyMarker: (transaction?.type === 'TRAILING_STOP_LIMIT_BUY') ? currentPrice : null,
-        ocoLimitBuyMarker: (transaction?.type === 'OCO_LIMIT_BUY' || (transaction?.type === 'BUY' && transaction?.ocoOrderDetail?.type === 'LIMIT_BUY')) ? currentPrice : null,
-        ocoTrailingBuyMarker: (transaction?.type === 'OCO_TRAILING_BUY' || (transaction?.type === 'BUY' && transaction?.ocoOrderDetail?.type === 'TRAILING_BUY')) ? currentPrice : null,
-        sellMarker: transaction?.type === 'SELL' ? currentPrice : null
+        trailingStopSellMarker: (transaction?.type === 'SELL') ? currentPrice : null
       };
     });
   }, [data, priceData]);
@@ -130,7 +151,24 @@ const BacktestResults = ({ data, chartData: priceData }) => {
     return <div>No backtest results available</div>;
   }
 
-  const { summary, transactions, dailyPrices, lots, transactionLog, enhancedTransactions, tradeAnalysis, buyAndHoldResults, outperformance, outperformancePercent, questionableEvents } = data;
+  const {
+    summary,
+    transactions,
+    dailyPrices,
+    lots = [], // Default to empty array for short selling
+    shorts = [], // Current short positions for short selling strategy
+    transactionLog = [], // Default to empty array for short selling
+    enhancedTransactions,
+    tradeAnalysis = {}, // Default to empty object for short selling
+    buyAndHoldResults = {}, // Default to empty object for long strategy
+    shortAndHoldResults = {}, // Default to empty object for short selling strategy
+    outperformance,
+    outperformancePercent,
+    questionableEvents = [] // Default to empty array for short selling
+  } = data;
+
+  // Use shortAndHoldResults for short selling strategy, buyAndHoldResults for long strategy
+  const holdResults = summary?.strategy === 'SHORT_DCA' ? shortAndHoldResults : buyAndHoldResults;
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('en-US', {
@@ -160,6 +198,9 @@ const BacktestResults = ({ data, chartData: priceData }) => {
     }));
   };
 
+  // Check if this is short selling strategy for the component
+  const isShortSellingStrategy = summary?.strategy === 'SHORT_DCA';
+
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
@@ -169,9 +210,15 @@ const BacktestResults = ({ data, chartData: priceData }) => {
           <p className="tooltip-date">{formatDate(label)}</p>
           <p className="tooltip-price">Price: {formatCurrency(parseFloat(data.price) || 0)}</p>
 
-          {data.totalPNLPercent !== null && (
+          {data.totalPNLPercent !== null && !isShortSellingStrategy && (
             <p className={`tooltip-pnl ${data.totalPNLPercent >= 0 ? 'positive' : 'negative'}`}>
               Total P&L %: {data.totalPNLPercent.toFixed(2)}%
+            </p>
+          )}
+
+          {data.totalPNL !== null && isShortSellingStrategy && (
+            <p className={`tooltip-pnl ${data.totalPNL >= 0 ? 'positive' : 'negative'}`}>
+              Total P&L: {formatCurrency(data.totalPNL)}
             </p>
           )}
 
@@ -193,15 +240,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
             </div>
           )}
 
-          {visibleIndicators.ma20 && data.ma20 && (
-            <p className="tooltip-indicator">MA20: {formatCurrency(parseFloat(data.ma20) || 0)}</p>
-          )}
-          {visibleIndicators.ma50 && data.ma50 && (
-            <p className="tooltip-indicator">MA50: {formatCurrency(parseFloat(data.ma50) || 0)}</p>
-          )}
-          {visibleIndicators.ma200 && data.ma200 && (
-            <p className="tooltip-indicator">MA200: {formatCurrency(parseFloat(data.ma200) || 0)}</p>
-          )}
+          {/* MA indicators removed from tooltip */}
           {visibleIndicators.rsi && data.rsi && (
             <p className="tooltip-indicator">RSI: {data.rsi !== undefined ? data.rsi.toFixed(1) : 'N/A'}</p>
           )}
@@ -289,7 +328,9 @@ const BacktestResults = ({ data, chartData: priceData }) => {
   };
 
   const prepareChartData = () => {
-    if (!dailyPrices || dailyPrices.length === 0) return [];
+    // Use price data from priceData (chart data) or fallback to dailyPrices from backtest results
+    const pricesData = priceData?.dailyPrices || dailyPrices || [];
+    if (!pricesData || pricesData.length === 0) return [];
 
     // Use enhanced transactions which have complete portfolio state
     const transactionsToUse = enhancedTransactions?.length > 0 ? enhancedTransactions : transactions || [];
@@ -304,35 +345,45 @@ const BacktestResults = ({ data, chartData: priceData }) => {
       transactionMap.set(transaction.date, transaction);
     });
 
-    return dailyPrices.map((daily) => {
+    return pricesData.map((daily) => {
       const date = daily.date;
       const currentPrice = parseFloat(daily.adjusted_close || daily.close || 0);
       const transaction = transactionMap.get(date);
 
       // If there's a transaction on this date, use its calculated portfolio state
       if (transaction) {
-        // Get the number of lots from lotsAfterTransaction
-        const currentLots = transaction.lotsAfterTransaction ? transaction.lotsAfterTransaction.length : 0;
+        // Get the number of positions from lotsAfterTransaction or shortsAfterTransaction
+        const currentLots = transaction.lotsAfterTransaction ? transaction.lotsAfterTransaction.length :
+                           (transaction.shortsAfterTransaction ? transaction.shortsAfterTransaction.length : 0);
 
-        // Calculate holdings value by summing each lot's current value
+        // Calculate holdings value by summing each position's current value
         let holdingsMarketValue = 0;
-        if (transaction.lotsAfterTransaction) {
-          holdingsMarketValue = transaction.lotsAfterTransaction.reduce((total, lot) => {
-            const shares = lotSizeUsd / lot.price; // shares = $10,000 / purchase price
-            return total + (shares * currentPrice); // current value = shares × current price
+        const positions = transaction.lotsAfterTransaction || transaction.shortsAfterTransaction;
+        if (positions) {
+          holdingsMarketValue = positions.reduce((total, position) => {
+            const shares = lotSizeUsd / position.price; // shares = $10,000 / purchase price
+            if (transaction.shortsAfterTransaction) {
+              // For short positions, holdings value = current market value of shorted shares
+              // This represents what we would need to pay to close the short positions
+              return total + (shares * currentPrice);
+            } else {
+              // Long position value = current market value
+              return total + (shares * currentPrice);
+            }
           }, 0);
         }
 
         // Available cash = (maxLots - currentLots) × $10,000
         const availableCash = (maxLots - currentLots) * lotSizeUsd;
 
-        // Break-even value = currentLots × $10,000
-        const breakEvenValue = currentLots * lotSizeUsd;
+        // Break-even value: for longs = capital invested, for shorts = total short entry value
+        const breakEvenValue = transaction.shortsAfterTransaction ?
+          positions.reduce((total, position) => total + lotSizeUsd, 0) : // Sum of all short entry values
+          currentLots * lotSizeUsd; // Capital invested for longs
 
-        // Calculate smooth Total P&L = unrealized + realized P&L
+        // Use Total P&L directly from Enhanced Transaction History (same as transaction.totalPNL)
         const cumulativeRealizedPNL = transaction.realizedPNL || 0;
-        const unrealizedPNL = holdingsMarketValue - breakEvenValue;
-        const totalPNL = unrealizedPNL + cumulativeRealizedPNL;
+        const totalPNL = transaction.totalPNL || 0;
 
         return {
           date: new Date(date).toLocaleDateString(),
@@ -358,21 +409,37 @@ const BacktestResults = ({ data, chartData: priceData }) => {
       }
 
       if (mostRecentTransaction) {
-        const currentLots = mostRecentTransaction.lotsAfterTransaction ? mostRecentTransaction.lotsAfterTransaction.length : 0;
+        const currentLots = mostRecentTransaction.lotsAfterTransaction ? mostRecentTransaction.lotsAfterTransaction.length :
+                           (mostRecentTransaction.shortsAfterTransaction ? mostRecentTransaction.shortsAfterTransaction.length : 0);
 
-        // Calculate holdings value using current price but most recent lot configuration
+        // Calculate holdings value using current price but most recent position configuration
         let holdingsMarketValue = 0;
-        if (mostRecentTransaction.lotsAfterTransaction) {
-          holdingsMarketValue = mostRecentTransaction.lotsAfterTransaction.reduce((total, lot) => {
-            const shares = lotSizeUsd / lot.price;
-            return total + (shares * currentPrice);
+        const positions = mostRecentTransaction.lotsAfterTransaction || mostRecentTransaction.shortsAfterTransaction;
+        if (positions) {
+          holdingsMarketValue = positions.reduce((total, position) => {
+            const shares = lotSizeUsd / position.price;
+            if (mostRecentTransaction.shortsAfterTransaction) {
+              // For short positions, holdings value = current market value of shorted shares
+              // This represents what we would need to pay to close the short positions
+              return total + (shares * currentPrice);
+            } else {
+              // Long position value = current market value
+              return total + (shares * currentPrice);
+            }
           }, 0);
         }
 
-        const breakEvenValue = currentLots * lotSizeUsd;
+        // Break-even value: for longs = capital invested, for shorts = total short entry value
+        const breakEvenValue = mostRecentTransaction.shortsAfterTransaction ?
+          positions.reduce((total, position) => total + lotSizeUsd, 0) : // Sum of all short entry values
+          currentLots * lotSizeUsd; // Capital invested for longs
         const cumulativeRealizedPNL = mostRecentTransaction.realizedPNL || 0;
-        // Calculate smooth Total P&L = unrealized + realized P&L
-        const unrealizedPNL = holdingsMarketValue - breakEvenValue;
+        // For non-transaction days, calculate P&L the same way but using current price
+        const unrealizedPNL = mostRecentTransaction.shortsAfterTransaction ?
+          // For shorts: P&L = (short entry value - current market value)
+          breakEvenValue - holdingsMarketValue :
+          // For longs: P&L = (current market value - capital invested)
+          holdingsMarketValue - breakEvenValue;
         const totalPNL = unrealizedPNL + cumulativeRealizedPNL;
 
         return {
@@ -438,14 +505,29 @@ const BacktestResults = ({ data, chartData: priceData }) => {
               <span className="parameter-label">Lot Size (USD)</span>
               <span className="parameter-value">{formatCurrency(priceData.backtestParameters.lotSizeUsd)}</span>
             </div>
-            <div className="parameter-card">
-              <span className="parameter-label">Max Lots</span>
-              <span className="parameter-value">{priceData.backtestParameters.maxLots}</span>
-            </div>
-            <div className="parameter-card">
-              <span className="parameter-label">Max Lots to Sell</span>
-              <span className="parameter-value">{priceData.backtestParameters.maxLotsToSell}</span>
-            </div>
+            {summary.strategy === 'SHORT_DCA' ? (
+              <>
+                <div className="parameter-card">
+                  <span className="parameter-label">Max Shorts</span>
+                  <span className="parameter-value">{priceData.backtestParameters.maxShorts || 'N/A'}</span>
+                </div>
+                <div className="parameter-card">
+                  <span className="parameter-label">Max Shorts to Cover</span>
+                  <span className="parameter-value">{priceData.backtestParameters.maxShortsToCovers || 'N/A'}</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="parameter-card">
+                  <span className="parameter-label">Max Lots</span>
+                  <span className="parameter-value">{priceData.backtestParameters.maxLots}</span>
+                </div>
+                <div className="parameter-card">
+                  <span className="parameter-label">Max Lots to Sell</span>
+                  <span className="parameter-value">{priceData.backtestParameters.maxLotsToSell}</span>
+                </div>
+              </>
+            )}
             <div className="parameter-card">
               <span className="parameter-label">Grid Interval</span>
               <span className="parameter-value">{formatPercent(priceData.backtestParameters.gridIntervalPercent * 100)}</span>
@@ -454,22 +536,56 @@ const BacktestResults = ({ data, chartData: priceData }) => {
               <span className="parameter-label">Profit Requirement</span>
               <span className="parameter-value">{formatPercent(priceData.backtestParameters.profitRequirement * 100)}</span>
             </div>
-            <div className="parameter-card">
-              <span className="parameter-label">Trailing Buy Activation</span>
-              <span className="parameter-value">{formatPercent(priceData.backtestParameters.trailingBuyActivationPercent * 100)}</span>
-            </div>
-            <div className="parameter-card">
-              <span className="parameter-label">Trailing Buy Rebound</span>
-              <span className="parameter-value">{formatPercent(priceData.backtestParameters.trailingBuyReboundPercent * 100)}</span>
-            </div>
-            <div className="parameter-card">
-              <span className="parameter-label">Trailing Sell Activation</span>
-              <span className="parameter-value">{formatPercent(priceData.backtestParameters.trailingSellActivationPercent * 100)}</span>
-            </div>
-            <div className="parameter-card">
-              <span className="parameter-label">Trailing Sell Pullback</span>
-              <span className="parameter-value">{formatPercent(priceData.backtestParameters.trailingSellPullbackPercent * 100)}</span>
-            </div>
+            {/* Conditional parameter display based on strategy */}
+            {summary.strategy === 'SHORT_DCA' ? (
+              // Short selling parameters
+              <>
+                <div className="parameter-card">
+                  <span className="parameter-label">Trailing Short Activation</span>
+                  <span className="parameter-value">{formatPercent((priceData.backtestParameters.trailingShortActivationPercent || 0) * 100)}</span>
+                </div>
+                <div className="parameter-card">
+                  <span className="parameter-label">Trailing Short Pullback</span>
+                  <span className="parameter-value">{formatPercent((priceData.backtestParameters.trailingShortPullbackPercent || 0) * 100)}</span>
+                </div>
+                <div className="parameter-card">
+                  <span className="parameter-label">Trailing Cover Activation</span>
+                  <span className="parameter-value">{formatPercent((priceData.backtestParameters.trailingCoverActivationPercent || 0) * 100)}</span>
+                </div>
+                <div className="parameter-card">
+                  <span className="parameter-label">Trailing Cover Rebound</span>
+                  <span className="parameter-value">{formatPercent((priceData.backtestParameters.trailingCoverReboundPercent || 0) * 100)}</span>
+                </div>
+                <div className="parameter-card">
+                  <span className="parameter-label">Hard Stop Loss</span>
+                  <span className="parameter-value">{formatPercent((priceData.backtestParameters.hardStopLossPercent || 0) * 100)}</span>
+                </div>
+                <div className="parameter-card">
+                  <span className="parameter-label">Portfolio Stop Loss</span>
+                  <span className="parameter-value">{formatPercent((priceData.backtestParameters.portfolioStopLossPercent || 0) * 100)}</span>
+                </div>
+              </>
+            ) : (
+              // Long DCA parameters
+              <>
+                <div className="parameter-card">
+                  <span className="parameter-label">Trailing Buy Activation</span>
+                  <span className="parameter-value">{formatPercent((priceData.backtestParameters.trailingBuyActivationPercent || 0) * 100)}</span>
+                </div>
+                <div className="parameter-card">
+                  <span className="parameter-label">Trailing Buy Rebound</span>
+                  <span className="parameter-value">{formatPercent((priceData.backtestParameters.trailingBuyReboundPercent || 0) * 100)}</span>
+                </div>
+                <div className="parameter-card">
+                  <span className="parameter-label">Trailing Sell Activation</span>
+                  <span className="parameter-value">{formatPercent((priceData.backtestParameters.trailingSellActivationPercent || 0) * 100)}</span>
+                </div>
+                <div className="parameter-card">
+                  <span className="parameter-label">Trailing Sell Pullback</span>
+                  <span className="parameter-value">{formatPercent((priceData.backtestParameters.trailingSellPullbackPercent || 0) * 100)}</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -482,29 +598,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
               <TrendingUp size={20} />
               Price Chart with Transaction Markers
             </h3>
-            <div className="indicator-toggles">
-              <button
-                className={`indicator-toggle ${visibleIndicators.ma20 ? 'active' : ''}`}
-                onClick={() => toggleIndicator('ma20')}
-              >
-                {visibleIndicators.ma20 ? <Eye size={16} /> : <EyeOff size={16} />}
-                MA20
-              </button>
-              <button
-                className={`indicator-toggle ${visibleIndicators.ma50 ? 'active' : ''}`}
-                onClick={() => toggleIndicator('ma50')}
-              >
-                {visibleIndicators.ma50 ? <Eye size={16} /> : <EyeOff size={16} />}
-                MA50
-              </button>
-              <button
-                className={`indicator-toggle ${visibleIndicators.ma200 ? 'active' : ''}`}
-                onClick={() => toggleIndicator('ma200')}
-              >
-                {visibleIndicators.ma200 ? <Eye size={16} /> : <EyeOff size={16} />}
-                MA200
-              </button>
-            </div>
+            {/* MA indicators removed as requested */}
           </div>
 
           <ResponsiveContainer width="100%" height={400}>
@@ -525,14 +619,14 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                 label={{ value: 'Price ($)', angle: -90, position: 'insideLeft' }}
               />
 
-              {/* Right Y-axis for Percentages */}
+              {/* Right Y-axis for P&L (Percentages for long, Dollar amounts for short) */}
               <YAxis
                 yAxisId="percent"
                 orientation="right"
                 domain={['auto', 'auto']}
-                tickFormatter={(value) => `${value.toFixed(0)}%`}
+                tickFormatter={(value) => isShortSellingStrategy ? `$${(value / 1000).toFixed(0)}k` : `${value.toFixed(0)}%`}
                 stroke="#0066cc"
-                label={{ value: 'P&L (%)', angle: 90, position: 'insideRight' }}
+                label={{ value: isShortSellingStrategy ? 'P&L ($)' : 'P&L (%)', angle: 90, position: 'insideRight' }}
               />
 
               <Tooltip content={<CustomTooltip />} />
@@ -549,15 +643,15 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                 name="Stock Price"
               />
 
-              {/* P&L Percentage lines on right Y-axis */}
+              {/* P&L lines on right Y-axis - use Total P&L for short selling, Total P&L % for long */}
               <Line
                 yAxisId="percent"
                 type="monotone"
-                dataKey="totalPNLPercent"
+                dataKey={isShortSellingStrategy ? "totalPNL" : "totalPNLPercent"}
                 stroke="#dc2626"
                 strokeWidth={3}
                 dot={false}
-                name="Total P&L %"
+                name={isShortSellingStrategy ? "Total P&L" : "Total P&L %"}
                 connectNulls={false}
               />
 
@@ -572,80 +666,53 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                 name="Buy & Hold %"
               />
 
-              {/* Moving averages on price axis */}
-              {visibleIndicators.ma20 && (
-                <Line
-                  yAxisId="price"
-                  type="monotone"
-                  dataKey="ma20"
-                  stroke="#f56565"
-                  strokeWidth={1}
-                  dot={false}
-                  strokeDasharray="5 5"
-                  name="MA20"
-                />
-              )}
-              {visibleIndicators.ma50 && (
-                <Line
-                  yAxisId="price"
-                  type="monotone"
-                  dataKey="ma50"
-                  stroke="#ed8936"
-                  strokeWidth={1}
-                  dot={false}
-                  strokeDasharray="10 5"
-                  name="MA50"
-                />
-              )}
-              {visibleIndicators.ma200 && (
-                <Line
-                  yAxisId="price"
-                  type="monotone"
-                  dataKey="ma200"
-                  stroke="#9f7aea"
-                  strokeWidth={1}
-                  dot={false}
-                  strokeDasharray="15 5"
-                  name="MA200"
-                />
-              )}
+              {/* MA20 and MA50 indicators removed as requested */}
 
-              {/* Transaction markers on price axis */}
-              <Scatter
-                yAxisId="price"
-                dataKey="regularBuyMarker"
-                fill="#38a169"
-                shape="triangle"
-                name="Regular Buy"
-              />
-              <Scatter
-                yAxisId="price"
-                dataKey="trailingStopBuyMarker"
-                fill="#0891b2"
-                shape="star"
-                name="Trailing Stop Buy"
-              />
-              <Scatter
-                yAxisId="price"
-                dataKey="ocoLimitBuyMarker"
-                fill="#7c3aed"
-                shape="square"
-                name="OCO Limit Buy"
-              />
-              <Scatter
-                yAxisId="price"
-                dataKey="ocoTrailingBuyMarker"
-                fill="#2563eb"
-                shape="diamond"
-                name="OCO Trailing Buy"
-              />
-              <Scatter
-                yAxisId="price"
-                dataKey="sellMarker"
-                fill="#e53e3e"
-                shape="triangleDown"
-                name="Sell"
-              />
+              {/* Transaction markers - conditional based on strategy */}
+              {isShortSellingStrategy ? (
+                // Short selling markers
+                <>
+                  <Scatter
+                    yAxisId="price"
+                    dataKey="trailingStopShortMarker"
+                    fill="#0891b2"
+                    shape="star"
+                    name="Short Entry"
+                  />
+                  <Scatter
+                    yAxisId="price"
+                    dataKey="coverMarker"
+                    fill="#10b981"
+                    shape="wye"
+                    name="Cover"
+                  />
+                  <Scatter
+                    yAxisId="price"
+                    dataKey="emergencyCoverMarker"
+                    fill="#dc2626"
+                    shape="triangle"
+                    name="Emergency Cover"
+                  />
+                </>
+              ) : (
+                // Long DCA markers
+                <>
+                  <Scatter
+                    yAxisId="price"
+                    dataKey="trailingStopBuyMarker"
+                    fill="#0891b2"
+                    shape="star"
+                    name="Buy"
+                  />
+                  <Scatter
+                    yAxisId="price"
+                    dataKey="trailingStopSellMarker"
+                    fill="#b91c1c"
+                    shape="wye"
+                    name="Trailing Stop Sell"
+                  />
+                </>
+              )}
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -671,10 +738,14 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                 let totalCapitalDeployed = 0;
                 let dayCount = 0;
 
-                // Calculate average capital deployed over time
+                // Calculate average capital deployed over time (correctly for short selling)
                 enhancedTransactions.forEach(transaction => {
-                  if (transaction.lotsAfterTransaction) {
-                    const capitalDeployed = transaction.lotsAfterTransaction.length * lotSizeUsd;
+                  const positions = transaction.lotsAfterTransaction || transaction.shortsAfterTransaction;
+                  if (positions) {
+                    // For short selling, capital deployed is the cash received from shorting
+                    // For long, capital deployed is the cash spent on purchases
+                    // Both use lotSizeUsd per position since each position represents $lotSizeUsd invested/received
+                    const capitalDeployed = positions.length * lotSizeUsd;
                     totalCapitalDeployed += capitalDeployed;
                     dayCount += 1;
                   }
@@ -685,20 +756,28 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                   const returnPercent = (summary.totalReturn / averageCapitalDeployed) * 100;
 
                   // Calculate annualized return (CAGR) based on backtest period
-                  const startDate = new Date(summary.startDate);
-                  const endDate = new Date(summary.endDate);
+                  const startDate = new Date(summary.startDate || priceData?.backtestParameters?.startDate);
+                  const endDate = new Date(summary.endDate || priceData?.backtestParameters?.endDate);
                   const years = (endDate - startDate) / (1000 * 60 * 60 * 24 * 365.25);
 
                   let annualizedReturnText = '';
-                  if (years > 0 && returnPercent > 0) {
+                  if (years > 0) {
                     const finalValue = 1 + (returnPercent / 100);
-                    const cagr = Math.pow(finalValue, 1 / years) - 1;
-                    const cagrPercent = cagr * 100;
-                    annualizedReturnText = ` | CAGR: ${cagrPercent.toFixed(2)}%`;
+                    if (finalValue > 0) {
+                      const cagr = Math.pow(finalValue, 1 / years) - 1;
+                      const cagrPercent = cagr * 100;
+                      annualizedReturnText = ` | CAGR: ${cagrPercent.toFixed(2)}%`;
+                    }
                   }
 
                   return `${formatPercent(returnPercent)} | Avg Capital: ${formatCurrency(averageCapitalDeployed)}${annualizedReturnText}`;
+                } else {
+                  // If no enhanced transactions, fallback to showing basic info
+                  return `${formatPercent(summary.totalReturnPercent)} | Enhanced data unavailable`;
                 }
+              } else {
+                // If no enhanced transactions at all, show basic percentage
+                return `${formatPercent(summary.totalReturnPercent)} | No transaction data`;
               }
               return formatPercent(summary.totalReturnPercent);
             })()}
@@ -720,7 +799,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
         </div>
 
         <div className="metric-card">
-          <h4>Lots Held</h4>
+          <h4>{summary.strategy === 'SHORT_DCA' ? 'Shorts Held' : 'Lots Held'}</h4>
           <p className="value">
             {summary.lotsHeld}
           </p>
@@ -742,7 +821,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
       </div>
 
       {/* Strategy Comparison Section */}
-      {(tradeAnalysis || buyAndHoldResults) && (
+      {(tradeAnalysis || holdResults) && (
         <div className="strategy-comparison-section">
           <h3>
             <Target size={20} />
@@ -753,42 +832,59 @@ const BacktestResults = ({ data, chartData: priceData }) => {
               <>
                 <div className="comparison-card">
                   <h4>Average Annualized Return</h4>
-                  <p className={`value ${tradeAnalysis.averageAnnualizedReturnPercent > 0 ? 'positive' : 'negative'}`}>
-                    {tradeAnalysis.averageAnnualizedReturnPercent?.toFixed(2)}%
+                  <p className={`value ${(tradeAnalysis.averageAnnualizedReturnPercent || 0) > 0 ? 'positive' : 'negative'}`}>
+                    {isNaN(tradeAnalysis.averageAnnualizedReturnPercent) || tradeAnalysis.averageAnnualizedReturnPercent == null
+                      ? 'N/A'
+                      : `${tradeAnalysis.averageAnnualizedReturnPercent.toFixed(2)}%`}
                   </p>
                   <small>All positions (trades + holdings)</small>
                 </div>
                 <div className="comparison-card">
                   <h4>Completed Trades Only</h4>
-                  <p className={`value ${tradeAnalysis.tradeOnlyAverageAnnualizedReturnPercent > 0 ? 'positive' : 'negative'}`}>
-                    {tradeAnalysis.tradeOnlyAverageAnnualizedReturnPercent?.toFixed(2)}%
+                  <p className={`value ${(tradeAnalysis.tradeOnlyAverageAnnualizedReturnPercent || 0) > 0 ? 'positive' : 'negative'}`}>
+                    {isNaN(tradeAnalysis.tradeOnlyAverageAnnualizedReturnPercent) || tradeAnalysis.tradeOnlyAverageAnnualizedReturnPercent == null
+                      ? 'N/A'
+                      : `${tradeAnalysis.tradeOnlyAverageAnnualizedReturnPercent.toFixed(2)}%`}
                   </p>
                   <small>{tradeAnalysis.individualTradeReturns?.length || 0} trades</small>
                 </div>
                 <div className="comparison-card">
-                  <h4>Current Holdings Only</h4>
-                  <p className={`value ${tradeAnalysis.holdingOnlyAverageAnnualizedReturnPercent > 0 ? 'positive' : 'negative'}`}>
-                    {tradeAnalysis.holdingOnlyAverageAnnualizedReturnPercent?.toFixed(2)}%
+                  <h4>{summary.strategy === 'SHORT_DCA' ? 'Current Short Positions Only' : 'Current Holdings Only'}</h4>
+                  <p className={`value ${((summary.strategy === 'SHORT_DCA' ? tradeAnalysis.shortOnlyAverageAnnualizedReturnPercent : tradeAnalysis.holdingOnlyAverageAnnualizedReturnPercent) || 0) > 0 ? 'positive' : 'negative'}`}>
+                    {(() => {
+                      const value = summary.strategy === 'SHORT_DCA' ? tradeAnalysis.shortOnlyAverageAnnualizedReturnPercent : tradeAnalysis.holdingOnlyAverageAnnualizedReturnPercent;
+                      return isNaN(value) || value == null ? 'N/A' : `${value.toFixed(2)}%`;
+                    })()}
                   </p>
-                  <small>{tradeAnalysis.currentHoldingReturns?.length || 0} holdings</small>
+                  <small>{(summary.strategy === 'SHORT_DCA' ? tradeAnalysis.currentShortReturns?.length : tradeAnalysis.currentHoldingReturns?.length) || 0} {summary.strategy === 'SHORT_DCA' ? 'short positions' : 'holdings'}</small>
                 </div>
               </>
             )}
-            {buyAndHoldResults && (
+            {holdResults && Object.keys(holdResults).length > 0 && (
               <>
                 <div className="comparison-card buy-hold">
-                  <h4>Buy & Hold Strategy</h4>
-                  <p className={`value ${buyAndHoldResults.totalReturnPercent > 0 ? 'positive' : 'negative'}`}>
-                    {buyAndHoldResults.annualizedReturnPercent?.toFixed(2)}% annualized
+                  <h4>{summary.strategy === 'SHORT_DCA' ? 'Short & Hold Strategy' : 'Buy & Hold Strategy'}</h4>
+                  <p className={`value ${(holdResults.totalReturnPercent || 0) > 0 ? 'positive' : 'negative'}`}>
+                    {isNaN(holdResults.annualizedReturnPercent) || holdResults.annualizedReturnPercent == null
+                      ? 'N/A'
+                      : `${holdResults.annualizedReturnPercent.toFixed(2)}% annualized`}
                   </p>
-                  <small>Final Value: {formatCurrency(buyAndHoldResults.finalValue)}</small>
+                  <small>Final Value: {isNaN(holdResults.finalValue) || holdResults.finalValue == null
+                    ? 'N/A'
+                    : formatCurrency(holdResults.finalValue)}</small>
                 </div>
                 <div className="comparison-card outperformance">
-                  <h4>DCA vs Buy & Hold</h4>
-                  <p className={`value ${outperformancePercent > 0 ? 'positive' : 'negative'}`}>
-                    {outperformancePercent > 0 ? '+' : ''}{outperformancePercent?.toFixed(2)}%
+                  <h4>{summary.strategy === 'SHORT_DCA' ? 'Short DCA vs Short & Hold' : 'DCA vs Buy & Hold'}</h4>
+                  <p className={`value ${(outperformancePercent || 0) > 0 ? 'positive' : 'negative'}`}>
+                    {isNaN(outperformancePercent) || outperformancePercent == null
+                      ? 'N/A'
+                      : `${outperformancePercent > 0 ? '+' : ''}${outperformancePercent.toFixed(2)}%`}
                   </p>
-                  <small>{outperformance > 0 ? 'Outperforming' : 'Underperforming'} by {formatCurrency(Math.abs(outperformance))}</small>
+                  <small>
+                    {isNaN(outperformance) || outperformance == null
+                      ? 'N/A'
+                      : `${outperformancePercent > 0 ? 'Outperforming' : 'Underperforming'} by ${formatCurrency(Math.abs(outperformance))}`}
+                  </small>
                 </div>
               </>
             )}
@@ -800,7 +896,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
       <div className="performance-section">
         <h3>Portfolio Value Over Time</h3>
         <div className="performance-chart">
-          {chartData.length > 0 ? (
+          {chartData && chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={400}>
               <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
@@ -954,14 +1050,23 @@ const BacktestResults = ({ data, chartData: priceData }) => {
               <div>Realized P&L</div>
               <div>Annual Return</div>
               <div>Total P&L</div>
+              <div>Total P&L %</div>
             </div>
 
             {enhancedTransactions.map((transaction, index) => {
               const getTransactionIcon = (type) => {
                 if (type === 'SELL') return <><TrendingDown size={16} /> SELL</>;
-                if (type === 'TRAILING_STOP_LIMIT_BUY') return <><TrendingUp size={16} /> TRAIL BUY</>;
+                if (type === 'SHORT') return <><TrendingDown size={16} /> SHORT</>;
+                if (type === 'COVER') return <><TrendingUp size={16} /> COVER</>;
+                if (type === 'EMERGENCY_COVER') return <><TrendingUp size={16} /> EMERGENCY COVER</>;
+                if (type === 'TRAILING_STOP_LIMIT_SHORT') return <><TrendingDown size={16} /> TRAIL SHORT</>;
+                if (type === 'TRAILING_STOP_LIMIT_BUY') return <><TrendingUp size={16} /> BUY</>;
                 if (type === 'OCO_LIMIT_BUY') return <><TrendingUp size={16} /> OCO LIMIT</>;
                 if (type === 'OCO_TRAILING_BUY') return <><TrendingUp size={16} /> OCO TRAIL</>;
+                // Debug: Log unknown transaction types
+                if (type && !['SELL', 'SHORT', 'COVER', 'EMERGENCY_COVER', 'TRAILING_STOP_LIMIT_SHORT', 'TRAILING_STOP_LIMIT_BUY', 'OCO_LIMIT_BUY', 'OCO_TRAILING_BUY', 'BUY', 'INITIAL_BUY'].includes(type)) {
+                  console.warn('🐛 Unknown transaction type:', type);
+                }
                 return <><TrendingUp size={16} /> BUY</>;
               };
 
@@ -981,9 +1086,18 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                   <div>{transaction.shares !== undefined ? transaction.shares.toFixed(4) : 'N/A'}</div>
                   <div>{formatCurrency(transaction.value)}</div>
                   <div className="lots-column">
-                    {transaction.type === 'SELL' && transaction.lotsDetails ?
-                      `Sold: ${formatLots(transaction.lotsDetails)}` :
-                      `Held: ${formatLots(transaction.lotsAfterTransaction)}`
+                    {(() => {
+                      // Handle both long and short selling display
+                      if ((transaction.type === 'SELL' || transaction.type === 'COVER') && (transaction.lotsDetails || transaction.shortsDetails)) {
+                        const details = transaction.lotsDetails || transaction.shortsDetails;
+                        const action = transaction.type === 'COVER' ? 'Covered' : 'Sold';
+                        return `${action}: ${formatLots(details)}`;
+                      } else {
+                        const positions = transaction.lotsAfterTransaction || transaction.shortsAfterTransaction;
+                        const holding = transaction.shortsAfterTransaction ? 'Shorted' : 'Held';
+                        return `${holding}: ${formatLots(positions)}`;
+                      }
+                    })()
                     }
                   </div>
                   <div>{transaction.averageCost ? formatCurrency(transaction.averageCost) : 'N/A'}</div>
@@ -994,10 +1108,17 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                                                      priceData?.dailyPrices?.find(d => d.date === transaction.date)?.close || transaction.price);
                       const lotSizeUsd = priceData?.backtestParameters?.lotSizeUsd || 10000;
 
-                      if (transaction.lotsAfterTransaction) {
-                        const holdingsValue = transaction.lotsAfterTransaction.reduce((total, lot) => {
-                          const shares = lotSizeUsd / lot.price; // shares = $10,000 / purchase price
-                          return total + (shares * currentPrice); // current value = shares × current price
+                      const positions = transaction.lotsAfterTransaction || transaction.shortsAfterTransaction;
+                      if (positions) {
+                        const holdingsValue = positions.reduce((total, position) => {
+                          const shares = lotSizeUsd / position.price; // shares = $10,000 / purchase price
+                          if (transaction.shortsAfterTransaction) {
+                            // Short position value = original short value - current market value
+                            return total + (lotSizeUsd - (shares * currentPrice));
+                          } else {
+                            // Long position value = current market value
+                            return total + (shares * currentPrice);
+                          }
                         }, 0);
                         return formatCurrency(holdingsValue);
                       }
@@ -1010,21 +1131,32 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                   <div className={getMetricClass(transaction.realizedPNL)}>
                     {formatCurrency(transaction.realizedPNL)}
                     {transaction.realizedPNLFromTrade !== 0 && (
-                      <small> (+{formatCurrency(transaction.realizedPNLFromTrade)})</small>
+                      <small className={getMetricClass(transaction.realizedPNLFromTrade)}>
+                        {transaction.realizedPNLFromTrade >= 0 ? ' (+' : ' ('}{formatCurrency(Math.abs(transaction.realizedPNLFromTrade))})
+                      </small>
                     )}
                   </div>
-                  <div className={transaction.type === 'SELL' ? (transaction.annualizedReturnPercent > 0 ? 'positive' : 'negative') : ''}>
+                  <div className={(transaction.type === 'SELL' || transaction.type === 'COVER' || transaction.type === 'EMERGENCY_COVER') ? (transaction.annualizedReturnPercent > 0 ? 'positive' : 'negative') : ''}>
                     {(() => {
-                      if (transaction.type === 'SELL') {
-                        if (transaction.lotsDetails && transaction.lotsDetails.length > 0) {
-                          const soldLot = transaction.lotsDetails[0];
-                          const purchaseDate = new Date(soldLot.date);
+                      // Handle both SELL (long) and COVER/EMERGENCY_COVER (short) transactions
+                      if (transaction.type === 'SELL' || transaction.type === 'COVER' || transaction.type === 'EMERGENCY_COVER') {
+                        const details = transaction.lotsDetails || transaction.shortsDetails;
+                        if (details && details.length > 0) {
+                          const tradedPosition = details[0];
+                          const purchaseDate = new Date(tradedPosition.date);
                           const saleDate = new Date(transaction.date);
                           const daysBetween = (saleDate - purchaseDate) / (1000 * 60 * 60 * 24);
                           const yearsBetween = daysBetween / 365.25;
 
                           if (yearsBetween > 0) {
-                            const totalReturn = (transaction.price - soldLot.price) / soldLot.price;
+                            let totalReturn;
+                            if (transaction.type === 'SELL') {
+                              // Long position: profit when sale price > purchase price
+                              totalReturn = (transaction.price - tradedPosition.price) / tradedPosition.price;
+                            } else {
+                              // Short position: profit when cover price < short price
+                              totalReturn = (tradedPosition.price - transaction.price) / tradedPosition.price;
+                            }
                             const annualizedReturn = totalReturn / yearsBetween * 100;
                             return `${annualizedReturn.toFixed(2)}%`;
                           }
@@ -1035,6 +1167,21 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                   </div>
                   <div className={getMetricClass(transaction.totalPNL)}>
                     {formatCurrency(transaction.totalPNL)}
+                  </div>
+                  <div className={getMetricClass(transaction.totalPNL)}>
+                    {(() => {
+                      // Calculate total P/L percentage based on total capital deployed
+                      const lotSizeUsd = priceData?.backtestParameters?.lotSizeUsd || 10000;
+                      const positions = transaction.lotsAfterTransaction || transaction.shortsAfterTransaction;
+                      const totalCapitalDeployed = positions ? positions.length * lotSizeUsd : 0;
+
+                      if (totalCapitalDeployed > 0) {
+                        const pnlPercent = (transaction.totalPNL / totalCapitalDeployed) * 100;
+                        const sign = pnlPercent >= 0 ? '+' : '';
+                        return `${sign}${pnlPercent.toFixed(2)}%`;
+                      }
+                      return 'N/A';
+                    })()}
                   </div>
                 </div>
               );
@@ -1057,8 +1204,14 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                 <div className={`transaction-type ${transaction.type.toLowerCase()}`}>
                   {transaction.type === 'BUY' ? (
                     <><TrendingUp size={16} /> BUY</>
-                  ) : (
+                  ) : transaction.type === 'SHORT' ? (
+                    <><TrendingDown size={16} /> SHORT</>
+                  ) : transaction.type === 'COVER' ? (
+                    <><TrendingUp size={16} /> COVER</>
+                  ) : transaction.type === 'SELL' ? (
                     <><TrendingDown size={16} /> SELL</>
+                  ) : (
+                    <><span size={16} /> {transaction.type}</>
                   )}
                 </div>
                 <div>{formatCurrency(transaction.price)}</div>
@@ -1094,7 +1247,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
             </div>
 
             {lots.map((lot, index) => {
-              const currentPrice = dailyPrices?.[dailyPrices.length - 1]?.close || 0;
+              const currentPrice = priceData?.dailyPrices?.[priceData.dailyPrices.length - 1]?.close || 0;
               const currentValue = lot.shares * currentPrice;
               const purchaseValue = lot.shares * lot.price;
               const pnl = currentValue - purchaseValue;
@@ -1119,6 +1272,60 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                   </div>
                   <div className={annualizedReturnPercent > 0 ? 'positive' : 'negative'}>
                     {annualizedReturnPercent.toFixed(2)}%
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Current Short Positions */}
+      {shorts.length > 0 && (
+        <div className="holdings-section">
+          <h3>
+            <TrendingDown size={20} />
+            Current Short Positions
+          </h3>
+
+          <div className="holdings-table">
+            <div className="table-header">
+              <div>Short Date</div>
+              <div>Short Price</div>
+              <div>Shares</div>
+              <div>Current Price</div>
+              <div>Current Value</div>
+              <div>P&L</div>
+              <div>Ann. Return</div>
+            </div>
+
+            {shorts.map((short, index) => {
+              const currentPrice = priceData?.dailyPrices?.[priceData.dailyPrices.length - 1]?.close || 0;
+              const currentValue = short.shares * currentPrice; // Current market value of the shorted shares
+              const shortValue = short.shares * short.price; // Original value when shorted
+              const pnl = (short.price - currentPrice) * short.shares; // P&L from short position (profit when price goes down)
+
+              // Calculate annualized return for this short position
+              const endDate = new Date(summary.endDate || priceData?.backtestParameters?.endDate);
+              const actualDaysHeld = Math.max(1, Math.ceil((endDate - new Date(short.date)) / (1000 * 60 * 60 * 24)));
+              const totalReturn = shortValue > 0 ? pnl / shortValue : 0;
+
+              // Simple linear annualization (matches backend calculation)
+              const annualizedReturn = totalReturn * (365 / actualDaysHeld);
+              const annualizedReturnPercent = annualizedReturn * 100;
+
+              return (
+                <div key={index} className="table-row">
+                  <div>{new Date(short.date).toLocaleDateString()}</div>
+                  <div>{formatCurrency(short.price)}</div>
+                  <div>{short.shares !== undefined ? short.shares.toFixed(4) : 'N/A'}</div>
+                  <div>{formatCurrency(currentPrice)}</div>
+                  <div>{formatCurrency(currentValue)}</div>
+                  <div className={getMetricClass(pnl)}>
+                    {formatCurrency(pnl)}
+                  </div>
+                  <div className={annualizedReturnPercent > 0 ? 'positive' : 'negative'}>
+                    {isNaN(annualizedReturnPercent) ? 'N/A' : `${annualizedReturnPercent.toFixed(2)}%`}
                   </div>
                 </div>
               );

@@ -44,7 +44,7 @@ function calculateMetrics(dailyValues, capitalDeployed, transactionLog, prices, 
 
   // Use enhanced transactions for more accurate metrics
   const sellTransactions = enhancedTransactions.filter(t => t.type === 'SELL');
-  const buyTransactions = enhancedTransactions.filter(t => t.type === 'TRAILING_STOP_LIMIT_BUY' || t.type === 'INITIAL_BUY');
+  const buyTransactions = enhancedTransactions.filter(t => t.type === 'TRAILING_STOP_LIMIT_BUY');
   const winningTrades = sellTransactions.filter(t => t.realizedPNLFromTrade > 0);
   const winRate = sellTransactions.length > 0 ? (winningTrades.length / sellTransactions.length) * 100 : 0;
   const totalTrades = sellTransactions.length; // Count sells as completed trades
@@ -67,7 +67,7 @@ function calculateMetrics(dailyValues, capitalDeployed, transactionLog, prices, 
 
   return {
     totalReturn: finalValue - initialValue,
-    totalReturnPercent: initialValue > 0 ? ((finalValue - initialValue) / initialValue) * 100 : 0,
+    totalReturnPercent: avgCapitalDeployed > 0 ? ((finalValue - initialValue) / avgCapitalDeployed) * 100 : 0,
     annualizedReturn: dcaAnnualizedReturn,
     annualizedReturnPercent: dcaAnnualizedReturnPercent,
     maxDrawdown: maxDrawdown,
@@ -254,13 +254,16 @@ function assessMarketCondition(indicators) {
   };
 }
 
-function calculateBuyAndHold(prices, initialCapital) {
+function calculateBuyAndHold(prices, initialCapital, avgCapitalForComparison = null) {
   const startPrice = prices[0].adjusted_close;
   const endPrice = prices[prices.length - 1].adjusted_close;
   const shares = initialCapital / startPrice;
   const finalValue = shares * endPrice;
   const totalReturn = finalValue - initialCapital;
-  const totalReturnPercent = (totalReturn / initialCapital) * 100;
+
+  // Use average capital for comparison if provided, otherwise use initial capital
+  const denominator = avgCapitalForComparison || initialCapital;
+  const totalReturnPercent = (totalReturn / denominator) * 100;
 
   // Calculate annualized return: (1 + total return) ^ (365 / days) - 1
   const totalDays = prices.length;
@@ -439,11 +442,11 @@ async function runDCABacktest(params) {
       // Check for questionable same-day events
       const dayTransactions = dailyTransactionTypes.get(date);
       const hasSell = dayTransactions.some(tx => tx.type === 'SELL');
-      const hasBuy = dayTransactions.some(tx => tx.type === 'BUY');
+      const hasBuy = dayTransactions.some(tx => tx.type === 'TRAILING_STOP_LIMIT_BUY');
 
       if (hasSell && hasBuy && dayTransactions.length >= 2) {
         const sellTx = dayTransactions.find(tx => tx.type === 'SELL');
-        const buyTx = dayTransactions.find(tx => tx.type === 'BUY');
+        const buyTx = dayTransactions.find(tx => tx.type === 'TRAILING_STOP_LIMIT_BUY');
 
         questionableEvents.push({
           date: date,
@@ -814,7 +817,7 @@ async function runDCABacktest(params) {
 
             // Calculate holding period for this specific lot (from when it was bought to when it's sold)
             const buyTransaction = enhancedTransactions.find(tx =>
-              (tx.type === 'BUY' || tx.type === 'INITIAL_BUY' || tx.type === 'TRAILING_STOP_LIMIT_BUY') &&
+              tx.type === 'TRAILING_STOP_LIMIT_BUY' &&
               tx.price === soldLot.price &&
               tx.date <= dayData.date
             );
@@ -882,7 +885,7 @@ async function runDCABacktest(params) {
             const lotTotalReturn = lotCost > 0 ? lotPNL / lotCost : 0;
 
             const buyTransaction = enhancedTransactions.find(tx =>
-              tx.type === 'BUY' &&
+              tx.type === 'TRAILING_STOP_LIMIT_BUY' &&
               tx.price === soldLot.price &&
               tx.date <= dayData.date
             );
@@ -937,46 +940,7 @@ async function runDCABacktest(params) {
         updateTrailingStopBuy(currentPrice);
       }
 
-      // INITIAL PURCHASE - Buy first lot on the first day to start DCA process
-      if (lots.length === 0 && i === 0) {
-        // Make initial purchase on first day
-        const shares = lotSizeUsd / currentPrice;
-        lots.push({ price: currentPrice, shares: shares, date: dayData.date });
-        averageCost = recalculateAverageCost();
-
-        // Calculate P&L values after initial buy
-        const totalSharesHeldAfterBuy = lots.reduce((sum, lot) => sum + lot.shares, 0);
-        const totalCostOfHeldLotsAfterBuy = lots.reduce((sum, lot) => sum + lot.price * lot.shares, 0);
-        const unrealizedPNLAfterBuy = (totalSharesHeldAfterBuy * currentPrice) - totalCostOfHeldLotsAfterBuy;
-        const totalPNLAfterBuy = realizedPNL + unrealizedPNLAfterBuy;
-
-        // Record enhanced transaction
-        enhancedTransactions.push({
-          date: dayData.date,
-          type: 'INITIAL_BUY',
-          price: currentPrice,
-          shares: shares,
-          value: lotSizeUsd,
-          lotsDetails: null,
-          lotsAfterTransaction: [...lots],
-          averageCost: averageCost,
-          unrealizedPNL: unrealizedPNLAfterBuy,
-          realizedPNL: realizedPNL,
-          totalPNL: totalPNLAfterBuy,
-          realizedPNLFromTrade: 0,
-          ocoOrderDetail: null,
-          trailingStopDetail: null
-        });
-
-        transactionLog.push(colorize(`  ACTION: INITIAL BUY at ${currentPrice.toFixed(2)} - First lot to start DCA strategy. Shares: ${shares.toFixed(4)}, Value: ${lotSizeUsd}`, 'green'));
-
-        // Reset peak/bottom tracking after initial buy
-        resetPeakBottomTracking(currentPrice, dayData.date);
-
-        actionsOccurred = true;
-      }
-
-      // ADDITIONAL BUYING - Only through trailing stop buy orders after initial purchase
+      // ALL BUYING - Only through trailing stop buy orders (no initial purchase)
 
       if (transactionLog.length > dayStartLogLength) {
         actionsOccurred = true;
@@ -1012,10 +976,12 @@ async function runDCABacktest(params) {
     // Calculate metrics
     const metrics = calculateMetrics(dailyPortfolioValues, dailyCapitalDeployed, transactionLog, pricesWithIndicators, enhancedTransactions);
     const initialCapital = lotSizeUsd * maxLots;
-    const buyAndHoldResults = calculateBuyAndHold(pricesWithIndicators, initialCapital);
+    const buyAndHoldResults = calculateBuyAndHold(pricesWithIndicators, initialCapital, metrics.avgCapitalDeployed);
     const dcaFinalValue = totalCostOfHeldLots + realizedPNL + unrealizedPNL;
+    // Compare P&L percentages: DCA return % - Buy & Hold return %
+    // Example: if DCA = +15% and Buy & Hold = +10%, then outperformance = +15% - (+10%) = +5%
+    const outperformancePercent = metrics.totalReturnPercent - buyAndHoldResults.totalReturnPercent;
     const outperformance = dcaFinalValue - buyAndHoldResults.finalValue;
-    const outperformancePercent = (outperformance / buyAndHoldResults.finalValue) * 100;
 
     // Calculate individual trade annualized returns including current holdings
     const tradeAnalysis = calculateTradeAnnualizedReturns(enhancedTransactions, startDate, endDate, lots, finalPrice, lotSizeUsd);

@@ -13,7 +13,7 @@
 }
 
 .header-content {
-  max-width: 1200px;
+  max-width: min(1600px, 95vw);
   margin: 0 auto;
   padding: 0 2rem;
   text-align: center;
@@ -41,7 +41,7 @@
 }
 
 .tab-navigation {
-  max-width: 1200px;
+  max-width: min(1600px, 95vw);
   margin: 0 auto 2rem auto;
   padding: 0 2rem;
   display: flex;
@@ -83,7 +83,7 @@
 }
 
 .app-main {
-  max-width: 1200px;
+  max-width: min(1600px, 95vw);
   margin: 0 auto;
   padding: 0 2rem 4rem 2rem;
 }
@@ -898,7 +898,7 @@
 
 .enhanced-transactions-table .table-header {
   display: grid;
-  grid-template-columns: 100px 120px 90px 180px 180px 90px 90px 180px 90px 100px 100px 100px 100px 100px;
+  grid-template-columns: 100px 120px 90px 180px 180px 90px 90px 180px 90px 100px 100px 100px 100px 100px 100px;
   gap: 1rem;
   padding: 1rem 0.5rem;
   background: #f7fafc;
@@ -906,18 +906,18 @@
   color: #4a5568;
   border-bottom: 1px solid #e2e8f0;
   font-size: 0.85rem;
-  min-width: 1700px;
+  min-width: 1600px;
 }
 
 .enhanced-transactions-table .table-row {
   display: grid;
-  grid-template-columns: 100px 120px 90px 180px 180px 90px 90px 180px 90px 100px 100px 100px 100px 100px;
+  grid-template-columns: 100px 120px 90px 180px 180px 90px 90px 180px 90px 100px 100px 100px 100px 100px 100px;
   gap: 1rem;
   padding: 1.25rem 0.5rem;
   border-bottom: 1px solid #f1f5f9;
   align-items: start;
   font-size: 0.85rem;
-  min-width: 1700px;
+  min-width: 1600px;
 }
 
 .enhanced-transactions-table .table-row:last-child {
@@ -985,14 +985,14 @@
 }
 
 /* Responsive design for enhanced table */
-@media (max-width: 1200px) {
+@media (max-width: 1600px) {
   .enhanced-transactions-table {
     overflow-x: scroll;
   }
 
   .enhanced-transactions-table .table-header,
   .enhanced-transactions-table .table-row {
-    min-width: 1700px;
+    min-width: 1600px;
   }
 }
 
@@ -1325,7 +1325,7 @@
 /* ===== BATCH RESULTS STYLES ===== */
 
 .batch-results {
-  max-width: 1200px;
+  max-width: min(1600px, 95vw);
   margin: 0 auto;
   padding: 2rem;
 }
