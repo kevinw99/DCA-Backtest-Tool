@@ -1,8 +1,16 @@
+ under .kiro/specs, I have a new feature called  beta-parameter-correlation, I have another AI agent define
+ the requirement  in requirements.md  and initial design  in design.md. The goal is to implement all tasks in tasks
+ .md. Some tasks have been implement but it take a while, so for the rest of tasks, I feel it is too extensive. Can
+  you
+ 1. check if uncomplted tasks are truly uncompleted, it is possible some tasks are already done but not marked as,
+ done.
+ 2. complete the remaining tasks.
+
 2.4.1 Activation Conditions:
 Trigger: Price rises by trailingShortActivationPercent (default 25%) from recent bottom
 
 
-
+is that all, Seems we have a lot more changes? perhaps they were lost since I swithc session?
 
 HOw is this calculated? "Short DCA vs Short & Hold
                          -78.08%"

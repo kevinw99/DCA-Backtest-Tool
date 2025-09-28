@@ -6,7 +6,7 @@
   "maxLots": 10,
   "maxLotsToSell": 5,
   "gridIntervalPercent": 0.1,
-  "profitRequirement": 0.05,
+  "profitRequirement": 0,
   "trailingBuyActivationPercent": 0.1,
   "trailingBuyReboundPercent": 0.05,
   "trailingSellActivationPercent": 0.2,

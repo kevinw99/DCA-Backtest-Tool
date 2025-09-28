@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Play, DollarSign, TrendingUp, Settings, Info, Zap, Target, ArrowUpDown } from 'lucide-react';
+import BetaControls from './BetaControls';
 
 const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setAppTestMode }) => {
 
@@ -1069,7 +1070,22 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
         </div>
       </div>
 
-      {/* Beta Controls removed - component not available */}
+      {/* Beta Controls - only show for long strategy in single mode */}
+      {!batchMode && strategyMode === 'long' && (
+        <BetaControls
+          symbol={parameters.symbol}
+          beta={beta}
+          onBetaChange={setBeta}
+          isManualOverride={isManualBetaOverride}
+          onToggleManualOverride={setIsManualBetaOverride}
+          enableBetaScaling={enableBetaScaling}
+          onToggleBetaScaling={setEnableBetaScaling}
+          baseParameters={baseParameters}
+          adjustedParameters={adjustedParameters}
+          loading={betaLoading}
+          error={betaError}
+        />
+      )}
 
       {/* Investment Parameters Section */}
       <div className="form-section">

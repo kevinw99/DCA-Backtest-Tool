@@ -101,6 +101,18 @@ class Database {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (stock_id) REFERENCES stocks (id),
         UNIQUE(stock_id, date)
+      )`,
+
+      `CREATE TABLE IF NOT EXISTS stock_beta (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        stock_id INTEGER NOT NULL,
+        beta REAL NOT NULL,
+        source TEXT NOT NULL,
+        last_updated DATETIME NOT NULL,
+        is_manual_override BOOLEAN DEFAULT FALSE,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (stock_id) REFERENCES stocks (id),
+        UNIQUE(stock_id)
       )`
     ];
 
@@ -118,7 +130,9 @@ class Database {
       'CREATE INDEX IF NOT EXISTS idx_quarterly_fundamentals_stock_date ON quarterly_fundamentals(stock_id, fiscal_date_ending)',
       'CREATE INDEX IF NOT EXISTS idx_stocks_symbol ON stocks(symbol)',
       'CREATE INDEX IF NOT EXISTS idx_corporate_actions_stock_date ON corporate_actions(stock_id, action_date)',
-      'CREATE INDEX IF NOT EXISTS idx_technical_indicators_stock_date ON technical_indicators(stock_id, date)'
+      'CREATE INDEX IF NOT EXISTS idx_technical_indicators_stock_date ON technical_indicators(stock_id, date)',
+      'CREATE INDEX IF NOT EXISTS idx_stock_beta_stock_id ON stock_beta(stock_id)',
+      'CREATE INDEX IF NOT EXISTS idx_stock_beta_last_updated ON stock_beta(last_updated)'
     ];
 
     indexes.forEach(sql => {
@@ -538,6 +552,125 @@ class Database {
         (err, row) => {
           if (err) reject(err);
           else resolve(row?.last_date || null);
+        }
+      );
+    });
+  }
+
+  // Beta operations
+  async getBeta(stockId) {
+    return new Promise((resolve, reject) => {
+      this.db.get(
+        'SELECT * FROM stock_beta WHERE stock_id = ?',
+        [stockId],
+        (err, row) => {
+          if (err) reject(err);
+          else resolve(row);
+        }
+      );
+    });
+  }
+
+  async insertBeta(stockId, betaData) {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        `INSERT OR REPLACE INTO stock_beta 
+         (stock_id, beta, source, last_updated, is_manual_override) 
+         VALUES (?, ?, ?, ?, ?)`,
+        [
+          stockId,
+          betaData.beta,
+          betaData.source,
+          betaData.lastUpdated || new Date().toISOString(),
+          betaData.isManualOverride || false
+        ],
+        function(err) {
+          if (err) reject(err);
+          else resolve(this.lastID);
+        }
+      );
+    });
+  }
+
+  async updateBeta(stockId, betaData) {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        `UPDATE stock_beta 
+         SET beta = ?, source = ?, last_updated = ?, is_manual_override = ?
+         WHERE stock_id = ?`,
+        [
+          betaData.beta,
+          betaData.source,
+          betaData.lastUpdated || new Date().toISOString(),
+          betaData.isManualOverride || false,
+          stockId
+        ],
+        function(err) {
+          if (err) reject(err);
+          else resolve(this.changes);
+        }
+      );
+    });
+  }
+
+  async getBetaBySymbol(symbol) {
+    return new Promise((resolve, reject) => {
+      this.db.get(
+        `SELECT sb.*, s.symbol, s.name 
+         FROM stock_beta sb
+         JOIN stocks s ON sb.stock_id = s.id
+         WHERE s.symbol = ?`,
+        [symbol.toUpperCase()],
+        (err, row) => {
+          if (err) reject(err);
+          else resolve(row);
+        }
+      );
+    });
+  }
+
+  async getAllBetas() {
+    return new Promise((resolve, reject) => {
+      this.db.all(
+        `SELECT sb.*, s.symbol, s.name 
+         FROM stock_beta sb
+         JOIN stocks s ON sb.stock_id = s.id
+         ORDER BY s.symbol ASC`,
+        [],
+        (err, rows) => {
+          if (err) reject(err);
+          else resolve(rows);
+        }
+      );
+    });
+  }
+
+  async getStaleBeats(maxAgeHours = 24) {
+    return new Promise((resolve, reject) => {
+      this.db.all(
+        `SELECT sb.*, s.symbol, s.name 
+         FROM stock_beta sb
+         JOIN stocks s ON sb.stock_id = s.id
+         WHERE datetime(sb.last_updated) < datetime('now', '-${maxAgeHours} hours')
+         AND sb.is_manual_override = FALSE
+         ORDER BY sb.last_updated ASC`,
+        [],
+        (err, rows) => {
+          if (err) reject(err);
+          else resolve(rows);
+        }
+      );
+    });
+  }
+
+  async deleteBeta(stockId) {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        'DELETE FROM stock_beta WHERE stock_id = ?',
+        [stockId],
+        function(err) {
+          if (err) reject(err);
+          else resolve(this.changes);
         }
       );
     });

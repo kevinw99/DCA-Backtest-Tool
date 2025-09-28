@@ -373,6 +373,69 @@ app.get('/api/stocks/:symbol/beta', async (req, res) => {
   }
 });
 
+// Beta parameter calculation API endpoint
+app.post('/api/backtest/beta-parameters', async (req, res) => {
+  try {
+    const { beta, baseParameters } = req.body;
+
+    console.log(`🧮 Beta parameter calculation request: Beta=${beta}`);
+
+    // Validate required parameters
+    if (typeof beta !== 'number' || isNaN(beta)) {
+      return res.status(400).json({
+        error: 'Invalid beta value',
+        message: 'Beta must be a valid number',
+        received: { beta, type: typeof beta }
+      });
+    }
+
+    if (beta < 0) {
+      return res.status(400).json({
+        error: 'Invalid beta value',
+        message: 'Beta cannot be negative',
+        received: { beta }
+      });
+    }
+
+    // Import the parameter correlation service
+    const parameterCorrelationService = require('./services/parameterCorrelationService');
+
+    // Calculate Beta-adjusted parameters
+    const result = parameterCorrelationService.calculateBetaAdjustedParameters(beta, baseParameters);
+
+    console.log(`✅ Beta parameters calculated successfully for Beta=${beta}`);
+    if (result.warnings.length > 0) {
+      console.log(`⚠️  Generated ${result.warnings.length} warnings`);
+    }
+
+    res.json({
+      success: true,
+      data: {
+        beta: result.beta,
+        baseMultipliers: result.baseMultipliers,
+        adjustedParameters: result.adjustedParameters,
+        warnings: result.warnings,
+        isValid: result.isValid,
+        calculationFormulas: {
+          profitRequirement: '0.05 * Beta',
+          gridIntervalPercent: '0.1 * Beta',
+          trailingBuyActivationPercent: '0.1 * Beta',
+          trailingBuyReboundPercent: '0.05 * Beta',
+          trailingSellActivationPercent: '0.2 * Beta',
+          trailingSellPullbackPercent: '0.1 * Beta'
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Beta parameter calculation error:', error);
+    res.status(500).json({
+      error: 'Failed to calculate Beta parameters',
+      message: error.message
+    });
+  }
+});
+
 // Get list of previously entered stocks for autocomplete
 app.get('/api/stocks', async (req, res) => {
   try {
