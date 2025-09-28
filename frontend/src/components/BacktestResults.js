@@ -611,12 +611,12 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                 </div>
                 <div className="parameter-card">
                   <span className="parameter-label">β-Factor</span>
-                  <span className="parameter-value">{(priceData.backtestParameters.betaFactor || 1.0).toFixed(3)}</span>
+                  <span className="parameter-value">{((priceData.backtestParameters.beta || 1.0) * (priceData.backtestParameters.coefficient || 1.0)).toFixed(3)}</span>
                 </div>
                 <div className="parameter-card beta-formula-card">
                   <span className="parameter-label">Formula</span>
                   <span className="parameter-value">
-                    {(priceData.backtestParameters.beta || 1.0).toFixed(2)} × {(priceData.backtestParameters.coefficient || 1.0).toFixed(2)} = {(priceData.backtestParameters.betaFactor || 1.0).toFixed(3)}
+                    {(priceData.backtestParameters.beta || 1.0).toFixed(2)} × {(priceData.backtestParameters.coefficient || 1.0).toFixed(2)} = {((priceData.backtestParameters.beta || 1.0) * (priceData.backtestParameters.coefficient || 1.0)).toFixed(3)}
                   </span>
                 </div>
               </>
