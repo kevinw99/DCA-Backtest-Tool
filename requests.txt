@@ -1,3 +1,199 @@
+
+Lets implement this consecutive-incremental gird size feature:
+for consecutive buys, the grid size can be incremental, e.g. 10%, 15%, 20% etc.
+Use the following function in ./frontend/generate_sequence.py, to generate the sequence of grid size.
+
+def generate_sequence(n, start=0.0, firstDelta=0.05, end=0.7, ith=None):
+    """
+    Generate a monotonically increasing sequence with:
+    - a0 = start
+    - a(n-1) = end
+    - If firstDelta is provided, a1 = start + firstDelta
+    - Absolute increments increase
+    - Relative increments decrease
+
+    Parameters:
+    n : int
+        Length of the sequence (must be >= 3)
+    start : float
+        First value (default 0.0)
+    firstDelta : float or None
+        First increment (a1 - a0). If None, use natural quadratic scaling.
+    end : float
+        Last value (default 0.7)
+    ith : int or None
+        If specified, return (value, delta) for that index.
+        Otherwise, return the full sequence.
+    """
+
+end is defalut to 0.7
+firstDelta = grid Interval option, 5% means 0.05
+
+
+please disable Max Lots option, do not show it in the UI. the value of Max_Lots = n = min (0.7 / grid Interval
+option - 1 , 10)
+ so if grid Interval = 10%, then n = min (0.7 / 0.1 - 2, 10) = min (6, 10) = 6
+
+start = the relative delta % from the all time high price, it is a positive number,
+default to 0.0
+
+ith = the ith consecutive buy count, starting from 0, when a sell occurs, the consecutive buy count resets to 0.
+
+Buy Logic:
+1. track all time high price = all_time_high_price
+consecutive_buy_count_ith = 0 to start with
+2. After each buy,  increment ith by 1 for each consecutive buy, reset ith to 0 when a sell occurs.
+3. calcualte start = the relative delta % from the all time high price = (all_time_high_price- current_buy_price) /
+ all_time_high_price, it is a positive number, default to 0.0
+
+4. n = Max_Lots - consecutive_buy_count_ith
+5. next_consecutive_buy_grid_size = generate_sequence(n, start=start, firstDelta=grid Interval option, end=0.7,
+ith=ith+1)
+6. next_consecutive_buy_price = current_buy_price - all_time_high_price * next_consecutive_buy_grid_size
+7. if next trade is sell, reset consecutive_buy_count_ith = 0
+8. repeat step 2 to step 7
+9. print all intermediate values when changed in the console log for debugging purpose.
+be careful all decimal numbers are in decimal, e.g. 0.1 means 10%, 0.05 means 5% etc. do not mess up with % and decimal.
+
+
+
+
+http://localhost:3000/batch?mode=batch&profitRequirement=0&gridIntervalPercent=10&trailingBuyActivationPercent=10%2C5&trailingBuyReboundPercent=0&trailingSellActivationPercent=0&trailingSellPullbackPercent=0%2C5&coefficients=1%2C0.25%2C0.5
+
+
+2. in  Price Chart with Transaction Markers, please draw a horizontal line to indicate 0% P/L(the right Y axis), so
+ user can
+easily see when the total P/L is positive or negative.
+you have draw a horizontal line in the "Portfolio Value Over Time" chart, please use the same method to draw a horizontal line in the  Price Chart with Transaction Markers chart.
+
+
+
+http://localhost:3000/batch?mode=batch&profitRequirement=5%2C0%2C10%2C15%2C20&gridIntervalPercent=10%2C5%2C15%2C20&trailingBuyActivationPercent=10%2C5%2C0&trailingBuyReboundPercent=5%2C0&trailingSellActivationPercent=20%2C10%2C0&trailingSellPullbackPercent=0%2C5%2C10&coefficients=1%2C0.25%2C0.5
+
+
+These 2 parameters can be 0:
+Trailing buy activation %
+Trailing sell activation %
+Please add 0 to the list of options for these 2 parameters in both single and batch mode.
+
+
+please implement specs in .kiro/specs/url-based-backtest-configuration. Update tasks.md accordingly as you made
+progress
+
+http://localhost:3000/backtest?mode=single&symbol=TSLA&startDate=2021-09-01&endDate=2025-09-01&strategyMode=long&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=10&profitRequirement=10&trailingBuyActivationPercent=10&trailingBuyReboundPercent=0&trailingSellActivationPercent=10&trailingSellPullbackPercent=0&beta=1&coefficient=1&enableBetaScaling=false
+
+&source=batch
+
+
+For debugging purpose, I want you to implement comprehensive URL based backtest configuration.
+
+1. in single mode, when I change parameters in the parameter page, and click "Run Backtest", the URL should
+change accordingly, so I can copy and paste the URL to another browser to get the same backtest result.
+2. in batch mode, when I change parameters in the parameter page, and click "Run Batch Optimization", the URL
+ should change accordingly, so I can copy and paste the URL to another browser to get the same batch backtest result.
+3. when I run one run from the batch result table, the URL should change accordingly, so I can copy and paste the URL to another browser to get the same single backtest result.
+
+corresondingly, I want server to handle URL parameters and print them in the server log for debugging purpose,
+before acutally run the backtest.
+
+4. make sure you do not break the parameters page persistence function when navigate back and forth between pages.
+5. make sure the URL only applys when user click "Run Backtest" or "Run Batch Optimization", when user swith back
+to parameter page, it will switch. previously there were issue when the run test URL perist and does not switch
+back to the parameter page.
+
+
+> I ran a batch, but no trades and 0 result from the run. If I pick the parameter manually for one
+  configuration and run the single backtest, then it was fine. Can you debug at how the batch send request to
+  run each single backtest, what is the parameters.
+
+
+
+
+1. please get new stock data and beta for all ticker in the batch mode list, and update the database.
+
+TSLA
+
+NVDA
+
+AAPL
+
+MSFT
+
+AMZN
+
+PLTR
+
+U
+
+META
+
+SHOP
+
+TDOC
+
+JD
+
+BABA
+
+LMND
+
+NIO
+
+KNDI
+
+API
+
+1. when I enable "Enable Beta Scaling", the parameters page and test handle correctly. However , when I disable it,
+ the parameters value should revert back to original value, not the value with beta scaling, please fix it.
+
+2. The scaled value should be rounded to 2 decimal places, not many decimal places. Please fix it.
+
+
+
+Previously it will calculate these parameters based on fixed beta = 1.8. and show it in tips.  But now it is not
+showing!
+"Strategy Parameters
+ Profit Requirement (%)
+ 0
+ Minimum profit required before selling
+ Grid Interval (%)
+ 10
+ Minimum price difference between lots
+ Trailing Buy Activation (%)
+ 10
+ Price drop % from peak to activate trailing buy
+ Trailing Buy Rebound (%)
+ 5
+ Stop price % above current price for trailing buy
+ Trailing Sell Activation (%)
+ 20
+ Price rise % from bottom to activate trailing sell
+ Trailing Sell Pullback (%)
+ 10
+ Stop price % below current price for trailing sell"
+
+Here is the parameters page for long single backtest:
+Symbol: TSLA
+several problems:
+1. is 1.8 mock data or from yahoo finance?
+2. should have a field for coefficient, default to 1, but allow user to change it
+3. only when "Enable Beta Scaling" is checked, the displayed beta_factor = beta * coefficient, otherwise beta_factor = beta
+4. This is completely wrong : β-Factor:
+                              1.000
+                              = 1.80 × 1.00
+Please refer to the new steering document on how to handle problems and bugs.
+
+I have reported a bug in .kiro/specs/beta-controls-calculation-fix, please review all docs there and implement the
+tasks in tasks.md.
+
+
+
+
+ how to use it to get beta for TSLA?
+what is the beta for TSLA? if not available, how to get it?
+,
+
+
  under .kiro/specs, I have a new feature called  beta-parameter-correlation, I have another AI agent define
  the requirement  in requirements.md  and initial design  in design.md. The goal is to implement all tasks in tasks
  .md. Some tasks have been implement but it take a while, so for the rest of tasks, I feel it is too extensive. Can
@@ -6,8 +202,41 @@
  done.
  2. complete the remaining tasks.
 
+I need to fine tune the beta-parameter-correlation feature:
+1. in batch mode, parameters page,  the multiple beta values like .25, .5, 1, 1.5, 2, 3 should be labled as
+coefficient.
+2. The beta value for each stock  obtained from yahoo finance is still called beta.
+3. The final beta factor used in the calculation of other parameters should be called beta_factor = beta *
+coefficient
+4. for example, if beta for TSLA is 2.1, and coefficient is 1.5, then beta_factor = 2.1 * 1.5 = 3.15. Then Trailing
+ buy Activation% = 10% * 3.15 = 31.5%, Trailing Buy Rebound% = 5% * 3.15 = 15.75%, Trailing Sell Activation% = 20%
+ * 3.15 = 63% etc.
+
+5. in batch mode, parameters page, please show the beta value for the selected stock, so user know what is the beta
+.
+6.
+
+what are the parameters that are affected by beta factor? and what are the parameters that are not affected by beta
+ factor?
+
+I have made update to beta-parameter-correlation feature. The change is in the requirement doc. The new tasks is
+in tasks_coefficient.md. Please implement these new tasks.
+
+
+Plese read the REQUIREMENT_SHORT.md for the short selling algo, and make the following changes.
+1.
 2.4.1 Activation Conditions:
 Trigger: Price rises by trailingShortActivationPercent (default 25%) from recent bottom
+=>
+Trigger: can be either of the following conditions is met:
+A: Price rises by trailingShortActivationPercent (default 25%) from recent bottom
+B: When price < moving average MA50 and MA20 < MA50, and price drops by trailingShortPullbackPercent (default 15%)
+
+2. please plot MA20 and MA50 in the Price Chart with Transaction Markers chart, for both long and short scenario,
+since we now use them in the algo. Make the line thinner and lighter color.
+
+
+
 
 
 is that all, Seems we have a lot more changes? perhaps they were lost since I swithc session?

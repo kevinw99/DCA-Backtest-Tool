@@ -1,0 +1,30 @@
+
+1. TSLA
+http://localhost:3000/backtest?mode=single&symbol=TSLA&startDate=2021-09-01&endDate=2025-09-01&strategyMode=long&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=10&profitRequirement=10&trailingBuyActivationPercent=10&trailingBuyReboundPercent=0&trailingSellActivationPercent=10&trailingSellPullbackPercent=0&beta=1&coefficient=1&enableBetaScaling=false&source=batch
+
+Actions	Rank	Stock	Beta	Coeff	β-Factor	Total Return	Annual Return	Total Trades	Win Rate	Avg Profit/Trade	Max Drawdown	Capital Util.	Profit Req.	Grid Int.	Buy Act.	Buy Rebound	Sell Act.	Sell Pullback
+📊 Run	1	TSLA	1.00	1.00	1.00	223.70%	35.56%	25	100.00%	$3,748.56	28.45%	0.00%	10.00%	10.00%	10.00%	0.00%	10.00%	0.00%
+📊 Run	2	TSLA	1.00	1.00	1.00	223.70%	35.56%	25	100.00%	$3,748.56	28.45%	0.00%	10.00%	10.00%	5.00%	0.00%	10.00%	0.00%
+http://localhost:3000/backtest?mode=single&symbol=TSLA&startDate=2021-09-01&endDate=2025-09-01&strategyMode=long&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=10&profitRequirement=10&trailingBuyActivationPercent=10&trailingBuyReboundPercent=0&trailingSellActivationPercent=10&trailingSellPullbackPercent=0&beta=1&coefficient=1&enableBetaScaling=false&source=batch
+
+try grid size, grid size can be incremental
+sell activation can be incremental
+
+differnet activation
+try selling activation =0
+
+1. in batch mode, there is no display of beta? it should be the same as in single mode, there is beta display.
+2 when enable "Enable Beta-based Parameter Scaling", I select coefficient=0.25,0.5 , the URL is:
+
+http://localhost:3000/batch?mode=batch&profitRequirement=0&gridIntervalPercent=10&trailingBuyActivationPercent=10%2C5&trailingBuyReboundPercent=0&trailingSellActivationPercent=0&trailingSellPullbackPercent=0%2C5&coefficients=0.25%2C0.5&enableBetaScaling=true
+3. results are non zero, which is good.  however,
+
+Detailed Results
+Filter by Stock:
+
+All Stocks (top 5 per stock, 4 total results)
+Filter by Coefficient:
+All Coefficients (4 results)
+Actions	Rank	Stock	Beta	Coeff	β-Factor	Total Return	Annual Return	Total Trades	Win Rate	Avg Profit/Trade	Max Drawdown	Capital Util.	Profit Req.	Grid Int.	Buy Act.	Buy Rebound	Sell Act.	Sell Pullback
+📊 Run	1	TSLA	1.00	1.00	1.00	137.29%	29.27%	15	100.00%	$2,710.61	39.49%	0.00%	0.00%	10.00%	5.00%	0.00%	0.00%	5.00%
+ Coeff = 1.0, but I only selected 0.25 and 0.5!

@@ -20,26 +20,27 @@ This feature introduces Beta-based parameter correlation to the DCA trading plat
 
 ### Requirement 2
 
-**User Story:** As a trader, I want to configure multiple Beta values for batch backtesting so that I can test strategies across different volatility scenarios.
+**User Story:** As a trader, I want to configure multiple coefficient values for batch backtesting so that I can test strategies across different volatility scaling scenarios.
 
 #### Acceptance Criteria
 
-1. WHEN configuring batch backtests THEN the system SHALL provide predefined Beta options: 0.25, 0.5, 1.0, 1.5, 2.0, 3.0
-2. WHEN running batch backtests THEN the system SHALL allow users to select multiple Beta values from the predefined list
-3. WHEN multiple Beta values are selected THEN the system SHALL run separate backtests for each Beta value
-4. WHEN batch results are displayed THEN the system SHALL clearly indicate which Beta value was used for each result set
+1. WHEN configuring batch backtests THEN the system SHALL provide predefined coefficient options: 0.25, 0.5, 1.0, 1.5, 2.0, 3.0
+2. WHEN running batch backtests THEN the system SHALL allow users to select multiple coefficient values from the predefined list
+3. WHEN multiple coefficient values are selected THEN the system SHALL run separate backtests for each coefficient value
+4. WHEN batch results are displayed THEN the system SHALL clearly indicate which coefficient value was used for each result set
+5. WHEN calculating parameters THEN the system SHALL compute beta_factor = beta * coefficient for each combination
 
 ### Requirement 3
 
-**User Story:** As a trader, I want profit and grid parameters to scale with Beta so that higher volatility stocks have appropriately adjusted profit targets and grid spacing.
+**User Story:** As a trader, I want profit and grid parameters to scale with beta_factor so that higher volatility stocks have appropriately adjusted profit targets and grid spacing.
 
 #### Acceptance Criteria
 
-1. WHEN Beta is applied to parameters THEN the system SHALL calculate profitRequirement = 0.05 * Beta
-2. WHEN Beta is applied to parameters THEN the system SHALL calculate gridIntervalPercent = 0.1 * Beta
-3. WHEN Beta changes THEN the system SHALL automatically recalculate these dependent parameters
-4. WHEN displaying parameters THEN the system SHALL show both the base values and the Beta-adjusted values
-5. WHEN saving backtest configurations THEN the system SHALL store both the Beta value and the calculated parameters
+1. WHEN beta_factor is applied to parameters THEN the system SHALL calculate profitRequirement = 0.05 * beta_factor (where beta_factor = beta * coefficient)
+2. WHEN beta_factor is applied to parameters THEN the system SHALL calculate gridIntervalPercent = 0.1 * beta_factor
+3. WHEN beta or coefficient changes THEN the system SHALL automatically recalculate beta_factor and these dependent parameters
+4. WHEN displaying parameters THEN the system SHALL show the base values, beta value, coefficient, beta_factor, and the final calculated values
+5. WHEN saving backtest configurations THEN the system SHALL store the beta value, coefficient, beta_factor, and the calculated parameters
 
 ### Requirement 4
 
