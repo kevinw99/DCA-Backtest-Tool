@@ -1661,3 +1661,34 @@
 .explanation-item strong {
   color: #2d3748;
 }
+
+/* Backtest Parameters Section */
+.parameters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.parameter-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+}
+
+.parameter-label {
+  font-weight: 600;
+  color: #4a5568;
+  font-size: 0.875rem;
+}
+
+.parameter-value {
+  font-weight: 500;
+  color: #2d3748;
+  font-size: 0.875rem;
+  text-align: right;
+}

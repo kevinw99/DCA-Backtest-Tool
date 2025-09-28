@@ -183,6 +183,13 @@ const BacktestResults = ({ data, chartData: priceData }) => {
     return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
   };
 
+  // Format decimal parameter values (e.g., 0.1 = 10%) as display percentages
+  const formatParameterPercent = (value) => {
+    if (value === undefined || value === null) return 'N/A';
+    const percentValue = value * 100; // Convert decimal to percentage
+    return `${percentValue >= 0 ? '+' : ''}${percentValue.toFixed(2)}%`;
+  };
+
   const formatDate = (dateStr) => {
     return new Date(dateStr).toLocaleDateString('en-US', {
       month: 'short',
@@ -530,11 +537,11 @@ const BacktestResults = ({ data, chartData: priceData }) => {
             )}
             <div className="parameter-card">
               <span className="parameter-label">Grid Interval</span>
-              <span className="parameter-value">{formatPercent(priceData.backtestParameters.gridIntervalPercent)}</span>
+              <span className="parameter-value">{formatParameterPercent(priceData.backtestParameters.gridIntervalPercent)}</span>
             </div>
             <div className="parameter-card">
               <span className="parameter-label">Profit Requirement</span>
-              <span className="parameter-value">{formatPercent(priceData.backtestParameters.profitRequirement)}</span>
+              <span className="parameter-value">{formatParameterPercent(priceData.backtestParameters.profitRequirement)}</span>
             </div>
             {/* Conditional parameter display based on strategy */}
             {summary.strategy === 'SHORT_DCA' ? (
@@ -542,27 +549,27 @@ const BacktestResults = ({ data, chartData: priceData }) => {
               <>
                 <div className="parameter-card">
                   <span className="parameter-label">Trailing Short Activation</span>
-                  <span className="parameter-value">{formatPercent(priceData.backtestParameters.trailingShortActivationPercent || 0)}</span>
+                  <span className="parameter-value">{formatParameterPercent(priceData.backtestParameters.trailingShortActivationPercent || 0)}</span>
                 </div>
                 <div className="parameter-card">
                   <span className="parameter-label">Trailing Short Pullback</span>
-                  <span className="parameter-value">{formatPercent(priceData.backtestParameters.trailingShortPullbackPercent || 0)}</span>
+                  <span className="parameter-value">{formatParameterPercent(priceData.backtestParameters.trailingShortPullbackPercent || 0)}</span>
                 </div>
                 <div className="parameter-card">
                   <span className="parameter-label">Trailing Cover Activation</span>
-                  <span className="parameter-value">{formatPercent(priceData.backtestParameters.trailingCoverActivationPercent || 0)}</span>
+                  <span className="parameter-value">{formatParameterPercent(priceData.backtestParameters.trailingCoverActivationPercent || 0)}</span>
                 </div>
                 <div className="parameter-card">
                   <span className="parameter-label">Trailing Cover Rebound</span>
-                  <span className="parameter-value">{formatPercent(priceData.backtestParameters.trailingCoverReboundPercent || 0)}</span>
+                  <span className="parameter-value">{formatParameterPercent(priceData.backtestParameters.trailingCoverReboundPercent || 0)}</span>
                 </div>
                 <div className="parameter-card">
                   <span className="parameter-label">Hard Stop Loss</span>
-                  <span className="parameter-value">{formatPercent(priceData.backtestParameters.hardStopLossPercent || 0)}</span>
+                  <span className="parameter-value">{formatParameterPercent(priceData.backtestParameters.hardStopLossPercent || 0)}</span>
                 </div>
                 <div className="parameter-card">
                   <span className="parameter-label">Portfolio Stop Loss</span>
-                  <span className="parameter-value">{formatPercent(priceData.backtestParameters.portfolioStopLossPercent || 0)}</span>
+                  <span className="parameter-value">{formatParameterPercent(priceData.backtestParameters.portfolioStopLossPercent || 0)}</span>
                 </div>
               </>
             ) : (
@@ -570,19 +577,19 @@ const BacktestResults = ({ data, chartData: priceData }) => {
               <>
                 <div className="parameter-card">
                   <span className="parameter-label">Trailing Buy Activation</span>
-                  <span className="parameter-value">{formatPercent(priceData.backtestParameters.trailingBuyActivationPercent || 0)}</span>
+                  <span className="parameter-value">{formatParameterPercent(priceData.backtestParameters.trailingBuyActivationPercent || 0)}</span>
                 </div>
                 <div className="parameter-card">
                   <span className="parameter-label">Trailing Buy Rebound</span>
-                  <span className="parameter-value">{formatPercent(priceData.backtestParameters.trailingBuyReboundPercent || 0)}</span>
+                  <span className="parameter-value">{formatParameterPercent(priceData.backtestParameters.trailingBuyReboundPercent || 0)}</span>
                 </div>
                 <div className="parameter-card">
                   <span className="parameter-label">Trailing Sell Activation</span>
-                  <span className="parameter-value">{formatPercent(priceData.backtestParameters.trailingSellActivationPercent || 0)}</span>
+                  <span className="parameter-value">{formatParameterPercent(priceData.backtestParameters.trailingSellActivationPercent || 0)}</span>
                 </div>
                 <div className="parameter-card">
                   <span className="parameter-label">Trailing Sell Pullback</span>
-                  <span className="parameter-value">{formatPercent(priceData.backtestParameters.trailingSellPullbackPercent || 0)}</span>
+                  <span className="parameter-value">{formatParameterPercent(priceData.backtestParameters.trailingSellPullbackPercent || 0)}</span>
                 </div>
               </>
             )}
@@ -741,6 +748,16 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                   />
                 </>
               )}
+
+              {/* 0% P/L Reference Line on right Y-axis */}
+              <ReferenceLine
+                yAxisId="percent"
+                y={0}
+                stroke="#6b7280"
+                strokeWidth={2}
+                strokeDasharray="8 4"
+                label={{ value: "0% P/L", position: "right", style: { fill: "#6b7280", fontSize: "12px" } }}
+              />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -996,6 +1013,15 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                   strokeDasharray="10 6"
                   dot={false}
                   name="Break-even Value (Dynamic)"
+                />
+
+                {/* 0% P/L Reference Line */}
+                <ReferenceLine
+                  y={0}
+                  stroke="#6b7280"
+                  strokeWidth={2}
+                  strokeDasharray="8 4"
+                  label={{ value: "0% P/L", position: "right", style: { fill: "#6b7280", fontSize: "12px" } }}
                 />
               </LineChart>
             </ResponsiveContainer>
