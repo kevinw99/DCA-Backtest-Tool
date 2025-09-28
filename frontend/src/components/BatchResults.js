@@ -3,6 +3,7 @@ import { TrendingUp, Target, Trophy, Activity, DollarSign, BarChart3, Users, Per
 
 const BatchResults = ({ data }) => {
   const [selectedStock, setSelectedStock] = useState('all');
+  const [selectedBeta, setSelectedBeta] = useState('all');
 
   // DEBUG: Log the received data
   console.log('🐛 BatchResults received data:', data);
@@ -150,13 +151,24 @@ const BatchResults = ({ data }) => {
 
   const { summary, results, totalCombinations, successfulRuns, failedRuns, executionTimeMs } = data;
 
-  // Get unique stocks from results
+  // Get unique stocks and coefficient values from results
   const stocks = [...new Set(results.map(r => r.parameters.symbol))];
+  const coefficients = [...new Set(results.map(r => r.parameters.coefficient || 1.0))].sort((a, b) => a - b);
 
-  // Filter results by selected stock and limit to top 5 per stock
-  const filteredResults = selectedStock === 'all'
-    ? getTop5PerStock(results)
-    : results.filter(r => r.parameters.symbol === selectedStock).slice(0, 5);
+  // Filter results by selected stock and coefficient, then limit to top 5 per stock
+  let filteredByFilters = results;
+
+  if (selectedStock !== 'all') {
+    filteredByFilters = filteredByFilters.filter(r => r.parameters.symbol === selectedStock);
+  }
+
+  if (selectedBeta !== 'all') {
+    filteredByFilters = filteredByFilters.filter(r => (r.parameters.coefficient || 1.0) === parseFloat(selectedBeta));
+  }
+
+  const filteredResults = selectedStock === 'all' && selectedBeta === 'all'
+    ? getTop5PerStock(filteredByFilters)
+    : filteredByFilters.slice(0, 5);
 
   // Helper function to get top 5 results per stock
   function getTop5PerStock(results) {
@@ -186,7 +198,7 @@ const BatchResults = ({ data }) => {
     });
   }
 
-  const formatPercent = (value) => `${(value * 100).toFixed(2)}%`;
+  const formatPercent = (value) => `${value.toFixed(2)}%`;
   const formatCurrency = (value) => `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const formatNumber = (value, decimals = 2) => value.toFixed(decimals);
 
@@ -346,24 +358,44 @@ const BatchResults = ({ data }) => {
       <div className="detailed-results-section">
         <div className="results-controls">
           <h3>📋 Detailed Results</h3>
-          <div className="stock-filter">
-            <label htmlFor="stock-filter">Filter by Stock:</label>
-            <select
-              id="stock-filter"
-              value={selectedStock}
-              onChange={(e) => setSelectedStock(e.target.value)}
-            >
-              <option value="all">All Stocks (top 5 per stock, {filteredResults.length} total results)</option>
-              {stocks.map(stock => {
-                const stockResultsCount = results.filter(r => r.parameters.symbol === stock).length;
-                const displayCount = Math.min(stockResultsCount, 5);
-                return (
-                  <option key={stock} value={stock}>
-                    {stock} (top {displayCount} of {stockResultsCount} results)
-                  </option>
-                );
-              })}
-            </select>
+          <div className="filter-controls">
+            <div className="stock-filter">
+              <label htmlFor="stock-filter">Filter by Stock:</label>
+              <select
+                id="stock-filter"
+                value={selectedStock}
+                onChange={(e) => setSelectedStock(e.target.value)}
+              >
+                <option value="all">All Stocks (top 5 per stock, {filteredResults.length} total results)</option>
+                {stocks.map(stock => {
+                  const stockResultsCount = results.filter(r => r.parameters.symbol === stock).length;
+                  const displayCount = Math.min(stockResultsCount, 5);
+                  return (
+                    <option key={stock} value={stock}>
+                      {stock} (top {displayCount} of {stockResultsCount} results)
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+            <div className="beta-filter">
+              <label htmlFor="beta-filter">Filter by Coefficient:</label>
+              <select
+                id="beta-filter"
+                value={selectedBeta}
+                onChange={(e) => setSelectedBeta(e.target.value)}
+              >
+                <option value="all">All Coefficients ({filteredResults.length} results)</option>
+                {coefficients.map(coefficient => {
+                  const coeffResultsCount = results.filter(r => (r.parameters.coefficient || 1.0) === coefficient).length;
+                  return (
+                    <option key={coefficient} value={coefficient}>
+                      Coefficient = {coefficient.toFixed(2)} ({coeffResultsCount} results)
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
           </div>
         </div>
 
@@ -374,6 +406,9 @@ const BatchResults = ({ data }) => {
                 <th>Actions</th>
                 <th>Rank</th>
                 <th>Stock</th>
+                <th>Beta</th>
+                <th>Coeff</th>
+                <th>β-Factor</th>
                 <th>Total Return</th>
                 <th>Annual Return</th>
                 <th>Total Trades</th>
@@ -403,6 +438,16 @@ const BatchResults = ({ data }) => {
                   </td>
                   <td>{index + 1}</td>
                   <td className="stock-cell">{result.parameters.symbol}</td>
+                  <td className="beta-cell">
+                    {(result.parameters.beta || 1.0).toFixed(2)}
+                    {result.parameters.betaInfo?.warnings?.length ? ' ⚠️' : ''}
+                  </td>
+                  <td className="coefficient-cell">
+                    {(result.parameters.coefficient || 1.0).toFixed(2)}
+                  </td>
+                  <td className="beta-factor-cell">
+                    {(result.parameters.betaFactor || 1.0).toFixed(2)}
+                  </td>
                   <td className={`return-cell ${(result.summary?.totalReturn || 0) >= 0 ? 'positive' : 'negative'}`}>
                     {formatPercent(result.summary?.totalReturn || 0)}
                   </td>
@@ -433,6 +478,15 @@ const BatchResults = ({ data }) => {
       <div className="report-explanation">
         <h3>📚 Report Metrics Explained</h3>
         <div className="explanation-grid">
+          <div className="explanation-item">
+            <strong>Beta:</strong> Stock's volatility relative to market (fetched from Yahoo Finance). Beta=1.0 moves with market, Beta&gt;1.0 more volatile, Beta&lt;1.0 less volatile.
+          </div>
+          <div className="explanation-item">
+            <strong>Coefficient:</strong> User-selected multiplier (0.25-3.0) to amplify or reduce Beta's effect on parameter scaling.
+          </div>
+          <div className="explanation-item">
+            <strong>β-Factor:</strong> Beta × Coefficient = final multiplier used for parameter calculations (e.g., TSLA Beta=2.1 × Coeff=1.5 = β-Factor=3.15).
+          </div>
           <div className="explanation-item">
             <strong>Total Return:</strong> (Final Portfolio Value - Initial Investment) / Initial Investment
           </div>

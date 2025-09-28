@@ -11,7 +11,7 @@ const { runDCABacktest } = require('./dcaBacktestService');
  * @param {Object} paramRanges - Parameter ranges to test
  * @returns {Array} Array of parameter combinations
  */
-function generateParameterCombinations(paramRanges) {
+async function generateParameterCombinations(paramRanges) {
   const {
     symbols = ['TSLA'],
     profitRequirement = [0.05],
@@ -20,6 +20,9 @@ function generateParameterCombinations(paramRanges) {
     trailingBuyReboundPercent = [0.05],
     trailingSellActivationPercent = [0.2],
     trailingSellPullbackPercent = [0.1],
+    // Beta-related parameters
+    coefficients = [1.0],
+    enableBetaScaling = false,
     // Fixed parameters
     startDate = '2021-09-01',
     endDate = '2025-09-01',
@@ -30,27 +33,112 @@ function generateParameterCombinations(paramRanges) {
 
   const combinations = [];
 
-  for (const symbol of symbols) {
-    for (const profit of profitRequirement) {
-      for (const grid of gridIntervalPercent) {
-        for (const buyActivation of trailingBuyActivationPercent) {
-          for (const buyRebound of trailingBuyReboundPercent) {
-            for (const sellActivation of trailingSellActivationPercent) {
-              for (const sellPullback of trailingSellPullbackPercent) {
-                combinations.push({
-                  symbol,
-                  startDate,
-                  endDate,
-                  lotSizeUsd,
-                  maxLots,
-                  maxLotsToSell,
-                  profitRequirement: profit,
-                  gridIntervalPercent: grid,
-                  trailingBuyActivationPercent: buyActivation,
-                  trailingBuyReboundPercent: buyRebound,
-                  trailingSellActivationPercent: sellActivation,
-                  trailingSellPullbackPercent: sellPullback
-                });
+  // If Beta scaling is enabled, generate combinations with coefficients
+  if (enableBetaScaling && coefficients.length > 0) {
+    const parameterCorrelationService = require('./parameterCorrelationService');
+    const betaDataService = require('./betaDataService');
+
+    for (const symbol of symbols) {
+      // Fetch real Beta for this symbol
+      let beta;
+      try {
+        const betaData = await betaDataService.fetchBeta(symbol);
+        beta = betaData.beta;
+        console.log(`📊 Using Beta ${beta} for ${symbol} in batch testing`);
+      } catch (error) {
+        console.warn(`Failed to fetch Beta for ${symbol}, using default 1.0:`, error.message);
+        beta = 1.0;
+      }
+
+      for (const coefficient of coefficients) {
+        // For each coefficient, calculate adjusted parameters using beta_factor
+        try {
+          const betaResult = parameterCorrelationService.calculateBetaAdjustedParameters(beta, coefficient, {
+            profitRequirementMultiplier: profitRequirement[0], // Use first value as base
+            gridIntervalMultiplier: gridIntervalPercent[0],
+            trailingBuyActivationMultiplier: trailingBuyActivationPercent[0],
+            trailingBuyReboundMultiplier: trailingBuyReboundPercent[0],
+            trailingSellActivationMultiplier: trailingSellActivationPercent[0],
+            trailingSellPullbackMultiplier: trailingSellPullbackPercent[0]
+          });
+
+          combinations.push({
+            symbol,
+            startDate,
+            endDate,
+            lotSizeUsd,
+            maxLots,
+            maxLotsToSell,
+            // Use Beta-adjusted parameters (convert to percentages)
+            profitRequirement: betaResult.adjustedParameters.profitRequirement * 100,
+            gridIntervalPercent: betaResult.adjustedParameters.gridIntervalPercent * 100,
+            trailingBuyActivationPercent: betaResult.adjustedParameters.trailingBuyActivationPercent * 100,
+            trailingBuyReboundPercent: betaResult.adjustedParameters.trailingBuyReboundPercent * 100,
+            trailingSellActivationPercent: betaResult.adjustedParameters.trailingSellActivationPercent * 100,
+            trailingSellPullbackPercent: betaResult.adjustedParameters.trailingSellPullbackPercent * 100,
+            // Include Beta, coefficient, and beta_factor information
+            beta: beta,
+            coefficient: coefficient,
+            betaFactor: betaResult.betaFactor,
+            enableBetaScaling: true,
+            betaInfo: {
+              beta: betaResult.beta,
+              coefficient: betaResult.coefficient,
+              betaFactor: betaResult.betaFactor,
+              baseParameters: {
+                profitRequirement: profitRequirement[0] * 100,
+                gridIntervalPercent: gridIntervalPercent[0] * 100,
+                trailingBuyActivationPercent: trailingBuyActivationPercent[0] * 100,
+                trailingBuyReboundPercent: trailingBuyReboundPercent[0] * 100,
+                trailingSellActivationPercent: trailingSellActivationPercent[0] * 100,
+                trailingSellPullbackPercent: trailingSellPullbackPercent[0] * 100
+              },
+              adjustedParameters: {
+                profitRequirement: betaResult.adjustedParameters.profitRequirement * 100,
+                gridIntervalPercent: betaResult.adjustedParameters.gridIntervalPercent * 100,
+                trailingBuyActivationPercent: betaResult.adjustedParameters.trailingBuyActivationPercent * 100,
+                trailingBuyReboundPercent: betaResult.adjustedParameters.trailingBuyReboundPercent * 100,
+                trailingSellActivationPercent: betaResult.adjustedParameters.trailingSellActivationPercent * 100,
+                trailingSellPullbackPercent: betaResult.adjustedParameters.trailingSellPullbackPercent * 100
+              },
+              warnings: betaResult.warnings,
+              isValid: betaResult.isValid
+            }
+          });
+        } catch (error) {
+          console.error(`Error calculating Beta parameters for Beta=${beta}, Coefficient=${coefficient}, Symbol=${symbol}:`, error);
+          // Skip this combination if Beta calculation fails
+        }
+      }
+    }
+  } else {
+    // Original logic for non-Beta scaling
+    for (const symbol of symbols) {
+      for (const profit of profitRequirement) {
+        for (const grid of gridIntervalPercent) {
+          for (const buyActivation of trailingBuyActivationPercent) {
+            for (const buyRebound of trailingBuyReboundPercent) {
+              for (const sellActivation of trailingSellActivationPercent) {
+                for (const sellPullback of trailingSellPullbackPercent) {
+                  combinations.push({
+                    symbol,
+                    startDate,
+                    endDate,
+                    lotSizeUsd,
+                    maxLots,
+                    maxLotsToSell,
+                    profitRequirement: profit,
+                    gridIntervalPercent: grid,
+                    trailingBuyActivationPercent: buyActivation,
+                    trailingBuyReboundPercent: buyRebound,
+                    trailingSellActivationPercent: sellActivation,
+                    trailingSellPullbackPercent: sellPullback,
+                    beta: 1.0,
+                    coefficient: 1.0,
+                    betaFactor: 1.0,
+                    enableBetaScaling: false
+                  });
+                }
               }
             }
           }
@@ -116,7 +204,7 @@ async function runBatchBacktest(options, progressCallback = null) {
   console.log('🚀 Starting batch backtest...');
 
   // Generate all parameter combinations
-  const combinations = generateParameterCombinations(parameterRanges);
+  const combinations = await generateParameterCombinations(parameterRanges);
   console.log(`📊 Generated ${combinations.length} parameter combinations`);
 
   const results = [];
@@ -136,7 +224,10 @@ async function runBatchBacktest(options, progressCallback = null) {
         });
       }
 
-      console.log(`🔄 Running backtest ${i + 1}/${combinations.length}: ${params.symbol} - Profit: ${(params.profitRequirement * 100).toFixed(1)}%, Grid: ${(params.gridIntervalPercent * 100).toFixed(1)}%`);
+      const betaInfo = params.enableBetaScaling ?
+        ` Beta: ${params.beta}, Coeff: ${params.coefficient}, β-factor: ${params.betaFactor?.toFixed(2) || 'N/A'}` :
+        '';
+      console.log(`🔄 Running backtest ${i + 1}/${combinations.length}: ${params.symbol}${betaInfo} - Profit: ${(params.profitRequirement).toFixed(1)}%, Grid: ${(params.gridIntervalPercent).toFixed(1)}%`);
 
       const result = await runDCABacktest({
         ...params,

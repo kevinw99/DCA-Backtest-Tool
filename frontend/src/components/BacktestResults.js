@@ -530,11 +530,11 @@ const BacktestResults = ({ data, chartData: priceData }) => {
             )}
             <div className="parameter-card">
               <span className="parameter-label">Grid Interval</span>
-              <span className="parameter-value">{formatPercent(priceData.backtestParameters.gridIntervalPercent * 100)}</span>
+              <span className="parameter-value">{formatPercent(priceData.backtestParameters.gridIntervalPercent)}</span>
             </div>
             <div className="parameter-card">
               <span className="parameter-label">Profit Requirement</span>
-              <span className="parameter-value">{formatPercent(priceData.backtestParameters.profitRequirement * 100)}</span>
+              <span className="parameter-value">{formatPercent(priceData.backtestParameters.profitRequirement)}</span>
             </div>
             {/* Conditional parameter display based on strategy */}
             {summary.strategy === 'SHORT_DCA' ? (
@@ -542,27 +542,27 @@ const BacktestResults = ({ data, chartData: priceData }) => {
               <>
                 <div className="parameter-card">
                   <span className="parameter-label">Trailing Short Activation</span>
-                  <span className="parameter-value">{formatPercent((priceData.backtestParameters.trailingShortActivationPercent || 0) * 100)}</span>
+                  <span className="parameter-value">{formatPercent(priceData.backtestParameters.trailingShortActivationPercent || 0)}</span>
                 </div>
                 <div className="parameter-card">
                   <span className="parameter-label">Trailing Short Pullback</span>
-                  <span className="parameter-value">{formatPercent((priceData.backtestParameters.trailingShortPullbackPercent || 0) * 100)}</span>
+                  <span className="parameter-value">{formatPercent(priceData.backtestParameters.trailingShortPullbackPercent || 0)}</span>
                 </div>
                 <div className="parameter-card">
                   <span className="parameter-label">Trailing Cover Activation</span>
-                  <span className="parameter-value">{formatPercent((priceData.backtestParameters.trailingCoverActivationPercent || 0) * 100)}</span>
+                  <span className="parameter-value">{formatPercent(priceData.backtestParameters.trailingCoverActivationPercent || 0)}</span>
                 </div>
                 <div className="parameter-card">
                   <span className="parameter-label">Trailing Cover Rebound</span>
-                  <span className="parameter-value">{formatPercent((priceData.backtestParameters.trailingCoverReboundPercent || 0) * 100)}</span>
+                  <span className="parameter-value">{formatPercent(priceData.backtestParameters.trailingCoverReboundPercent || 0)}</span>
                 </div>
                 <div className="parameter-card">
                   <span className="parameter-label">Hard Stop Loss</span>
-                  <span className="parameter-value">{formatPercent((priceData.backtestParameters.hardStopLossPercent || 0) * 100)}</span>
+                  <span className="parameter-value">{formatPercent(priceData.backtestParameters.hardStopLossPercent || 0)}</span>
                 </div>
                 <div className="parameter-card">
                   <span className="parameter-label">Portfolio Stop Loss</span>
-                  <span className="parameter-value">{formatPercent((priceData.backtestParameters.portfolioStopLossPercent || 0) * 100)}</span>
+                  <span className="parameter-value">{formatPercent(priceData.backtestParameters.portfolioStopLossPercent || 0)}</span>
                 </div>
               </>
             ) : (
@@ -570,19 +570,47 @@ const BacktestResults = ({ data, chartData: priceData }) => {
               <>
                 <div className="parameter-card">
                   <span className="parameter-label">Trailing Buy Activation</span>
-                  <span className="parameter-value">{formatPercent((priceData.backtestParameters.trailingBuyActivationPercent || 0) * 100)}</span>
+                  <span className="parameter-value">{formatPercent(priceData.backtestParameters.trailingBuyActivationPercent || 0)}</span>
                 </div>
                 <div className="parameter-card">
                   <span className="parameter-label">Trailing Buy Rebound</span>
-                  <span className="parameter-value">{formatPercent((priceData.backtestParameters.trailingBuyReboundPercent || 0) * 100)}</span>
+                  <span className="parameter-value">{formatPercent(priceData.backtestParameters.trailingBuyReboundPercent || 0)}</span>
                 </div>
                 <div className="parameter-card">
                   <span className="parameter-label">Trailing Sell Activation</span>
-                  <span className="parameter-value">{formatPercent((priceData.backtestParameters.trailingSellActivationPercent || 0) * 100)}</span>
+                  <span className="parameter-value">{formatPercent(priceData.backtestParameters.trailingSellActivationPercent || 0)}</span>
                 </div>
                 <div className="parameter-card">
                   <span className="parameter-label">Trailing Sell Pullback</span>
-                  <span className="parameter-value">{formatPercent((priceData.backtestParameters.trailingSellPullbackPercent || 0) * 100)}</span>
+                  <span className="parameter-value">{formatPercent(priceData.backtestParameters.trailingSellPullbackPercent || 0)}</span>
+                </div>
+              </>
+            )}
+
+            {/* Beta Scaling Information */}
+            {priceData.backtestParameters.enableBetaScaling && (
+              <>
+                <div className="parameter-card beta-scaling-card">
+                  <span className="parameter-label">Beta Scaling</span>
+                  <span className="parameter-value">Enabled</span>
+                </div>
+                <div className="parameter-card">
+                  <span className="parameter-label">Beta (Yahoo Finance)</span>
+                  <span className="parameter-value">{(priceData.backtestParameters.beta || 1.0).toFixed(2)}</span>
+                </div>
+                <div className="parameter-card">
+                  <span className="parameter-label">Coefficient</span>
+                  <span className="parameter-value">{(priceData.backtestParameters.coefficient || 1.0).toFixed(2)}</span>
+                </div>
+                <div className="parameter-card">
+                  <span className="parameter-label">β-Factor</span>
+                  <span className="parameter-value">{(priceData.backtestParameters.betaFactor || 1.0).toFixed(3)}</span>
+                </div>
+                <div className="parameter-card beta-formula-card">
+                  <span className="parameter-label">Formula</span>
+                  <span className="parameter-value">
+                    {(priceData.backtestParameters.beta || 1.0).toFixed(2)} × {(priceData.backtestParameters.coefficient || 1.0).toFixed(2)} = {(priceData.backtestParameters.betaFactor || 1.0).toFixed(3)}
+                  </span>
                 </div>
               </>
             )}

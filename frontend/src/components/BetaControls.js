@@ -5,7 +5,10 @@ import './BetaControls.css';
 const BetaControls = ({
   symbol,
   beta = 1.0,
+  coefficient = 1.0,
+  betaFactor = 1.0,
   onBetaChange,
+  onCoefficientChange,
   isManualOverride = false,
   onToggleManualOverride,
   enableBetaScaling = false,
@@ -17,9 +20,20 @@ const BetaControls = ({
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(beta.toString());
+  const [isCoefficientEditing, setIsCoefficientEditing] = useState(false);
+  const [coefficientEditValue, setCoefficientEditValue] = useState(coefficient.toString());
   const [fetchingBeta, setFetchingBeta] = useState(false);
   const [betaSource, setBetaSource] = useState('Default Value');
   const [lastUpdated, setLastUpdated] = useState(null);
+
+  // Update edit values when props change
+  useEffect(() => {
+    setEditValue(beta.toString());
+  }, [beta]);
+
+  useEffect(() => {
+    setCoefficientEditValue(coefficient.toString());
+  }, [coefficient]);
 
   // Fetch beta data when symbol changes (unless manual override is active)
   useEffect(() => {
@@ -28,6 +42,26 @@ const BetaControls = ({
     }
   }, [symbol, isManualOverride]);
 
+  // Helper function to determine proper beta source display
+  const determineBetaSource = (apiResponse) => {
+    if (!apiResponse) return 'Default Value';
+
+    switch (apiResponse.source) {
+      case 'yahoo_finance':
+        return 'Yahoo Finance';
+      case 'alpha_vantage':
+        return 'Alpha Vantage';
+      case 'mock':
+      case 'default':
+        return 'Mock Data';
+      case undefined:
+      case null:
+        return 'Default Value';
+      default:
+        return apiResponse.source || 'API Default';
+    }
+  };
+
   const fetchBetaData = async () => {
     setFetchingBeta(true);
     try {
@@ -35,11 +69,17 @@ const BetaControls = ({
       if (response.ok) {
         const data = await response.json();
         onBetaChange(data.beta);
-        setBetaSource(data.source || 'API');
+        setBetaSource(determineBetaSource(data));
         setLastUpdated(data.lastUpdated);
+      } else {
+        // API call failed, fall back to default
+        setBetaSource('Default Value (API Error)');
+        setLastUpdated(null);
       }
     } catch (error) {
       console.error('Error fetching Beta data:', error);
+      setBetaSource('Default Value (Network Error)');
+      setLastUpdated(null);
     } finally {
       setFetchingBeta(false);
     }
@@ -96,6 +136,34 @@ const BetaControls = ({
     onToggleManualOverride(!isManualOverride);
   };
 
+  // Coefficient editing handlers
+  const handleCoefficientEditClick = () => {
+    setCoefficientEditValue(coefficient.toString());
+    setIsCoefficientEditing(true);
+  };
+
+  const handleCoefficientSave = () => {
+    const newCoefficient = parseFloat(coefficientEditValue);
+
+    if (isNaN(newCoefficient) || newCoefficient <= 0) {
+      alert('Please enter a valid coefficient value (must be > 0)');
+      return;
+    }
+
+    if (newCoefficient < 0.1 || newCoefficient > 5.0) {
+      const proceed = window.confirm(`Coefficient ${newCoefficient} is outside the recommended range (0.1-5.0). Are you sure you want to continue?`);
+      if (!proceed) return;
+    }
+
+    onCoefficientChange(newCoefficient);
+    setIsCoefficientEditing(false);
+  };
+
+  const handleCoefficientCancel = () => {
+    setCoefficientEditValue(coefficient.toString());
+    setIsCoefficientEditing(false);
+  };
+
   const handleReset = async () => {
     try {
       const response = await fetch(`/api/stocks/${symbol}/beta`);
@@ -103,7 +171,7 @@ const BetaControls = ({
         const data = await response.json();
         onBetaChange(data.beta);
         onToggleManualOverride(false);
-        setBetaSource(data.source || 'API');
+        setBetaSource(determineBetaSource(data));
         setLastUpdated(data.lastUpdated);
       }
     } catch (error) {
@@ -112,7 +180,7 @@ const BetaControls = ({
   };
 
   const formatPercentage = (value) => {
-    return `${(value * 100).toFixed(2)}%`;
+    return `${value.toFixed(2)}%`;
   };
 
   const formatDate = (dateString) => {
@@ -203,6 +271,56 @@ const BetaControls = ({
             )}
           </div>
           
+          <div className="beta-calculation">
+            <div className="calculation-row">
+              <span className="calc-label">Beta (Yahoo Finance):</span>
+              <span className="calc-value">{beta.toFixed(2)}</span>
+            </div>
+            <div className="calculation-row">
+              <span className="calc-label">Coefficient:</span>
+              {isCoefficientEditing ? (
+                <div className="beta-edit-controls">
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0.1"
+                    max="5.0"
+                    value={coefficientEditValue}
+                    onChange={(e) => setCoefficientEditValue(e.target.value)}
+                    className="beta-input"
+                  />
+                  <button onClick={handleCoefficientSave} className="beta-save-btn">
+                    Save
+                  </button>
+                  <button onClick={handleCoefficientCancel} className="beta-cancel-btn">
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <span className="calc-value">{coefficient.toFixed(2)}</span>
+                  {onCoefficientChange && (
+                    <button
+                      onClick={handleCoefficientEditClick}
+                      className="beta-edit-btn"
+                      title="Edit coefficient value"
+                      disabled={loading}
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+            <div className="calculation-row calculation-result">
+              <span className="calc-label">β-Factor:</span>
+              <span className="calc-value beta-factor">{betaFactor.toFixed(3)}</span>
+              <span className="calc-formula">
+                = {beta.toFixed(2)} {enableBetaScaling ? `× ${coefficient.toFixed(2)}` : '(scaling disabled)'}
+              </span>
+            </div>
+          </div>
+
           <div className="beta-status">
             <span className="beta-source">
               {isManualOverride ? 'Manual Override' : betaSource}
@@ -262,7 +380,7 @@ const BetaControls = ({
 
       {enableBetaScaling && (
         <div className="beta-parameter-adjustments">
-          <h4>Parameter Adjustments</h4>
+          <h4>Parameter Adjustments (based on β-factor: {betaFactor.toFixed(3)})</h4>
           
           {hasExtremeParameters() && (
             <div className="beta-warning">
