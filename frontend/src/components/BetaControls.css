@@ -290,6 +290,59 @@
   font-family: monospace;
 }
 
+/* Beta calculation display */
+.beta-calculation {
+  margin: 12px 0;
+  padding: 12px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border-left: 3px solid #007bff;
+}
+
+.calculation-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 6px 0;
+  padding: 4px 0;
+}
+
+.calculation-row.calculation-result {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #dee2e6;
+  font-weight: 600;
+}
+
+.calc-label {
+  font-size: 14px;
+  color: #6c757d;
+  font-weight: 500;
+  flex: 0 0 140px;
+}
+
+.calc-value {
+  font-family: monospace;
+  font-size: 16px;
+  font-weight: 600;
+  color: #495057;
+  flex: 0 0 auto;
+}
+
+.calc-value.beta-factor {
+  color: #007bff;
+  font-size: 18px;
+}
+
+.calc-formula {
+  font-size: 12px;
+  color: #6c757d;
+  font-family: monospace;
+  margin-left: 8px;
+  flex: 1;
+  text-align: right;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .beta-controls-section {

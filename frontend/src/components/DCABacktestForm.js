@@ -61,9 +61,9 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
   const [batchParameters, setBatchParameters] = useState(() => {
     // Initialize from localStorage just like other parameters, with fallback defaults
     const saved = localStorage.getItem('dca-batch-parameters');
-    return saved ? JSON.parse(saved) : {
+    const defaultParams = {
       symbols: ['TSLA'],
-      betaValues: [1.0],
+      coefficients: [1.0],
       enableBetaScaling: false,
       profitRequirement: [5],
       gridIntervalPercent: [10],
@@ -72,6 +72,18 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
       trailingSellActivationPercent: [20],
       trailingSellPullbackPercent: [10]
     };
+
+    if (saved) {
+      const parsedSaved = JSON.parse(saved);
+      // Ensure coefficients array exists (for backwards compatibility with old betaValues)
+      return {
+        ...defaultParams,
+        ...parsedSaved,
+        coefficients: parsedSaved.coefficients || parsedSaved.betaValues || [1.0]
+      };
+    }
+
+    return defaultParams;
   });
 
   // Short selling batch parameters
@@ -104,12 +116,36 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
 
   // Beta-related state - moved before useEffect hooks to avoid initialization errors
   const [beta, setBeta] = useState(1.0);
+  const [coefficient, setCoefficient] = useState(() => {
+    // Load coefficient from localStorage for single mode persistence
+    const saved = localStorage.getItem('dca-coefficient');
+    return saved ? parseFloat(saved) : 1.0;
+  });
+  const [betaFactor, setBetaFactor] = useState(1.0);
   const [isManualBetaOverride, setIsManualBetaOverride] = useState(false);
-  const [enableBetaScaling, setEnableBetaScaling] = useState(false);
+  const [enableBetaScaling, setEnableBetaScaling] = useState(() => {
+    try {
+      const saved = localStorage.getItem('dca-enable-beta-scaling');
+      return saved === 'true';
+    } catch (error) {
+      console.error('Error loading enableBetaScaling from localStorage:', error);
+      return false;
+    }
+  });
   const [betaError, setBetaError] = useState(null);
   const [betaLoading, setBetaLoading] = useState(false);
-  const [baseParameters, setBaseParameters] = useState({});
+  const [baseParameters, setBaseParameters] = useState(() => {
+    try {
+      const saved = localStorage.getItem('dca-base-parameters');
+      return saved ? JSON.parse(saved) : {};
+    } catch (error) {
+      console.error('Error loading base parameters from localStorage:', error);
+      return {};
+    }
+  });
   const [adjustedParameters, setAdjustedParameters] = useState({});
+  const [isUpdatingBetaParameters, setIsUpdatingBetaParameters] = useState(false);
+  const [parametersAreBetaAdjusted, setParametersAreBetaAdjusted] = useState(false);
 
   // Add validation state
   const [validationErrors, setValidationErrors] = useState({});
@@ -117,6 +153,37 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
   // Local input states to prevent NaN validation errors during typing
   const [localInputValues, setLocalInputValues] = useState({});
 
+  // Helper function to calculate betaFactor based on scaling state
+  const calculateBetaFactor = (betaValue, coefficientValue, enableScaling) => {
+    // Validate inputs to prevent NaN
+    const safeBeta = isNaN(betaValue) || betaValue < 0 ? 1.0 : betaValue;
+    const safeCoefficient = isNaN(coefficientValue) || coefficientValue <= 0 ? 1.0 : coefficientValue;
+
+    return enableScaling ? safeBeta * safeCoefficient : safeBeta;
+  };
+
+  // Persist coefficient to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('dca-coefficient', coefficient.toString());
+  }, [coefficient]);
+
+  // Persist enableBetaScaling to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('dca-enable-beta-scaling', enableBetaScaling.toString());
+  }, [enableBetaScaling]);
+
+  // Update betaFactor whenever beta, coefficient, or enableBetaScaling changes
+  useEffect(() => {
+    const newBetaFactor = calculateBetaFactor(beta, coefficient, enableBetaScaling);
+    setBetaFactor(newBetaFactor);
+
+    // Add warnings for extreme betaFactor values
+    if (enableBetaScaling && newBetaFactor > 5.0) {
+      console.warn(`Extreme β-factor detected: ${newBetaFactor.toFixed(3)} - parameters may be too aggressive`);
+    } else if (enableBetaScaling && newBetaFactor < 0.1) {
+      console.warn(`Extreme β-factor detected: ${newBetaFactor.toFixed(3)} - parameters may be too conservative`);
+    }
+  }, [beta, coefficient, enableBetaScaling]);
 
   // Load default parameters from backend on component mount
   useEffect(() => {
@@ -345,9 +412,14 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
 
   // Persist single parameters to localStorage - same pattern as strategyMode
   useEffect(() => {
+    // Skip saving to localStorage when updating beta parameters to avoid loops
+    if (isUpdatingBetaParameters) {
+      console.log('⏭️ Skipping localStorage save during beta parameter update');
+      return;
+    }
     console.log('💾 Saving parameters to localStorage:', parameters);
     localStorage.setItem('dca-single-parameters', JSON.stringify(parameters));
-  }, [parameters]);
+  }, [parameters, isUpdatingBetaParameters]);
 
   // Persist short single parameters to localStorage - same pattern as strategyMode
   useEffect(() => {
@@ -365,16 +437,59 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
     }
   }, [parameters.symbol, strategyMode, batchMode, isManualBetaOverride]);
 
-  // Recalculate adjusted parameters when Beta scaling is toggled or Beta changes
+  // Recalculate adjusted parameters when Beta scaling is toggled or Beta/coefficient changes
   useEffect(() => {
+    let isCancelled = false;
+    
     const updateParameters = async () => {
+      console.log('🔄 useEffect: Checking if parameters need update', {
+        enableBetaScaling,
+        beta,
+        strategyMode,
+        coefficient
+      });
+
       if (enableBetaScaling && beta && strategyMode === 'long') {
-        await calculateAdjustedParameters(beta);
+        console.log('✅ Conditions met, calling calculateAdjustedParameters');
+        try {
+          await calculateAdjustedParameters();
+        } catch (error) {
+          if (!isCancelled) {
+            console.error('Error in calculateAdjustedParameters:', error);
+            setBetaError('Failed to calculate adjusted parameters');
+          }
+        }
+      } else {
+        console.log('❌ Conditions not met for calculateAdjustedParameters');
+
+        // Reset to base parameters when beta scaling is disabled
+        if (!enableBetaScaling && strategyMode === 'long') {
+          console.log('🔄 Resetting parameters to base values (beta scaling disabled)');
+          const baseParams = {
+            profitRequirement: 5,
+            gridIntervalPercent: 10,
+            trailingBuyActivationPercent: 10,
+            trailingBuyReboundPercent: 5,
+            trailingSellActivationPercent: 20,
+            trailingSellPullbackPercent: 10
+          };
+          setParameters(prev => ({
+            ...prev,
+            ...baseParams
+          }));
+          setAdjustedParameters({});
+          console.log('✅ Parameters reset to base values');
+        }
       }
     };
-    
+
     updateParameters();
-  }, [enableBetaScaling, beta, strategyMode]);
+
+    // Cleanup function to prevent state updates after component unmount
+    return () => {
+      isCancelled = true;
+    };
+  }, [enableBetaScaling, beta, coefficient, strategyMode]);
 
 
   // Parameter validation function
@@ -393,11 +508,13 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
         }
       } else {
         // Long DCA validation
-        if (parameters.trailingBuyActivationPercent <= parameters.trailingBuyReboundPercent) {
-          errors.trailingBuy = 'Trailing buy activation percentage must be greater than trailing buy rebound percentage';
+        if (parameters.trailingBuyActivationPercent < parameters.trailingBuyReboundPercent ||
+            (parameters.trailingBuyActivationPercent === parameters.trailingBuyReboundPercent && parameters.trailingBuyActivationPercent !== 0)) {
+          errors.trailingBuy = 'Trailing buy activation percentage must be greater than trailing buy rebound percentage (or both can be 0)';
         }
-        if (parameters.trailingSellActivationPercent <= parameters.trailingSellPullbackPercent) {
-          errors.trailingSell = 'Trailing sell activation percentage must be greater than trailing sell pullback percentage';
+        if (parameters.trailingSellActivationPercent < parameters.trailingSellPullbackPercent ||
+            (parameters.trailingSellActivationPercent === parameters.trailingSellPullbackPercent && parameters.trailingSellActivationPercent !== 0)) {
+          errors.trailingSell = 'Trailing sell activation percentage must be greater than trailing sell pullback percentage (or both can be 0)';
         }
       }
 
@@ -423,11 +540,13 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
       const maxSellActivation = Math.max(...batchParameters.trailingSellActivationPercent);
       const minSellPullback = Math.min(...batchParameters.trailingSellPullbackPercent);
 
-      if (maxBuyActivation <= minBuyRebound) {
-        errors.trailingBuyBatch = 'Selected trailing buy activation values must be greater than trailing buy rebound values';
+      if (maxBuyActivation < minBuyRebound ||
+          (maxBuyActivation === minBuyRebound && maxBuyActivation !== 0)) {
+        errors.trailingBuyBatch = 'Selected trailing buy activation values must be greater than trailing buy rebound values (or both can be 0)';
       }
-      if (maxSellActivation <= minSellPullback) {
-        errors.trailingSellBatch = 'Selected trailing sell activation values must be greater than trailing sell pullback values';
+      if (maxSellActivation < minSellPullback ||
+          (maxSellActivation === minSellPullback && maxSellActivation !== 0)) {
+        errors.trailingSellBatch = 'Selected trailing sell activation values must be greater than trailing sell pullback values (or both can be 0)';
       }
     }
 
@@ -441,6 +560,11 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
     console.log('=== DEBUG: Form Submission ===');
     console.log('Strategy Mode:', strategyMode);
     console.log('Batch Mode:', batchMode);
+    console.log('Enable Beta Scaling:', enableBetaScaling);
+    console.log('Beta:', beta);
+    console.log('Coefficient:', coefficient);
+    console.log('Beta Factor:', betaFactor);
+    console.log('Parameters:', parameters);
     console.log('==============================');
 
     // Validate parameters before submission
@@ -504,8 +628,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
       const batchOptions = {
         parameterRanges: {
           symbols: batchParameters.symbols,
-          betaValues: batchParameters.betaValues,
-          enableBetaScaling: batchParameters.enableBetaScaling,
+          coefficients: batchParameters.coefficients,
           profitRequirement: batchParameters.profitRequirement.map(p => p / 100),
           gridIntervalPercent: batchParameters.gridIntervalPercent.map(p => p / 100),
           trailingBuyActivationPercent: batchParameters.trailingBuyActivationPercent.map(p => p / 100),
@@ -519,6 +642,8 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
           maxLots: parameters.maxLots,
           maxLotsToSell: parameters.maxLotsToSell
         },
+        // Move enableBetaScaling to top level to match URL structure
+        enableBetaScaling: batchParameters.enableBetaScaling,
         sortBy: 'annualizedReturn'
       };
       onSubmit(batchOptions, true); // true indicates batch mode
@@ -534,6 +659,8 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
         trailingSellPullbackPercent: parameters.trailingSellPullbackPercent / 100,
         // Add Beta information
         beta: beta,
+        coefficient: coefficient,
+        betaFactor: betaFactor,
         enableBetaScaling: enableBetaScaling,
         isManualBetaOverride: isManualBetaOverride,
         // Add strategy mode
@@ -564,21 +691,45 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
         }
       }
     } else {
+      // Update parameters
       setParameters(prev => ({
         ...prev,
         [field]: value
       }));
 
+      // Mark parameters as no longer beta-adjusted when user manually changes them
+      setParametersAreBetaAdjusted(false);
+      
+      // Update base parameters if Beta scaling is disabled (user is changing their base preferences)
+      if (!enableBetaScaling) {
+        const updatedBaseParams = {
+          ...baseParameters,
+          [field]: value
+        };
+        setBaseParameters(updatedBaseParams);
+        localStorage.setItem('dca-base-parameters', JSON.stringify(updatedBaseParams));
+        console.log(`📝 Updated base parameter ${field} = ${value} (Beta scaling disabled)`);
+      } else {
+        // If Beta scaling is enabled and user changes parameters, we need to update base parameters
+        // by reverse-calculating what the base value should be
+        console.log(`⚠️ Parameter change while Beta scaling enabled: ${field} = ${value}`);
+        // Note: This is complex because we'd need to reverse the beta calculation
+        // For now, we'll just log this case - in practice, users shouldn't be able to edit
+        // parameters when Beta scaling is enabled (they should be read-only)
+      }
+
       // Clear validation errors when values change and become valid
       if (field === 'trailingBuyActivationPercent' || field === 'trailingBuyReboundPercent') {
         const updatedParams = { ...parameters, [field]: value };
-        if (updatedParams.trailingBuyActivationPercent > updatedParams.trailingBuyReboundPercent) {
+        if (updatedParams.trailingBuyActivationPercent > updatedParams.trailingBuyReboundPercent ||
+            (updatedParams.trailingBuyActivationPercent === updatedParams.trailingBuyReboundPercent && updatedParams.trailingBuyActivationPercent === 0)) {
           setValidationErrors(prev => ({ ...prev, trailingBuy: undefined }));
         }
       }
       if (field === 'trailingSellActivationPercent' || field === 'trailingSellPullbackPercent') {
         const updatedParams = { ...parameters, [field]: value };
-        if (updatedParams.trailingSellActivationPercent > updatedParams.trailingSellPullbackPercent) {
+        if (updatedParams.trailingSellActivationPercent > updatedParams.trailingSellPullbackPercent ||
+            (updatedParams.trailingSellActivationPercent === updatedParams.trailingSellPullbackPercent && updatedParams.trailingSellActivationPercent === 0)) {
           setValidationErrors(prev => ({ ...prev, trailingSell: undefined }));
         }
       }
@@ -700,13 +851,13 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
       if (response.ok || response.status === 206) { // 206 = Partial Content (with warnings)
         setBeta(data.beta);
         if (enableBetaScaling) {
-          calculateAdjustedParameters(data.beta);
+          calculateAdjustedParameters();
         }
       } else {
         setBetaError(data.message || 'Failed to fetch Beta data');
         setBeta(1.0); // Default to 1.0 on error
         if (enableBetaScaling) {
-          calculateAdjustedParameters(1.0);
+          calculateAdjustedParameters();
         }
       }
     } catch (error) {
@@ -714,21 +865,25 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
       setBetaError('Network error fetching Beta data');
       setBeta(1.0); // Default to 1.0 on error
       if (enableBetaScaling) {
-        calculateAdjustedParameters(1.0);
+        calculateAdjustedParameters();
       }
     } finally {
       setBetaLoading(false);
     }
   };
 
-  const calculateAdjustedParameters = async (betaValue) => {
+  const calculateAdjustedParameters = async () => {
     if (!enableBetaScaling || strategyMode !== 'long') {
       setAdjustedParameters({});
       return;
     }
 
-    // Store base parameters before any Beta adjustments
-    const baseParams = {
+    // Set loading state
+    setBetaLoading(true);
+    setBetaError(null);
+
+    // Use stored base parameters or defaults for API call
+    const baseParams = Object.keys(baseParameters).length > 0 ? baseParameters : {
       profitRequirement: 0.05, // 5% base
       gridIntervalPercent: 0.1, // 10% base
       trailingBuyActivationPercent: 0.1, // 10% base
@@ -737,50 +892,80 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
       trailingSellPullbackPercent: 0.1 // 10% base
     };
 
-    setBaseParameters(baseParams);
-
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
       const response = await fetch('http://localhost:3001/api/backtest/beta-parameters', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          beta: betaValue,
-          baseParameters: baseParams,
-          enableBetaScaling: true
-        })
+          symbol: parameters.symbol,
+          coefficient: enableBetaScaling ? coefficient : 1.0, // Use coefficient only when scaling enabled
+          baseParameters: baseParams
+        }),
+        signal: controller.signal
       });
 
-      const data = await response.json();
+      clearTimeout(timeoutId);
+      const responseData = await response.json();
       
-      if (response.ok) {
-        setAdjustedParameters(data.adjustedParameters);
-        
-        // Update form parameters with adjusted values
+      if (response.ok && responseData.success && responseData.data && responseData.data.adjustedParameters) {
+        const apiData = responseData.data;
+        setAdjustedParameters(apiData.adjustedParameters);
+
+        // The API already returns parameters in percentage format, round to 2 decimal places
         const adjustedForUI = {
-          profitRequirement: data.adjustedParameters.profitRequirement * 100,
-          gridIntervalPercent: data.adjustedParameters.gridIntervalPercent * 100,
-          trailingBuyActivationPercent: data.adjustedParameters.trailingBuyActivationPercent * 100,
-          trailingBuyReboundPercent: data.adjustedParameters.trailingBuyReboundPercent * 100,
-          trailingSellActivationPercent: data.adjustedParameters.trailingSellActivationPercent * 100,
-          trailingSellPullbackPercent: data.adjustedParameters.trailingSellPullbackPercent * 100
+          profitRequirement: Math.round((apiData.adjustedParameters.profitRequirement || 5.0) * 100) / 100,
+          gridIntervalPercent: Math.round((apiData.adjustedParameters.gridIntervalPercent || 10.0) * 100) / 100,
+          trailingBuyActivationPercent: Math.round((apiData.adjustedParameters.trailingBuyActivationPercent || 10.0) * 100) / 100,
+          trailingBuyReboundPercent: Math.round((apiData.adjustedParameters.trailingBuyReboundPercent || 5.0) * 100) / 100,
+          trailingSellActivationPercent: Math.round((apiData.adjustedParameters.trailingSellActivationPercent || 20.0) * 100) / 100,
+          trailingSellPullbackPercent: Math.round((apiData.adjustedParameters.trailingSellPullbackPercent || 10.0) * 100) / 100
         };
 
-        setParameters(prev => ({
-          ...prev,
-          ...adjustedForUI
-        }));
+        console.log('📊 Calculated adjusted parameters:', adjustedForUI);
+        
+        // Apply the adjusted parameters to form (this will be handled separately)
+        applyAdjustedParameters(adjustedForUI);
 
         // Validate adjusted parameters and set warnings
         validateAdjustedParameters(adjustedForUI);
       } else {
-        setBetaError(data.message || 'Failed to calculate adjusted parameters');
+        setBetaError(responseData.message || responseData.error || 'Failed to calculate adjusted parameters');
       }
     } catch (error) {
-      console.error('Error calculating adjusted parameters:', error);
-      setBetaError('Network error calculating adjusted parameters');
+      if (error.name === 'AbortError') {
+        console.log('Parameter calculation request was cancelled');
+      } else {
+        console.error('Error calculating adjusted parameters:', error);
+        console.error('Request details:', {
+          symbol: parameters.symbol,
+          coefficient: enableBetaScaling ? coefficient : 1.0,
+          baseParameters: baseParams
+        });
+        setBetaError(`Network error: ${error.message}`);
+      }
+    } finally {
+      setBetaLoading(false);
     }
+  };
+
+  // Apply adjusted parameters to form inputs
+  const applyAdjustedParameters = (adjustedParams) => {
+    if (!adjustedParams || !enableBetaScaling) return;
+    
+    console.log('✅ Applying adjusted parameters to form:', adjustedParams);
+    setIsUpdatingBetaParameters(true);
+    setParametersAreBetaAdjusted(true); // Mark parameters as beta-adjusted
+    setParameters(prev => ({
+      ...prev,
+      ...adjustedParams
+    }));
+    // Reset flag after a brief delay to allow the useEffect to run
+    setTimeout(() => setIsUpdatingBetaParameters(false), 100);
   };
 
   // Validate Beta-adjusted parameters and set warnings
@@ -808,14 +993,86 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
 
   const handleBetaChange = (newBeta) => {
     setBeta(newBeta);
-    calculateAdjustedParameters(newBeta);
+    calculateAdjustedParameters();
+  };
+
+  // Store current parameters as base before applying beta scaling
+  const storeBaseParameters = () => {
+    // Safety check: don't store beta-adjusted parameters as base
+    if (parametersAreBetaAdjusted) {
+      console.log('⚠️ Skipping base parameter storage - parameters are currently beta-adjusted');
+      return;
+    }
+    
+    // Store the current UI parameters (in percentage format) as base parameters
+    const currentBaseParams = {
+      profitRequirement: parameters.profitRequirement,
+      gridIntervalPercent: parameters.gridIntervalPercent,
+      trailingBuyActivationPercent: parameters.trailingBuyActivationPercent,
+      trailingBuyReboundPercent: parameters.trailingBuyReboundPercent,
+      trailingSellActivationPercent: parameters.trailingSellActivationPercent,
+      trailingSellPullbackPercent: parameters.trailingSellPullbackPercent
+    };
+    
+    setBaseParameters(currentBaseParams);
+    localStorage.setItem('dca-base-parameters', JSON.stringify(currentBaseParams));
+    console.log('📦 Stored base parameters:', currentBaseParams);
+  };
+
+  // Restore base parameters when beta scaling is disabled
+  const restoreBaseParameters = () => {
+    let baseParamsToRestore = baseParameters;
+    
+    // If no base parameters in state, try to load from localStorage
+    if (Object.keys(baseParamsToRestore).length === 0) {
+      try {
+        const saved = localStorage.getItem('dca-base-parameters');
+        if (saved) {
+          baseParamsToRestore = JSON.parse(saved);
+          setBaseParameters(baseParamsToRestore);
+          console.log('📥 Loaded base parameters from localStorage:', baseParamsToRestore);
+        }
+      } catch (error) {
+        console.error('Error loading base parameters from localStorage:', error);
+      }
+    }
+    
+    if (Object.keys(baseParamsToRestore).length === 0) {
+      console.log('⚠️ No base parameters found, using current values as defaults');
+      // If still no base parameters, use current parameter values (they should be the original user values)
+      baseParamsToRestore = {
+        profitRequirement: parameters.profitRequirement,
+        gridIntervalPercent: parameters.gridIntervalPercent,
+        trailingBuyActivationPercent: parameters.trailingBuyActivationPercent,
+        trailingBuyReboundPercent: parameters.trailingBuyReboundPercent,
+        trailingSellActivationPercent: parameters.trailingSellActivationPercent,
+        trailingSellPullbackPercent: parameters.trailingSellPullbackPercent
+      };
+    }
+
+    console.log('🔄 Restoring base parameters:', baseParamsToRestore);
+    setIsUpdatingBetaParameters(true);
+    setParametersAreBetaAdjusted(false); // Mark parameters as no longer beta-adjusted
+    setParameters(prev => ({
+      ...prev,
+      ...baseParamsToRestore
+    }));
+    setTimeout(() => setIsUpdatingBetaParameters(false), 100);
   };
 
   const handleToggleBetaScaling = (enabled) => {
+    if (enabled && strategyMode === 'long') {
+      // Store current parameters as base BEFORE enabling beta scaling
+      storeBaseParameters();
+      console.log('🔄 Enabling Beta scaling - stored base parameters first');
+    }
+    
+    // Set the beta scaling state
     setEnableBetaScaling(enabled);
     
     if (enabled && strategyMode === 'long') {
-      calculateAdjustedParameters(beta);
+      // Now calculate and apply beta-adjusted parameters
+      calculateAdjustedParameters();
     } else {
       // Reset to base parameters when Beta scaling is disabled
       setAdjustedParameters({});
@@ -830,20 +1087,9 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
         return newErrors;
       });
       
-      // Restore base parameter values
-      const baseForUI = {
-        profitRequirement: 5, // 5%
-        gridIntervalPercent: 10, // 10%
-        trailingBuyActivationPercent: 10, // 10%
-        trailingBuyReboundPercent: 5, // 5%
-        trailingSellActivationPercent: 20, // 20%
-        trailingSellPullbackPercent: 10 // 10%
-      };
-
-      setParameters(prev => ({
-        ...prev,
-        ...baseForUI
-      }));
+      console.log('🔄 Disabling Beta scaling - restoring base parameters');
+      // Restore base parameters
+      restoreBaseParameters();
     }
   };
 
@@ -1075,7 +1321,10 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
         <BetaControls
           symbol={parameters.symbol}
           beta={beta}
+          coefficient={coefficient}
+          betaFactor={betaFactor}
           onBetaChange={setBeta}
+          onCoefficientChange={setCoefficient}
           isManualOverride={isManualBetaOverride}
           onToggleManualOverride={setIsManualBetaOverride}
           enableBetaScaling={enableBetaScaling}
@@ -1384,7 +1633,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                   />
                   <span className="form-help">
                     {enableBetaScaling
-                      ? `Automatically calculated: ${(0.05 * beta * 100).toFixed(1)}% (5% × ${beta.toFixed(1)} Beta)`
+                      ? `Beta-adjusted: ${parameters.profitRequirement.toFixed(1)}% (Base: 5% × β-factor: ${betaFactor.toFixed(2)})`
                       : 'Minimum profit required before selling'
                     }
                   </span>
@@ -1408,7 +1657,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                   />
                   <span className="form-help">
                     {enableBetaScaling 
-                      ? `Automatically calculated: ${(0.1 * beta * 100).toFixed(1)}% (10% × ${beta.toFixed(1)} Beta)`
+                      ? `Beta-adjusted: ${parameters.gridIntervalPercent.toFixed(1)}% (Base: 10% × β-factor: ${betaFactor.toFixed(2)})`
                       : 'Minimum price difference between lots'
                     }
                   </span>
@@ -1424,7 +1673,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                     type="number"
                     value={parameters.trailingBuyActivationPercent}
                     onChange={(e) => handleChange('trailingBuyActivationPercent', parseFloat(e.target.value))}
-                    min="5"
+                    min="0"
                     max="20"
                     step="0.1"
                     required
@@ -1432,7 +1681,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                   />
                   <span className="form-help">
                     {enableBetaScaling 
-                      ? `Automatically calculated: ${(0.1 * beta * 100).toFixed(1)}% (10% × ${beta.toFixed(1)} Beta)`
+                      ? `Beta-adjusted: ${parameters.trailingBuyActivationPercent.toFixed(1)}% (Base: 10% × β-factor: ${betaFactor.toFixed(2)})`
                       : 'Price drop % from peak to activate trailing buy'
                     }
                   </span>
@@ -1456,7 +1705,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                   />
                   <span className="form-help">
                     {enableBetaScaling 
-                      ? `Automatically calculated: ${(0.05 * beta * 100).toFixed(1)}% (5% × ${beta.toFixed(1)} Beta)`
+                      ? `Beta-adjusted: ${parameters.trailingBuyReboundPercent.toFixed(1)}% (Base: 5% × β-factor: ${betaFactor.toFixed(2)})`
                       : 'Stop price % above current price for trailing buy'
                     }
                   </span>
@@ -1479,7 +1728,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                     type="number"
                     value={parameters.trailingSellActivationPercent}
                     onChange={(e) => handleChange('trailingSellActivationPercent', parseFloat(e.target.value))}
-                    min="5"
+                    min="0"
                     max="50"
                     step="0.1"
                     required
@@ -1487,7 +1736,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                   />
                   <span className="form-help">
                     {enableBetaScaling 
-                      ? `Automatically calculated: ${(0.2 * beta * 100).toFixed(1)}% (20% × ${beta.toFixed(1)} Beta)`
+                      ? `Beta-adjusted: ${parameters.trailingSellActivationPercent.toFixed(1)}% (Base: 20% × β-factor: ${betaFactor.toFixed(2)})`
                       : 'Price rise % from bottom to activate trailing sell'
                     }
                   </span>
@@ -1511,7 +1760,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                   />
                   <span className="form-help">
                     {enableBetaScaling 
-                      ? `Automatically calculated: ${(0.1 * beta * 100).toFixed(1)}% (10% × ${beta.toFixed(1)} Beta)`
+                      ? `Beta-adjusted: ${parameters.trailingSellPullbackPercent.toFixed(1)}% (Base: 10% × β-factor: ${betaFactor.toFixed(2)})`
                       : 'Stop price % below current price for trailing sell'
                     }
                   </span>
@@ -1811,19 +2060,19 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                     </div>
 
                     <div className="parameter-range">
-                      <label>Beta Values - Test different volatility scenarios</label>
+                      <label>Coefficient Values - Test different volatility scaling scenarios</label>
                       <div className="selection-controls">
                         <button
                           type="button"
                           className="control-button"
-                          onClick={() => handleSelectAll('betaValues', [0.25, 0.5, 1.0, 1.5, 2.0, 3.0])}
+                          onClick={() => handleSelectAll('coefficients', [0.25, 0.5, 1.0, 1.5, 2.0, 3.0])}
                         >
                           Select All
                         </button>
                         <button
                           type="button"
                           className="control-button"
-                          onClick={() => handleDeselectAll('betaValues')}
+                          onClick={() => handleDeselectAll('coefficients')}
                         >
                           Deselect All
                         </button>
@@ -1833,12 +2082,12 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                           <label key={val} className="checkbox-item">
                             <input
                               type="checkbox"
-                              checked={batchParameters.betaValues.includes(val)}
+                              checked={(batchParameters.coefficients || []).includes(val)}
                               onChange={(e) => {
                                 if (e.target.checked) {
-                                  handleBatchParameterChange('betaValues', [...batchParameters.betaValues, val]);
+                                  handleBatchParameterChange('coefficients', [...(batchParameters.coefficients || []), val]);
                                 } else {
-                                  handleBatchParameterChange('betaValues', batchParameters.betaValues.filter(b => b !== val));
+                                  handleBatchParameterChange('coefficients', (batchParameters.coefficients || []).filter(b => b !== val));
                                 }
                               }}
                             />
@@ -1852,10 +2101,10 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                         ))}
                       </div>
                       <span className="form-help">
-                        Selected: {batchParameters.betaValues.join(', ')} |
+                        Selected: {batchParameters.coefficients.join(', ')} |
                         {batchParameters.enableBetaScaling
-                          ? ' Parameters will be scaled by these Beta values'
-                          : ' These Beta values will be tested with fixed parameters'
+                          ? ' Parameters will be scaled by Beta × Coefficient values'
+                          : ' These coefficient values will be tested with fixed parameters'
                         }
                       </span>
                     </div>
@@ -1960,12 +2209,12 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                 </div>
 
                 <div className="parameter-range">
-                  <label>Trailing Buy Activation (%) - Range: 5 to 20, step 5</label>
+                  <label>Trailing Buy Activation (%) - Range: 0 to 20, step 5</label>
                   <div className="selection-controls">
                     <button
                       type="button"
                       className="control-button"
-                      onClick={() => handleSelectAll('trailingBuyActivationPercent', generateRange(5, 20, 5))}
+                      onClick={() => handleSelectAll('trailingBuyActivationPercent', [0, ...generateRange(5, 20, 5)])}
                     >
                       Select All
                     </button>
@@ -1978,7 +2227,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                     </button>
                   </div>
                   <div className="checkbox-grid">
-                    {generateRange(5, 20, 5).map(val => (
+                    {[0, ...generateRange(5, 20, 5)].map(val => (
                       <label key={val} className="checkbox-item">
                         <input
                           type="checkbox"
@@ -2036,12 +2285,12 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                 </div>
 
                 <div className="parameter-range">
-                  <label>Trailing Sell Activation (%) - Range: 10 to 50, step 10</label>
+                  <label>Trailing Sell Activation (%) - Range: 0 to 50, step 10</label>
                   <div className="selection-controls">
                     <button
                       type="button"
                       className="control-button"
-                      onClick={() => handleSelectAll('trailingSellActivationPercent', generateRange(10, 50, 10))}
+                      onClick={() => handleSelectAll('trailingSellActivationPercent', [0, ...generateRange(10, 50, 10)])}
                     >
                       Select All
                     </button>
@@ -2054,7 +2303,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                     </button>
                   </div>
                   <div className="checkbox-grid">
-                    {generateRange(10, 50, 10).map(val => (
+                    {[0, ...generateRange(10, 50, 10)].map(val => (
                       <label key={val} className="checkbox-item">
                         <input
                           type="checkbox"
@@ -2134,7 +2383,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                     shortBatchParameters.trailingCoverReboundPercent.length
                   ) : (
                     batchParameters.symbols.length *
-                    (batchParameters.betaValues.length || 1) *
+                    (batchParameters.coefficients.length || 1) *
                     batchParameters.profitRequirement.length *
                     batchParameters.gridIntervalPercent.length *
                     batchParameters.trailingBuyActivationPercent.length *

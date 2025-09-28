@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { TrendingUp, Target, Trophy, Activity, DollarSign, BarChart3, Users, Percent } from 'lucide-react';
+import URLParameterManager from '../utils/URLParameterManager';
 
 const BatchResults = ({ data }) => {
   const [selectedStock, setSelectedStock] = useState('all');
@@ -75,69 +76,57 @@ const BatchResults = ({ data }) => {
     }
     console.log('🌐 Current window location:', window.location.href);
 
-    // Create URL with parameters for the existing single backtest page
-    const baseUrl = window.location.origin + window.location.pathname;
-    console.log('🐛 Base URL for new tab:', baseUrl);
-
-    // Convert decimal parameters to percentages for URL (form expects percentages)
-    let convertedParams = {
-      mode: currentMode, // Preserve the current mode (batch/single) from URL
+    // Prepare parameters for URLParameterManager (keep decimal format - URLParameterManager will handle conversion)
+    const urlParams = {
+      mode: 'single', // Always single mode for individual batch result row
       strategyMode: isShortStrategy ? 'short' : 'long',
       symbol: parameters.symbol,
       startDate: parameters.startDate,
       endDate: parameters.endDate,
       lotSizeUsd: parameters.lotSizeUsd,
-      // Convert decimal values to percentages for URL parameters (backend expects decimals, form displays percentages)
-      gridIntervalPercent: parameters.gridIntervalPercent * 100,
-      profitRequirement: parameters.profitRequirement * 100,
-      autoRun: 'true' // Flag to automatically run the backtest
+      // Keep backend decimal values as-is - URLParameterManager will convert to percentage for URL
+      gridIntervalPercent: parameters.gridIntervalPercent,
+      profitRequirement: parameters.profitRequirement,
+      source: 'batch' // Mark that this came from a batch result
     };
 
+    // Add strategy-specific parameters (keep decimal format - URLParameterManager will handle conversion)
     if (isShortStrategy) {
-      // Short strategy parameters
-      convertedParams = {
-        ...convertedParams,
+      Object.assign(urlParams, {
         maxShorts: parameters.maxShorts,
         maxShortsToCovers: parameters.maxShortsToCovers,
-        trailingShortActivationPercent: parameters.trailingShortActivationPercent * 100,
-        trailingShortPullbackPercent: parameters.trailingShortPullbackPercent * 100,
-        trailingCoverActivationPercent: parameters.trailingCoverActivationPercent * 100,
-        trailingCoverReboundPercent: parameters.trailingCoverReboundPercent * 100
-      };
+        trailingShortActivationPercent: parameters.trailingShortActivationPercent,
+        trailingShortPullbackPercent: parameters.trailingShortPullbackPercent,
+        trailingCoverActivationPercent: parameters.trailingCoverActivationPercent,
+        trailingCoverReboundPercent: parameters.trailingCoverReboundPercent,
+        hardStopLossPercent: parameters.hardStopLossPercent,
+        portfolioStopLossPercent: parameters.portfolioStopLossPercent
+      });
     } else {
-      // Long strategy parameters
-      convertedParams = {
-        ...convertedParams,
+      Object.assign(urlParams, {
         maxLots: parameters.maxLots,
         maxLotsToSell: parameters.maxLotsToSell,
-        trailingBuyActivationPercent: parameters.trailingBuyActivationPercent * 100,
-        trailingBuyReboundPercent: parameters.trailingBuyReboundPercent * 100,
-        trailingSellActivationPercent: parameters.trailingSellActivationPercent * 100,
-        trailingSellPullbackPercent: parameters.trailingSellPullbackPercent * 100
-      };
+        trailingBuyActivationPercent: parameters.trailingBuyActivationPercent,
+        trailingBuyReboundPercent: parameters.trailingBuyReboundPercent,
+        trailingSellActivationPercent: parameters.trailingSellActivationPercent,
+        trailingSellPullbackPercent: parameters.trailingSellPullbackPercent
+      });
     }
+
+    // Add beta parameters if available
+    if (parameters.beta) urlParams.beta = parameters.beta;
+    if (parameters.coefficient) urlParams.coefficient = parameters.coefficient;
+    if (parameters.enableBetaScaling !== undefined) urlParams.enableBetaScaling = parameters.enableBetaScaling;
+    if (parameters.isManualBetaOverride !== undefined) urlParams.isManualBetaOverride = parameters.isManualBetaOverride;
 
     console.log(`🔄 PARAMETER CONVERSION (decimal → percentage for ${isShortStrategy ? 'SHORT' : 'LONG'} strategy URL):`);
-    console.log(`  📊 Strategy Mode: ${convertedParams.strategyMode}`);
-    console.log(`  📊 Grid Interval: ${parameters.gridIntervalPercent} → ${convertedParams.gridIntervalPercent}%`);
-    console.log(`  📊 Profit Requirement: ${parameters.profitRequirement} → ${convertedParams.profitRequirement}%`);
+    console.log(`  📊 Strategy Mode: ${urlParams.strategyMode}`);
+    console.log(`  📊 Grid Interval: ${parameters.gridIntervalPercent} → ${urlParams.gridIntervalPercent}%`);
+    console.log(`  📊 Profit Requirement: ${parameters.profitRequirement} → ${urlParams.profitRequirement}%`);
 
-    if (isShortStrategy) {
-      console.log(`  📊 Trailing Short Activation: ${parameters.trailingShortActivationPercent} → ${convertedParams.trailingShortActivationPercent}%`);
-      console.log(`  📊 Trailing Short Pullback: ${parameters.trailingShortPullbackPercent} → ${convertedParams.trailingShortPullbackPercent}%`);
-      console.log(`  📊 Trailing Cover Activation: ${parameters.trailingCoverActivationPercent} → ${convertedParams.trailingCoverActivationPercent}%`);
-      console.log(`  📊 Trailing Cover Rebound: ${parameters.trailingCoverReboundPercent} → ${convertedParams.trailingCoverReboundPercent}%`);
-    } else {
-      console.log(`  📊 Trailing Buy Activation: ${parameters.trailingBuyActivationPercent} → ${convertedParams.trailingBuyActivationPercent}%`);
-      console.log(`  📊 Trailing Buy Rebound: ${parameters.trailingBuyReboundPercent} → ${convertedParams.trailingBuyReboundPercent}%`);
-      console.log(`  📊 Trailing Sell Activation: ${parameters.trailingSellActivationPercent} → ${convertedParams.trailingSellActivationPercent}%`);
-      console.log(`  📊 Trailing Sell Pullback: ${parameters.trailingSellPullbackPercent} → ${convertedParams.trailingSellPullbackPercent}%`);
-    }
-
-    const params = new URLSearchParams(convertedParams);
-    const url = `${baseUrl}?${params.toString()}`;
-    console.log('🌐 Complete URL being opened in new tab:', url);
-    console.log('🌐 URL parameters being passed (percentage format):', Object.fromEntries(params));
+    // Generate URL using URLParameterManager
+    const url = URLParameterManager.generateShareableURL(urlParams, 'single');
+    console.log('🌐 Complete URL being opened in new tab (via URLParameterManager):', url);
 
     // Open new tab with single backtest page
     console.log('🐛 Calling window.open with _blank target...');
@@ -199,6 +188,10 @@ const BatchResults = ({ data }) => {
   }
 
   const formatPercent = (value) => `${value.toFixed(2)}%`;
+  // Format decimal parameter values (e.g., 0.1 = 10%) as display percentages
+  const formatParameterPercent = (value) => `${(value * 100).toFixed(2)}%`;
+  // Format decimal performance metrics (e.g., 0.617 = 61.76%) as display percentages
+  const formatPerformancePercent = (value) => `${(value * 100).toFixed(2)}%`;
   const formatCurrency = (value) => `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const formatNumber = (value, decimals = 2) => value.toFixed(decimals);
 
@@ -231,14 +224,14 @@ const BatchResults = ({ data }) => {
             <TrendingUp size={20} />
             <div>
               <span className="metric-label">Average Annualized Return</span>
-              <span className="metric-value">{formatPercent(summary?.statistics?.averageAnnualizedReturn || 0)}</span>
+              <span className="metric-value">{formatPerformancePercent(summary?.statistics?.averageAnnualizedReturn || 0)}</span>
             </div>
           </div>
           <div className="metric-card">
             <Target size={20} />
             <div>
               <span className="metric-label">Average Win Rate</span>
-              <span className="metric-value">{formatPercent(summary?.statistics?.averageWinRate || 0)}</span>
+              <span className="metric-value">{formatPerformancePercent(summary?.statistics?.averageWinRate || 0)}</span>
             </div>
           </div>
           <div className="metric-card">
@@ -259,39 +252,39 @@ const BatchResults = ({ data }) => {
             <div className="best-result-header">
               <h4>{summary.overallBest.parameters.symbol}</h4>
               <span className="return-badge">
-                {formatPercent(summary.overallBest?.summary?.annualizedReturn || 0)} Annual Return
+                {formatPerformancePercent(summary.overallBest?.summary?.annualizedReturn || 0)} Annual Return
               </span>
             </div>
             <div className="best-params">
               <div className="param-group">
                 <span>Profit Req:</span>
-                <span>{formatPercent(summary.overallBest.parameters.profitRequirement)}</span>
+                <span>{formatParameterPercent(summary.overallBest.parameters.profitRequirement)}</span>
               </div>
               <div className="param-group">
                 <span>Grid Interval:</span>
-                <span>{formatPercent(summary.overallBest.parameters.gridIntervalPercent)}</span>
+                <span>{formatParameterPercent(summary.overallBest.parameters.gridIntervalPercent)}</span>
               </div>
               <div className="param-group">
                 <span>{isShortStrategy ? 'Short Activation:' : 'Buy Activation:'}</span>
-                <span>{formatPercent(summary.overallBest.parameters[isShortStrategy ? 'trailingShortActivationPercent' : 'trailingBuyActivationPercent'])}</span>
+                <span>{formatParameterPercent(summary.overallBest.parameters[isShortStrategy ? 'trailingShortActivationPercent' : 'trailingBuyActivationPercent'])}</span>
               </div>
               <div className="param-group">
                 <span>{isShortStrategy ? 'Short Pullback:' : 'Buy Rebound:'}</span>
-                <span>{formatPercent(summary.overallBest.parameters[isShortStrategy ? 'trailingShortPullbackPercent' : 'trailingBuyReboundPercent'])}</span>
+                <span>{formatParameterPercent(summary.overallBest.parameters[isShortStrategy ? 'trailingShortPullbackPercent' : 'trailingBuyReboundPercent'])}</span>
               </div>
               <div className="param-group">
                 <span>{isShortStrategy ? 'Cover Activation:' : 'Sell Activation:'}</span>
-                <span>{formatPercent(summary.overallBest.parameters[isShortStrategy ? 'trailingCoverActivationPercent' : 'trailingSellActivationPercent'])}</span>
+                <span>{formatParameterPercent(summary.overallBest.parameters[isShortStrategy ? 'trailingCoverActivationPercent' : 'trailingSellActivationPercent'])}</span>
               </div>
               <div className="param-group">
                 <span>{isShortStrategy ? 'Cover Rebound:' : 'Sell Pullback:'}</span>
-                <span>{formatPercent(summary.overallBest.parameters[isShortStrategy ? 'trailingCoverReboundPercent' : 'trailingSellPullbackPercent'])}</span>
+                <span>{formatParameterPercent(summary.overallBest.parameters[isShortStrategy ? 'trailingCoverReboundPercent' : 'trailingSellPullbackPercent'])}</span>
               </div>
             </div>
             <div className="performance-summary">
               <div className="perf-metric">
                 <DollarSign size={16} />
-                <span>Total Return: {formatPercent(summary?.overallBest?.summary?.totalReturn || 0)}</span>
+                <span>Total Return: {formatPerformancePercent(summary?.overallBest?.summary?.totalReturn || 0)}</span>
               </div>
               <div className="perf-metric">
                 <Activity size={16} />
@@ -299,11 +292,11 @@ const BatchResults = ({ data }) => {
               </div>
               <div className="perf-metric">
                 <Target size={16} />
-                <span>Win Rate: {formatPercent(summary?.overallBest?.summary?.winRate || 0)}</span>
+                <span>Win Rate: {formatPerformancePercent(summary?.overallBest?.summary?.winRate || 0)}</span>
               </div>
               <div className="perf-metric">
                 <Percent size={16} />
-                <span>Max Drawdown: {formatPercent(summary?.overallBest?.summary?.maxDrawdownPercent || 0)}</span>
+                <span>Max Drawdown: {formatPerformancePercent(summary?.overallBest?.summary?.maxDrawdownPercent || 0)}</span>
               </div>
             </div>
           </div>
@@ -328,24 +321,24 @@ const BatchResults = ({ data }) => {
                 <div className="best-params-section">
                   <h5>🎯 Best for Total Return</h5>
                   <div className="mini-params">
-                    <span>Profit: {formatPercent(bestParams.bestByTotalReturn.parameters.profitRequirement)}</span>
-                    <span>Grid: {formatPercent(bestParams.bestByTotalReturn.parameters.gridIntervalPercent)}</span>
-                    <span>{isShortStrategy ? 'Short Activation' : 'Buy Activation'}: {formatPercent(bestParams.bestByTotalReturn.parameters[isShortStrategy ? 'trailingShortActivationPercent' : 'trailingBuyActivationPercent'])}</span>
-                    <span>{isShortStrategy ? 'Short Pullback' : 'Buy Rebound'}: {formatPercent(bestParams.bestByTotalReturn.parameters[isShortStrategy ? 'trailingShortPullbackPercent' : 'trailingBuyReboundPercent'])}</span>
-                    <span>{isShortStrategy ? 'Cover Activation' : 'Sell Activation'}: {formatPercent(bestParams.bestByTotalReturn.parameters[isShortStrategy ? 'trailingCoverActivationPercent' : 'trailingSellActivationPercent'])}</span>
-                    <span>{isShortStrategy ? 'Cover Rebound' : 'Sell Pullback'}: {formatPercent(bestParams.bestByTotalReturn.parameters[isShortStrategy ? 'trailingCoverReboundPercent' : 'trailingSellPullbackPercent'])}</span>
+                    <span>Profit: {formatParameterPercent(bestParams.bestByTotalReturn.parameters.profitRequirement)}</span>
+                    <span>Grid: {formatParameterPercent(bestParams.bestByTotalReturn.parameters.gridIntervalPercent)}</span>
+                    <span>{isShortStrategy ? 'Short Activation' : 'Buy Activation'}: {formatParameterPercent(bestParams.bestByTotalReturn.parameters[isShortStrategy ? 'trailingShortActivationPercent' : 'trailingBuyActivationPercent'])}</span>
+                    <span>{isShortStrategy ? 'Short Pullback' : 'Buy Rebound'}: {formatParameterPercent(bestParams.bestByTotalReturn.parameters[isShortStrategy ? 'trailingShortPullbackPercent' : 'trailingBuyReboundPercent'])}</span>
+                    <span>{isShortStrategy ? 'Cover Activation' : 'Sell Activation'}: {formatParameterPercent(bestParams.bestByTotalReturn.parameters[isShortStrategy ? 'trailingCoverActivationPercent' : 'trailingSellActivationPercent'])}</span>
+                    <span>{isShortStrategy ? 'Cover Rebound' : 'Sell Pullback'}: {formatParameterPercent(bestParams.bestByTotalReturn.parameters[isShortStrategy ? 'trailingCoverReboundPercent' : 'trailingSellPullbackPercent'])}</span>
                   </div>
                 </div>
 
                 <div className="best-params-section">
                   <h5>📊 Best for Annualized Return</h5>
                   <div className="mini-params">
-                    <span>Profit: {formatPercent(bestParams.bestByAnnualizedReturn.parameters.profitRequirement)}</span>
-                    <span>Grid: {formatPercent(bestParams.bestByAnnualizedReturn.parameters.gridIntervalPercent)}</span>
-                    <span>{isShortStrategy ? 'Short Activation' : 'Buy Activation'}: {formatPercent(bestParams.bestByAnnualizedReturn.parameters[isShortStrategy ? 'trailingShortActivationPercent' : 'trailingBuyActivationPercent'])}</span>
-                    <span>{isShortStrategy ? 'Short Pullback' : 'Buy Rebound'}: {formatPercent(bestParams.bestByAnnualizedReturn.parameters[isShortStrategy ? 'trailingShortPullbackPercent' : 'trailingBuyReboundPercent'])}</span>
-                    <span>{isShortStrategy ? 'Cover Activation' : 'Sell Activation'}: {formatPercent(bestParams.bestByAnnualizedReturn.parameters[isShortStrategy ? 'trailingCoverActivationPercent' : 'trailingSellActivationPercent'])}</span>
-                    <span>{isShortStrategy ? 'Cover Rebound' : 'Sell Pullback'}: {formatPercent(bestParams.bestByAnnualizedReturn.parameters[isShortStrategy ? 'trailingCoverReboundPercent' : 'trailingSellPullbackPercent'])}</span>
+                    <span>Profit: {formatParameterPercent(bestParams.bestByAnnualizedReturn.parameters.profitRequirement)}</span>
+                    <span>Grid: {formatParameterPercent(bestParams.bestByAnnualizedReturn.parameters.gridIntervalPercent)}</span>
+                    <span>{isShortStrategy ? 'Short Activation' : 'Buy Activation'}: {formatParameterPercent(bestParams.bestByAnnualizedReturn.parameters[isShortStrategy ? 'trailingShortActivationPercent' : 'trailingBuyActivationPercent'])}</span>
+                    <span>{isShortStrategy ? 'Short Pullback' : 'Buy Rebound'}: {formatParameterPercent(bestParams.bestByAnnualizedReturn.parameters[isShortStrategy ? 'trailingShortPullbackPercent' : 'trailingBuyReboundPercent'])}</span>
+                    <span>{isShortStrategy ? 'Cover Activation' : 'Sell Activation'}: {formatParameterPercent(bestParams.bestByAnnualizedReturn.parameters[isShortStrategy ? 'trailingCoverActivationPercent' : 'trailingSellActivationPercent'])}</span>
+                    <span>{isShortStrategy ? 'Cover Rebound' : 'Sell Pullback'}: {formatParameterPercent(bestParams.bestByAnnualizedReturn.parameters[isShortStrategy ? 'trailingCoverReboundPercent' : 'trailingSellPullbackPercent'])}</span>
                   </div>
                 </div>
               </div>
@@ -449,24 +442,24 @@ const BatchResults = ({ data }) => {
                     {(result.parameters.betaFactor || 1.0).toFixed(2)}
                   </td>
                   <td className={`return-cell ${(result.summary?.totalReturn || 0) >= 0 ? 'positive' : 'negative'}`}>
-                    {formatPercent(result.summary?.totalReturn || 0)}
+                    {formatPerformancePercent(result.summary?.totalReturn || 0)}
                   </td>
                   <td className={`return-cell ${(result.summary?.annualizedReturn || 0) >= 0 ? 'positive' : 'negative'}`}>
-                    {formatPercent(result.summary?.annualizedReturn || 0)}
+                    {formatPerformancePercent(result.summary?.annualizedReturn || 0)}
                   </td>
                   <td>{result.summary?.totalTrades || 0}</td>
-                  <td>{formatPercent(result.summary?.winRate || 0)}</td>
+                  <td>{formatPerformancePercent(result.summary?.winRate || 0)}</td>
                   <td className={`return-cell ${(result.summary?.avgProfitPerTrade || 0) >= 0 ? 'positive' : 'negative'}`}>
                     {formatCurrency(result.summary?.avgProfitPerTrade || 0)}
                   </td>
-                  <td className="drawdown-cell">{formatPercent(result.summary?.maxDrawdownPercent || 0)}</td>
-                  <td>{formatPercent(result.summary?.capitalUtilizationRate || 0)}</td>
-                  <td>{formatPercent(result.parameters.profitRequirement)}</td>
-                  <td>{formatPercent(result.parameters.gridIntervalPercent)}</td>
-                  <td>{formatPercent(result.parameters[isShortStrategy ? 'trailingShortActivationPercent' : 'trailingBuyActivationPercent'])}</td>
-                  <td>{formatPercent(result.parameters[isShortStrategy ? 'trailingShortPullbackPercent' : 'trailingBuyReboundPercent'])}</td>
-                  <td>{formatPercent(result.parameters[isShortStrategy ? 'trailingCoverActivationPercent' : 'trailingSellActivationPercent'])}</td>
-                  <td>{formatPercent(result.parameters[isShortStrategy ? 'trailingCoverReboundPercent' : 'trailingSellPullbackPercent'])}</td>
+                  <td className="drawdown-cell">{formatPerformancePercent(result.summary?.maxDrawdownPercent || 0)}</td>
+                  <td>{formatPerformancePercent(result.summary?.capitalUtilizationRate || 0)}</td>
+                  <td>{formatParameterPercent(result.parameters.profitRequirement)}</td>
+                  <td>{formatParameterPercent(result.parameters.gridIntervalPercent)}</td>
+                  <td>{formatParameterPercent(result.parameters[isShortStrategy ? 'trailingShortActivationPercent' : 'trailingBuyActivationPercent'])}</td>
+                  <td>{formatParameterPercent(result.parameters[isShortStrategy ? 'trailingShortPullbackPercent' : 'trailingBuyReboundPercent'])}</td>
+                  <td>{formatParameterPercent(result.parameters[isShortStrategy ? 'trailingCoverActivationPercent' : 'trailingSellActivationPercent'])}</td>
+                  <td>{formatParameterPercent(result.parameters[isShortStrategy ? 'trailingCoverReboundPercent' : 'trailingSellPullbackPercent'])}</td>
                 </tr>
               ))}
             </tbody>

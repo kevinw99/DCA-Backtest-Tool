@@ -33,8 +33,15 @@ async function generateParameterCombinations(paramRanges) {
 
   const combinations = [];
 
+  // Debug Beta scaling condition
+  console.log('🔍 DEBUG: Beta scaling condition check:');
+  console.log('   enableBetaScaling:', enableBetaScaling);
+  console.log('   coefficients:', coefficients);
+  console.log('   coefficients.length:', coefficients?.length);
+
   // If Beta scaling is enabled, generate combinations with coefficients
   if (enableBetaScaling && coefficients.length > 0) {
+    console.log('✅ Using Beta scaling path');
     const parameterCorrelationService = require('./parameterCorrelationService');
     const betaDataService = require('./betaDataService');
 
@@ -51,16 +58,10 @@ async function generateParameterCombinations(paramRanges) {
       }
 
       for (const coefficient of coefficients) {
-        // For each coefficient, calculate adjusted parameters using beta_factor
+        // For each coefficient, just include coefficient info but use original parameters
+        // Beta scaling should not modify user-specified parameter ranges
         try {
-          const betaResult = parameterCorrelationService.calculateBetaAdjustedParameters(beta, coefficient, {
-            profitRequirementMultiplier: profitRequirement[0], // Use first value as base
-            gridIntervalMultiplier: gridIntervalPercent[0],
-            trailingBuyActivationMultiplier: trailingBuyActivationPercent[0],
-            trailingBuyReboundMultiplier: trailingBuyReboundPercent[0],
-            trailingSellActivationMultiplier: trailingSellActivationPercent[0],
-            trailingSellPullbackMultiplier: trailingSellPullbackPercent[0]
-          });
+          const betaFactor = beta * coefficient;
 
           combinations.push({
             symbol,
@@ -69,40 +70,40 @@ async function generateParameterCombinations(paramRanges) {
             lotSizeUsd,
             maxLots,
             maxLotsToSell,
-            // Use Beta-adjusted parameters (convert to percentages)
-            profitRequirement: betaResult.adjustedParameters.profitRequirement * 100,
-            gridIntervalPercent: betaResult.adjustedParameters.gridIntervalPercent * 100,
-            trailingBuyActivationPercent: betaResult.adjustedParameters.trailingBuyActivationPercent * 100,
-            trailingBuyReboundPercent: betaResult.adjustedParameters.trailingBuyReboundPercent * 100,
-            trailingSellActivationPercent: betaResult.adjustedParameters.trailingSellActivationPercent * 100,
-            trailingSellPullbackPercent: betaResult.adjustedParameters.trailingSellPullbackPercent * 100,
-            // Include Beta, coefficient, and beta_factor information
+            // Use original user parameters (already in correct decimal format)
+            profitRequirement: profitRequirement[0],
+            gridIntervalPercent: gridIntervalPercent[0],
+            trailingBuyActivationPercent: trailingBuyActivationPercent[0],
+            trailingBuyReboundPercent: trailingBuyReboundPercent[0],
+            trailingSellActivationPercent: trailingSellActivationPercent[0],
+            trailingSellPullbackPercent: trailingSellPullbackPercent[0],
+            // Include Beta, coefficient, and beta_factor information for display
             beta: beta,
             coefficient: coefficient,
-            betaFactor: betaResult.betaFactor,
+            betaFactor: betaFactor,
             enableBetaScaling: true,
             betaInfo: {
-              beta: betaResult.beta,
-              coefficient: betaResult.coefficient,
-              betaFactor: betaResult.betaFactor,
+              beta: beta,
+              coefficient: coefficient,
+              betaFactor: betaFactor,
               baseParameters: {
-                profitRequirement: profitRequirement[0] * 100,
-                gridIntervalPercent: gridIntervalPercent[0] * 100,
-                trailingBuyActivationPercent: trailingBuyActivationPercent[0] * 100,
-                trailingBuyReboundPercent: trailingBuyReboundPercent[0] * 100,
-                trailingSellActivationPercent: trailingSellActivationPercent[0] * 100,
-                trailingSellPullbackPercent: trailingSellPullbackPercent[0] * 100
+                profitRequirement: profitRequirement[0],
+                gridIntervalPercent: gridIntervalPercent[0],
+                trailingBuyActivationPercent: trailingBuyActivationPercent[0],
+                trailingBuyReboundPercent: trailingBuyReboundPercent[0],
+                trailingSellActivationPercent: trailingSellActivationPercent[0],
+                trailingSellPullbackPercent: trailingSellPullbackPercent[0]
               },
               adjustedParameters: {
-                profitRequirement: betaResult.adjustedParameters.profitRequirement * 100,
-                gridIntervalPercent: betaResult.adjustedParameters.gridIntervalPercent * 100,
-                trailingBuyActivationPercent: betaResult.adjustedParameters.trailingBuyActivationPercent * 100,
-                trailingBuyReboundPercent: betaResult.adjustedParameters.trailingBuyReboundPercent * 100,
-                trailingSellActivationPercent: betaResult.adjustedParameters.trailingSellActivationPercent * 100,
-                trailingSellPullbackPercent: betaResult.adjustedParameters.trailingSellPullbackPercent * 100
+                profitRequirement: profitRequirement[0],
+                gridIntervalPercent: gridIntervalPercent[0],
+                trailingBuyActivationPercent: trailingBuyActivationPercent[0],
+                trailingBuyReboundPercent: trailingBuyReboundPercent[0],
+                trailingSellActivationPercent: trailingSellActivationPercent[0],
+                trailingSellPullbackPercent: trailingSellPullbackPercent[0]
               },
-              warnings: betaResult.warnings,
-              isValid: betaResult.isValid
+              warnings: [],
+              isValid: true
             }
           });
         } catch (error) {
@@ -112,6 +113,7 @@ async function generateParameterCombinations(paramRanges) {
       }
     }
   } else {
+    console.log('❌ Using NON-Beta scaling path');
     // Original logic for non-Beta scaling
     for (const symbol of symbols) {
       for (const profit of profitRequirement) {
@@ -197,14 +199,21 @@ function calculateBuyAndHoldPerformance(priceData, totalCapital, startDate, endD
 async function runBatchBacktest(options, progressCallback = null) {
   const {
     parameterRanges,
+    enableBetaScaling,
     includeComparison = true,
     sortBy = 'annualizedReturn' // 'totalReturn', 'annualizedReturn', 'winRate'
   } = options;
 
   console.log('🚀 Starting batch backtest...');
 
+  // Merge top-level enableBetaScaling into parameterRanges for backward compatibility
+  const mergedParameterRanges = {
+    ...parameterRanges,
+    enableBetaScaling: enableBetaScaling ?? parameterRanges.enableBetaScaling
+  };
+
   // Generate all parameter combinations
-  const combinations = await generateParameterCombinations(parameterRanges);
+  const combinations = await generateParameterCombinations(mergedParameterRanges);
   console.log(`📊 Generated ${combinations.length} parameter combinations`);
 
   const results = [];
@@ -247,14 +256,22 @@ async function runBatchBacktest(options, progressCallback = null) {
       result.parameters = params;
       result.testId = i + 1;
 
-      // Calculate return percentages from actual PNL and exposure
-      const maxExposure = result.maxCapitalDeployed || (result.parameters.maxLots * result.parameters.lotSizeUsd);
-      const actualTotalReturnPercent = maxExposure > 0 ? (result.totalPNL / maxExposure) * 100 : 0;
+      // Use the original totalReturnPercent from DCA service (already correctly calculated)
+      const actualTotalReturnPercent = result.totalReturnPercent || 0;
 
-      // Use the annualized return from the DCA service calculation (tradeAnalysis.averageAnnualizedReturnPercent)
+      // DEBUG: Log total return calculation (only first result)
+      if (i === 0) {
+        console.log(`🐛 Total Return Debug for ${params.symbol}:`);
+        console.log(`  - result.totalPNL: ${result.totalPNL}`);
+        console.log(`  - result.totalCost: ${result.totalCost}`);
+        console.log(`  - result.totalReturnPercent (original): ${result.totalReturnPercent}%`);
+        console.log(`  - using actualTotalReturnPercent: ${actualTotalReturnPercent}%`);
+      }
+
+      // Use the portfolio annualized return (CAGR) instead of trade average to match single backtest
       const tradeAnalysisAnnualized = result.tradeAnalysis?.averageAnnualizedReturnPercent;
       const originalAnnualized = result.annualizedReturnPercent;
-      let actualAnnualizedReturnPercent = tradeAnalysisAnnualized || originalAnnualized || 0;
+      let actualAnnualizedReturnPercent = originalAnnualized || tradeAnalysisAnnualized || 0;
 
       // Cap extreme values to prevent unrealistic returns
       if (Math.abs(actualAnnualizedReturnPercent) > 1000) {
@@ -297,7 +314,7 @@ async function runBatchBacktest(options, progressCallback = null) {
         totalTrades: sellTransactions,
         avgProfitPerTrade: avgProfitPerTrade,
         maxDrawdownPercent: (result.maxDrawdownPercent || 0) / 100, // Convert to decimal for display
-        capitalUtilizationRate: result.avgCapitalDeployed ? result.avgCapitalDeployed / maxExposure : 0
+        capitalUtilizationRate: result.avgCapitalDeployed && result.totalCost ? result.avgCapitalDeployed / result.totalCost : 0
       };
 
       // DEBUG: Log the created summary (only first 3)

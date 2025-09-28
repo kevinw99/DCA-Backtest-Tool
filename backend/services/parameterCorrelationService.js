@@ -7,12 +7,13 @@
 
 class ParameterCorrelationService {
   /**
-   * Calculate Beta-adjusted parameters based on correlation formulas
+   * Calculate Beta-adjusted parameters based on correlation formulas using beta_factor
    * @param {number} beta - Stock's Beta value (volatility relative to market)
+   * @param {number} coefficient - Coefficient multiplier (default: 1.0)
    * @param {Object} baseParameters - Base parameter values to adjust
    * @returns {Object} Adjusted parameters with validation warnings
    */
-  calculateBetaAdjustedParameters(beta, baseParameters = {}) {
+  calculateBetaAdjustedParameters(beta, coefficient = 1.0, baseParameters = {}) {
     // Validate Beta input
     if (typeof beta !== 'number' || isNaN(beta)) {
       throw new Error('Beta must be a valid number');
@@ -21,6 +22,30 @@ class ParameterCorrelationService {
     if (beta < 0) {
       throw new Error('Beta cannot be negative');
     }
+
+    // Validate coefficient input
+    if (typeof coefficient !== 'number' || isNaN(coefficient)) {
+      throw new Error('Coefficient must be a valid number');
+    }
+
+    if (coefficient <= 0) {
+      throw new Error('Coefficient must be greater than 0');
+    }
+
+    // Add warnings for extreme coefficient values
+    const coefficientWarnings = [];
+    if (coefficient > 5.0) {
+      coefficientWarnings.push(`Coefficient ${coefficient} is extremely high (>5.0) - this may result in overly aggressive parameters`);
+    }
+    if (coefficient < 0.1) {
+      coefficientWarnings.push(`Coefficient ${coefficient} is extremely low (<0.1) - this may result in overly conservative parameters`);
+    }
+    if (coefficient > 3.0 && coefficient <= 5.0) {
+      coefficientWarnings.push(`Coefficient ${coefficient} is very high (>3.0) - consider reviewing parameter bounds carefully`);
+    }
+
+    // Calculate beta_factor = beta * coefficient
+    const betaFactor = beta * coefficient;
 
     // Default base multipliers (as specified in requirements)
     const baseMultipliers = {
@@ -33,24 +58,26 @@ class ParameterCorrelationService {
       ...baseParameters
     };
 
-    // Calculate Beta-adjusted parameters using the formulas from requirements
+    // Calculate parameters using beta_factor instead of beta directly
     const adjustedParameters = {
-      profitRequirement: baseMultipliers.profitRequirementMultiplier * beta,
-      gridIntervalPercent: baseMultipliers.gridIntervalMultiplier * beta,
-      trailingBuyActivationPercent: baseMultipliers.trailingBuyActivationMultiplier * beta,
-      trailingBuyReboundPercent: baseMultipliers.trailingBuyReboundMultiplier * beta,
-      trailingSellActivationPercent: baseMultipliers.trailingSellActivationMultiplier * beta,
-      trailingSellPullbackPercent: baseMultipliers.trailingSellPullbackMultiplier * beta
+      profitRequirement: baseMultipliers.profitRequirementMultiplier * betaFactor,
+      gridIntervalPercent: baseMultipliers.gridIntervalMultiplier * betaFactor,
+      trailingBuyActivationPercent: baseMultipliers.trailingBuyActivationMultiplier * betaFactor,
+      trailingBuyReboundPercent: baseMultipliers.trailingBuyReboundMultiplier * betaFactor,
+      trailingSellActivationPercent: baseMultipliers.trailingSellActivationMultiplier * betaFactor,
+      trailingSellPullbackPercent: baseMultipliers.trailingSellPullbackMultiplier * betaFactor
     };
 
     // Validate parameter ranges and generate warnings
-    const validation = this.validateParameterRanges(adjustedParameters, beta);
+    const validation = this.validateParameterRanges(adjustedParameters, betaFactor);
 
     return {
       beta,
+      coefficient,
+      betaFactor,
       baseMultipliers,
       adjustedParameters,
-      warnings: validation.warnings,
+      warnings: [...coefficientWarnings, ...validation.warnings],
       isValid: validation.isValid
     };
   }
@@ -58,51 +85,51 @@ class ParameterCorrelationService {
   /**
    * Validate that adjusted parameters are within reasonable bounds
    * @param {Object} adjustedParameters - The calculated parameters
-   * @param {number} beta - The Beta value used for calculation
+   * @param {number} betaFactor - The beta_factor value used for calculation
    * @returns {Object} Validation result with warnings
    */
-  validateParameterRanges(adjustedParameters, beta) {
+  validateParameterRanges(adjustedParameters, betaFactor) {
     const warnings = [];
     let isValid = true;
 
     // Check profit requirement bounds
     if (adjustedParameters.profitRequirement > 0.2) {
-      warnings.push(`Profit requirement of ${(adjustedParameters.profitRequirement * 100).toFixed(1)}% exceeds 20% - consider manual override for Beta ${beta}`);
+      warnings.push(`Profit requirement of ${(adjustedParameters.profitRequirement * 100).toFixed(1)}% exceeds 20% - consider manual override for beta_factor ${betaFactor.toFixed(2)}`);
     }
     if (adjustedParameters.profitRequirement < 0.01) {
-      warnings.push(`Profit requirement of ${(adjustedParameters.profitRequirement * 100).toFixed(1)}% is very low - may result in frequent small trades for Beta ${beta}`);
+      warnings.push(`Profit requirement of ${(adjustedParameters.profitRequirement * 100).toFixed(1)}% is very low - may result in frequent small trades for beta_factor ${betaFactor.toFixed(2)}`);
     }
 
     // Check grid interval bounds
     if (adjustedParameters.gridIntervalPercent > 0.5) {
-      warnings.push(`Grid interval of ${(adjustedParameters.gridIntervalPercent * 100).toFixed(1)}% exceeds 50% - may reduce trading frequency for Beta ${beta}`);
+      warnings.push(`Grid interval of ${(adjustedParameters.gridIntervalPercent * 100).toFixed(1)}% exceeds 50% - may reduce trading frequency for beta_factor ${betaFactor.toFixed(2)}`);
     }
     if (adjustedParameters.gridIntervalPercent < 0.01) {
-      warnings.push(`Grid interval of ${(adjustedParameters.gridIntervalPercent * 100).toFixed(1)}% is very small - may result in excessive trading for Beta ${beta}`);
+      warnings.push(`Grid interval of ${(adjustedParameters.gridIntervalPercent * 100).toFixed(1)}% is very small - may result in excessive trading for beta_factor ${betaFactor.toFixed(2)}`);
     }
 
     // Check trailing buy parameters
     if (adjustedParameters.trailingBuyActivationPercent > 0.5) {
-      warnings.push(`Trailing buy activation of ${(adjustedParameters.trailingBuyActivationPercent * 100).toFixed(1)}% is very high for Beta ${beta}`);
+      warnings.push(`Trailing buy activation of ${(adjustedParameters.trailingBuyActivationPercent * 100).toFixed(1)}% is very high for beta_factor ${betaFactor.toFixed(2)}`);
     }
     if (adjustedParameters.trailingBuyReboundPercent > 0.3) {
-      warnings.push(`Trailing buy rebound of ${(adjustedParameters.trailingBuyReboundPercent * 100).toFixed(1)}% is very high for Beta ${beta}`);
+      warnings.push(`Trailing buy rebound of ${(adjustedParameters.trailingBuyReboundPercent * 100).toFixed(1)}% is very high for beta_factor ${betaFactor.toFixed(2)}`);
     }
 
     // Check trailing sell parameters
     if (adjustedParameters.trailingSellActivationPercent > 1.0) {
-      warnings.push(`Trailing sell activation of ${(adjustedParameters.trailingSellActivationPercent * 100).toFixed(1)}% exceeds 100% for Beta ${beta}`);
+      warnings.push(`Trailing sell activation of ${(adjustedParameters.trailingSellActivationPercent * 100).toFixed(1)}% exceeds 100% for beta_factor ${betaFactor.toFixed(2)}`);
     }
     if (adjustedParameters.trailingSellPullbackPercent > 0.5) {
-      warnings.push(`Trailing sell pullback of ${(adjustedParameters.trailingSellPullbackPercent * 100).toFixed(1)}% is very high for Beta ${beta}`);
+      warnings.push(`Trailing sell pullback of ${(adjustedParameters.trailingSellPullbackPercent * 100).toFixed(1)}% is very high for beta_factor ${betaFactor.toFixed(2)}`);
     }
 
-    // Check for extreme Beta values
-    if (beta > 3.0) {
-      warnings.push(`Beta value of ${beta} is extremely high - parameters may be too aggressive`);
+    // Check for extreme beta_factor values
+    if (betaFactor > 5.0) {
+      warnings.push(`Beta factor of ${betaFactor.toFixed(2)} is extremely high - parameters may be too aggressive`);
     }
-    if (beta < 0.1) {
-      warnings.push(`Beta value of ${beta} is extremely low - parameters may be too conservative`);
+    if (betaFactor < 0.1) {
+      warnings.push(`Beta factor of ${betaFactor.toFixed(2)} is extremely low - parameters may be too conservative`);
     }
 
     // Check for parameter consistency
@@ -119,20 +146,51 @@ class ParameterCorrelationService {
   }
 
   /**
-   * Generate parameter matrix for batch testing with multiple Beta values
-   * @param {Array} betaValues - Array of Beta values to test
+   * Generate parameter matrix for batch testing with Beta and coefficient combinations
+   * @param {number} beta - Stock's Beta value
+   * @param {Array} coefficients - Array of coefficient values to test
    * @param {Object} baseParameters - Base parameters to adjust
    * @returns {Array} Array of parameter combinations
    */
-  generateBetaParameterMatrix(betaValues, baseParameters = {}) {
+  generateBetaParameterMatrix(beta, coefficients, baseParameters = {}) {
+    if (typeof beta !== 'number' || isNaN(beta) || beta < 0) {
+      throw new Error('Beta must be a valid positive number');
+    }
+
+    if (!Array.isArray(coefficients) || coefficients.length === 0) {
+      throw new Error('coefficients must be a non-empty array');
+    }
+
+    return coefficients.map(coefficient => {
+      const result = this.calculateBetaAdjustedParameters(beta, coefficient, baseParameters);
+      return {
+        beta,
+        coefficient,
+        betaFactor: result.betaFactor,
+        parameters: result.adjustedParameters,
+        warnings: result.warnings,
+        isValid: result.isValid
+      };
+    });
+  }
+
+  /**
+   * Legacy method for backward compatibility - generates matrix for multiple beta values with coefficient = 1.0
+   * @param {Array} betaValues - Array of Beta values to test (legacy parameter)
+   * @param {Object} baseParameters - Base parameters to adjust
+   * @returns {Array} Array of parameter combinations
+   */
+  generateLegacyBetaParameterMatrix(betaValues, baseParameters = {}) {
     if (!Array.isArray(betaValues) || betaValues.length === 0) {
       throw new Error('betaValues must be a non-empty array');
     }
 
     return betaValues.map(beta => {
-      const result = this.calculateBetaAdjustedParameters(beta, baseParameters);
+      const result = this.calculateBetaAdjustedParameters(beta, 1.0, baseParameters);
       return {
         beta,
+        coefficient: 1.0,
+        betaFactor: result.betaFactor,
         parameters: result.adjustedParameters,
         warnings: result.warnings,
         isValid: result.isValid

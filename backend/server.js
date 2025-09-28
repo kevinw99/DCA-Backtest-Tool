@@ -11,6 +11,54 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
+// URL Parameter Logging Middleware
+app.use((req, res, next) => {
+  // Only log for backtest-related endpoints
+  if (req.path.includes('/api/backtest/') || req.path.includes('/api/stocks/') && req.method === 'POST') {
+    const timestamp = new Date().toISOString();
+    const hasUrlParams = Object.keys(req.query).length > 0;
+    const hasBodyParams = Object.keys(req.body).length > 0;
+
+    let parameterSource = 'none';
+    if (hasUrlParams && hasBodyParams) {
+      parameterSource = 'mixed';
+    } else if (hasUrlParams) {
+      parameterSource = 'url';
+    } else if (hasBodyParams) {
+      parameterSource = 'form';
+    }
+
+    console.log(`\n🌐 URL PARAMETER LOG - ${timestamp}`);
+    console.log(`📍 Endpoint: ${req.method} ${req.path}`);
+    console.log(`🔗 Parameter Source: ${parameterSource}`);
+    console.log(`👤 Client IP: ${req.ip || req.connection.remoteAddress || 'unknown'}`);
+    console.log(`🖥️  User Agent: ${req.get('User-Agent') || 'unknown'}`);
+
+    if (hasUrlParams) {
+      console.log(`🔗 URL Parameters:`, req.query);
+    }
+
+    if (hasBodyParams) {
+      // Log body parameters but exclude sensitive data
+      const safeBody = { ...req.body };
+      // Don't log full price data arrays to keep logs readable
+      if (safeBody.prices && Array.isArray(safeBody.prices)) {
+        safeBody.prices = `[${safeBody.prices.length} price records]`;
+      }
+      console.log(`📝 Body Parameters:`, safeBody);
+    }
+
+    if (req.body.source) {
+      console.log(`📊 Parameter Origin: ${req.body.source} (from batch result, URL sharing, etc.)`);
+    }
+
+    console.log(`🌐 Full URL: ${req.protocol}://${req.get('host')}${req.originalUrl}`);
+    console.log('─────────────────────────────────────────────────────────');
+  }
+
+  next();
+});
+
 // Routes
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Stock Trading API is running' });
@@ -334,34 +382,25 @@ app.get('/api/stocks/:symbol/beta', async (req, res) => {
   try {
     const { symbol } = req.params;
 
-    // Get stock record
-    const stock = await database.getStock(symbol);
-    if (!stock) {
-      return res.status(404).json({
-        error: `Stock ${symbol} not found`,
-        message: 'Stock symbol not found in database. Please run a backtest first to fetch stock data.'
+    if (!symbol) {
+      return res.status(400).json({
+        error: 'Symbol is required',
+        message: 'Please provide a valid stock symbol'
       });
     }
 
-    // Get the most recent fundamental data to extract beta
-    const fundamentals = await database.getQuarterlyFundamentals(stock.id);
+    // Use BetaDataService to fetch real Beta data
+    const betaDataService = require('./services/betaDataService');
+    const betaData = await betaDataService.fetchBeta(symbol);
 
-    if (fundamentals.length === 0) {
-      return res.status(404).json({
-        error: 'No fundamental data available',
-        message: `No fundamental data found for ${symbol}. Beta calculation requires fundamental data.`
-      });
-    }
-
-    // For now, return a default beta of 1.0 since beta isn't directly stored
-    // In a real implementation, this would calculate beta from price correlation with market
-    const defaultBeta = 1.0;
+    console.log(`📊 Beta fetched for ${symbol}: ${betaData.beta} (source: ${betaData.source})`);
 
     res.json({
       symbol: symbol.toUpperCase(),
-      beta: defaultBeta,
-      source: 'default',
-      note: 'Beta calculation not yet implemented. Using default value of 1.0.'
+      beta: betaData.beta,
+      source: betaData.source,
+      lastUpdated: betaData.lastUpdated,
+      isManualOverride: betaData.isManualOverride
     });
 
   } catch (error) {
@@ -373,14 +412,19 @@ app.get('/api/stocks/:symbol/beta', async (req, res) => {
   }
 });
 
-// Beta parameter calculation API endpoint
-app.post('/api/backtest/beta-parameters', async (req, res) => {
+// Update/set manual beta override for a stock symbol
+app.put('/api/stocks/:symbol/beta', async (req, res) => {
   try {
-    const { beta, baseParameters } = req.body;
+    const { symbol } = req.params;
+    const { beta, isManualOverride } = req.body;
 
-    console.log(`🧮 Beta parameter calculation request: Beta=${beta}`);
+    if (!symbol) {
+      return res.status(400).json({
+        error: 'Symbol is required',
+        message: 'Please provide a valid stock symbol'
+      });
+    }
 
-    // Validate required parameters
     if (typeof beta !== 'number' || isNaN(beta)) {
       return res.status(400).json({
         error: 'Invalid beta value',
@@ -389,52 +433,45 @@ app.post('/api/backtest/beta-parameters', async (req, res) => {
       });
     }
 
-    if (beta < 0) {
+    if (beta < 0 || beta > 10) {
       return res.status(400).json({
         error: 'Invalid beta value',
-        message: 'Beta cannot be negative',
+        message: 'Beta must be between 0 and 10',
         received: { beta }
       });
     }
 
-    // Import the parameter correlation service
-    const parameterCorrelationService = require('./services/parameterCorrelationService');
+    const betaDataService = require('./services/betaDataService');
 
-    // Calculate Beta-adjusted parameters
-    const result = parameterCorrelationService.calculateBetaAdjustedParameters(beta, baseParameters);
-
-    console.log(`✅ Beta parameters calculated successfully for Beta=${beta}`);
-    if (result.warnings.length > 0) {
-      console.log(`⚠️  Generated ${result.warnings.length} warnings`);
+    let result;
+    if (isManualOverride) {
+      // Set manual Beta override
+      result = await betaDataService.setManualBeta(symbol, beta);
+      console.log(`🔧 Manual Beta override set for ${symbol}: ${result.beta}`);
+    } else {
+      // Remove manual override and fetch fresh data
+      result = await betaDataService.removeManualBeta(symbol);
+      console.log(`🔄 Manual Beta override removed for ${symbol}, new Beta: ${result.beta}`);
     }
 
     res.json({
-      success: true,
-      data: {
-        beta: result.beta,
-        baseMultipliers: result.baseMultipliers,
-        adjustedParameters: result.adjustedParameters,
-        warnings: result.warnings,
-        isValid: result.isValid,
-        calculationFormulas: {
-          profitRequirement: '0.05 * Beta',
-          gridIntervalPercent: '0.1 * Beta',
-          trailingBuyActivationPercent: '0.1 * Beta',
-          trailingBuyReboundPercent: '0.05 * Beta',
-          trailingSellActivationPercent: '0.2 * Beta',
-          trailingSellPullbackPercent: '0.1 * Beta'
-        }
-      }
+      symbol: symbol.toUpperCase(),
+      beta: result.beta,
+      source: result.source,
+      lastUpdated: result.lastUpdated,
+      isManualOverride: result.isManualOverride,
+      message: isManualOverride ? 'Manual Beta override set successfully' : 'Manual Beta override removed successfully'
     });
 
   } catch (error) {
-    console.error('Beta parameter calculation error:', error);
+    console.error(`Error updating beta for ${req.params.symbol}:`, error.message);
     res.status(500).json({
-      error: 'Failed to calculate Beta parameters',
+      error: 'Failed to update beta data',
       message: error.message
     });
   }
 });
+
 
 // Get list of previously entered stocks for autocomplete
 app.get('/api/stocks', async (req, res) => {
@@ -563,11 +600,88 @@ app.post('/api/backtest/dca', async (req, res) => {
       trailingBuyActivationPercent,
       trailingBuyReboundPercent,
       trailingSellActivationPercent,
-      trailingSellPullbackPercent
+      trailingSellPullbackPercent,
+      // Beta-related parameters
+      beta,
+      enableBetaScaling,
+      isManualBetaOverride
     } = params;
 
+    // Process Beta-adjusted parameters if Beta scaling is enabled
+    let finalParams = { ...params };
+    let betaInfo = null;
+
+    if (enableBetaScaling && beta) {
+      try {
+        const parameterCorrelationService = require('./services/parameterCorrelationService');
+
+        // Calculate Beta-adjusted parameters using coefficient = 1.0 for single mode
+        const coefficient = 1.0;
+        const betaResult = parameterCorrelationService.calculateBetaAdjustedParameters(beta, coefficient, {
+          profitRequirementMultiplier: profitRequirement / 100, // Convert from percentage
+          gridIntervalMultiplier: gridIntervalPercent / 100,
+          trailingBuyActivationMultiplier: trailingBuyActivationPercent / 100,
+          trailingBuyReboundMultiplier: trailingBuyReboundPercent / 100,
+          trailingSellActivationMultiplier: trailingSellActivationPercent / 100,
+          trailingSellPullbackMultiplier: trailingSellPullbackPercent / 100
+        });
+
+        // Update parameters with Beta-adjusted values (convert back to percentages)
+        finalParams = {
+          ...finalParams,
+          profitRequirement: betaResult.adjustedParameters.profitRequirement * 100,
+          gridIntervalPercent: betaResult.adjustedParameters.gridIntervalPercent * 100,
+          trailingBuyActivationPercent: betaResult.adjustedParameters.trailingBuyActivationPercent * 100,
+          trailingBuyReboundPercent: betaResult.adjustedParameters.trailingBuyReboundPercent * 100,
+          trailingSellActivationPercent: betaResult.adjustedParameters.trailingSellActivationPercent * 100,
+          trailingSellPullbackPercent: betaResult.adjustedParameters.trailingSellPullbackPercent * 100
+        };
+
+        betaInfo = {
+          beta: betaResult.beta,
+          coefficient: betaResult.coefficient,
+          betaFactor: betaResult.betaFactor,
+          baseParameters: {
+            profitRequirement: profitRequirement,
+            gridIntervalPercent: gridIntervalPercent,
+            trailingBuyActivationPercent: trailingBuyActivationPercent,
+            trailingBuyReboundPercent: trailingBuyReboundPercent,
+            trailingSellActivationPercent: trailingSellActivationPercent,
+            trailingSellPullbackPercent: trailingSellPullbackPercent
+          },
+          adjustedParameters: {
+            profitRequirement: finalParams.profitRequirement,
+            gridIntervalPercent: finalParams.gridIntervalPercent,
+            trailingBuyActivationPercent: finalParams.trailingBuyActivationPercent,
+            trailingBuyReboundPercent: finalParams.trailingBuyReboundPercent,
+            trailingSellActivationPercent: finalParams.trailingSellActivationPercent,
+            trailingSellPullbackPercent: finalParams.trailingSellPullbackPercent
+          },
+          warnings: betaResult.warnings,
+          isValid: betaResult.isValid,
+          isManualOverride: isManualBetaOverride || false
+        };
+
+        console.log(`🧮 Beta scaling applied: Beta=${beta}, Warnings=${betaResult.warnings.length}`);
+        if (betaResult.warnings.length > 0) {
+          console.log('⚠️  Beta warnings:', betaResult.warnings);
+        }
+
+      } catch (error) {
+        console.error('Error applying Beta scaling:', error);
+        // Continue with original parameters if Beta scaling fails
+        betaInfo = {
+          error: `Beta scaling failed: ${error.message}`,
+          beta: beta,
+          coefficient: 1.0,
+          betaFactor: beta, // When scaling fails, beta_factor = beta * 1.0 = beta
+          fallbackToOriginal: true
+        };
+      }
+    }
+
     // Save updated parameters to config (for consistency between CLI and UI)
-    backtestConfig.saveDefaults({ ...params, strategyMode: 'long' });
+    backtestConfig.saveDefaults({ ...finalParams, strategyMode: 'long' });
 
     console.log(`🔄 DCA Backtest request for ${symbol} (${startDate} to ${endDate})`);
 
@@ -580,40 +694,40 @@ app.post('/api/backtest/dca', async (req, res) => {
       });
     }
 
-    // Validate strategy parameters to prevent 0 trades scenario
+    // Validate strategy parameters to prevent 0 trades scenario (use finalParams for Beta-adjusted values)
     const paramValidationErrors = [];
 
-    if (trailingBuyReboundPercent <= 0) {
-      paramValidationErrors.push(`trailingBuyReboundPercent must be greater than 0 (received: ${trailingBuyReboundPercent}). A value of 0 prevents trailing stop buy orders from executing.`);
+    if (finalParams.trailingBuyReboundPercent < 0) {
+      paramValidationErrors.push(`trailingBuyReboundPercent must be greater than or equal to 0 (received: ${finalParams.trailingBuyReboundPercent}). Negative values are not allowed.`);
     }
 
-    if (trailingSellPullbackPercent <= 0) {
-      paramValidationErrors.push(`trailingSellPullbackPercent must be greater than 0 (received: ${trailingSellPullbackPercent}). A value of 0 prevents trailing stop sell orders from executing.`);
+    if (finalParams.trailingSellPullbackPercent < 0) {
+      paramValidationErrors.push(`trailingSellPullbackPercent must be greater than or equal to 0 (received: ${finalParams.trailingSellPullbackPercent}). Negative values are not allowed.`);
     }
 
-    if (profitRequirement < 0) {
-      paramValidationErrors.push(`profitRequirement must be greater than or equal to 0 (received: ${profitRequirement}). Negative values prevent profitable sales.`);
+    if (finalParams.profitRequirement < 0) {
+      paramValidationErrors.push(`profitRequirement must be greater than or equal to 0 (received: ${finalParams.profitRequirement}). Negative values prevent profitable sales.`);
     }
 
-    if (trailingBuyActivationPercent <= 0) {
-      paramValidationErrors.push(`trailingBuyActivationPercent must be greater than 0 (received: ${trailingBuyActivationPercent}). A value of 0 prevents trailing stop buy activation.`);
+    if (finalParams.trailingBuyActivationPercent < 0) {
+      paramValidationErrors.push(`trailingBuyActivationPercent must be greater than or equal to 0 (received: ${finalParams.trailingBuyActivationPercent}). Negative values are not allowed.`);
     }
 
-    if (trailingSellActivationPercent <= 0) {
-      paramValidationErrors.push(`trailingSellActivationPercent must be greater than 0 (received: ${trailingSellActivationPercent}). A value of 0 prevents trailing stop sell activation.`);
+    if (finalParams.trailingSellActivationPercent < 0) {
+      paramValidationErrors.push(`trailingSellActivationPercent must be greater than or equal to 0 (received: ${finalParams.trailingSellActivationPercent}). Negative values are not allowed.`);
     }
 
-    if (gridIntervalPercent <= 0) {
-      paramValidationErrors.push(`gridIntervalPercent must be greater than 0 (received: ${gridIntervalPercent}). A value of 0 prevents grid spacing validation.`);
+    if (finalParams.gridIntervalPercent <= 0) {
+      paramValidationErrors.push(`gridIntervalPercent must be greater than 0 (received: ${finalParams.gridIntervalPercent}). A value of 0 prevents grid spacing validation.`);
     }
 
     // Check for unreasonably large values that could cause issues
-    if (trailingBuyReboundPercent >= 1) {
-      paramValidationErrors.push(`trailingBuyReboundPercent should be less than 100% (received: ${trailingBuyReboundPercent * 100}%). Values >= 100% may cause unexpected behavior.`);
+    if (finalParams.trailingBuyReboundPercent >= 100) {
+      paramValidationErrors.push(`trailingBuyReboundPercent should be less than 100% (received: ${finalParams.trailingBuyReboundPercent}%). Values >= 100% may cause unexpected behavior.`);
     }
 
-    if (trailingSellPullbackPercent >= 1) {
-      paramValidationErrors.push(`trailingSellPullbackPercent should be less than 100% (received: ${trailingSellPullbackPercent * 100}%). Values >= 100% may cause unexpected behavior.`);
+    if (finalParams.trailingSellPullbackPercent >= 100) {
+      paramValidationErrors.push(`trailingSellPullbackPercent should be less than 100% (received: ${finalParams.trailingSellPullbackPercent}%). Values >= 100% may cause unexpected behavior.`);
     }
 
     if (paramValidationErrors.length > 0) {
@@ -711,19 +825,19 @@ app.post('/api/backtest/dca', async (req, res) => {
     const { runDCABacktest } = require('./services/dcaBacktestService');
 
     const results = await runDCABacktest({
-      symbol,
-      startDate,
-      endDate,
-      lotSizeUsd,
-      maxLots,
-      maxLotsToSell,
-      gridIntervalPercent, // Already in decimal format from config
-      remainingLotsLossTolerance, // Already in decimal format from config
-      profitRequirement,
-      trailingBuyActivationPercent,
-      trailingBuyReboundPercent,
-      trailingSellActivationPercent,
-      trailingSellPullbackPercent,
+      symbol: finalParams.symbol,
+      startDate: finalParams.startDate,
+      endDate: finalParams.endDate,
+      lotSizeUsd: finalParams.lotSizeUsd,
+      maxLots: finalParams.maxLots,
+      maxLotsToSell: finalParams.maxLotsToSell,
+      gridIntervalPercent: finalParams.gridIntervalPercent, // Already in decimal format from config
+      remainingLotsLossTolerance: finalParams.remainingLotsLossTolerance, // Already in decimal format from config
+      profitRequirement: finalParams.profitRequirement,
+      trailingBuyActivationPercent: finalParams.trailingBuyActivationPercent,
+      trailingBuyReboundPercent: finalParams.trailingBuyReboundPercent,
+      trailingSellActivationPercent: finalParams.trailingSellActivationPercent,
+      trailingSellPullbackPercent: finalParams.trailingSellPullbackPercent,
       verbose: false // Don't log to console for API calls
     });
 
@@ -798,7 +912,9 @@ app.post('/api/backtest/dca', async (req, res) => {
         tradeAnalysis: results.tradeAnalysis,
         buyAndHoldResults: results.buyAndHoldResults,
         outperformance: results.outperformance,
-        outperformancePercent: results.outperformancePercent
+        outperformancePercent: results.outperformancePercent,
+        // Include Beta information if Beta scaling was used
+        ...(betaInfo && { betaInfo: betaInfo })
       }
     });
 
@@ -1007,6 +1123,210 @@ app.post('/api/backtest/short-batch', async (req, res) => {
     res.status(500).json({
       success: false,
       error: error.message
+    });
+  }
+});
+
+// Beta parameter calculation API endpoint
+app.post('/api/backtest/beta-parameters', async (req, res) => {
+  try {
+    const { symbol, coefficient = 1.0, baseParameters } = req.body;
+
+    if (!symbol) {
+      return res.status(400).json({
+        error: 'Missing required parameters',
+        message: 'Symbol is required for beta parameter calculation',
+        received: { symbol, coefficient }
+      });
+    }
+
+    // Validate coefficient
+    if (typeof coefficient !== 'number' || coefficient <= 0) {
+      return res.status(400).json({
+        error: 'Invalid coefficient value',
+        message: 'Coefficient must be a positive number',
+        received: { coefficient, type: typeof coefficient }
+      });
+    }
+
+    console.log(`🧮 Calculating Beta parameters for ${symbol} with coefficient ${coefficient}`);
+
+    // Fetch Beta for the symbol
+    const betaDataService = require('./services/betaDataService');
+    const betaData = await betaDataService.fetchBeta(symbol);
+    const beta = betaData.beta;
+
+    // Calculate Beta-adjusted parameters
+    const parameterCorrelationService = require('./services/parameterCorrelationService');
+    const result = parameterCorrelationService.calculateBetaAdjustedParameters(beta, coefficient, baseParameters);
+
+    console.log(`✅ Beta parameters calculated: Beta=${beta}, Coefficient=${coefficient}, β-factor=${result.betaFactor.toFixed(3)}`);
+
+    res.json({
+      success: true,
+      data: {
+        symbol: symbol.toUpperCase(),
+        beta: result.beta,
+        coefficient: result.coefficient,
+        betaFactor: result.betaFactor,
+        baseMultipliers: result.baseMultipliers,
+        adjustedParameters: {
+          // Convert to percentages for frontend
+          profitRequirement: result.adjustedParameters.profitRequirement * 100,
+          gridIntervalPercent: result.adjustedParameters.gridIntervalPercent * 100,
+          trailingBuyActivationPercent: result.adjustedParameters.trailingBuyActivationPercent * 100,
+          trailingBuyReboundPercent: result.adjustedParameters.trailingBuyReboundPercent * 100,
+          trailingSellActivationPercent: result.adjustedParameters.trailingSellActivationPercent * 100,
+          trailingSellPullbackPercent: result.adjustedParameters.trailingSellPullbackPercent * 100
+        },
+        warnings: result.warnings,
+        isValid: result.isValid,
+        calculation: {
+          formula: `Beta (${beta}) × Coefficient (${coefficient}) = β-factor (${result.betaFactor.toFixed(3)})`,
+          example: `Profit Requirement = 5% × ${result.betaFactor.toFixed(3)} = ${(result.adjustedParameters.profitRequirement * 100).toFixed(2)}%`
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Beta parameter calculation error:', error);
+    res.status(500).json({
+      error: 'Failed to calculate beta parameters',
+      message: error.message
+    });
+  }
+});
+
+// Batch data refresh API endpoint
+app.post('/api/batch/refresh-data', async (req, res) => {
+  try {
+    const { symbols = [], forceRefresh = true, includeBeta = true, includeStockData = true } = req.body;
+
+    if (!Array.isArray(symbols) || symbols.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid symbols array',
+        message: 'Please provide an array of stock symbols to refresh'
+      });
+    }
+
+    console.log(`🔄 Batch refresh requested for ${symbols.length} symbols: ${symbols.join(', ')}`);
+    const startTime = Date.now();
+
+    const results = {
+      successful: [],
+      failed: [],
+      summary: {
+        total: symbols.length,
+        successful: 0,
+        failed: 0,
+        totalTime: 0
+      }
+    };
+
+    // Create concurrent operations for stock data and beta refresh
+    const refreshPromises = symbols.map(async (symbol) => {
+      const symbolStartTime = Date.now();
+      const result = {
+        symbol: symbol.toUpperCase(),
+        stockDataUpdated: false,
+        betaUpdated: false,
+        newBeta: null,
+        timing: 0,
+        errors: []
+      };
+
+      try {
+        // Refresh stock data if requested
+        if (includeStockData) {
+          try {
+            let stock = await database.getStock(symbol);
+            if (!stock) {
+              const stockId = await database.createStock(symbol);
+              stock = { id: stockId, symbol: symbol.toUpperCase() };
+            }
+
+            await stockDataService.updateStockData(stock.id, symbol, {
+              updatePrices: true,
+              updateFundamentals: true,
+              updateCorporateActions: true,
+              forceRefresh: forceRefresh
+            });
+            await database.updateStockTimestamp(stock.id);
+            result.stockDataUpdated = true;
+            console.log(`✅ Stock data updated for ${symbol}`);
+          } catch (error) {
+            result.errors.push(`Stock data: ${error.message}`);
+            console.error(`❌ Stock data update failed for ${symbol}:`, error.message);
+          }
+        }
+
+        // Refresh beta data if requested
+        if (includeBeta) {
+          try {
+            // Force fresh beta fetch by clearing cache first
+            const stock = await database.getStock(symbol);
+            if (stock) {
+              await database.deleteBeta(stock.id);
+            }
+
+            const betaDataService = require('./services/betaDataService');
+            const betaData = await betaDataService.fetchBeta(symbol);
+            result.betaUpdated = true;
+            result.newBeta = betaData.beta;
+            console.log(`✅ Beta updated for ${symbol}: ${betaData.beta}`);
+          } catch (error) {
+            result.errors.push(`Beta: ${error.message}`);
+            console.error(`❌ Beta update failed for ${symbol}:`, error.message);
+          }
+        }
+
+        result.timing = Date.now() - symbolStartTime;
+
+        if (result.stockDataUpdated || result.betaUpdated) {
+          results.successful.push(result);
+        } else {
+          results.failed.push({
+            symbol: result.symbol,
+            errors: result.errors,
+            timing: result.timing
+          });
+        }
+
+      } catch (error) {
+        result.errors.push(`General: ${error.message}`);
+        result.timing = Date.now() - symbolStartTime;
+        results.failed.push({
+          symbol: result.symbol,
+          errors: result.errors,
+          timing: result.timing
+        });
+        console.error(`❌ Complete failure for ${symbol}:`, error.message);
+      }
+    });
+
+    // Execute all refresh operations concurrently
+    await Promise.allSettled(refreshPromises);
+
+    // Calculate final summary
+    results.summary.successful = results.successful.length;
+    results.summary.failed = results.failed.length;
+    results.summary.totalTime = Date.now() - startTime;
+
+    console.log(`🏁 Batch refresh completed: ${results.summary.successful}/${results.summary.total} successful in ${results.summary.totalTime}ms`);
+
+    res.json({
+      success: true,
+      results: results,
+      message: `Batch refresh completed: ${results.summary.successful}/${results.summary.total} symbols updated successfully`
+    });
+
+  } catch (error) {
+    console.error('Batch refresh error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Batch refresh failed',
+      message: error.message
     });
   }
 });

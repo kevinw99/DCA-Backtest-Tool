@@ -81,39 +81,94 @@ class BetaDataService {
   }
 
   /**
-   * Get Beta from Yahoo Finance API
+   * Get Beta from Yahoo Finance API using yfinance
    * @param {string} symbol - Stock symbol
    * @returns {Promise<Object>} Beta data
    */
   async getBetaFromYahooFinance(symbol) {
-    // For now, return a simulated Beta value
-    // In a real implementation, this would make an HTTP request to Yahoo Finance
-    console.log(`Fetching Beta from Yahoo Finance for ${symbol}`);
-    
-    // Simulate different Beta values for different stocks
-    const simulatedBetas = {
-      'TSLA': 1.8,
-      'NVDA': 1.6,
-      'AAPL': 1.2,
-      'MSFT': 1.1,
-      'GOOGL': 1.3,
-      'AMZN': 1.4,
-      'META': 1.5,
-      'NFLX': 1.7,
-      'AMD': 1.9,
-      'SPY': 1.0,
-      'QQQ': 1.1,
-      'VTI': 0.9
-    };
+    try {
+      console.log(`📡 YFinance: Fetching Beta for ${symbol}`);
 
-    const beta = simulatedBetas[symbol.toUpperCase()] || (0.5 + Math.random() * 2); // Random between 0.5 and 2.5
+      const pythonScript = `
+import yfinance as yf
+import json
+import sys
 
-    return {
-      beta: Math.round(beta * 100) / 100, // Round to 2 decimal places
-      source: 'yahoo_finance',
-      lastUpdated: new Date().toISOString(),
-      isManualOverride: false
-    };
+try:
+    ticker = yf.Ticker("${symbol}")
+    info = ticker.info
+
+    # Get Beta value - handle different possible field names
+    beta = None
+    beta_fields = ['beta', 'beta3Year', 'beta5Year']
+
+    for field in beta_fields:
+        if field in info and info[field] is not None:
+            beta = float(info[field])
+            break
+
+    # If no beta found, use default
+    if beta is None or beta <= 0:
+        beta = 1.0
+        print(f"Warning: No valid beta found for {symbol}, using default 1.0", file=sys.stderr)
+
+    # Additional info for context
+    market_cap = info.get('marketCap')
+    sector = info.get('sector', 'Unknown')
+
+    result = {
+        "beta": round(beta, 3),
+        "market_cap": market_cap,
+        "sector": sector,
+        "symbol": "${symbol}".upper()
+    }
+
+    print(json.dumps(result))
+
+except Exception as e:
+    print(f"Error fetching beta for ${symbol}: {str(e)}", file=sys.stderr)
+    # Return default beta on error
+    result = {
+        "beta": 1.0,
+        "market_cap": None,
+        "sector": "Unknown",
+        "symbol": "${symbol}".upper(),
+        "error": str(e)
+    }
+    print(json.dumps(result))
+`;
+
+      const pythonData = await this.runPythonScript(pythonScript);
+      const result = JSON.parse(pythonData);
+
+      console.log(`✅ YFinance: Fetched Beta ${result.beta} for ${symbol} (Sector: ${result.sector})`);
+
+      return {
+        beta: result.beta,
+        source: result.error ? 'yahoo_finance_fallback' : 'yahoo_finance',
+        lastUpdated: new Date().toISOString(),
+        isManualOverride: false,
+        metadata: {
+          sector: result.sector,
+          marketCap: result.market_cap,
+          hasError: !!result.error
+        }
+      };
+
+    } catch (error) {
+      console.error(`❌ YFinance Beta error for ${symbol}:`, error.message);
+
+      // Fallback to default beta
+      return {
+        beta: 1.0,
+        source: 'yahoo_finance_error',
+        lastUpdated: new Date().toISOString(),
+        isManualOverride: false,
+        metadata: {
+          error: error.message
+        }
+      };
+    }
   }
 
   /**
@@ -325,7 +380,7 @@ class BetaDataService {
     try {
       const staleBetas = await this.getStaleBeats(maxAgeHours);
       console.log(`Found ${staleBetas.length} stale Betas to refresh`);
-      
+
       let refreshed = 0;
       for (const staleBeta of staleBetas) {
         try {
@@ -336,13 +391,49 @@ class BetaDataService {
           console.error(`Failed to refresh Beta for ${staleBeta.symbol}:`, error);
         }
       }
-      
+
       console.log(`Successfully refreshed ${refreshed} out of ${staleBetas.length} stale Betas`);
       return refreshed;
     } catch (error) {
       console.error('Error refreshing stale Betas:', error);
       return 0;
     }
+  }
+
+  /**
+   * Run Python script using subprocess (same pattern as yfinanceProvider)
+   * @param {string} script - Python script to execute
+   * @returns {Promise<string>} Script output
+   */
+  runPythonScript(script) {
+    const { spawn } = require('child_process');
+
+    return new Promise((resolve, reject) => {
+      const python = spawn('python3', ['-c', script]);
+
+      let stdout = '';
+      let stderr = '';
+
+      python.stdout.on('data', (data) => {
+        stdout += data.toString();
+      });
+
+      python.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+
+      python.on('close', (code) => {
+        if (code !== 0) {
+          reject(new Error(`Python script failed: ${stderr}`));
+        } else {
+          resolve(stdout.trim());
+        }
+      });
+
+      python.on('error', (error) => {
+        reject(new Error(`Failed to spawn python process: ${error.message}`));
+      });
+    });
   }
 }
 
