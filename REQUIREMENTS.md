@@ -52,9 +52,10 @@ A complete Dollar Cost Averaging (DCA) trading platform with three main componen
 ## 2. DCA BACKTEST ENGINE
 
 ### 2.1 Portfolio Structure
-- **2.1.1** Maximum 5 lots per symbol
+- **2.1.1** Maximum lots per symbol (dynamically calculated)
 - **2.1.2** Each lot = $10,000 USD (configurable)
-- **2.1.3** Grid-based buying with 10% price separation minimum
+- **2.1.3** ✅ **ENHANCED**: Consecutive-incremental grid-based buying with dynamic spacing
+- **2.1.4** **NEW**: Max Lots auto-calculation: min(0.7 / gridInterval - 1, 10)
 
 ### 2.2 Daily Execution Priority Order
 Daily processing follows this strict priority hierarchy:
@@ -112,8 +113,8 @@ Daily processing follows this strict priority hierarchy:
 - **2.5.1** **EXCLUSIVE TRAILING STOP LIMIT BUYING**: All purchases are made exclusively through trailing stop limit buy orders
 - **2.5.2** **NO REGULAR GRID BUYING**: Traditional grid-based buying is completely removed
 - **2.5.3** **NO INITIAL PURCHASE**: No automatic first lot - must wait for trailing stop limit buy trigger
-- **2.5.4** **Portfolio Limits**: Maximum 5 lots per symbol, $10,000 per lot (configurable)
-- **2.5.5** **Grid Spacing**: Trailing stop limit buys must still respect 10% spacing from existing lots
+- **2.5.4** **Portfolio Limits**: Maximum lots per symbol (dynamically calculated), $10,000 per lot (configurable)
+- **2.5.5** ✅ **ENHANCED**: **Consecutive-Incremental Grid Spacing**: Dynamic grid sizes using generate_sequence function
 - **2.5.6** **Price Protection**: Limit price prevents execution above original peak reference price
 
 ### 2.6 Risk Management
@@ -161,25 +162,53 @@ Daily processing follows this strict priority hierarchy:
 - **2.9.3** Results consistency between UI and CLI
 - **2.9.4** Automatic stock data creation and fetching for new symbols
 
-### 2.10 Questionable Events Detection System
-- **2.10.1** **Purpose**: Monitor and flag potentially problematic trading scenarios during backtesting
-- **2.10.2** **Same-Day Sell/Buy Detection**:
+### 2.10 Consecutive-Incremental Grid Size System ✅ **NEW FEATURE**
+- **2.10.1** **Dynamic Grid Sizing**: Grid sizes increase progressively for consecutive buy orders using mathematical sequence generation
+- **2.10.2** **All-Time High Tracking**: 
+  - **Track Peak Prices**: Monitor all-time high prices throughout backtest period
+  - **Reference Point**: Use all-time high as reference for grid size calculations
+  - **Update Logic**: Update all-time high when current price exceeds existing peak
+- **2.10.3** **Consecutive Buy Counter**:
+  - **Buy Increment**: Increment counter by 1 after each buy order execution
+  - **Sell Reset**: Reset counter to 0 when any sell order is executed
+  - **State Tracking**: Maintain consecutive buy count throughout backtest
+- **2.10.4** **Grid Size Calculation Logic**:
+  - **Python Integration**: Use generate_sequence(n, start, firstDelta, end=0.7, ith) function
+  - **Parameter Calculation**:
+    - n = Max_Lots - consecutive_buy_count_ith
+    - start = (all_time_high_price - current_buy_price) / all_time_high_price
+    - firstDelta = gridInterval option (e.g., 0.05 for 5%)
+    - ith = consecutive_buy_count_ith + 1
+  - **Price Calculation**: next_consecutive_buy_price = current_buy_price - all_time_high_price * next_consecutive_buy_grid_size
+- **2.10.5** **Max Lots Auto-Calculation**:
+  - **Formula**: min(0.7 / gridInterval - 1, 10)
+  - **Example**: gridInterval 10% → min(0.7/0.1 - 1, 10) = min(6, 10) = 6
+  - **UI Integration**: Max Lots field hidden from user interface, calculated automatically
+- **2.10.6** **Comprehensive Logging**:
+  - **State Changes**: Log all_time_high_price, consecutive_buy_count_ith updates
+  - **Calculations**: Log start parameter, n, firstDelta, ith values
+  - **Results**: Log next_consecutive_buy_grid_size and next_consecutive_buy_price
+  - **Debug Support**: All intermediate values logged to console for debugging
+
+### 2.11 Questionable Events Detection System
+- **2.11.1** **Purpose**: Monitor and flag potentially problematic trading scenarios during backtesting
+- **2.11.2** **Same-Day Sell/Buy Detection**:
   - **Detection Logic**: Flag when both trailing stop sell and trailing stop buy orders execute on the same trading day
   - **Rationale**: Same-day execution of both order types may indicate:
     - Algorithm instability or oscillation
     - Inappropriate parameter settings
     - Market volatility exceeding strategy assumptions
     - Potential loss of intended strategy behavior
-- **2.10.3** **Event Data Structure**:
+- **2.11.3** **Event Data Structure**:
   - **Date**: Trading date when event occurred
   - **Event Type**: Category of questionable behavior (e.g., "SAME_DAY_SELL_BUY")
   - **Description**: Human-readable explanation of the detected issue
   - **Severity**: Risk level classification ("WARNING", "ERROR")
-- **2.10.4** **Implementation**:
+- **2.11.4** **Implementation**:
   - **Backend**: Events tracked in `questionableEvents` array and logged during backtest execution
   - **Frontend**: Dedicated "Questionable Events" section displayed before transaction history
   - **Console Output**: Events listed in backtest summary when verbose logging enabled
-- **2.10.5** **User Benefits**:
+- **2.11.5** **User Benefits**:
   - **Strategy Validation**: Identify when trading logic may be working incorrectly
   - **Parameter Tuning**: Discover parameter combinations that lead to unstable behavior
   - **Risk Assessment**: Understand potential issues with strategy implementation
@@ -193,8 +222,8 @@ Daily processing follows this strict priority hierarchy:
   - **3.1.1.1** Symbol selection with autocomplete
   - **3.1.1.2** Start/End date pickers
   - **3.1.1.3** Lot size ($10,000 default)
-  - **3.1.1.4** Maximum lots (5 default)
-  - **3.1.1.5** Grid interval percentage (10% default)
+  - **3.1.1.4** ✅ **UPDATED**: Maximum lots (auto-calculated, hidden from UI)
+  - **3.1.1.5** Grid interval percentage (10% default) - used as firstDelta for consecutive-incremental system
   - **3.1.1.6** Remaining lots loss tolerance (5% default) - for stop-loss mechanism
   - **3.1.1.7** Remaining lots unrealized loss tolerance (50% default) - for buying pause
 
@@ -294,14 +323,18 @@ Daily processing follows this strict priority hierarchy:
   "startDate": "2021-11-01",
   "endDate": "2023-11-01",
   "lotSizeUsd": 10000,
-  "maxLots": 10,
+  "maxLots": null, // ✅ UPDATED: Auto-calculated as min(0.7 / gridIntervalPercent - 1, 10)
   "maxLotsToSell": 1,
-  "gridIntervalPercent": 0.10,
+  "gridIntervalPercent": 0.10, // ✅ UPDATED: Used as firstDelta in consecutive-incremental system
   "profitRequirement": 0.05,
   "trailingBuyActivationPercent": 0.10,
   "trailingBuyReboundPercent": 0.05,
   "trailingSellActivationPercent": 0.20,
-  "trailingSellPullbackPercent": 0.10
+  "trailingSellPullbackPercent": 0.10,
+  // ✅ NEW: Consecutive-incremental grid size feature
+  "consecutiveIncrementalEnabled": true,
+  "allTimeHighTracking": true,
+  "consecutiveBuyCountTracking": true
 }
 ```
 
