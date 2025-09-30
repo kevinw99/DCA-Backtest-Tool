@@ -1,4 +1,5 @@
 const database = require('../database');
+const PerformanceCalculatorService = require('./performanceCalculatorService');
 
 /**
  * Core DCA Backtesting Service
@@ -1045,6 +1046,28 @@ async function runDCABacktest(params) {
       }
     }
 
+    // Calculate comprehensive performance metrics
+    const performanceCalculator = new PerformanceCalculatorService();
+
+    // Prepare trades data for performance calculator
+    const tradesForPerformance = enhancedTransactions
+      .filter(t => t.type === 'SELL')
+      .map(t => ({
+        entryDate: t.lotsDetails && t.lotsDetails[0] ? t.lotsDetails[0].date : startDate,
+        exitDate: t.date,
+        profit: t.realizedPNLFromTrade || 0,
+        shares: t.shares || 0
+      }));
+
+    const performanceMetrics = performanceCalculator.calculateComprehensiveMetrics({
+      dailyPortfolioValues: dailyPortfolioValues,
+      dailyCapitalDeployed: dailyCapitalDeployed,
+      trades: tradesForPerformance,
+      maxExposure: maxLots * lotSizeUsd,
+      startDate: startDate,
+      endDate: endDate
+    });
+
     return {
       strategy: 'SHARED_CORE',
       symbol: symbol,
@@ -1080,7 +1103,10 @@ async function runDCABacktest(params) {
       transactionLog: transactionLog,
       lots: lots,
       enhancedTransactions: enhancedTransactions,
-      questionableEvents: questionableEvents
+      questionableEvents: questionableEvents,
+
+      // Add comprehensive performance metrics
+      performanceMetrics: performanceMetrics
     };
 
     console.log(`🔍 DCA Backtest Debug - Enhanced Transactions: ${enhancedTransactions.length} total`);

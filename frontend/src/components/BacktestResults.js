@@ -13,6 +13,7 @@ import {
   Scatter,
   Legend
 } from 'recharts';
+import PerformanceSummary from './PerformanceSummary';
 
 const BacktestResults = ({ data, chartData: priceData }) => {
   const [visibleIndicators, setVisibleIndicators] = useState({
@@ -537,11 +538,31 @@ const BacktestResults = ({ data, chartData: priceData }) => {
             )}
             <div className="parameter-card">
               <span className="parameter-label">Grid Interval</span>
-              <span className="parameter-value">{formatParameterPercent(priceData.backtestParameters.gridIntervalPercent)}</span>
+              <span className="parameter-value">
+                {priceData.betaInfo && priceData.backtestParameters.enableBetaScaling ? (
+                  <>
+                    {formatParameterPercent(priceData.betaInfo.baseParameters.gridIntervalPercent)}
+                    <span style={{color: '#666', fontSize: '0.9em'}}> scaled to→ </span>
+                    {formatParameterPercent(priceData.betaInfo.adjustedParameters.gridIntervalPercent)}
+                  </>
+                ) : (
+                  formatParameterPercent(priceData.backtestParameters.gridIntervalPercent)
+                )}
+              </span>
             </div>
             <div className="parameter-card">
               <span className="parameter-label">Profit Requirement</span>
-              <span className="parameter-value">{formatParameterPercent(priceData.backtestParameters.profitRequirement)}</span>
+              <span className="parameter-value">
+                {priceData.betaInfo && priceData.backtestParameters.enableBetaScaling ? (
+                  <>
+                    {formatParameterPercent(priceData.betaInfo.baseParameters.profitRequirement)}
+                    <span style={{color: '#666', fontSize: '0.9em'}}> scaled to→ </span>
+                    {formatParameterPercent(priceData.betaInfo.adjustedParameters.profitRequirement)}
+                  </>
+                ) : (
+                  formatParameterPercent(priceData.backtestParameters.profitRequirement)
+                )}
+              </span>
             </div>
             {/* Conditional parameter display based on strategy */}
             {summary.strategy === 'SHORT_DCA' ? (
@@ -577,19 +598,59 @@ const BacktestResults = ({ data, chartData: priceData }) => {
               <>
                 <div className="parameter-card">
                   <span className="parameter-label">Trailing Buy Activation</span>
-                  <span className="parameter-value">{formatParameterPercent(priceData.backtestParameters.trailingBuyActivationPercent || 0)}</span>
+                  <span className="parameter-value">
+                    {priceData.betaInfo && priceData.backtestParameters.enableBetaScaling ? (
+                      <>
+                        {formatParameterPercent(priceData.betaInfo.baseParameters.trailingBuyActivationPercent)}
+                        <span style={{color: '#666', fontSize: '0.9em'}}> scaled to→ </span>
+                        {formatParameterPercent(priceData.betaInfo.adjustedParameters.trailingBuyActivationPercent)}
+                      </>
+                    ) : (
+                      formatParameterPercent(priceData.backtestParameters.trailingBuyActivationPercent || 0)
+                    )}
+                  </span>
                 </div>
                 <div className="parameter-card">
                   <span className="parameter-label">Trailing Buy Rebound</span>
-                  <span className="parameter-value">{formatParameterPercent(priceData.backtestParameters.trailingBuyReboundPercent || 0)}</span>
+                  <span className="parameter-value">
+                    {priceData.betaInfo && priceData.backtestParameters.enableBetaScaling ? (
+                      <>
+                        {formatParameterPercent(priceData.betaInfo.baseParameters.trailingBuyReboundPercent)}
+                        <span style={{color: '#666', fontSize: '0.9em'}}> scaled to→ </span>
+                        {formatParameterPercent(priceData.betaInfo.adjustedParameters.trailingBuyReboundPercent)}
+                      </>
+                    ) : (
+                      formatParameterPercent(priceData.backtestParameters.trailingBuyReboundPercent || 0)
+                    )}
+                  </span>
                 </div>
                 <div className="parameter-card">
                   <span className="parameter-label">Trailing Sell Activation</span>
-                  <span className="parameter-value">{formatParameterPercent(priceData.backtestParameters.trailingSellActivationPercent || 0)}</span>
+                  <span className="parameter-value">
+                    {priceData.betaInfo && priceData.backtestParameters.enableBetaScaling ? (
+                      <>
+                        {formatParameterPercent(priceData.betaInfo.baseParameters.trailingSellActivationPercent)}
+                        <span style={{color: '#666', fontSize: '0.9em'}}> scaled to→ </span>
+                        {formatParameterPercent(priceData.betaInfo.adjustedParameters.trailingSellActivationPercent)}
+                      </>
+                    ) : (
+                      formatParameterPercent(priceData.backtestParameters.trailingSellActivationPercent || 0)
+                    )}
+                  </span>
                 </div>
                 <div className="parameter-card">
                   <span className="parameter-label">Trailing Sell Pullback</span>
-                  <span className="parameter-value">{formatParameterPercent(priceData.backtestParameters.trailingSellPullbackPercent || 0)}</span>
+                  <span className="parameter-value">
+                    {priceData.betaInfo && priceData.backtestParameters.enableBetaScaling ? (
+                      <>
+                        {formatParameterPercent(priceData.betaInfo.baseParameters.trailingSellPullbackPercent)}
+                        <span style={{color: '#666', fontSize: '0.9em'}}> scaled to→ </span>
+                        {formatParameterPercent(priceData.betaInfo.adjustedParameters.trailingSellPullbackPercent)}
+                      </>
+                    ) : (
+                      formatParameterPercent(priceData.backtestParameters.trailingSellPullbackPercent || 0)
+                    )}
+                  </span>
                 </div>
               </>
             )}
@@ -1412,6 +1473,11 @@ const BacktestResults = ({ data, chartData: priceData }) => {
             })}
           </div>
         </div>
+      )}
+
+      {/* Performance Metrics Summary */}
+      {summary.performanceMetrics && (
+        <PerformanceSummary performanceMetrics={summary.performanceMetrics} />
       )}
 
       {/* Strategy Summary */}
