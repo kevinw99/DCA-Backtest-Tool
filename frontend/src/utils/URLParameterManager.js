@@ -177,12 +177,13 @@ class URLParameterManager {
    * @private
    */
   _encodeBatchParameters(params, parameters) {
-    // Basic parameters
-    if (parameters.symbols) {
-      if (Array.isArray(parameters.symbols)) {
-        params.set('symbols', parameters.symbols.join(','));
+    // Basic parameters - prioritize parameterRanges.symbols over top-level symbols
+    const symbols = parameters.parameterRanges?.symbols || parameters.symbols;
+    if (symbols) {
+      if (Array.isArray(symbols)) {
+        params.set('symbols', symbols.join(','));
       } else {
-        params.set('symbols', parameters.symbols);
+        params.set('symbols', symbols);
       }
     }
     if (parameters.startDate) params.set('startDate', parameters.startDate);
@@ -243,13 +244,14 @@ class URLParameterManager {
       maxLots: this._parseNumber(params.maxLots, 10),
       maxLotsToSell: this._parseNumber(params.maxLotsToSell, 1),
 
-      // Strategy parameters - apply Beta scaling if enabled and parameters appear to be base values
-      gridIntervalPercent: this._parseParameterWithBetaScaling(params.gridIntervalPercent, 10, betaFactor, enableBetaScaling),
-      profitRequirement: this._parseParameterWithBetaScaling(params.profitRequirement, 5, betaFactor, enableBetaScaling),
-      trailingBuyActivationPercent: this._parseParameterWithBetaScaling(params.trailingBuyActivationPercent, 10, betaFactor, enableBetaScaling),
-      trailingBuyReboundPercent: this._parseParameterWithBetaScaling(params.trailingBuyReboundPercent, 5, betaFactor, enableBetaScaling),
-      trailingSellActivationPercent: this._parseParameterWithBetaScaling(params.trailingSellActivationPercent, 20, betaFactor, enableBetaScaling),
-      trailingSellPullbackPercent: this._parseParameterWithBetaScaling(params.trailingSellPullbackPercent, 10, betaFactor, enableBetaScaling),
+      // Strategy parameters - parse as percentages without applying Beta scaling
+      // Beta scaling will be handled by the backend when enableBetaScaling=true
+      gridIntervalPercent: this._parsePercentageAsDecimal(params.gridIntervalPercent, 10),
+      profitRequirement: this._parsePercentageAsDecimal(params.profitRequirement, 5),
+      trailingBuyActivationPercent: this._parsePercentageAsDecimal(params.trailingBuyActivationPercent, 10),
+      trailingBuyReboundPercent: this._parsePercentageAsDecimal(params.trailingBuyReboundPercent, 5),
+      trailingSellActivationPercent: this._parsePercentageAsDecimal(params.trailingSellActivationPercent, 20),
+      trailingSellPullbackPercent: this._parsePercentageAsDecimal(params.trailingSellPullbackPercent, 10),
 
       // Beta parameters
       beta: beta,

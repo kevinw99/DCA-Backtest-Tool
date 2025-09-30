@@ -409,6 +409,7 @@ const BatchResults = ({ data }) => {
                 <th>Avg Profit/Trade</th>
                 <th>Max Drawdown</th>
                 <th>Capital Util.</th>
+                {!isShortStrategy && <th>Max Lots/Sell</th>}
                 <th>Profit Req.</th>
                 <th>Grid Int.</th>
                 <th>{isShortStrategy ? 'Short Act.' : 'Buy Act.'}</th>
@@ -454,6 +455,7 @@ const BatchResults = ({ data }) => {
                   </td>
                   <td className="drawdown-cell">{formatPerformancePercent(result.summary?.maxDrawdownPercent || 0)}</td>
                   <td>{formatPerformancePercent(result.summary?.capitalUtilizationRate || 0)}</td>
+                  {!isShortStrategy && <td>{result.parameters.maxLotsToSell || 1}</td>}
                   <td>{formatParameterPercent(result.parameters.profitRequirement)}</td>
                   <td>{formatParameterPercent(result.parameters.gridIntervalPercent)}</td>
                   <td>{formatParameterPercent(result.parameters[isShortStrategy ? 'trailingShortActivationPercent' : 'trailingBuyActivationPercent'])}</td>
