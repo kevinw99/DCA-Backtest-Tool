@@ -1,5 +1,13 @@
 const database = require('../database');
 const PerformanceCalculatorService = require('./performanceCalculatorService');
+const {
+  calculatePortfolioDrawdown,
+  assessMarketCondition,
+  calculateBuyAndHold: calculateBuyAndHoldUtil,
+  calculateSharpeRatio,
+  calculateWinRate,
+  validateBacktestParameters
+} = require('./shared/backtestUtilities');
 
 /**
  * Core DCA Backtesting Service
@@ -203,57 +211,7 @@ function calculateTradeAnnualizedReturns(enhancedTransactions, startDate, endDat
   };
 }
 
-function calculatePortfolioDrawdown(portfolioValues) {
-  if (portfolioValues.length === 0) return { maxDrawdown: 0, maxDrawdownPercent: 0 };
-
-  let maxValue = Math.max(0, portfolioValues[0]);
-  let maxDrawdown = 0;
-  let maxDrawdownPercent = 0;
-
-  for (const value of portfolioValues) {
-    if (value > maxValue && value > 0) {
-      maxValue = value;
-    }
-
-    if (maxValue > 0) {
-      const drawdown = Math.max(0, maxValue - value);
-      const drawdownPercent = (drawdown / maxValue) * 100;
-
-      if (drawdown > maxDrawdown) {
-        maxDrawdown = drawdown;
-      }
-      if (drawdownPercent > maxDrawdownPercent) {
-        maxDrawdownPercent = drawdownPercent;
-      }
-    }
-  }
-
-  return { maxDrawdown, maxDrawdownPercent };
-}
-
-function assessMarketCondition(indicators) {
-  if (!indicators.ma_200 || !indicators.ma_50) {
-    return { regime: 'neutral', isHighVolatility: false, weeklyTrend: 'neutral', volatility: null };
-  }
-
-  const currentPrice = indicators.adjusted_close;
-  let marketRegime = 'neutral';
-
-  if (currentPrice > indicators.ma_200 && indicators.ma_50 > indicators.ma_200) {
-    marketRegime = 'bull';
-  } else if (currentPrice < indicators.ma_200 && indicators.ma_50 < indicators.ma_200) {
-    marketRegime = 'bear';
-  }
-
-  const isHighVolatility = indicators.volatility_20 && indicators.volatility_20 > 0.40;
-
-  return {
-    regime: marketRegime,
-    isHighVolatility: isHighVolatility,
-    weeklyTrend: indicators.weekly_trend || 'neutral',
-    volatility: indicators.volatility_20
-  };
-}
+// calculatePortfolioDrawdown and assessMarketCondition moved to shared/backtestUtilities.js
 
 function calculateBuyAndHold(prices, initialCapital, avgCapitalForComparison = null) {
   const startPrice = prices[0].adjusted_close;
@@ -1067,6 +1025,88 @@ async function runDCABacktest(params) {
       startDate: startDate,
       endDate: endDate
     });
+
+    // Add performance metrics breakdown to transaction log
+    const initialValue = dailyPortfolioValues[0] || 0;
+    const finalValue = dailyPortfolioValues[dailyPortfolioValues.length - 1] || 0;
+    const totalDays = dailyPortfolioValues.length;
+    const totalYears = totalDays / 252;
+    const maxDeployedCapital = performanceMetrics.maxDeployedCapital;
+    const avgDeployedCapital = performanceMetrics.avgDeployedCapital;
+    // maxExposure already declared above, reuse it
+
+    transactionLog.push('');
+    transactionLog.push('========== PERFORMANCE METRICS CALCULATION BREAKDOWN ==========');
+    transactionLog.push('');
+    transactionLog.push('INPUT VALUES:');
+    transactionLog.push(`   Initial Portfolio Value: $${initialValue.toFixed(2)}`);
+    transactionLog.push(`   Final Portfolio Value: $${finalValue.toFixed(2)}`);
+    transactionLog.push(`   Max Capital Deployed: $${maxDeployedCapital.toFixed(2)}`);
+    transactionLog.push(`   Avg Capital Deployed: $${avgDeployedCapital.toFixed(2)}`);
+    transactionLog.push(`   Max Exposure (Available): $${maxExposure.toFixed(2)}`);
+    transactionLog.push(`   Total Days: ${totalDays} (${totalYears.toFixed(2)} years)`);
+    transactionLog.push(`   Number of Trades: ${tradesForPerformance.length}`);
+    transactionLog.push('');
+    transactionLog.push('RETURNS CALCULATIONS:');
+    transactionLog.push(`   Total Return = (Final - Initial) / Initial`);
+    transactionLog.push(`              = ($${finalValue.toFixed(2)} - $${initialValue.toFixed(2)}) / $${initialValue.toFixed(2)}`);
+    transactionLog.push(`              = $${(finalValue - initialValue).toFixed(2)} / $${initialValue.toFixed(2)}`);
+    transactionLog.push(`              = ${performanceMetrics.totalReturn.toFixed(4)} = ${performanceMetrics.totalReturnPercent.toFixed(2)}%`);
+    transactionLog.push('');
+    transactionLog.push(`   CAGR = (Final / Initial)^(1/Years) - 1`);
+    transactionLog.push(`        = ($${finalValue.toFixed(2)} / $${initialValue.toFixed(2)})^(1/${totalYears.toFixed(2)}) - 1`);
+    transactionLog.push(`        = ${(finalValue/initialValue).toFixed(4)}^${(1/totalYears).toFixed(4)} - 1`);
+    transactionLog.push(`        = ${performanceMetrics.cagr.toFixed(4)} = ${performanceMetrics.cagrPercent.toFixed(2)}%`);
+    transactionLog.push('');
+    transactionLog.push(`   Return on Max Deployed = (Final - Max Capital) / Max Capital`);
+    transactionLog.push(`                         = ($${finalValue.toFixed(2)} - $${maxDeployedCapital.toFixed(2)}) / $${maxDeployedCapital.toFixed(2)}`);
+    transactionLog.push(`                         = $${(finalValue - maxDeployedCapital).toFixed(2)} / $${maxDeployedCapital.toFixed(2)}`);
+    transactionLog.push(`                         = ${performanceMetrics.returnOnMaxDeployed.toFixed(4)} = ${performanceMetrics.returnOnMaxDeployedPercent.toFixed(2)}%`);
+    transactionLog.push('');
+    transactionLog.push(`   CAGR on Max Deployed = (Final / Max Capital)^(1/Years) - 1`);
+    transactionLog.push(`                       = ($${finalValue.toFixed(2)} / $${maxDeployedCapital.toFixed(2)})^(1/${totalYears.toFixed(2)}) - 1`);
+    transactionLog.push(`                       = ${(finalValue/maxDeployedCapital).toFixed(4)}^${(1/totalYears).toFixed(4)} - 1`);
+    transactionLog.push(`                       = ${performanceMetrics.cagrOnMaxDeployed.toFixed(4)} = ${performanceMetrics.cagrOnMaxDeployedPercent.toFixed(2)}%`);
+    transactionLog.push('');
+    transactionLog.push(`   Return on Avg Deployed = (Final - Avg Capital) / Avg Capital`);
+    transactionLog.push(`                         = ($${finalValue.toFixed(2)} - $${avgDeployedCapital.toFixed(2)}) / $${avgDeployedCapital.toFixed(2)}`);
+    transactionLog.push(`                         = $${(finalValue - avgDeployedCapital).toFixed(2)} / $${avgDeployedCapital.toFixed(2)}`);
+    transactionLog.push(`                         = ${performanceMetrics.returnOnAvgDeployed.toFixed(4)} = ${performanceMetrics.returnOnAvgDeployedPercent.toFixed(2)}%`);
+    transactionLog.push('');
+    transactionLog.push(`   CAGR on Avg Deployed = (Final / Avg Capital)^(1/Years) - 1`);
+    transactionLog.push(`                       = ($${finalValue.toFixed(2)} / $${avgDeployedCapital.toFixed(2)})^(1/${totalYears.toFixed(2)}) - 1`);
+    transactionLog.push(`                       = ${(finalValue/avgDeployedCapital).toFixed(4)}^${(1/totalYears).toFixed(4)} - 1`);
+    transactionLog.push(`                       = ${performanceMetrics.cagrOnAvgDeployed.toFixed(4)} = ${performanceMetrics.cagrOnAvgDeployedPercent.toFixed(2)}%`);
+    transactionLog.push('');
+    transactionLog.push(`   Time-Weighted Return = ${performanceMetrics.timeWeightedReturn.toFixed(4)} = ${performanceMetrics.timeWeightedReturnPercent.toFixed(2)}%`);
+    transactionLog.push('');
+    transactionLog.push('RISK METRICS:');
+    transactionLog.push(`   Sharpe Ratio: ${performanceMetrics.sharpeRatio.toFixed(3)}`);
+    transactionLog.push(`   Sortino Ratio: ${performanceMetrics.sortinoRatio.toFixed(3)}`);
+    transactionLog.push(`   Calmar Ratio = CAGR / Max Drawdown`);
+    transactionLog.push(`                = ${performanceMetrics.cagr.toFixed(4)} / ${(performanceMetrics.maxDrawdown).toFixed(4)}`);
+    transactionLog.push(`                = ${performanceMetrics.calmarRatio.toFixed(3)}`);
+    transactionLog.push(`   Max Drawdown: ${performanceMetrics.maxDrawdownPercent.toFixed(2)}%`);
+    transactionLog.push(`   Avg Drawdown: ${performanceMetrics.avgDrawdownPercent.toFixed(2)}%`);
+    transactionLog.push('');
+    transactionLog.push('TRADING EFFICIENCY:');
+    transactionLog.push(`   Win Rate: ${performanceMetrics.winRatePercent.toFixed(2)}%`);
+    transactionLog.push(`   Profit Factor: ${performanceMetrics.profitFactor.toFixed(3)}`);
+    transactionLog.push(`   Expectancy: $${performanceMetrics.expectancy.toFixed(2)}`);
+    transactionLog.push(`   Avg Win: $${performanceMetrics.avgWin.toFixed(2)}`);
+    transactionLog.push(`   Avg Loss: $${performanceMetrics.avgLoss.toFixed(2)}`);
+    transactionLog.push(`   Avg Holding Period: ${performanceMetrics.avgHoldingPeriod.toFixed(1)} days`);
+    transactionLog.push(`   Profit Per Day Held: $${performanceMetrics.profitPerDayHeld.toFixed(2)}`);
+    transactionLog.push('');
+    transactionLog.push('CAPITAL EFFICIENCY:');
+    transactionLog.push(`   Capital Utilization = Avg Deployed / Max Exposure`);
+    transactionLog.push(`                      = $${avgDeployedCapital.toFixed(2)} / $${maxExposure.toFixed(2)}`);
+    transactionLog.push(`                      = ${performanceMetrics.capitalUtilization.toFixed(4)} = ${performanceMetrics.capitalUtilizationPercent.toFixed(2)}%`);
+    transactionLog.push(`   Avg Idle Capital: $${performanceMetrics.avgIdleCapital.toFixed(2)}`);
+    transactionLog.push(`   Total Opportunity Cost: $${performanceMetrics.opportunityCost.toFixed(2)}`);
+    transactionLog.push(`   Opportunity Cost Adjusted Return: ${performanceMetrics.opportunityCostAdjustedReturnPercent.toFixed(2)}%`);
+    transactionLog.push('');
+    transactionLog.push('============================================================');
 
     return {
       strategy: 'SHARED_CORE',

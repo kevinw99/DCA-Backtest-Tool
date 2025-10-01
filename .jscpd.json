@@ -1,0 +1,17 @@
+{
+  "threshold": 5,
+  "reporters": ["html", "console", "badge"],
+  "ignore": [
+    "node_modules/**",
+    "coverage/**",
+    "**/__tests__/**",
+    "**/*.test.js",
+    "build/**",
+    "frontend/build/**",
+    "backend/node_modules/**"
+  ],
+  "format": ["javascript", "jsx"],
+  "minLines": 5,
+  "minTokens": 50,
+  "output": "./reports/jscpd"
+}

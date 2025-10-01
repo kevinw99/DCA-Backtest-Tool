@@ -14,6 +14,7 @@ import {
   Legend
 } from 'recharts';
 import PerformanceSummary from './PerformanceSummary';
+import { formatCurrency, formatPercent, formatParameterPercent, formatDate } from '../utils/formatters';
 
 const BacktestResults = ({ data, chartData: priceData }) => {
   const [visibleIndicators, setVisibleIndicators] = useState({
@@ -170,34 +171,6 @@ const BacktestResults = ({ data, chartData: priceData }) => {
 
   // Use shortAndHoldResults for short selling strategy, buyAndHoldResults for long strategy
   const holdResults = summary?.strategy === 'SHORT_DCA' ? shortAndHoldResults : buyAndHoldResults;
-
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2
-    }).format(value);
-  };
-
-  const formatPercent = (value) => {
-    if (value === undefined || value === null) return 'N/A';
-    return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
-  };
-
-  // Format decimal parameter values (e.g., 0.1 = 10%) as display percentages
-  const formatParameterPercent = (value) => {
-    if (value === undefined || value === null) return 'N/A';
-    const percentValue = value * 100; // Convert decimal to percentage
-    return `${percentValue >= 0 ? '+' : ''}${percentValue.toFixed(2)}%`;
-  };
-
-  const formatDate = (dateStr) => {
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: '2-digit'
-    });
-  };
 
   const toggleIndicator = (indicator) => {
     setVisibleIndicators(prev => ({
@@ -483,6 +456,14 @@ const BacktestResults = ({ data, chartData: priceData }) => {
   };
 
   const chartData = prepareChartData();
+
+  // Debug logging for performance metrics
+  console.log('🔍 BacktestResults - Performance Metrics Check:', {
+    hasPerformanceMetrics: !!summary.performanceMetrics,
+    performanceMetrics: summary.performanceMetrics,
+    summaryKeys: Object.keys(summary),
+    fullSummary: summary
+  });
 
   return (
     <div className="results-container">

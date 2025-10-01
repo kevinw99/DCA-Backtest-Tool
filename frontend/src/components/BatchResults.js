@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { TrendingUp, Target, Trophy, Activity, DollarSign, BarChart3, Users, Percent } from 'lucide-react';
 import URLParameterManager from '../utils/URLParameterManager';
+import { formatCurrency, formatPercent, formatParameterPercent, formatPerformancePercent, formatNumber } from '../utils/formatters';
 
 const BatchResults = ({ data }) => {
   const [selectedStock, setSelectedStock] = useState('all');
@@ -186,14 +187,6 @@ const BatchResults = ({ data }) => {
       return bValue - aValue;
     });
   }
-
-  const formatPercent = (value) => `${value.toFixed(2)}%`;
-  // Format decimal parameter values (e.g., 0.1 = 10%) as display percentages
-  const formatParameterPercent = (value) => `${(value * 100).toFixed(2)}%`;
-  // Format decimal performance metrics (e.g., 0.617 = 61.76%) as display percentages
-  const formatPerformancePercent = (value) => `${(value * 100).toFixed(2)}%`;
-  const formatCurrency = (value) => `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  const formatNumber = (value, decimals = 2) => value.toFixed(decimals);
 
   return (
     <div className="batch-results">
@@ -404,6 +397,11 @@ const BatchResults = ({ data }) => {
                 <th>β-Factor</th>
                 <th>Total Return</th>
                 <th>Annual Return</th>
+                <th>CAGR on Max Deployed</th>
+                <th>CAGR on Avg Deployed</th>
+                <th>Return on Max Deployed</th>
+                <th>Sharpe Ratio</th>
+                <th>Sortino Ratio</th>
                 <th>Total Trades</th>
                 <th>Win Rate</th>
                 <th>Avg Profit/Trade</th>
@@ -448,6 +446,21 @@ const BatchResults = ({ data }) => {
                   <td className={`return-cell ${(result.summary?.annualizedReturn || 0) >= 0 ? 'positive' : 'negative'}`}>
                     {formatPerformancePercent(result.summary?.annualizedReturn || 0)}
                   </td>
+                  <td className={`return-cell ${(result.summary?.cagrOnMaxDeployed || 0) >= 0 ? 'positive' : 'negative'}`}>
+                    {formatPerformancePercent(result.summary?.cagrOnMaxDeployed || 0)}
+                  </td>
+                  <td className={`return-cell ${(result.summary?.cagrOnAvgDeployed || 0) >= 0 ? 'positive' : 'negative'}`}>
+                    {formatPerformancePercent(result.summary?.cagrOnAvgDeployed || 0)}
+                  </td>
+                  <td className={`return-cell ${(result.summary?.returnOnMaxDeployed || 0) >= 0 ? 'positive' : 'negative'}`}>
+                    {formatPerformancePercent(result.summary?.returnOnMaxDeployed || 0)}
+                  </td>
+                  <td className="ratio-cell">
+                    {(result.summary?.sharpeRatio || 0).toFixed(2)}
+                  </td>
+                  <td className="ratio-cell">
+                    {(result.summary?.sortinoRatio || 0).toFixed(2)}
+                  </td>
                   <td>{result.summary?.totalTrades || 0}</td>
                   <td>{formatPerformancePercent(result.summary?.winRate || 0)}</td>
                   <td className={`return-cell ${(result.summary?.avgProfitPerTrade || 0) >= 0 ? 'positive' : 'negative'}`}>
@@ -487,6 +500,21 @@ const BatchResults = ({ data }) => {
           </div>
           <div className="explanation-item">
             <strong>Annualized Return:</strong> (1 + Total Return) ^ (365 / Days in Period) - 1
+          </div>
+          <div className="explanation-item">
+            <strong>CAGR on Max Deployed:</strong> Compound Annual Growth Rate based on maximum capital actually deployed (most realistic annualized return metric)
+          </div>
+          <div className="explanation-item">
+            <strong>CAGR on Avg Deployed:</strong> CAGR based on average capital deployed over time (shows capital efficiency)
+          </div>
+          <div className="explanation-item">
+            <strong>Return on Max Deployed:</strong> Total return percentage based on peak capital used, not total available capital
+          </div>
+          <div className="explanation-item">
+            <strong>Sharpe Ratio:</strong> Risk-adjusted return metric: (Avg Return - Risk-Free Rate) / Volatility. Higher is better (>1.0 is good, >2.0 is excellent)
+          </div>
+          <div className="explanation-item">
+            <strong>Sortino Ratio:</strong> Like Sharpe but only penalizes downside volatility. Higher is better (>1.0 is good, >2.0 is excellent)
           </div>
           <div className="explanation-item">
             <strong>Total Trades:</strong> Total number of buy and sell transactions executed

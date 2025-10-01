@@ -1,4 +1,5 @@
 const { runDCABacktest } = require('./dcaBacktestService');
+const { generateBatchSummary } = require('./shared/batchUtilities');
 
 /**
  * Batch Backtest Service
@@ -12,8 +13,19 @@ const { runDCABacktest } = require('./dcaBacktestService');
  * @returns {Array} Array of parameter combinations
  */
 async function generateParameterCombinations(paramRanges) {
+  // Extract symbols from paramRanges without providing fallback
+  const symbols = paramRanges.symbols;
+
+  // Log the received symbols for debugging
+  console.log('🔍 DEBUG: Received symbols from paramRanges:', symbols);
+  console.log('🔍 DEBUG: Full paramRanges keys:', Object.keys(paramRanges));
+
+  // If no symbols provided, throw an error instead of using default
+  if (!symbols || symbols.length === 0) {
+    throw new Error('No symbols provided for batch backtest. Please select at least one symbol.');
+  }
+
   const {
-    symbols = ['TSLA'],
     profitRequirement = [0.05],
     gridIntervalPercent = [0.1],
     trailingBuyActivationPercent = [0.1],
@@ -28,8 +40,14 @@ async function generateParameterCombinations(paramRanges) {
     endDate = '2025-09-01',
     lotSizeUsd = 10000,
     maxLots = 10,
-    maxLotsToSell = 1
+    maxLotsToSell = [1]
   } = paramRanges;
+
+  console.log('🔍 DEBUG: Parameter combinations input:', {
+    symbols,
+    symbolsLength: symbols?.length,
+    paramRanges: Object.keys(paramRanges)
+  });
 
   const combinations = [];
 
@@ -58,18 +76,19 @@ async function generateParameterCombinations(paramRanges) {
       }
 
       for (const coefficient of coefficients) {
-        // For each coefficient, just include coefficient info but use original parameters
-        // Beta scaling should not modify user-specified parameter ranges
-        try {
-          const betaFactor = beta * coefficient;
+        for (const lotsToSell of maxLotsToSell) {
+          // For each coefficient, just include coefficient info but use original parameters
+          // Beta scaling should not modify user-specified parameter ranges
+          try {
+            const betaFactor = beta * coefficient;
 
-          combinations.push({
-            symbol,
-            startDate,
-            endDate,
-            lotSizeUsd,
-            maxLots,
-            maxLotsToSell,
+            combinations.push({
+              symbol,
+              startDate,
+              endDate,
+              lotSizeUsd,
+              maxLots,
+              maxLotsToSell: lotsToSell,
             // Use original user parameters (already in correct decimal format)
             profitRequirement: profitRequirement[0],
             gridIntervalPercent: gridIntervalPercent[0],
@@ -106,9 +125,10 @@ async function generateParameterCombinations(paramRanges) {
               isValid: true
             }
           });
-        } catch (error) {
-          console.error(`Error calculating Beta parameters for Beta=${beta}, Coefficient=${coefficient}, Symbol=${symbol}:`, error);
-          // Skip this combination if Beta calculation fails
+          } catch (error) {
+            console.error(`Error calculating Beta parameters for Beta=${beta}, Coefficient=${coefficient}, Symbol=${symbol}:`, error);
+            // Skip this combination if Beta calculation fails
+          }
         }
       }
     }
@@ -116,19 +136,20 @@ async function generateParameterCombinations(paramRanges) {
     console.log('❌ Using NON-Beta scaling path');
     // Original logic for non-Beta scaling
     for (const symbol of symbols) {
-      for (const profit of profitRequirement) {
-        for (const grid of gridIntervalPercent) {
-          for (const buyActivation of trailingBuyActivationPercent) {
-            for (const buyRebound of trailingBuyReboundPercent) {
-              for (const sellActivation of trailingSellActivationPercent) {
-                for (const sellPullback of trailingSellPullbackPercent) {
-                  combinations.push({
-                    symbol,
-                    startDate,
-                    endDate,
-                    lotSizeUsd,
-                    maxLots,
-                    maxLotsToSell,
+      for (const lotsToSell of maxLotsToSell) {
+        for (const profit of profitRequirement) {
+          for (const grid of gridIntervalPercent) {
+            for (const buyActivation of trailingBuyActivationPercent) {
+              for (const buyRebound of trailingBuyReboundPercent) {
+                for (const sellActivation of trailingSellActivationPercent) {
+                  for (const sellPullback of trailingSellPullbackPercent) {
+                    combinations.push({
+                      symbol,
+                      startDate,
+                      endDate,
+                      lotSizeUsd,
+                      maxLots,
+                      maxLotsToSell: lotsToSell,
                     profitRequirement: profit,
                     gridIntervalPercent: grid,
                     trailingBuyActivationPercent: buyActivation,
@@ -139,7 +160,8 @@ async function generateParameterCombinations(paramRanges) {
                     coefficient: 1.0,
                     betaFactor: 1.0,
                     enableBetaScaling: false
-                  });
+                    });
+                  }
                 }
               }
             }
@@ -198,6 +220,7 @@ function calculateBuyAndHoldPerformance(priceData, totalCapital, startDate, endD
  */
 async function runBatchBacktest(options, progressCallback = null) {
   const {
+    symbols,
     parameterRanges,
     enableBetaScaling,
     includeComparison = true,
@@ -206,11 +229,14 @@ async function runBatchBacktest(options, progressCallback = null) {
 
   console.log('🚀 Starting batch backtest...');
 
-  // Merge top-level enableBetaScaling into parameterRanges for backward compatibility
+  // Merge top-level symbols and enableBetaScaling into parameterRanges for backward compatibility
   const mergedParameterRanges = {
     ...parameterRanges,
+    symbols: symbols || parameterRanges.symbols, // Pass symbols from top-level to parameterRanges
     enableBetaScaling: enableBetaScaling ?? parameterRanges.enableBetaScaling
   };
+
+  console.log('🔍 DEBUG: Merged symbols into parameterRanges:', mergedParameterRanges.symbols);
 
   // Generate all parameter combinations
   const combinations = await generateParameterCombinations(mergedParameterRanges);
@@ -314,7 +340,19 @@ async function runBatchBacktest(options, progressCallback = null) {
         totalTrades: sellTransactions,
         avgProfitPerTrade: avgProfitPerTrade,
         maxDrawdownPercent: (result.maxDrawdownPercent || 0) / 100, // Convert to decimal for display
-        capitalUtilizationRate: result.avgCapitalDeployed && result.totalCost ? result.avgCapitalDeployed / result.totalCost : 0
+        capitalUtilizationRate: result.avgCapitalDeployed && result.totalCost ? result.avgCapitalDeployed / result.totalCost : 0,
+        // Include CAGR metrics from performanceMetrics
+        cagrOnMaxDeployed: result.performanceMetrics?.cagrOnMaxDeployed,
+        cagrOnMaxDeployedPercent: result.performanceMetrics?.cagrOnMaxDeployedPercent,
+        cagrOnAvgDeployed: result.performanceMetrics?.cagrOnAvgDeployed,
+        cagrOnAvgDeployedPercent: result.performanceMetrics?.cagrOnAvgDeployedPercent,
+        returnOnMaxDeployed: result.performanceMetrics?.returnOnMaxDeployed,
+        returnOnMaxDeployedPercent: result.performanceMetrics?.returnOnMaxDeployedPercent,
+        returnOnAvgDeployed: result.performanceMetrics?.returnOnAvgDeployed,
+        returnOnAvgDeployedPercent: result.performanceMetrics?.returnOnAvgDeployedPercent,
+        // Include risk-adjusted metrics
+        sharpeRatio: result.performanceMetrics?.sharpeRatio,
+        sortinoRatio: result.performanceMetrics?.sortinoRatio
       };
 
       // DEBUG: Log the created summary (only first 3)
@@ -372,77 +410,8 @@ async function runBatchBacktest(options, progressCallback = null) {
   };
 }
 
-/**
- * Generate summary statistics from batch results
- * @param {Array} results - Array of backtest results
- * @param {Object} parameterRanges - Original parameter ranges
- * @returns {Object} Summary statistics
- */
-function generateBatchSummary(results, parameterRanges) {
-  if (results.length === 0) return null;
-
-  // Group results by symbol for best parameters analysis
-  const resultsBySymbol = {};
-  results.forEach(result => {
-    const symbol = result.parameters.symbol;
-    if (!resultsBySymbol[symbol]) resultsBySymbol[symbol] = [];
-    resultsBySymbol[symbol].push(result);
-  });
-
-  // Find best parameters for each symbol
-  const bestParametersBySymbol = {};
-  Object.keys(resultsBySymbol).forEach(symbol => {
-    const symbolResults = resultsBySymbol[symbol];
-    const bestByTotalReturn = symbolResults[0]; // Already sorted
-    const bestByAnnualized = [...symbolResults].sort((a, b) => {
-      const aValue = a.summary?.annualizedReturn || 0;
-      const bValue = b.summary?.annualizedReturn || 0;
-      return bValue - aValue;
-    })[0];
-
-    bestParametersBySymbol[symbol] = {
-      bestByTotalReturn: {
-        parameters: bestByTotalReturn.parameters,
-        totalReturn: bestByTotalReturn.summary?.totalReturn || 0,
-        annualizedReturn: bestByTotalReturn.summary?.annualizedReturn || 0,
-        winRate: bestByTotalReturn.summary?.winRate || 0
-      },
-      bestByAnnualizedReturn: {
-        parameters: bestByAnnualized.parameters,
-        totalReturn: bestByAnnualized.summary?.totalReturn || 0,
-        annualizedReturn: bestByAnnualized.summary?.annualizedReturn || 0,
-        winRate: bestByAnnualized.summary?.winRate || 0
-      }
-    };
-  });
-
-  // Overall statistics
-  const totalReturns = results.map(r => r.summary?.totalReturn || 0);
-  const annualizedReturns = results.map(r => r.summary?.annualizedReturn || 0);
-  const winRates = results.map(r => r.summary?.winRate || 0);
-
-  return {
-    overallBest: results[0], // Best overall result
-    bestParametersBySymbol,
-    statistics: {
-      totalRuns: results.length,
-      averageTotalReturn: totalReturns.reduce((a, b) => a + b, 0) / totalReturns.length,
-      averageAnnualizedReturn: annualizedReturns.reduce((a, b) => a + b, 0) / annualizedReturns.length,
-      averageWinRate: winRates.reduce((a, b) => a + b, 0) / winRates.length,
-      maxTotalReturn: Math.max(...totalReturns),
-      minTotalReturn: Math.min(...totalReturns),
-      maxAnnualizedReturn: Math.max(...annualizedReturns),
-      minAnnualizedReturn: Math.min(...annualizedReturns),
-      maxWinRate: Math.max(...winRates),
-      minWinRate: Math.min(...winRates)
-    },
-    parameterRanges
-  };
-}
-
 module.exports = {
   runBatchBacktest,
   generateParameterCombinations,
-  calculateBuyAndHoldPerformance,
-  generateBatchSummary
+  calculateBuyAndHoldPerformance
 };

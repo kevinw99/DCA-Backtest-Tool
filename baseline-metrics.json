@@ -1,0 +1,114 @@
+{
+  "timestamp": "2025-09-30",
+  "phase": "Phase 1 - Baseline",
+  "codeMetrics": {
+    "codebase": {
+      "filesAnalyzed": 23,
+      "totalLines": 7786,
+      "totalTokens": 71983
+    },
+    "duplication": {
+      "percentage": 5.87,
+      "duplicatedLines": 457,
+      "duplicatedTokens": 4823,
+      "clonesFound": 33,
+      "status": "⚠️ Above 5% threshold",
+      "largestClone": {
+        "files": [
+          "backend/services/batchBacktestService.js",
+          "backend/services/shortBatchBacktestService.js"
+        ],
+        "lines": 63,
+        "tokens": 724
+      }
+    },
+    "complexity": {
+      "status": "Unable to measure with complexity-report (ES2020+ syntax not supported)",
+      "alternative": "Use ESLint complexity rule",
+      "note": "Will measure after Phase 1 using ESLint"
+    },
+    "testCoverage": {
+      "backend": {
+        "statements": 3.7,
+        "branches": 1.84,
+        "functions": 4.15,
+        "lines": 4.04,
+        "status": "❌ Critical - Far below 80% target"
+      },
+      "servicesCoverage": {
+        "batchBacktestService.js": 0,
+        "betaDataService.js": 88.61,
+        "dcaBacktestService.js": 0,
+        "parameterCorrelationService.js": 0,
+        "performanceCalculatorService.js": 0,
+        "shortBatchBacktestService.js": 0,
+        "shortDCABacktestService.js": 0,
+        "stockDataService.js": 0,
+        "technicalIndicatorsService.js": 0
+      },
+      "testFiles": 1,
+      "testSuites": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      },
+      "tests": {
+        "total": 23,
+        "passed": 17,
+        "failed": 6
+      }
+    },
+    "linting": {
+      "backend": {
+        "status": "✅ Configured",
+        "errors": "Multiple (console.log warnings, prefer-const errors, unused vars)",
+        "note": "ESLint 9 with flat config"
+      },
+      "frontend": {
+        "status": "✅ Configured",
+        "note": "Using react-scripts ESLint config + accessibility plugins"
+      }
+    }
+  },
+  "goals": {
+    "duplication": {
+      "current": 5.87,
+      "target": "<5%",
+      "reduction": "~1% reduction needed"
+    },
+    "testCoverage": {
+      "current": 3.7,
+      "target": ">80%",
+      "increase": "~76% increase needed"
+    },
+    "linting": {
+      "current": "Many warnings/errors",
+      "target": "0 errors"
+    }
+  },
+  "tools": {
+    "installed": [
+      "ESLint 9.36.0",
+      "Prettier 3.6.2",
+      "jscpd 4.0.5",
+      "complexity-report 2.0.0-alpha",
+      "Husky 9.1.7",
+      "lint-staged 16.2.3",
+      "Jest 30.1.3"
+    ],
+    "configured": [
+      "ESLint (flat config)",
+      "Prettier (.prettierrc.json)",
+      "jscpd (.jscpd.json)",
+      "Husky (pre-commit hook)",
+      "lint-staged (package.json)"
+    ]
+  },
+  "notes": [
+    "complexity-report doesn't support modern JS syntax (optional chaining, etc.)",
+    "Only betaDataService.js has test coverage (88.61%)",
+    "Largest duplication is between batch services (63 lines)",
+    "Backend has 255+ console.log statements to replace with structured logging",
+    "6 tests failing in betaDataService.test.js (likely environment issues)"
+  ]
+}

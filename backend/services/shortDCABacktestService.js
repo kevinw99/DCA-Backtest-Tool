@@ -1,4 +1,12 @@
 const database = require('../database');
+const {
+  calculatePortfolioDrawdown,
+  assessMarketCondition,
+  calculateShortAndHold: calculateShortAndHoldUtil,
+  calculateSharpeRatio,
+  calculateWinRate,
+  validateBacktestParameters
+} = require('./shared/backtestUtilities');
 
 /**
  * Short Selling DCA Backtesting Service
@@ -209,57 +217,7 @@ function calculateShortTradeAnnualizedReturns(enhancedTransactions, startDate, e
   };
 }
 
-function calculatePortfolioDrawdown(portfolioValues) {
-  if (portfolioValues.length === 0) return { maxDrawdown: 0, maxDrawdownPercent: 0 };
-
-  let maxValue = Math.max(0, portfolioValues[0]);
-  let maxDrawdown = 0;
-  let maxDrawdownPercent = 0;
-
-  for (const value of portfolioValues) {
-    if (value > maxValue && value > 0) {
-      maxValue = value;
-    }
-
-    if (maxValue > 0) {
-      const drawdown = Math.max(0, maxValue - value);
-      const drawdownPercent = (drawdown / maxValue) * 100;
-
-      if (drawdown > maxDrawdown) {
-        maxDrawdown = drawdown;
-      }
-      if (drawdownPercent > maxDrawdownPercent) {
-        maxDrawdownPercent = drawdownPercent;
-      }
-    }
-  }
-
-  return { maxDrawdown, maxDrawdownPercent };
-}
-
-function assessMarketCondition(indicators) {
-  if (!indicators.ma_200 || !indicators.ma_50) {
-    return { regime: 'neutral', isHighVolatility: false, weeklyTrend: 'neutral', volatility: null };
-  }
-
-  const currentPrice = indicators.adjusted_close;
-  let marketRegime = 'neutral';
-
-  if (currentPrice > indicators.ma_200 && indicators.ma_50 > indicators.ma_200) {
-    marketRegime = 'bull';
-  } else if (currentPrice < indicators.ma_200 && indicators.ma_50 < indicators.ma_200) {
-    marketRegime = 'bear';
-  }
-
-  const isHighVolatility = indicators.volatility_20 && indicators.volatility_20 > 0.40;
-
-  return {
-    regime: marketRegime,
-    isHighVolatility: isHighVolatility,
-    weeklyTrend: indicators.weekly_trend || 'neutral',
-    volatility: indicators.volatility_20
-  };
-}
+// calculatePortfolioDrawdown and assessMarketCondition moved to shared/backtestUtilities.js
 
 function calculateShortAndHold(prices, initialCapital, avgCapitalForComparison = null) {
   const startPrice = prices[0].adjusted_close;

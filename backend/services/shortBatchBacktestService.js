@@ -1,4 +1,5 @@
 const { runShortDCABacktest } = require('./shortDCABacktestService');
+const { generateBatchSummary } = require('./shared/batchUtilities');
 
 /**
  * Short Selling Batch Backtest Service
@@ -252,8 +253,8 @@ async function runShortBatchBacktest(options, progressCallback = null) {
     return (bValue.annualizedReturn || 0) - (aValue.annualizedReturn || 0); // default
   });
 
-  // Generate summary statistics
-  const summary = generateShortBatchSummary(results, parameterRanges);
+  // Generate summary statistics using shared utility
+  const summary = generateBatchSummary(results, parameterRanges);
 
   return {
     summary,
@@ -267,77 +268,8 @@ async function runShortBatchBacktest(options, progressCallback = null) {
   };
 }
 
-/**
- * Generate summary statistics from short batch results
- * @param {Array} results - Array of backtest results
- * @param {Object} parameterRanges - Original parameter ranges
- * @returns {Object} Summary statistics
- */
-function generateShortBatchSummary(results, parameterRanges) {
-  if (results.length === 0) return null;
-
-  // Group results by symbol for best parameters analysis
-  const resultsBySymbol = {};
-  results.forEach(result => {
-    const symbol = result.parameters.symbol;
-    if (!resultsBySymbol[symbol]) resultsBySymbol[symbol] = [];
-    resultsBySymbol[symbol].push(result);
-  });
-
-  // Find best parameters for each symbol
-  const bestParametersBySymbol = {};
-  Object.keys(resultsBySymbol).forEach(symbol => {
-    const symbolResults = resultsBySymbol[symbol];
-    const bestByTotalReturn = symbolResults[0]; // Already sorted
-    const bestByAnnualized = [...symbolResults].sort((a, b) => {
-      const aValue = a.summary?.annualizedReturn || 0;
-      const bValue = b.summary?.annualizedReturn || 0;
-      return bValue - aValue;
-    })[0];
-
-    bestParametersBySymbol[symbol] = {
-      bestByTotalReturn: {
-        parameters: bestByTotalReturn.parameters,
-        totalReturn: bestByTotalReturn.summary?.totalReturn || 0,
-        annualizedReturn: bestByTotalReturn.summary?.annualizedReturn || 0,
-        winRate: bestByTotalReturn.summary?.winRate || 0
-      },
-      bestByAnnualizedReturn: {
-        parameters: bestByAnnualized.parameters,
-        totalReturn: bestByAnnualized.summary?.totalReturn || 0,
-        annualizedReturn: bestByAnnualized.summary?.annualizedReturn || 0,
-        winRate: bestByAnnualized.summary?.winRate || 0
-      }
-    };
-  });
-
-  // Overall statistics
-  const totalReturns = results.map(r => r.summary?.totalReturn || 0);
-  const annualizedReturns = results.map(r => r.summary?.annualizedReturn || 0);
-  const winRates = results.map(r => r.summary?.winRate || 0);
-
-  return {
-    overallBest: results[0], // Best overall result
-    bestParametersBySymbol,
-    statistics: {
-      totalRuns: results.length,
-      averageTotalReturn: totalReturns.reduce((a, b) => a + b, 0) / totalReturns.length,
-      averageAnnualizedReturn: annualizedReturns.reduce((a, b) => a + b, 0) / annualizedReturns.length,
-      averageWinRate: winRates.reduce((a, b) => a + b, 0) / winRates.length,
-      maxTotalReturn: Math.max(...totalReturns),
-      minTotalReturn: Math.min(...totalReturns),
-      maxAnnualizedReturn: Math.max(...annualizedReturns),
-      minAnnualizedReturn: Math.min(...annualizedReturns),
-      maxWinRate: Math.max(...winRates),
-      minWinRate: Math.min(...winRates)
-    },
-    parameterRanges
-  };
-}
-
 module.exports = {
   runShortBatchBacktest,
   generateShortParameterCombinations,
-  calculateShortAndHoldPerformance,
-  generateShortBatchSummary
+  calculateShortAndHoldPerformance
 };

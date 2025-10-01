@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const database = require('./database');
 const stockDataService = require('./services/stockDataService');
+const validation = require('./middleware/validation');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -65,7 +66,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Get stock data with all metrics
-app.get('/api/stocks/:symbol', async (req, res) => {
+app.get('/api/stocks/:symbol', validation.validateSymbolParam, validation.validateQueryDateRange, async (req, res) => {
   try {
     const { symbol } = req.params;
     const { startDate, endDate } = req.query;
@@ -246,7 +247,7 @@ app.get('/api/stocks/:symbol', async (req, res) => {
 });
 
 // Full chart data endpoint for technical analysis
-app.get('/api/stocks/:symbol/full-chart-data', async (req, res) => {
+app.get('/api/stocks/:symbol/full-chart-data', validation.validateSymbolParam, async (req, res) => {
   try {
     const { symbol } = req.params;
     const { includeIndicators } = req.query;
@@ -378,7 +379,7 @@ app.get('/api/test-av/:symbol', async (req, res) => {
 });
 
 // Get beta data for a specific stock symbol
-app.get('/api/stocks/:symbol/beta', async (req, res) => {
+app.get('/api/stocks/:symbol/beta', validation.validateSymbolParam, async (req, res) => {
   try {
     const { symbol } = req.params;
 
@@ -577,7 +578,7 @@ app.get('/api/backtest/defaults', (req, res) => {
 });
 
 // DCA Backtesting API endpoints
-app.post('/api/backtest/dca', async (req, res) => {
+app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, res) => {
   try {
     console.log('=== DEBUG: LONG DCA ENDPOINT CALLED ===');
     console.log('Strategy Mode in request:', req.body.strategyMode);
@@ -603,6 +604,7 @@ app.post('/api/backtest/dca', async (req, res) => {
       trailingSellPullbackPercent,
       // Beta-related parameters
       beta,
+      coefficient,
       enableBetaScaling,
       isManualBetaOverride
     } = params;
@@ -615,15 +617,15 @@ app.post('/api/backtest/dca', async (req, res) => {
       try {
         const parameterCorrelationService = require('./services/parameterCorrelationService');
 
-        // Calculate Beta-adjusted parameters using coefficient = 1.0 for single mode
-        const coefficient = 1.0;
+        // Use coefficient from request, default to 1.0 if not provided
+        const coefficientValue = coefficient !== undefined ? coefficient : 1.0;
         const betaResult = parameterCorrelationService.calculateBetaAdjustedParameters(beta, coefficient, {
-          profitRequirementMultiplier: profitRequirement / 100, // Convert from percentage
-          gridIntervalMultiplier: gridIntervalPercent / 100,
-          trailingBuyActivationMultiplier: trailingBuyActivationPercent / 100,
-          trailingBuyReboundMultiplier: trailingBuyReboundPercent / 100,
-          trailingSellActivationMultiplier: trailingSellActivationPercent / 100,
-          trailingSellPullbackMultiplier: trailingSellPullbackPercent / 100
+          profitRequirement: profitRequirement / 100, // Convert from percentage
+          gridIntervalPercent: gridIntervalPercent / 100,
+          trailingBuyActivationPercent: trailingBuyActivationPercent / 100,
+          trailingBuyReboundPercent: trailingBuyReboundPercent / 100,
+          trailingSellActivationPercent: trailingSellActivationPercent / 100,
+          trailingSellPullbackPercent: trailingSellPullbackPercent / 100
         });
 
         // Update parameters with Beta-adjusted values (convert back to percentages)
@@ -777,14 +779,36 @@ app.post('/api/backtest/dca', async (req, res) => {
 
     // Get or create stock record and ensure data is available
     let stock = await database.getStock(symbol);
+    let needsDataFetch = false;
+
     if (!stock) {
       console.log(`🆕 Creating new stock record for backtest: ${symbol}`);
       try {
         const stockId = await database.createStock(symbol);
         stock = await database.getStock(symbol);
+        needsDataFetch = true;
+      } catch (createError) {
+        return res.status(503).json({
+          error: 'Unable to create stock record',
+          message: `Could not create stock record for symbol ${symbol}.`,
+          details: createError.message
+        });
+      }
+    }
 
-        // Fetch data for new stock
-        console.log(`📡 Fetching initial data for ${symbol}...`);
+    // Check if stock has any price data
+    if (!needsDataFetch) {
+      const existingPrices = await database.getDailyPrices(stock.id, startDate, endDate);
+      if (!existingPrices || existingPrices.length === 0) {
+        console.log(`📊 No price data found for ${symbol}, fetching data...`);
+        needsDataFetch = true;
+      }
+    }
+
+    // Fetch data if needed
+    if (needsDataFetch) {
+      try {
+        console.log(`📡 Fetching data for ${symbol}...`);
         await stockDataService.updateStockData(stock.id, symbol, {
           updatePrices: true,
           updateFundamentals: true,
@@ -807,8 +831,8 @@ app.post('/api/backtest/dca', async (req, res) => {
     if (!dailyPrices || dailyPrices.length === 0) {
       return res.status(404).json({
         error: 'No data available for backtest period',
-        message: `No price data found for ${symbol} between ${startDate} and ${endDate}.`,
-        suggestion: 'Try a different date range or ensure the symbol was listed during this period.'
+        message: `No price data found for ${symbol} between ${startDate} and ${endDate} even after attempting to fetch data.`,
+        suggestion: 'The symbol may not have been listed during this period or may not exist.'
       });
     }
 
@@ -858,7 +882,8 @@ app.post('/api/backtest/dca', async (req, res) => {
           maxDrawdownPercent: results.maxDrawdownPercent,
           sharpeRatio: results.sharpeRatio,
           winRate: results.winRate,
-          volatility: results.volatility
+          volatility: results.volatility,
+          performanceMetrics: results.performanceMetrics
         },
         transactions: (() => {
           const transactions = [];
@@ -926,7 +951,7 @@ app.post('/api/backtest/dca', async (req, res) => {
 
 // Batch Backtest API endpoint - Run multiple backtests with different parameters
 // Short Selling DCA Backtest endpoint
-app.post('/api/backtest/short-dca', async (req, res) => {
+app.post('/api/backtest/short-dca', validation.validateShortDCABacktestParams, async (req, res) => {
   try {
     console.log('=== DEBUG: SHORT DCA ENDPOINT CALLED ===');
     console.log('\n📊 RECEIVED SHORT SELLING DCA BACKTEST REQUEST');
@@ -1032,7 +1057,7 @@ app.post('/api/backtest/short-dca', async (req, res) => {
   }
 });
 
-app.post('/api/backtest/batch', async (req, res) => {
+app.post('/api/backtest/batch', validation.validateBatchBacktestParams, async (req, res) => {
   try {
     console.log('📊 Received batch backtest request');
 
@@ -1080,7 +1105,7 @@ app.post('/api/backtest/batch', async (req, res) => {
 });
 
 // Short Selling Batch Backtest API endpoint
-app.post('/api/backtest/short-batch', async (req, res) => {
+app.post('/api/backtest/short-batch', validation.validateBatchBacktestParams, async (req, res) => {
   try {
     console.log('📊 Received short selling batch backtest request');
 
@@ -1169,7 +1194,7 @@ app.post('/api/backtest/beta-parameters', async (req, res) => {
         beta: result.beta,
         coefficient: result.coefficient,
         betaFactor: result.betaFactor,
-        baseMultipliers: result.baseMultipliers,
+        userParameters: result.userParameters,
         adjustedParameters: {
           // Convert to percentages for frontend
           profitRequirement: result.adjustedParameters.profitRequirement * 100,
