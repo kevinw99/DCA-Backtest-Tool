@@ -1,7 +1,14 @@
 /**
  * Shared formatting utilities for consistent display across components
  * Eliminates code duplication of formatter functions
+ *
+ * IMPORTANT: Percentage Conventions
+ * - API responses use DECIMALS (0.05 = 5%, 1.0 = 100%, 2.24 = 224%)
+ * - Display functions convert decimals to percentages for users
+ * - This prevents double conversion bugs
  */
+
+import { toPercent } from './percentageUtils';
 
 /**
  * Format currency values consistently across all components
@@ -20,9 +27,10 @@ export const formatCurrency = (value) => {
 
 /**
  * Format percentage values with optional sign
- * @param {number} value - The numeric percentage value
+ * @param {number} value - The numeric percentage value (already as percentage, e.g., 5 for 5%)
  * @param {boolean} showSign - Whether to show + sign for positive values (default: true)
  * @returns {string} Formatted percentage string (e.g., "+12.34%")
+ * @deprecated Use formatParameterPercent or formatPerformancePercent for clarity
  */
 export const formatPercent = (value, showSign = true) => {
   if (value === undefined || value === null) return 'N/A';
