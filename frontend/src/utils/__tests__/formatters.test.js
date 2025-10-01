@@ -96,9 +96,10 @@ describe('formatParameterPercent', () => {
 });
 
 describe('formatPerformancePercent', () => {
-  it('should format percentages without sign', () => {
-    expect(formatPerformancePercent(12.34)).toBe('12.34%');
-    expect(formatPerformancePercent(-5.67)).toBe('-5.67%');
+  it('should format decimal values as percentages (e.g., 2.24 -> 224%)', () => {
+    expect(formatPerformancePercent(2.24)).toBe('224.00%');
+    expect(formatPerformancePercent(0.1234)).toBe('12.34%');
+    expect(formatPerformancePercent(-0.0567)).toBe('-5.67%');
   });
 
   it('should handle null and undefined', () => {
@@ -107,7 +108,8 @@ describe('formatPerformancePercent', () => {
   });
 
   it('should always show 2 decimal places', () => {
-    expect(formatPerformancePercent(5)).toBe('5.00%');
+    expect(formatPerformancePercent(0.05)).toBe('5.00%');
+    expect(formatPerformancePercent(1.0)).toBe('100.00%');
   });
 });
 

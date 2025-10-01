@@ -44,12 +44,12 @@ export const formatParameterPercent = (value) => {
 
 /**
  * Format performance percentages without sign for absolute values
- * @param {number} value - The numeric percentage value
+ * @param {number} value - The numeric percentage value (as decimal, e.g., 2.24 for 224%)
  * @returns {string} Formatted percentage string without sign
  */
 export const formatPerformancePercent = (value) => {
   if (value === undefined || value === null) return 'N/A';
-  return `${value.toFixed(2)}%`;
+  return `${(value * 100).toFixed(2)}%`;
 };
 
 /**
