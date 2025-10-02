@@ -1,5 +1,8 @@
 const { runDCABacktest } = require('./dcaBacktestService');
 const { generateBatchSummary } = require('./shared/batchUtilities');
+const sessionManager = require('../utils/sessionManager');
+const sseHelpers = require('../utils/sseHelpers');
+const database = require('../database');
 
 /**
  * Batch Backtest Service
@@ -216,7 +219,7 @@ function calculateBuyAndHoldPerformance(priceData, totalCapital, startDate, endD
  * @param {Function} progressCallback - Optional progress callback function
  * @returns {Promise<Object>} Batch backtest results
  */
-async function runBatchBacktest(options, progressCallback = null) {
+async function runBatchBacktest(options, progressCallback = null, sessionId = null) {
   const {
     symbols,
     parameterRanges,
@@ -236,21 +239,175 @@ async function runBatchBacktest(options, progressCallback = null) {
 
   console.log('🔍 DEBUG: Merged symbols into parameterRanges:', mergedParameterRanges.symbols);
 
-  // Generate all parameter combinations
+  // Pre-validate stocks before generating combinations
+  const validSymbols = [];
+  const invalidSymbols = [];
+  const stockValidationErrors = [];
+
+  console.log('🔍 Pre-validating stocks...');
+  for (const symbol of mergedParameterRanges.symbols) {
+    try {
+      let stock = await database.getStock(symbol);
+
+      // If stock doesn't exist, create it and fetch data
+      if (!stock) {
+        console.log(`📡 Fetching data for new symbol: ${symbol}`);
+        const stockDataService = require('./stockDataService');
+        const stockId = await database.createStock(symbol);
+        await stockDataService.updateStockData(stockId, symbol, {
+          updatePrices: true,
+          updateFundamentals: true,
+          updateCorporateActions: true
+        });
+        await database.updateStockTimestamp(stockId);
+        stock = await database.getStock(symbol);
+      }
+
+      // Verify we have price data - if not, fetch it
+      let latestPriceDate = await database.getLastPriceDate(stock.id);
+      if (!latestPriceDate) {
+        console.log(`📡 Stock ${symbol} exists but has no price data. Fetching...`);
+        const stockDataService = require('./stockDataService');
+        await stockDataService.updateStockData(stock.id, symbol, {
+          updatePrices: true,
+          updateFundamentals: true,
+          updateCorporateActions: true
+        });
+        await database.updateStockTimestamp(stock.id);
+
+        // Verify again after fetch
+        latestPriceDate = await database.getLastPriceDate(stock.id);
+        if (!latestPriceDate) {
+          throw new Error(`No price data available for ${symbol}`);
+        }
+      }
+
+      validSymbols.push(symbol);
+      console.log(`✅ ${symbol} validated (data until ${latestPriceDate})`);
+    } catch (error) {
+      invalidSymbols.push(symbol);
+      stockValidationErrors.push({
+        symbol,
+        error: error.message
+      });
+      console.error(`❌ ${symbol} validation failed: ${error.message}`);
+    }
+  }
+
+  console.log(`\n📊 Stock Validation Summary:`);
+  console.log(`   Valid symbols: ${validSymbols.length} - ${validSymbols.join(', ')}`);
+  if (invalidSymbols.length > 0) {
+    console.log(`   Invalid symbols: ${invalidSymbols.length} - ${invalidSymbols.join(', ')}`);
+  }
+
+  // Update parameterRanges to only include valid symbols
+  mergedParameterRanges.symbols = validSymbols;
+
+  // If no valid symbols, send error event and return
+  if (validSymbols.length === 0) {
+    const errorResult = {
+      results: [],
+      errors: stockValidationErrors,
+      invalidSymbols,
+      validSymbols: [],
+      stockValidationErrors,
+      totalCombinations: 0,
+      successfulRuns: 0,
+      failedRuns: stockValidationErrors.length,
+      sortedBy: sortBy,
+      message: 'All symbols failed validation. No backtests were run.'
+    };
+
+    // Send completion event with error result if using SSE
+    if (sessionId) {
+      const connection = sessionManager.getConnection(sessionId);
+      if (connection) {
+        sseHelpers.sendSSE(connection, 'complete', {
+          sessionId,
+          data: errorResult,
+          executionTimeMs: 0
+        });
+        sseHelpers.closeSSE(connection);
+        sessionManager.removeConnection(sessionId);
+      }
+      sessionManager.completeSession(sessionId, errorResult);
+    }
+
+    return errorResult;
+  }
+
+  // Generate all parameter combinations (only for valid symbols)
   const combinations = await generateParameterCombinations(mergedParameterRanges);
-  console.log(`📊 Generated ${combinations.length} parameter combinations`);
+  console.log(`📊 Generated ${combinations.length} parameter combinations for ${validSymbols.length} valid symbols`);
 
   const results = [];
-  const errors = [];
+  const errors = [...stockValidationErrors]; // Include stock validation errors in final error report
+
+  // Initialize timing for progress calculation
+  const startTime = Date.now();
+  let bestResult = null;
+  let lastProgressEmit = 0;
+  const PROGRESS_THROTTLE_MS = 1500; // Emit progress at most every 1.5 seconds
 
   // Run backtest for each combination
   for (let i = 0; i < combinations.length; i++) {
     const params = combinations[i];
 
     try {
+      // Calculate progress metrics
+      const now = Date.now();
+      const elapsedTime = now - startTime;
+      const current = i + 1;
+      const percentage = sseHelpers.calculatePercentage(current, combinations.length);
+      const avgTimePerTest = sseHelpers.calculateAvgTime(elapsedTime, current);
+      const estimatedTimeRemaining = sseHelpers.calculateETA(current, combinations.length, elapsedTime);
+
+      // Emit SSE progress event (throttled)
+      const shouldEmitProgress = sessionId && (now - lastProgressEmit > PROGRESS_THROTTLE_MS || i === 0 || i === combinations.length - 1);
+
+      if (shouldEmitProgress) {
+        const connection = sessionManager.getConnection(sessionId);
+        if (connection) {
+          sseHelpers.sendSSE(connection, 'progress', {
+            sessionId,
+            current,
+            total: combinations.length,
+            percentage,
+            currentSymbol: params.symbol,
+            currentBeta: params.beta,
+            currentCoefficient: params.coefficient,
+            estimatedTimeRemaining,
+            elapsedTime: Math.round(elapsedTime / 1000), // Convert to seconds
+            avgTimePerTest,
+            successfulTests: results.length,
+            failedTests: errors.length,
+            bestSoFar: bestResult ? {
+              symbol: bestResult.parameters?.symbol,
+              annualizedReturn: bestResult.summary?.annualizedReturn || 0,
+              totalReturn: bestResult.summary?.totalReturn || 0
+            } : null
+          });
+
+          lastProgressEmit = now;
+
+          // Update session progress
+          sessionManager.updateProgress(sessionId, {
+            current,
+            total: combinations.length,
+            percentage,
+            elapsedTime,
+            estimatedTimeRemaining,
+            avgTimePerTest,
+            successfulTests: results.length,
+            failedTests: errors.length
+          });
+        }
+      }
+
+      // Legacy progress callback support
       if (progressCallback) {
         progressCallback({
-          current: i + 1,
+          current,
           total: combinations.length,
           currentParams: params,
           symbol: params.symbol
@@ -260,7 +417,7 @@ async function runBatchBacktest(options, progressCallback = null) {
       const betaInfo = params.enableBetaScaling ?
         ` Beta: ${params.beta}, Coeff: ${params.coefficient}, β-factor: ${params.betaFactor?.toFixed(2) || 'N/A'}` :
         '';
-      console.log(`🔄 Running backtest ${i + 1}/${combinations.length}: ${params.symbol}${betaInfo} - Profit: ${(params.profitRequirement).toFixed(1)}%, Grid: ${(params.gridIntervalPercent).toFixed(1)}%`);
+      console.log(`🔄 Running backtest ${current}/${combinations.length}: ${params.symbol}${betaInfo} - Profit: ${(params.profitRequirement).toFixed(1)}%, Grid: ${(params.gridIntervalPercent).toFixed(1)}%`);
 
       const result = await runDCABacktest({
         ...params,
@@ -368,6 +525,11 @@ async function runBatchBacktest(options, progressCallback = null) {
 
       results.push(result);
 
+      // Track best result for progress updates
+      if (!bestResult || (result.summary?.annualizedReturn || 0) > (bestResult.summary?.annualizedReturn || 0)) {
+        bestResult = result;
+      }
+
     } catch (error) {
       console.error(`❌ Error in backtest ${i + 1} (${params.symbol}):`, error.message);
       errors.push({
@@ -401,15 +563,41 @@ async function runBatchBacktest(options, progressCallback = null) {
   // Generate summary statistics
   const summary = generateBatchSummary(results, parameterRanges);
 
-  return {
+  const finalResults = {
     summary,
     results,
     errors,
     totalCombinations: combinations.length,
     successfulRuns: results.length,
     failedRuns: errors.length,
-    sortedBy: sortBy
+    sortedBy: sortBy,
+    validSymbols: validSymbols,
+    invalidSymbols: invalidSymbols.length > 0 ? invalidSymbols : undefined,
+    stockValidationErrors: stockValidationErrors.length > 0 ? stockValidationErrors : undefined
   };
+
+  // Emit completion event via SSE
+  if (sessionId) {
+    const connection = sessionManager.getConnection(sessionId);
+    if (connection) {
+      sseHelpers.sendSSE(connection, 'complete', {
+        sessionId,
+        data: finalResults,
+        executionTimeMs: Date.now() - startTime
+      });
+
+      // Close the SSE connection after a brief delay to ensure message is received
+      setTimeout(() => {
+        sseHelpers.closeSSE(connection);
+        sessionManager.removeConnection(sessionId);
+      }, 1000);
+    }
+
+    // Mark session as completed
+    sessionManager.completeSession(sessionId, finalResults);
+  }
+
+  return finalResults;
 }
 
 module.exports = {

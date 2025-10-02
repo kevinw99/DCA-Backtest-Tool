@@ -1,11 +1,11 @@
 {
-  "symbol": "TDOC",
+  "symbol": "APP",
   "startDate": "2021-09-01",
   "endDate": "2025-10-02",
   "lotSizeUsd": 10000,
   "maxLots": 10,
   "maxLotsToSell": 1,
-  "gridIntervalPercent": 0.1,
+  "gridIntervalPercent": 0.05,
   "profitRequirement": 0.1,
   "trailingBuyActivationPercent": 0.1,
   "trailingBuyReboundPercent": 0,

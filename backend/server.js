@@ -4,6 +4,8 @@ const cors = require('cors');
 const database = require('./database');
 const stockDataService = require('./services/stockDataService');
 const validation = require('./middleware/validation');
+const sessionManager = require('./utils/sessionManager');
+const sseHelpers = require('./utils/sseHelpers');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -75,7 +77,7 @@ app.get('/api/stocks/:symbol', validation.validateSymbolParam, validation.valida
     if (req.query.force) console.log(`   🔄 FORCE REFRESH requested`);
 
     // Validate requested date range for backtesting
-    let dataValidationErrors = [];
+    const dataValidationErrors = [];
 
     if (startDate && endDate) {
       const start = new Date(startDate);
@@ -481,7 +483,7 @@ app.get('/api/stocks', async (req, res) => {
     
     // Get all stocks from database, optionally filtered by search term
     let sql = 'SELECT symbol, last_updated FROM stocks';
-    let params = [];
+    const params = [];
     
     if (search) {
       sql += ' WHERE symbol LIKE ? ';
@@ -1057,6 +1059,56 @@ app.post('/api/backtest/short-dca', validation.validateShortDCABacktestParams, a
   }
 });
 
+// SSE Streaming endpoint for batch backtest progress
+app.get('/api/backtest/batch/stream', (req, res) => {
+  const { sessionId } = req.query;
+
+  if (!sessionId) {
+    return res.status(400).json({
+      success: false,
+      error: 'sessionId query parameter is required'
+    });
+  }
+
+  const session = sessionManager.getSession(sessionId);
+  if (!session) {
+    return res.status(404).json({
+      success: false,
+      error: 'Session not found'
+    });
+  }
+
+  console.log(`🔌 SSE connection established for session ${sessionId}`);
+
+  // Initialize SSE connection
+  sseHelpers.initSSE(res);
+
+  // Register this connection with the session
+  sessionManager.registerConnection(sessionId, res);
+
+  // Send initial connection event
+  sseHelpers.sendSSE(res, 'connected', {
+    sessionId,
+    message: 'Connected to progress stream'
+  });
+
+  // Set up keep-alive heartbeat (every 30 seconds)
+  const keepAliveInterval = setInterval(() => {
+    if (res.destroyed || res.closed) {
+      clearInterval(keepAliveInterval);
+      return;
+    }
+    sseHelpers.sendKeepAlive(res);
+  }, 30000);
+
+  // Handle client disconnect
+  req.on('close', () => {
+    console.log(`🔌 SSE connection closed for session ${sessionId}`);
+    clearInterval(keepAliveInterval);
+    sessionManager.removeConnection(sessionId);
+  });
+});
+
 app.post('/api/backtest/batch', validation.validateBatchBacktestParams, async (req, res) => {
   try {
     console.log('📊 Received batch backtest request');
@@ -1064,6 +1116,7 @@ app.post('/api/backtest/batch', validation.validateBatchBacktestParams, async (r
     const { runBatchBacktest } = require('./services/batchBacktestService');
 
     const options = req.body;
+    const { async: isAsync = false } = req.query; // Support async mode via query param
 
     // Validate required fields
     if (!options.parameterRanges) {
@@ -1078,17 +1131,43 @@ app.post('/api/backtest/batch', validation.validateBatchBacktestParams, async (r
       options.parameterRanges.symbols = options.symbols;
     }
 
-    // Set up progress tracking for long-running batch tests
-    let progressData = null;
-    const progressCallback = (progress) => {
-      progressData = progress;
-      // Could implement WebSocket or Server-Sent Events here for real-time updates
-    };
+    // ASYNC MODE: Create session and run backtest in background
+    if (isAsync || isAsync === 'true') {
+      const sessionId = sessionManager.createSession();
+      console.log(`🔄 Starting async batch backtest with session ${sessionId}`);
 
-    console.log('🚀 Starting batch backtest with options:', options);
+      // Return session ID immediately
+      res.json({
+        success: true,
+        sessionId,
+        message: 'Batch backtest started. Connect to /api/backtest/batch/stream for progress updates.'
+      });
+
+      // Run backtest asynchronously (don't await)
+      runBatchBacktest(options, null, sessionId).catch(error => {
+        console.error('Async batch backtest error:', error);
+        sessionManager.errorSession(sessionId, error.message);
+
+        // Try to send error event via SSE if connection exists
+        const connection = sessionManager.getConnection(sessionId);
+        if (connection) {
+          sseHelpers.sendSSE(connection, 'error', {
+            sessionId,
+            error: error.message
+          });
+          sseHelpers.closeSSE(connection);
+          sessionManager.removeConnection(sessionId);
+        }
+      });
+
+      return;
+    }
+
+    // SYNC MODE (backward compatible): Wait for results
+    console.log('🚀 Starting synchronous batch backtest with options:', options);
 
     const startTime = Date.now();
-    const results = await runBatchBacktest(options, progressCallback);
+    const results = await runBatchBacktest(options, null, null); // No progress callback or session
     const executionTime = Date.now() - startTime;
 
     console.log(`✅ Batch backtest completed in ${(executionTime / 1000).toFixed(1)}s`);

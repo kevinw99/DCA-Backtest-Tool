@@ -159,11 +159,22 @@ const BatchResults = ({ data }) => {
   }
 
   const filteredResults = selectedStock === 'all' && selectedBeta === 'all'
-    ? getTop5PerStock(filteredByFilters)
+    ? getTop2UniquePerStock(filteredByFilters)
     : filteredByFilters.slice(0, 5);
 
-  // Helper function to get top 5 results per stock
-  function getTop5PerStock(results) {
+  // Helper function to create a unique key for parameter configuration
+  function getParameterKey(params) {
+    const isShort = params.strategyMode === 'short' || params.hasOwnProperty('maxShorts');
+
+    if (isShort) {
+      return `${params.profitRequirement}_${params.gridIntervalPercent}_${params.trailingShortActivationPercent}_${params.trailingShortPullbackPercent}_${params.trailingCoverActivationPercent}_${params.trailingCoverReboundPercent}`;
+    } else {
+      return `${params.profitRequirement}_${params.gridIntervalPercent}_${params.trailingBuyActivationPercent}_${params.trailingBuyReboundPercent}_${params.trailingSellActivationPercent}_${params.trailingSellPullbackPercent}`;
+    }
+  }
+
+  // Helper function to get top 2 unique results per stock
+  function getTop2UniquePerStock(results) {
     const resultsByStock = {};
 
     // Group results by stock symbol
@@ -175,15 +186,33 @@ const BatchResults = ({ data }) => {
       resultsByStock[symbol].push(result);
     });
 
-    // Get top 5 for each stock and combine
-    const top5Results = [];
+    // Get top 2 unique configurations for each stock and combine
+    const topUniqueResults = [];
     Object.keys(resultsByStock).forEach(symbol => {
-      const stockResults = resultsByStock[symbol].slice(0, 5); // Top 5 for this stock
-      top5Results.push(...stockResults);
+      const stockResults = resultsByStock[symbol];
+      const seenConfigs = new Set();
+      const uniqueResults = [];
+
+      // Iterate through results and add only unique configurations
+      for (const result of stockResults) {
+        const configKey = getParameterKey(result.parameters);
+
+        if (!seenConfigs.has(configKey)) {
+          seenConfigs.add(configKey);
+          uniqueResults.push(result);
+
+          // Stop after finding 2 unique configurations
+          if (uniqueResults.length >= 2) {
+            break;
+          }
+        }
+      }
+
+      topUniqueResults.push(...uniqueResults);
     });
 
     // Sort by overall performance to maintain ranking
-    return top5Results.sort((a, b) => {
+    return topUniqueResults.sort((a, b) => {
       const aValue = a.summary?.annualizedReturn || 0;
       const bValue = b.summary?.annualizedReturn || 0;
       return bValue - aValue;
@@ -203,6 +232,23 @@ const BatchResults = ({ data }) => {
           <span>⏱️ {(executionTimeMs / 1000).toFixed(1)}s</span>
         </div>
       </div>
+
+      {/* Stock Validation Errors */}
+      {data.invalidSymbols && data.invalidSymbols.length > 0 && (
+        <div className="error-banner" style={{ marginBottom: '1rem' }}>
+          <strong>⚠️ Stock Validation Errors:</strong>
+          <div style={{ marginTop: '0.5rem' }}>
+            {data.stockValidationErrors.map((err, idx) => (
+              <div key={idx} style={{ marginLeft: '1rem', fontSize: '0.9rem' }}>
+                • <strong>{err.symbol}</strong>: {err.error}
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop: '0.5rem', fontSize: '0.9rem' }}>
+            Valid symbols tested: {data.validSymbols.join(', ')}
+          </div>
+        </div>
+      )}
 
       {/* Overall Summary */}
       <div className="summary-section">
@@ -354,13 +400,13 @@ const BatchResults = ({ data }) => {
                 value={selectedStock}
                 onChange={(e) => setSelectedStock(e.target.value)}
               >
-                <option value="all">All Stocks (top 5 per stock, {filteredResults.length} total results)</option>
+                <option value="all">All Stocks (top 2 unique configs per stock, {filteredResults.length} total results)</option>
                 {stocks.map(stock => {
                   const stockResultsCount = results.filter(r => r.parameters.symbol === stock).length;
-                  const displayCount = Math.min(stockResultsCount, 5);
+                  const displayCount = Math.min(stockResultsCount, 2);
                   return (
                     <option key={stock} value={stock}>
-                      {stock} (top {displayCount} of {stockResultsCount} results)
+                      {stock} (top {displayCount} unique of {stockResultsCount} results)
                     </option>
                   );
                 })}

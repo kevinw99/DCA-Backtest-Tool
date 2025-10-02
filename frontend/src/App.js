@@ -4,7 +4,9 @@ import './App.css';
 import DCABacktestForm from './components/DCABacktestForm';
 import BacktestResults from './components/BacktestResults';
 import BatchResults from './components/BatchResults';
+import BatchProgressBanner from './components/BatchProgressBanner';
 import URLParameterManager from './utils/URLParameterManager';
+import useSSEProgress from './hooks/useSSEProgress';
 import { Play, TrendingUp, Settings, Zap } from 'lucide-react';
 
 function AppContent() {
@@ -20,6 +22,28 @@ function AppContent() {
   const [testMode, setTestMode] = useState('single'); // 'single' or 'batch'
   const [urlParams, setUrlParams] = useState(null); // Store URL parameters
   const [autoExecuted, setAutoExecuted] = useState(false); // Prevent infinite execution
+  const [batchSessionId, setBatchSessionId] = useState(null); // SSE session tracking
+
+  // Use SSE progress hook for batch operations
+  const { progress, isConnected, error: sseError, isComplete, results } = useSSEProgress(batchSessionId);
+
+  // Handle SSE completion
+  useEffect(() => {
+    if (isComplete && results) {
+      console.log('✅ Batch backtest completed via SSE', results);
+      setBatchData(results);
+      setLoading(false);
+      setBatchSessionId(null); // Clear session ID
+      setActiveTab('results');
+    }
+
+    if (sseError) {
+      console.error('❌ SSE error:', sseError);
+      setError(sseError);
+      setLoading(false);
+      setBatchSessionId(null); // Clear session ID
+    }
+  }, [isComplete, results, sseError]);
 
   // Handle URL parameters and route changes
   useEffect(() => {
@@ -104,8 +128,8 @@ function AppContent() {
         // Determine the batch endpoint based on strategy mode
         const strategyMode = parameters.strategyMode || parameters.parameterRanges?.strategyMode;
         const batchEndpoint = strategyMode === 'short'
-          ? 'http://localhost:3001/api/backtest/short-batch'
-          : 'http://localhost:3001/api/backtest/batch';
+          ? 'http://localhost:3001/api/backtest/short-batch?async=true'
+          : 'http://localhost:3001/api/backtest/batch?async=true';
 
         console.log('=== DEBUG: Auto Batch API Call Info ===');
         console.log('Strategy Mode:', strategyMode);
@@ -191,6 +215,9 @@ function AppContent() {
     const mode = isBatchMode ? 'batch' : 'single';
     URLParameterManager.navigateToResults(parameters, mode);
 
+    // Set active tab to show progress/results
+    setActiveTab(isBatchMode ? 'results' : 'chart');
+
     // Clear previous results
     if (isBatchMode) {
       setBatchData(null);
@@ -208,15 +235,16 @@ function AppContent() {
         // For short batch, strategyMode is at top level; for long batch, check parameterRanges
         const strategyMode = parameters.strategyMode || parameters.parameterRanges?.strategyMode;
         const batchEndpoint = strategyMode === 'short'
-          ? 'http://localhost:3001/api/backtest/short-batch'
-          : 'http://localhost:3001/api/backtest/batch';
+          ? 'http://localhost:3001/api/backtest/short-batch?async=true'
+          : 'http://localhost:3001/api/backtest/batch?async=true';
 
         console.log('=== DEBUG: Batch API Call Info ===');
         console.log('Strategy Mode:', strategyMode);
         console.log('Batch Endpoint:', batchEndpoint);
         console.log('===================================');
 
-        const batchResponse = await fetch(batchEndpoint, {
+        // Use async mode for SSE progress tracking (add ?async=true query param)
+        const batchResponse = await fetch(`${batchEndpoint}?async=true`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -229,8 +257,19 @@ function AppContent() {
         }
 
         const batchResult = await batchResponse.json();
-        setBatchData({ ...batchResult.data, executionTimeMs: batchResult.executionTimeMs });
-        setActiveTab('results');
+
+        // Check if we got a sessionId (async mode) or data (sync mode fallback)
+        if (batchResult.sessionId) {
+          console.log('🔄 Batch started in async mode with session:', batchResult.sessionId);
+          setBatchSessionId(batchResult.sessionId);
+          // Keep loading state true - will be cleared when SSE completes
+        } else if (batchResult.data) {
+          // Fallback to sync mode (shouldn't happen with async=true, but handle it)
+          console.log('⚠️ Received synchronous response instead of sessionId');
+          setBatchData({ ...batchResult.data, executionTimeMs: batchResult.executionTimeMs });
+          setLoading(false);
+          setActiveTab('results');
+        }
       } else {
         // Determine the endpoint based on strategy mode
         const endpoint = parameters.strategyMode === 'short'
@@ -334,10 +373,10 @@ function AppContent() {
           </div>
         )}
 
-        {loading && (
+        {loading && testMode !== 'batch' && (
           <div className="loading-banner">
             <div className="loading-spinner"></div>
-            {testMode === 'batch' ? 'Running batch optimization analysis...' : 'Running backtest analysis...'}
+            Running backtest analysis...
           </div>
         )}
 
@@ -359,9 +398,38 @@ function AppContent() {
           </div>
         )}
 
-        {activeTab === 'results' && testMode === 'batch' && batchData && (
+        {activeTab === 'results' && testMode === 'batch' && (
           <div className="tab-content">
-            <BatchResults data={batchData} />
+            {/* Debug: Log rendering conditions */}
+            {console.log('🎨 Batch Results Tab Render:', { activeTab, testMode, loading, batchSessionId, hasBatchData: !!batchData, hasProgress: !!progress, isComplete })}
+
+            {/* Show progress banner if we have a session ID and haven't completed yet */}
+            {batchSessionId && !isComplete && (
+              <BatchProgressBanner
+                progress={progress}
+                error={sseError}
+                isConnected={isConnected}
+              />
+            )}
+
+            {/* Show final results when available */}
+            {batchData && <BatchResults data={batchData} />}
+
+            {/* Show loading state if loading but no session ID yet (initial state) */}
+            {loading && !batchSessionId && !batchData && (
+              <div className="loading-banner">
+                <div className="loading-spinner"></div>
+                Starting batch backtest...
+              </div>
+            )}
+
+            {/* Show waiting message only if not loading, no session, and no results */}
+            {!loading && !batchSessionId && !batchData && (
+              <div className="loading-banner">
+                <div className="loading-spinner"></div>
+                Waiting for batch results...
+              </div>
+            )}
           </div>
         )}
 

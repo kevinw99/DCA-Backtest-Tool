@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/label-has-associated-control */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, DollarSign, TrendingUp, Settings, Info, Zap, Target, ArrowUpDown } from 'lucide-react';
 import BetaControls from './BetaControls';
@@ -1290,6 +1291,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
             </>
           ) : (
             <div className="form-group symbols-selection">
+              {/* eslint-disable-next-line jsx-a11y/label-has-associated-control */}
               <label>Stock Symbols (Select one or more)</label>
               <div className="selection-controls">
                 <button

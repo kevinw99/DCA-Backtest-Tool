@@ -365,9 +365,22 @@ async function runShortDCABacktest(params) {
     }
 
     // 2. Get Combined Price and Technical Indicator Data
-    const pricesWithIndicators = await database.getPricesWithIndicators(stock.id, startDate, endDate);
+    let pricesWithIndicators = await database.getPricesWithIndicators(stock.id, startDate, endDate);
+
+    // If no data found for the exact date range, try with latest available data
     if (pricesWithIndicators.length === 0) {
-      throw new Error(`No price/indicator data found for ${symbol} between ${startDate} and ${endDate}.`);
+      const latestPriceDate = await database.getLastPriceDate(stock.id);
+
+      if (latestPriceDate) {
+        // Adjust end date to latest available data
+        console.warn(`⚠️  No data found until ${endDate} for ${symbol}, using latest available data (${latestPriceDate})`);
+        pricesWithIndicators = await database.getPricesWithIndicators(stock.id, startDate, latestPriceDate);
+      }
+
+      // If still no data, the stock truly has no price data in the database
+      if (pricesWithIndicators.length === 0) {
+        throw new Error(`No price/indicator data found for ${symbol}. The stock may not exist or data fetch failed. Please check the symbol and try again.`);
+      }
     }
 
     if (verbose) {
@@ -378,16 +391,16 @@ async function runShortDCABacktest(params) {
     let shorts = []; // Array of short positions
     let realizedPNL = 0;
     let averageShortCost = 0;
-    let initialPrice = pricesWithIndicators[0].adjusted_close;
-    let transactionLog = [];
+    const initialPrice = pricesWithIndicators[0].adjusted_close;
+    const transactionLog = [];
     let activeStop = null;
-    let dailyPortfolioValues = [];
-    let dailyCapitalDeployed = [];
+    const dailyPortfolioValues = [];
+    const dailyCapitalDeployed = [];
     let stopLossTriggered = false;
 
     // Questionable events monitoring
-    let questionableEvents = [];
-    let dailyTransactionTypes = new Map(); // Track transaction types per date
+    const questionableEvents = [];
+    const dailyTransactionTypes = new Map(); // Track transaction types per date
 
     // Recent Peak/Bottom Tracking System (inverted for short selling)
     let recentPeak = null;  // Highest price since last transaction
@@ -848,7 +861,7 @@ async function runShortDCABacktest(params) {
     };
 
     // Enhanced transaction records for UI
-    let enhancedTransactions = [];
+    const enhancedTransactions = [];
 
     // Main loop through each day's data
     for (let i = 0; i < pricesWithIndicators.length; i++) {

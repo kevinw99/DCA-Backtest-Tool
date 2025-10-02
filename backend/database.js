@@ -216,7 +216,7 @@ class Database {
   async getDailyPrices(stockId, startDate = null, endDate = null) {
     return new Promise((resolve, reject) => {
       let sql = 'SELECT * FROM daily_prices WHERE stock_id = ?';
-      let params = [stockId];
+      const params = [stockId];
 
       if (startDate) {
         sql += ' AND date >= ?';
@@ -275,7 +275,7 @@ class Database {
   async getQuarterlyFundamentals(stockId, startDate = null, endDate = null) {
     return new Promise((resolve, reject) => {
       let sql = 'SELECT * FROM quarterly_fundamentals WHERE stock_id = ?';
-      let params = [stockId];
+      const params = [stockId];
 
       if (startDate) {
         sql += ' AND fiscal_date_ending >= ?';
@@ -344,7 +344,7 @@ class Database {
   async getCorporateActions(stockId, startDate = null, endDate = null) {
     return new Promise((resolve, reject) => {
       let sql = 'SELECT * FROM corporate_actions WHERE stock_id = ?';
-      let params = [stockId];
+      const params = [stockId];
 
       if (startDate) {
         sql += ' AND action_date >= ?';
@@ -493,7 +493,7 @@ class Database {
         WHERE p.stock_id = ?
       `;
 
-      let params = [stockId];
+      const params = [stockId];
 
       // Only add date filters if they are provided
       if (startDate) {
@@ -733,7 +733,7 @@ class Database {
         db.run('BEGIN TRANSACTION');
         
         const tables = ['daily_prices', 'quarterly_fundamentals', 'corporate_actions', 'stocks'];
-        let deletedCounts = {};
+        const deletedCounts = {};
         let completed = 0;
         
         tables.forEach(table => {
