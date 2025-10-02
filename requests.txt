@@ -1,3 +1,85 @@
+I ran a batch with +5000 combination, it takes a while without seeing any update on the UI. Should we provide
+  some progress on UI if it is a long running, please make this a new spec and propose a
+  requirements/designe/tasks, pleae include details like what info , what parameteres to include on the UI update.
+
+
+Let's discuss how to evaluate the effectiveness the trading algo. Over the total trading peirod of 5 years, We have
+ a number of trades, some are profitable,
+some are loss. each has differnt holding time, at various time the capital deployed is differnt.  How to calculate
+the
+overall performance of the
+algo? What could be the metrics?
+
+The key things is the Algo is a multi leg DCA, so each stage the captial deployed is differnt. I only have a max
+capital available  100,000, and each time the algo only deploys 10,000 to buy. If the actual max total capital
+deployed is 50,000, I want to calculate the return based on 50,000, not 100,000. To be even more preise, I want to
+at differnt time period, the capital deployed is differnt, e.g., at the begining, I only have 10,000 deployed, then
+ after 3 months, I have 30,000 deployed, then after 6 months, I have 50,000 deployed. I think the performace is
+ will be different from I used deploy 50k throughout the 6 months, because the 40k is not deployed at the begining,
+  it can be used to invest in other stocks, or in fixed income, so the opportunity cost is different. So I want to
+  calculate the these performance based on the actual capital deployed at differnt time period.
+
+help me crate a CLAUDE.md file to include these instructions
+1. The following actions is what you need to do, in additional to wonderful jobs you already do without these
+additional instructions.
+2. when I report a problem or a bug, other than fixing the problem or bug, you should:
+  a. find out the root cause of the problem or bug, and fix it.
+  b. find out if there are similar problems or bugs in other places, and fix them.
+  c. find out if there are any technical debts in the related code, and refactor the code to remove them.
+  d. find out if there are any related features that can be improved, and improve them.
+  e. update the relevant documentation to reflect the changes you made.
+
+  f. do as much as testing to verify the changes you made, and make sure you do not break anything.
+  for example, for backend, you should test a curl command with appropriate URL parameters to verify the changes you
+  for front end, you should also use curl command to verify the changes you made.
+  g. if it is not clear or you don't have a high confidence of fixing it, try to add debugging log
+  h you can then use combination of of f and g to investigate and fix the problem or bug.It can be iteraitve and
+  take some times, but please make sure you do it thoroughly. The goal is to save me from doing manual testing and
+  report the log back to you. If you can try f and get g, then don't ask me to do it.
+
+3. therefore, you should make a tasks list for each problem or bug, and mark them as done when you complete them.
+4. everytime when you claim you fix a problem, please provide the URL you used to verify the fix, so I can
+  verify it too.
+5. if it can not be verified by URL, then suggest what changes need to make it so it can be verified by URL, or
+other ways that require minimal manual effort from me to verify it
+6 after a big change of fixing similar issues, please pick optimum times to suggest a git commit, so we can stage
+the development and have a good commit history.
+7. consider I allow all permissions, you should try to do as much as possible without asking me for permission.
+8. when I make statment or request, first please validate if I am making any mistake or worng assumption, don't
+assume what I ask is valid. Be critial and faithful to the truth. You are my partner, not a yes man.
+
+I see you have the capability to run parallel tasks, can you use it to speed up the testing and verification
+process automaitically, wihtout me using the command like /rapid-development:experimental:*?
+
+ok lets implement the " Proposed URL Schema Solution:
+
+   " will you using multipel agents/sesssions? I want to see some exeuction track that shows multiple agents,
+  just when I use commands like /rapid-development:experimental:*
+
+pelase add this to CLAUDE.md: when taking actions, first list the steps you will take, and whether parallel
+sessions are needed, and how many sessions are needed. then execute the steps.
+
+make sure the backend server is restarted after you make changes to the backend code.
+
+
+
+Can you do a thorough review of all parameters with beta scaling:
+scaling should be done in front end,
+and the scaled value should be passed to backend, not the original value.
+Make sure all parameters are handled the same way in both single and batch mode.
+
+
+http://localhost:3000/batch?mode=batch&symbols=COST%2CTSLA&profitRequirement=0%2C5%2C10&gridIntervalPercent=10%2C15&trailingBuyActivationPercent=10&trailingBuyReboundPercent=0%2C5&trailingSellActivationPercent=10%2C20&trailingSellPullbackPercent=0%2C5&coefficients=0.5%2C0.25&enableBetaScaling=true
+
+The TDOC backtest should now work - when you run it, the backend will detect there's no price data and
+  automatically fetch it from Yahoo Finance before running the backtest.
+
+
+can you add a reset button to the parameters page, so user can reset all parameters to default value easily?
+
+pleae make max lots to sell also an option, so user can select 1,2,3,4,5 etc. up to max lots.
+
+
 
 Lets implement this consecutive-incremental gird size feature:
 for consecutive buys, the grid size can be incremental, e.g. 10%, 15%, 20% etc.

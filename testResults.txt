@@ -1,6 +1,66 @@
 
+Similar to claude code use command line interface, can we skip the traditional UI, and use command line interface to
+run the DCA algorithm. e.g, if I want to run the DCA algorithm batch, I can use the following command:
+run TSLA batch, focus on parameter profitRequirement, gridIntervalPercent, trailingBuyActivationPercent,
+
+Then the program already knows what is the best paramter for single run so far, and it will select a parameters to
+tweek, and make sure not to produce too many combinations, and only use sensible ones. User does not consider those
+. Just focus on the intent (what) and let AI figure out the how.
+
+even smarter, the program starts with a known best parameter set, and then it will try to tweek one parameter
+depending on the results. e.g.
+http://localhost:3000/backtest?mode=single&symbol=TDOC&startDate=2021-09-01&endDate=2025-10-02&strategyMode=long&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=10&profitRequirement=10&trailingBuyActivationPercent=10&trailingBuyReboundPercent=0&trailingSellActivationPercent=10&trailingSellPullbackPercent=5&source=batch
+it should detect that perhaps the profitRequirement is too hight, so there is no sells to get out of the some of
+the positions to take some short term profits.
+how ask AI to come up with a heuristic way to tweek the parameters based on the results
+AI needs to understand the how each parameter affects the trading behavior,
+So ask AI how it understand the parameters, and how it will tweek them based on the results
+
+.
+
+
+
+claude --allowedTools "Bash(git:*) Bash(curl:*) Edit"  --dangerously-skip-permissions   --permission-mode
+bypassPermissions
+
+--allowedTools, --allowed-tools <tools...>        Comma or space-separated list of tool names to allow (e.g.
+                                                    "Bash(git:*) Edit")
+--permission-mode <mode>                          Permission mode to use for the session (choices:
+                                                    "acceptEdits", "bypassPermissions", "default", "plan")
+   --dangerously-skip-permissions                    Bypass all permission checks. Recommended only for sandboxes
+
+Since I make request on a ad-hoc basis, there seem to be quick solutino that incur technical debts. I need you to
+thoroughly review existing code base to to see if there is any technical debt, and refactor the code base to remove
+ duplication, and improve the code quality. make a new spec on how you can review the code base, and how to refactor it.
+
+\ /rapid-development:experimental:create-base-prp-parallel Since I make request on a ad-hoc basis,
+   there seem to be quick solutino that incur technical debts. I need you to
+   thoroughly review existing code base to to see if there is any technical debt, and refactor the
+   code base to remove
+    duplication, and improve the code quality.
+
+1. let's set the "End Date" in the parameter default to use the latest date. User can still change it. This
+requires fetching the latest date from the data source, please just request the missing quote, and keep older quote
+ in the db, otherwise any data outside the 5 years window will be lost if you make a full refresh, correct?
+ 2.  what is
+the current
+cache duration?
+,
+
+
 1. TSLA
-http://localhost:3000/backtest?mode=single&symbol=TSLA&startDate=2021-09-01&endDate=2025-09-01&strategyMode=long&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=10&profitRequirement=10&trailingBuyActivationPercent=10&trailingBuyReboundPercent=0&trailingSellActivationPercent=10&trailingSellPullbackPercent=0&beta=1&coefficient=1&enableBetaScaling=false&source=batch
+A
+http://localhost:3000/backtest?mode=single&symbol=TSLA&startDate=2021-09-01&endDate=2025-09-01&strategyMode=long&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=10&profitRequirement=10&trailingBuyActivationPercent=10&trailingBuyReboundPercent=0&trailingSellActivationPercent=10&trailingSellPullbackPercent=0&beta=1&coefficient=1&enableBetaScaling=false&source=manual
+B
+http://localhost:3000/backtest?mode=single&symbol=TSLA&startDate=2021-09-01&endDate=2025-09-01&strategyMode=long
+&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=10&profitRequirement=10
+&trailingBuyActivationPercent=10&trailingBuyReboundPercent=0&trailingSellActivationPercent=10
+&trailingSellPullbackPercent=0&beta=1&coefficient=1&enableBetaScaling=true&source=manual
+
+does it work?
+http://localhost:3000/backtest?mode=single&symbol=TSLA&startDate=2021-09-01&endDate=2025-09-01&strategyMode=long&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=10&profitRequirement=10&trailingBuyActivationPercent=10&trailingBuyReboundPercent=0&trailingSellActivationPercent=20&trailingSellPullbackPercent=10&beta=2.065&coefficient=0.25&enableBetaScaling=true&source=manual
+
+
 
 Actions	Rank	Stock	Beta	Coeff	β-Factor	Total Return	Annual Return	Total Trades	Win Rate	Avg Profit/Trade	Max Drawdown	Capital Util.	Profit Req.	Grid Int.	Buy Act.	Buy Rebound	Sell Act.	Sell Pullback
 📊 Run	1	TSLA	1.00	1.00	1.00	223.70%	35.56%	25	100.00%	$3,748.56	28.45%	0.00%	10.00%	10.00%	10.00%	0.00%	10.00%	0.00%
@@ -28,3 +88,10 @@ All Coefficients (4 results)
 Actions	Rank	Stock	Beta	Coeff	β-Factor	Total Return	Annual Return	Total Trades	Win Rate	Avg Profit/Trade	Max Drawdown	Capital Util.	Profit Req.	Grid Int.	Buy Act.	Buy Rebound	Sell Act.	Sell Pullback
 📊 Run	1	TSLA	1.00	1.00	1.00	137.29%	29.27%	15	100.00%	$2,710.61	39.49%	0.00%	0.00%	10.00%	5.00%	0.00%	0.00%	5.00%
  Coeff = 1.0, but I only selected 0.25 and 0.5!
+
+2. test real case: for TEM, FIGR etc
+get the latest quote
+output pending order, current price, current lots held
+how to save various lot price, or is it only the average matter?
+
+when to exit: when it is no long volatile, or it is in a down trend,
