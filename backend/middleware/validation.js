@@ -189,22 +189,25 @@ function validateShortDCABacktestParams(req, res, next) {
 
 /**
  * Validate batch backtest parameters
+ * Accepts symbols either at top level OR inside parameterRanges
  */
 function validateBatchBacktestParams(req, res, next) {
   try {
-    const { symbols, parameterRanges } = req.body;
-
-    // Validate symbols array
-    if (!symbols || !Array.isArray(symbols) || symbols.length === 0) {
-      throw new Error('Invalid symbols: must be a non-empty array');
-    }
-
-    symbols.forEach(symbol => validateSymbol(symbol));
+    const { symbols: topLevelSymbols, parameterRanges } = req.body;
 
     // Validate parameter ranges exist
     if (!parameterRanges || typeof parameterRanges !== 'object') {
       throw new Error('Invalid parameterRanges: must be an object');
     }
+
+    // Accept symbols from either top level or inside parameterRanges
+    const symbols = topLevelSymbols || parameterRanges.symbols;
+
+    if (!symbols || !Array.isArray(symbols) || symbols.length === 0) {
+      throw new Error('Invalid symbols: must be a non-empty array (either at top level or inside parameterRanges)');
+    }
+
+    symbols.forEach(symbol => validateSymbol(symbol));
 
     // Validate date range if provided
     if (parameterRanges.startDate && parameterRanges.endDate) {

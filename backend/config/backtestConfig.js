@@ -27,7 +27,12 @@ class BacktestConfig {
   }
 
   getDefaults() {
-    return { ...this.defaults };
+    // Always return today's date as endDate to keep it current
+    const today = new Date().toISOString().split('T')[0];
+    return {
+      ...this.defaults,
+      endDate: today  // Override with today's date
+    };
   }
 
   saveDefaults(newDefaults) {

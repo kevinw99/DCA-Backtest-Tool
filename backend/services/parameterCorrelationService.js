@@ -47,25 +47,35 @@ class ParameterCorrelationService {
     // Calculate beta_factor = beta * coefficient
     const betaFactor = beta * coefficient;
 
-    // Default base multipliers (as specified in requirements)
-    const baseMultipliers = {
-      profitRequirementMultiplier: 0.05,
-      gridIntervalMultiplier: 0.1,
-      trailingBuyActivationMultiplier: 0.1,
-      trailingBuyReboundMultiplier: 0.05,
-      trailingSellActivationMultiplier: 0.2,
-      trailingSellPullbackMultiplier: 0.1,
-      ...baseParameters
+    // Default base parameters (used only if no user parameters provided)
+    const defaultBaseParameters = {
+      profitRequirement: 0.05,
+      gridIntervalPercent: 0.1,
+      trailingBuyActivationPercent: 0.1,
+      trailingBuyReboundPercent: 0.05,
+      trailingSellActivationPercent: 0.2,
+      trailingSellPullbackPercent: 0.1
     };
 
-    // Calculate parameters using beta_factor instead of beta directly
+    // Use provided user parameters, or fall back to defaults
+    const userParameters = {
+      profitRequirement: baseParameters.profitRequirement !== undefined ? baseParameters.profitRequirement : defaultBaseParameters.profitRequirement,
+      gridIntervalPercent: baseParameters.gridIntervalPercent !== undefined ? baseParameters.gridIntervalPercent : defaultBaseParameters.gridIntervalPercent,
+      trailingBuyActivationPercent: baseParameters.trailingBuyActivationPercent !== undefined ? baseParameters.trailingBuyActivationPercent : defaultBaseParameters.trailingBuyActivationPercent,
+      trailingBuyReboundPercent: baseParameters.trailingBuyReboundPercent !== undefined ? baseParameters.trailingBuyReboundPercent : defaultBaseParameters.trailingBuyReboundPercent,
+      trailingSellActivationPercent: baseParameters.trailingSellActivationPercent !== undefined ? baseParameters.trailingSellActivationPercent : defaultBaseParameters.trailingSellActivationPercent,
+      trailingSellPullbackPercent: baseParameters.trailingSellPullbackPercent !== undefined ? baseParameters.trailingSellPullbackPercent : defaultBaseParameters.trailingSellPullbackPercent
+    };
+
+    // Scale the user's actual parameters by beta_factor
+    // IMPORTANT: Zero parameters must remain zero (no scaling applied)
     const adjustedParameters = {
-      profitRequirement: baseMultipliers.profitRequirementMultiplier * betaFactor,
-      gridIntervalPercent: baseMultipliers.gridIntervalMultiplier * betaFactor,
-      trailingBuyActivationPercent: baseMultipliers.trailingBuyActivationMultiplier * betaFactor,
-      trailingBuyReboundPercent: baseMultipliers.trailingBuyReboundMultiplier * betaFactor,
-      trailingSellActivationPercent: baseMultipliers.trailingSellActivationMultiplier * betaFactor,
-      trailingSellPullbackPercent: baseMultipliers.trailingSellPullbackMultiplier * betaFactor
+      profitRequirement: userParameters.profitRequirement === 0 ? 0 : userParameters.profitRequirement * betaFactor,
+      gridIntervalPercent: userParameters.gridIntervalPercent === 0 ? 0 : userParameters.gridIntervalPercent * betaFactor,
+      trailingBuyActivationPercent: userParameters.trailingBuyActivationPercent === 0 ? 0 : userParameters.trailingBuyActivationPercent * betaFactor,
+      trailingBuyReboundPercent: userParameters.trailingBuyReboundPercent === 0 ? 0 : userParameters.trailingBuyReboundPercent * betaFactor,
+      trailingSellActivationPercent: userParameters.trailingSellActivationPercent === 0 ? 0 : userParameters.trailingSellActivationPercent * betaFactor,
+      trailingSellPullbackPercent: userParameters.trailingSellPullbackPercent === 0 ? 0 : userParameters.trailingSellPullbackPercent * betaFactor
     };
 
     // Validate parameter ranges and generate warnings
@@ -75,7 +85,7 @@ class ParameterCorrelationService {
       beta,
       coefficient,
       betaFactor,
-      baseMultipliers,
+      userParameters, // Show the actual user parameters that were scaled
       adjustedParameters,
       warnings: [...coefficientWarnings, ...validation.warnings],
       isValid: validation.isValid

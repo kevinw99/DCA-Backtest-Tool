@@ -1,7 +1,10 @@
 /**
  * URLParameterManager - Centralized URL parameter handling service
  * Handles encoding/decoding backtest parameters to/from URL query strings
+ * Supports both legacy query-string format and new semantic path format with compression
  */
+
+import LZString from 'lz-string';
 
 class URLParameterManager {
   constructor() {
@@ -90,16 +93,21 @@ class URLParameterManager {
 
   /**
    * Navigate to results page with parameters
+   * Uses pushState to create a new history entry (enables back button)
    * @param {Object} parameters - Backtest parameters
    * @param {string} mode - 'single' or 'batch'
    */
   navigateToResults(parameters, mode) {
     try {
-      const url = this.encodeParametersToURL(parameters, mode);
-      window.history.pushState({ parameters, mode }, '', url);
-      console.log('🚀 Navigated to results:', url);
+      // Use new semantic URL format with /results suffix
+      const url = this.generateSemanticURL(parameters, mode, true);
+      window.history.pushState({ parameters, mode, results: true }, '', url);
+      console.log('🚀 Navigated to results (pushState):', url);
     } catch (error) {
       console.error('Error navigating to results:', error);
+      // Fallback to legacy URL encoding
+      const fallbackUrl = this.encodeParametersToURL(parameters, mode);
+      window.history.pushState({ parameters, mode }, '', fallbackUrl);
     }
   }
 
@@ -124,6 +132,167 @@ class URLParameterManager {
    */
   generateShareableURL(parameters, mode) {
     return this.encodeParametersToURL(parameters, mode);
+  }
+
+  /**
+   * Compress parameters using LZString
+   * @param {Object} parameters - Parameters to compress
+   * @returns {string} Base64-encoded compressed string
+   */
+  compressParameters(parameters) {
+    try {
+      const json = JSON.stringify(parameters);
+      const compressed = LZString.compressToEncodedURIComponent(json);
+      return compressed;
+    } catch (error) {
+      console.error('Error compressing parameters:', error);
+      return '';
+    }
+  }
+
+  /**
+   * Decompress parameters from compressed string
+   * @param {string} compressed - Compressed parameter string
+   * @returns {Object|null} Decompressed parameters or null
+   */
+  decompressParameters(compressed) {
+    try {
+      if (!compressed) return null;
+      const json = LZString.decompressFromEncodedURIComponent(compressed);
+      if (!json) return null;
+      return JSON.parse(json);
+    } catch (error) {
+      console.error('Error decompressing parameters:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Generate semantic URL with path-based routing and compressed parameters
+   * @param {Object} parameters - Backtest parameters
+   * @param {string} mode - 'single' or 'batch'
+   * @param {boolean} includeResults - Include /results suffix
+   * @returns {string} Semantic URL
+   */
+  generateSemanticURL(parameters, mode, includeResults = false) {
+    try {
+      let path = '';
+
+      if (mode === 'single') {
+        const strategyMode = parameters.strategyMode || 'long';
+        const symbol = parameters.symbol || '';
+        if (!symbol) {
+          console.warn('Cannot generate semantic URL without symbol');
+          return `${this.baseURL}/`;
+        }
+        path = `/backtest/${strategyMode}/${symbol}`;
+      } else if (mode === 'batch') {
+        const symbols = parameters.symbols || parameters.parameterRanges?.symbols || [];
+        if (symbols.length === 0) {
+          console.warn('Cannot generate semantic URL without symbols');
+          return `${this.baseURL}/`;
+        }
+        const symbolPath = symbols.join('+');
+        path = `/batch/${symbolPath}`;
+      }
+
+      if (includeResults) {
+        path += '/results';
+      }
+
+      // Compress all parameters except those in the path
+      const paramsToCompress = { ...parameters };
+      // Don't include path parameters in compressed params (redundant)
+      if (mode === 'single') {
+        delete paramsToCompress.symbol;
+        delete paramsToCompress.strategyMode;
+      } else if (mode === 'batch') {
+        delete paramsToCompress.symbols;
+      }
+
+      const compressed = this.compressParameters(paramsToCompress);
+      const url = `${this.baseURL}${path}?params=${compressed}`;
+
+      console.log(`🔗 Generated semantic URL (${mode}):`, url);
+      console.log(`   Original size: ${JSON.stringify(parameters).length} chars`);
+      console.log(`   Compressed size: ${compressed.length} chars`);
+      console.log(`   Compression ratio: ${(compressed.length / JSON.stringify(parameters).length * 100).toFixed(1)}%`);
+
+      return url;
+    } catch (error) {
+      console.error('Error generating semantic URL:', error);
+      return window.location.href;
+    }
+  }
+
+  /**
+   * Parse semantic URL path
+   * @returns {Object|null} Parsed path components
+   */
+  parseSemanticURL() {
+    try {
+      const pathname = window.location.pathname;
+      const urlParams = new URLSearchParams(window.location.search);
+
+      // Check for compressed params
+      const compressed = urlParams.get('params');
+      let parameters = compressed ? this.decompressParameters(compressed) : {};
+
+      // Parse path components
+      const parts = pathname.split('/').filter(p => p);
+
+      if (parts[0] === 'backtest' && parts.length >= 3) {
+        // /backtest/{strategyMode}/{symbol}[/results]
+        const hasResults = parts[parts.length - 1] === 'results';
+        const symbol = hasResults ? parts[2] : parts[parts.length - 1];
+        const strategyMode = parts[1];
+
+        console.log('📥 Parsed semantic URL (single):', { symbol, strategyMode, hasResults });
+
+        return {
+          mode: 'single',
+          strategyMode,
+          symbol,
+          hasResults,
+          parameters: { ...parameters, symbol, strategyMode }
+        };
+      } else if (parts[0] === 'batch' && parts.length >= 2) {
+        // /batch/{symbols}[/results]
+        const hasResults = parts[parts.length - 1] === 'results';
+        const symbolsPath = hasResults ? parts[1] : parts[parts.length - 1];
+        const symbols = symbolsPath.split('+').filter(s => s);
+
+        console.log('📥 Parsed semantic URL (batch):', { symbols, hasResults });
+
+        return {
+          mode: 'batch',
+          symbols,
+          hasResults,
+          parameters: { ...parameters, symbols }
+        };
+      }
+
+      // Not a semantic URL
+      return null;
+    } catch (error) {
+      console.error('Error parsing semantic URL:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Update URL in real-time (uses replaceState to avoid history pollution)
+   * @param {Object} parameters - Current parameters
+   * @param {string} mode - 'single' or 'batch'
+   */
+  updateURLRealtime(parameters, mode) {
+    try {
+      const url = this.generateSemanticURL(parameters, mode, false);
+      window.history.replaceState({ parameters, mode }, '', url);
+      console.log('🔄 URL updated (real-time):', url);
+    } catch (error) {
+      console.error('Error updating URL:', error);
+    }
   }
 
   // Private helper methods

@@ -49,6 +49,10 @@ class PerformanceCalculatorService {
       ? (finalValue - avgDeployedCapital) / avgDeployedCapital
       : 0;
 
+    // CAGR for capital-based returns
+    const cagrOnMaxDeployed = this._calculateCAGR(maxDeployedCapital, finalValue, totalYears);
+    const cagrOnAvgDeployed = this._calculateCAGR(avgDeployedCapital, finalValue, totalYears);
+
     // Capital utilization
     const capitalUtilization = maxExposure > 0
       ? avgDeployedCapital / maxExposure
@@ -82,6 +86,79 @@ class PerformanceCalculatorService {
       maxExposure
     );
 
+    // Log detailed calculation breakdown
+    console.log('\n📊 ========== PERFORMANCE METRICS CALCULATION BREAKDOWN ==========');
+    console.log('\n📈 INPUT VALUES:');
+    console.log(`   Initial Portfolio Value: $${initialValue.toFixed(2)}`);
+    console.log(`   Final Portfolio Value: $${finalValue.toFixed(2)}`);
+    console.log(`   Max Capital Deployed: $${maxDeployedCapital.toFixed(2)}`);
+    console.log(`   Avg Capital Deployed: $${avgDeployedCapital.toFixed(2)}`);
+    console.log(`   Max Exposure (Available): $${maxExposure.toFixed(2)}`);
+    console.log(`   Total Days: ${totalDays} (${totalYears.toFixed(2)} years)`);
+    console.log(`   Number of Trades: ${trades.length}`);
+
+    console.log('\n💰 RETURNS CALCULATIONS:');
+    console.log(`   Total Return = (Final - Initial) / Initial`);
+    console.log(`              = ($${finalValue.toFixed(2)} - $${initialValue.toFixed(2)}) / $${initialValue.toFixed(2)}`);
+    console.log(`              = $${(finalValue - initialValue).toFixed(2)} / $${initialValue.toFixed(2)}`);
+    console.log(`              = ${totalReturn.toFixed(4)} = ${(totalReturn * 100).toFixed(2)}%`);
+
+    console.log(`\n   CAGR = (Final / Initial)^(1/Years) - 1`);
+    console.log(`        = ($${finalValue.toFixed(2)} / $${initialValue.toFixed(2)})^(1/${totalYears.toFixed(2)}) - 1`);
+    console.log(`        = ${(finalValue/initialValue).toFixed(4)}^${(1/totalYears).toFixed(4)} - 1`);
+    console.log(`        = ${(cagr + 1).toFixed(4)} - 1`);
+    console.log(`        = ${cagr.toFixed(4)} = ${(cagr * 100).toFixed(2)}%`);
+
+    console.log(`\n   Return on Max Deployed = (Final - Max Capital) / Max Capital`);
+    console.log(`                         = ($${finalValue.toFixed(2)} - $${maxDeployedCapital.toFixed(2)}) / $${maxDeployedCapital.toFixed(2)}`);
+    console.log(`                         = $${(finalValue - maxDeployedCapital).toFixed(2)} / $${maxDeployedCapital.toFixed(2)}`);
+    console.log(`                         = ${returnOnMaxDeployed.toFixed(4)} = ${(returnOnMaxDeployed * 100).toFixed(2)}%`);
+    console.log(`      CAGR on Max Deployed = (Final / Max Capital)^(1/Years) - 1`);
+    console.log(`                          = ($${finalValue.toFixed(2)} / $${maxDeployedCapital.toFixed(2)})^(1/${totalYears.toFixed(2)}) - 1`);
+    console.log(`                          = ${cagrOnMaxDeployed.toFixed(4)} = ${(cagrOnMaxDeployed * 100).toFixed(2)}%`);
+
+    console.log(`\n   Return on Avg Deployed = (Final - Avg Capital) / Avg Capital`);
+    console.log(`                         = ($${finalValue.toFixed(2)} - $${avgDeployedCapital.toFixed(2)}) / $${avgDeployedCapital.toFixed(2)}`);
+    console.log(`                         = $${(finalValue - avgDeployedCapital).toFixed(2)} / $${avgDeployedCapital.toFixed(2)}`);
+    console.log(`                         = ${returnOnAvgDeployed.toFixed(4)} = ${(returnOnAvgDeployed * 100).toFixed(2)}%`);
+    console.log(`      CAGR on Avg Deployed = (Final / Avg Capital)^(1/Years) - 1`);
+    console.log(`                          = ($${finalValue.toFixed(2)} / $${avgDeployedCapital.toFixed(2)})^(1/${totalYears.toFixed(2)}) - 1`);
+    console.log(`                          = ${cagrOnAvgDeployed.toFixed(4)} = ${(cagrOnAvgDeployed * 100).toFixed(2)}%`);
+
+    console.log(`\n   Time-Weighted Return = ${timeWeightedReturn.toFixed(4)} = ${(timeWeightedReturn * 100).toFixed(2)}%`);
+
+    console.log('\n📉 RISK METRICS:');
+    console.log(`   Sharpe Ratio: ${sharpeRatio.toFixed(3)}`);
+    console.log(`      Formula: (Avg Daily Return - Risk Free Rate) / Std Dev * sqrt(252)`);
+    console.log(`      Daily Returns: ${dailyReturns.length} periods, Risk-Free: ${(this.riskFreeRate * 100).toFixed(2)}% annual`);
+    console.log(`   Sortino Ratio: ${sortinoRatio.toFixed(3)}`);
+    console.log(`      Formula: (Avg Daily Return - Risk Free Rate) / Downside Std Dev * sqrt(252)`);
+    console.log(`      Only uses negative returns for volatility calculation`);
+    console.log(`   Calmar Ratio = CAGR / Max Drawdown (as decimal)`);
+    console.log(`                = ${cagr.toFixed(4)} / ${drawdownAnalysis.maxDrawdownPercent.toFixed(4)}`);
+    console.log(`                = ${calmarRatio.toFixed(3)}`);
+    console.log(`   Max Drawdown: ${(drawdownAnalysis.maxDrawdownPercent * 100).toFixed(2)}% ($${drawdownAnalysis.maxDrawdown.toFixed(2)})`);
+    console.log(`   Avg Drawdown: ${(drawdownAnalysis.avgDrawdownPercent * 100).toFixed(2)}%`);
+
+    console.log('\n🎯 TRADING EFFICIENCY:');
+    console.log(`   Win Rate: ${(tradingMetrics.winRate * 100).toFixed(2)}%`);
+    console.log(`   Profit Factor: ${tradingMetrics.profitFactor.toFixed(3)}`);
+    console.log(`   Expectancy: $${tradingMetrics.expectancy.toFixed(2)}`);
+    console.log(`   Avg Win: $${tradingMetrics.avgWin.toFixed(2)}`);
+    console.log(`   Avg Loss: $${tradingMetrics.avgLoss.toFixed(2)}`);
+    console.log(`   Avg Holding Period: ${tradingMetrics.avgHoldingPeriod.toFixed(1)} days`);
+    console.log(`   Profit Per Day Held: $${tradingMetrics.profitPerDayHeld.toFixed(2)}`);
+
+    console.log('\n💼 CAPITAL EFFICIENCY:');
+    console.log(`   Capital Utilization = Avg Deployed / Max Exposure`);
+    console.log(`                      = $${avgDeployedCapital.toFixed(2)} / $${maxExposure.toFixed(2)}`);
+    console.log(`                      = ${capitalUtilization.toFixed(4)} = ${(capitalUtilization * 100).toFixed(2)}%`);
+    console.log(`   Avg Idle Capital: $${opportunityCostAnalysis.avgIdleCapital.toFixed(2)}`);
+    console.log(`   Total Opportunity Cost: $${opportunityCostAnalysis.totalOpportunityCost.toFixed(2)}`);
+    console.log(`   Opportunity Cost Adjusted Return: ${(opportunityCostAnalysis.adjustedReturn * 100).toFixed(2)}%`);
+
+    console.log('\n📊 ============================================================\n');
+
     return {
       // Core Performance
       totalReturn,
@@ -90,8 +167,12 @@ class PerformanceCalculatorService {
       cagrPercent: cagr * 100,
       returnOnMaxDeployed,
       returnOnMaxDeployedPercent: returnOnMaxDeployed * 100,
+      cagrOnMaxDeployed,
+      cagrOnMaxDeployedPercent: cagrOnMaxDeployed * 100,
       returnOnAvgDeployed,
       returnOnAvgDeployedPercent: returnOnAvgDeployed * 100,
+      cagrOnAvgDeployed,
+      cagrOnAvgDeployedPercent: cagrOnAvgDeployed * 100,
 
       // Risk-Adjusted Metrics
       sharpeRatio,

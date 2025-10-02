@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, DollarSign, TrendingUp, Settings, Info, Zap, Target, ArrowUpDown } from 'lucide-react';
 import BetaControls from './BetaControls';
 import { getDefaultParameters, resetToDefaults } from '../utils/strategyDefaults';
+import URLParameterManager from '../utils/URLParameterManager';
 
 const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setAppTestMode }) => {
 
@@ -81,7 +82,9 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
     const saved = localStorage.getItem('dca-available-symbols');
     const defaultSymbols = ['TSLA', 'NVDA', 'AAPL', 'MSFT', 'AMZN', 'PLTR', 'U', 'META',
       'SHOP', 'TDOC', 'JD', 'BABA', 'LMND', 'NIO', 'KNDI', 'API'];
-    return saved ? JSON.parse(saved) : defaultSymbols;
+    const symbols = saved ? JSON.parse(saved) : defaultSymbols;
+    // Sort alphabetically
+    return symbols.sort();
   });
 
   const [newSymbol, setNewSymbol] = useState('');
@@ -142,6 +145,9 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
     return enableScaling ? safeBeta * safeCoefficient : safeBeta;
   };
 
+  // Real-time URL updates are disabled to prevent infinite loops
+  // URL is updated only when submitting backtest via handleBacktestSubmit in App.js
+
   // Persist coefficient to localStorage when it changes
   useEffect(() => {
     localStorage.setItem('dca-coefficient', coefficient.toString());
@@ -191,7 +197,12 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
             const savedParams = localStorage.getItem('dca-single-parameters');
             const savedShortParams = localStorage.getItem('dca-short-single-parameters');
 
-            // Only apply backend defaults if no localStorage data exists (fresh user)
+            // ALWAYS update endDate from backend to keep it current (today's date)
+            // This ensures users always get the latest available data by default
+            setParameters(prev => ({ ...prev, endDate: uiParams.endDate }));
+            setShortParameters(prev => ({ ...prev, endDate: uiParams.endDate }));
+
+            // Only apply full backend defaults if no localStorage data exists (fresh user)
             if (!savedParams) {
               console.log('📥 No localStorage found, applying backend defaults for long parameters');
               setParameters(prev => ({ ...prev, ...uiParams }));
@@ -250,30 +261,76 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
 
       // Map URL parameter names to form field names and convert types
       // Include both long and short strategy parameters (only relevant ones will be used)
+      // IMPORTANT: Use ?? instead of || to allow 0 values
       const urlParamMapping = {
         // Common parameters
         symbol: (value) => value,
         startDate: (value) => value,
         endDate: (value) => value,
-        lotSizeUsd: (value) => parseInt(value) || 10000,
-        gridIntervalPercent: (value) => parseFloat(value) || 10, // Values from BatchResults are already in percentage format
-        profitRequirement: (value) => parseFloat(value) ?? 5, // Values from BatchResults are already in percentage format
+        lotSizeUsd: (value) => {
+          const parsed = parseInt(value);
+          return !isNaN(parsed) ? parsed : 10000;
+        },
+        gridIntervalPercent: (value) => {
+          const parsed = parseFloat(value);
+          return !isNaN(parsed) ? parsed : 10;
+        },
+        profitRequirement: (value) => {
+          const parsed = parseFloat(value);
+          return !isNaN(parsed) ? parsed : 5;
+        },
 
         // Long strategy parameters
-        maxLots: (value) => parseInt(value) || 10,
-        maxLotsToSell: (value) => parseInt(value) || 1,
-        trailingBuyActivationPercent: (value) => parseFloat(value) || 10, // Values from BatchResults are already in percentage format
-        trailingBuyReboundPercent: (value) => parseFloat(value) || 5, // Values from BatchResults are already in percentage format
-        trailingSellActivationPercent: (value) => parseFloat(value) || 20, // Values from BatchResults are already in percentage format
-        trailingSellPullbackPercent: (value) => parseFloat(value) || 10, // Values from BatchResults are already in percentage format
+        maxLots: (value) => {
+          const parsed = parseInt(value);
+          return !isNaN(parsed) ? parsed : 10;
+        },
+        maxLotsToSell: (value) => {
+          const parsed = parseInt(value);
+          return !isNaN(parsed) ? parsed : 1;
+        },
+        trailingBuyActivationPercent: (value) => {
+          const parsed = parseFloat(value);
+          return !isNaN(parsed) ? parsed : 10;
+        },
+        trailingBuyReboundPercent: (value) => {
+          const parsed = parseFloat(value);
+          return !isNaN(parsed) ? parsed : 5;
+        },
+        trailingSellActivationPercent: (value) => {
+          const parsed = parseFloat(value);
+          return !isNaN(parsed) ? parsed : 20;
+        },
+        trailingSellPullbackPercent: (value) => {
+          const parsed = parseFloat(value);
+          return !isNaN(parsed) ? parsed : 10;
+        },
 
         // Short strategy parameters
-        maxShorts: (value) => parseInt(value) || 6,
-        maxShortsToCovers: (value) => parseInt(value) || 3,
-        trailingShortActivationPercent: (value) => parseFloat(value) || 25,
-        trailingShortPullbackPercent: (value) => parseFloat(value) || 15,
-        trailingCoverActivationPercent: (value) => parseFloat(value) || 20,
-        trailingCoverReboundPercent: (value) => parseFloat(value) || 10
+        maxShorts: (value) => {
+          const parsed = parseInt(value);
+          return !isNaN(parsed) ? parsed : 6;
+        },
+        maxShortsToCovers: (value) => {
+          const parsed = parseInt(value);
+          return !isNaN(parsed) ? parsed : 3;
+        },
+        trailingShortActivationPercent: (value) => {
+          const parsed = parseFloat(value);
+          return !isNaN(parsed) ? parsed : 25;
+        },
+        trailingShortPullbackPercent: (value) => {
+          const parsed = parseFloat(value);
+          return !isNaN(parsed) ? parsed : 15;
+        },
+        trailingCoverActivationPercent: (value) => {
+          const parsed = parseFloat(value);
+          return !isNaN(parsed) ? parsed : 20;
+        },
+        trailingCoverReboundPercent: (value) => {
+          const parsed = parseFloat(value);
+          return !isNaN(parsed) ? parsed : 10;
+        }
       };
 
       // Build updated parameters object - handle both long and short parameters appropriately
@@ -333,7 +390,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
         setBatchMode(true);
       }
     }
-  }, [urlParams, loadingDefaults, parameters]); // Run when urlParams OR loadingDefaults change
+  }, [urlParams, loadingDefaults]); // Run when urlParams OR loadingDefaults change (NOT parameters to avoid infinite loop)
 
   // Handle autoRun functionality
   useEffect(() => {
@@ -783,7 +840,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
   const handleAddSymbol = () => {
     const symbol = newSymbol.trim().toUpperCase();
     if (symbol && !availableSymbols.includes(symbol)) {
-      setAvailableSymbols(prev => [...prev, symbol]);
+      setAvailableSymbols(prev => [...prev, symbol].sort());
       if (strategyMode === 'short') {
         setShortBatchParameters(prev => ({
           ...prev,

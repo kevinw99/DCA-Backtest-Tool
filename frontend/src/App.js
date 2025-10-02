@@ -24,36 +24,38 @@ function AppContent() {
   // Handle URL parameters and route changes
   useEffect(() => {
     const path = location.pathname;
-    const params = URLParameterManager.decodeParametersFromURL();
 
-    console.log('🔍 Route changed:', { path, params });
+    // Try to parse semantic URL first, then fall back to legacy format
+    let semanticParams = URLParameterManager.parseSemanticURL();
+    let params = semanticParams ? semanticParams.parameters : URLParameterManager.decodeParametersFromURL();
 
-    if (params) {
+    console.log('🔍 Route changed:', { path, semanticParams, params });
+
+    // Determine if we're in results mode based on semantic URL or path
+    const isResultsMode = semanticParams?.hasResults || path.includes('/results') || path === '/backtest' || path === '/batch';
+
+    if (params || semanticParams) {
       setUrlParams(params);
-      setTestMode(params.mode || 'single');
+      setTestMode(semanticParams?.mode || params?.mode || 'single');
 
-      // Set active tab based on route
-      if (path === '/backtest') {
-        setActiveTab('chart');
-        // Auto-execute single backtest if parameters are present and not already executed
-        if (params.symbol && params.startDate && params.endDate && !autoExecuted) {
-          console.log('🚀 Auto-executing single backtest from URL parameters');
+      // Set active tab based on semantic URL or legacy path
+      if (isResultsMode) {
+        setActiveTab(semanticParams?.mode === 'batch' ? 'results' : 'chart');
+
+        // Auto-execute if in results mode and not already executed
+        const isBatch = semanticParams?.mode === 'batch' || path.includes('/batch');
+        const shouldAutoExecute = isBatch
+          ? (params.symbols && !autoExecuted)
+          : (params.symbol && !autoExecuted);
+
+        if (shouldAutoExecute) {
+          console.log(`🚀 Auto-executing ${isBatch ? 'batch' : 'single'} from semantic URL`);
           setAutoExecuted(true);
-          // Don't call handleBacktestSubmit here to avoid URL update loop
-          executeBacktestWithoutURLUpdate(params, false);
-        }
-      } else if (path === '/batch') {
-        setActiveTab('results');
-        // Auto-execute batch backtest if parameters are present and not already executed
-        if (params.symbols && params.startDate && params.endDate && !autoExecuted) {
-          console.log('🚀 Auto-executing batch backtest from URL parameters');
-          setAutoExecuted(true);
-          // Don't call handleBacktestSubmit here to avoid URL update loop
-          executeBacktestWithoutURLUpdate(params, true);
+          executeBacktestWithoutURLUpdate(params, isBatch);
         }
       } else {
         setActiveTab('parameters');
-        setAutoExecuted(false); // Reset when going back to parameters
+        setAutoExecuted(false); // Reset when in editing mode
       }
     } else {
       setAutoExecuted(false); // Reset when no params
@@ -163,7 +165,8 @@ function AppContent() {
         const finalChartData = {
           ...chartResult,
           backtestParameters: parameters,
-          transactions: backtestResult.data.transactions
+          transactions: backtestResult.data.transactions,
+          betaInfo: backtestResult.data.betaInfo
         };
 
         setChartData(finalChartData);
@@ -267,7 +270,8 @@ function AppContent() {
         const finalChartData = {
           ...chartResult,
           backtestParameters: parameters,
-          transactions: backtestResult.data.transactions
+          transactions: backtestResult.data.transactions,
+          betaInfo: backtestResult.data.betaInfo
         };
 
         setChartData(finalChartData);
@@ -377,9 +381,20 @@ function App() {
   return (
     <Router>
       <Routes>
+        {/* Root - clean slate */}
         <Route path="/" element={<AppContent />} />
+
+        {/* Legacy routes (backward compatibility) */}
         <Route path="/backtest" element={<AppContent />} />
         <Route path="/batch" element={<AppContent />} />
+
+        {/* Semantic routes for single backtest */}
+        <Route path="/backtest/:strategyMode/:symbol" element={<AppContent />} />
+        <Route path="/backtest/:strategyMode/:symbol/results" element={<AppContent />} />
+
+        {/* Semantic routes for batch */}
+        <Route path="/batch/:symbols" element={<AppContent />} />
+        <Route path="/batch/:symbols/results" element={<AppContent />} />
       </Routes>
     </Router>
   );

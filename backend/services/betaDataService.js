@@ -1,11 +1,15 @@
 const database = require('../database');
+const config = require('../config');
 
 class BetaDataService {
   constructor() {
+    // Convert config.beta.cacheExpiry (milliseconds) to hours
+    const cacheExpiryHours = config.beta.cacheExpiry / (1000 * 60 * 60);
+
     this.providers = [
       { name: 'yahoo_finance', priority: 1, rateLimit: null },
       { name: 'alpha_vantage', priority: 2, rateLimit: 25 },
-      { name: 'cached', priority: 3, maxAge: 24 } // 24 hours
+      { name: 'cached', priority: 3, maxAge: cacheExpiryHours } // Use config value (30 days = 720 hours)
     ];
   }
 
@@ -248,10 +252,10 @@ except Exception as e:
   /**
    * Check if Beta data is still fresh (within maxAge hours)
    * @param {Object} betaData - Beta data with last_updated field
-   * @param {number} maxAgeHours - Maximum age in hours (default: 24)
+   * @param {number} maxAgeHours - Maximum age in hours (default: from config)
    * @returns {boolean} True if data is fresh
    */
-  isBetaFresh(betaData, maxAgeHours = 24) {
+  isBetaFresh(betaData, maxAgeHours = null) {
     if (!betaData || !betaData.last_updated) {
       return false;
     }
@@ -261,11 +265,14 @@ except Exception as e:
       return true;
     }
 
+    // Use configured cache expiry if not specified
+    const cacheExpiryHours = maxAgeHours || (config.beta.cacheExpiry / (1000 * 60 * 60));
+
     const lastUpdated = new Date(betaData.last_updated);
     const now = new Date();
     const ageHours = (now - lastUpdated) / (1000 * 60 * 60);
-    
-    return ageHours < maxAgeHours;
+
+    return ageHours < cacheExpiryHours;
   }
 
   /**

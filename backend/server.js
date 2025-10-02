@@ -1073,6 +1073,11 @@ app.post('/api/backtest/batch', validation.validateBatchBacktestParams, async (r
       });
     }
 
+    // If symbols are at top level, merge them into parameterRanges
+    if (options.symbols && !options.parameterRanges.symbols) {
+      options.parameterRanges.symbols = options.symbols;
+    }
+
     // Set up progress tracking for long-running batch tests
     let progressData = null;
     const progressCallback = (progress) => {
@@ -1119,6 +1124,11 @@ app.post('/api/backtest/short-batch', validation.validateBatchBacktestParams, as
         success: false,
         error: 'parameterRanges is required'
       });
+    }
+
+    // If symbols are at top level, merge them into parameterRanges
+    if (options.symbols && !options.parameterRanges.symbols) {
+      options.parameterRanges.symbols = options.symbols;
     }
 
     // Set up progress tracking for long-running batch tests
