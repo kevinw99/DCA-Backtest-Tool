@@ -879,7 +879,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
         </div>
 
         <div className="metric-card">
-          <h4>Total Investment</h4>
+          <h4>Max Capital Deployed</h4>
           <p className="value">
             {formatCurrency(summary.totalCost)}
           </p>

@@ -77,10 +77,22 @@ async function generateParameterCombinations(paramRanges) {
 
       for (const coefficient of coefficients) {
         for (const lotsToSell of maxLotsToSell) {
-          // For each coefficient, just include coefficient info but use original parameters
-          // Beta scaling should not modify user-specified parameter ranges
           try {
-            const betaFactor = beta * coefficient;
+            // Calculate Beta-adjusted parameters using parameterCorrelationService
+            const baseParams = {
+              profitRequirement: profitRequirement[0],
+              gridIntervalPercent: gridIntervalPercent[0],
+              trailingBuyActivationPercent: trailingBuyActivationPercent[0],
+              trailingBuyReboundPercent: trailingBuyReboundPercent[0],
+              trailingSellActivationPercent: trailingSellActivationPercent[0],
+              trailingSellPullbackPercent: trailingSellPullbackPercent[0]
+            };
+
+            const betaResult = parameterCorrelationService.calculateBetaAdjustedParameters(
+              beta,
+              coefficient,
+              baseParams
+            );
 
             combinations.push({
               symbol,
@@ -89,42 +101,28 @@ async function generateParameterCombinations(paramRanges) {
               lotSizeUsd,
               maxLots,
               maxLotsToSell: lotsToSell,
-            // Use original user parameters (already in correct decimal format)
-            profitRequirement: profitRequirement[0],
-            gridIntervalPercent: gridIntervalPercent[0],
-            trailingBuyActivationPercent: trailingBuyActivationPercent[0],
-            trailingBuyReboundPercent: trailingBuyReboundPercent[0],
-            trailingSellActivationPercent: trailingSellActivationPercent[0],
-            trailingSellPullbackPercent: trailingSellPullbackPercent[0],
-            // Include Beta, coefficient, and beta_factor information for display
-            beta: beta,
-            coefficient: coefficient,
-            betaFactor: betaFactor,
-            enableBetaScaling: true,
-            betaInfo: {
+              // Use Beta-adjusted parameters
+              profitRequirement: betaResult.adjustedParameters.profitRequirement,
+              gridIntervalPercent: betaResult.adjustedParameters.gridIntervalPercent,
+              trailingBuyActivationPercent: betaResult.adjustedParameters.trailingBuyActivationPercent,
+              trailingBuyReboundPercent: betaResult.adjustedParameters.trailingBuyReboundPercent,
+              trailingSellActivationPercent: betaResult.adjustedParameters.trailingSellActivationPercent,
+              trailingSellPullbackPercent: betaResult.adjustedParameters.trailingSellPullbackPercent,
+              // Include Beta, coefficient, and beta_factor information for display
               beta: beta,
               coefficient: coefficient,
-              betaFactor: betaFactor,
-              baseParameters: {
-                profitRequirement: profitRequirement[0],
-                gridIntervalPercent: gridIntervalPercent[0],
-                trailingBuyActivationPercent: trailingBuyActivationPercent[0],
-                trailingBuyReboundPercent: trailingBuyReboundPercent[0],
-                trailingSellActivationPercent: trailingSellActivationPercent[0],
-                trailingSellPullbackPercent: trailingSellPullbackPercent[0]
-              },
-              adjustedParameters: {
-                profitRequirement: profitRequirement[0],
-                gridIntervalPercent: gridIntervalPercent[0],
-                trailingBuyActivationPercent: trailingBuyActivationPercent[0],
-                trailingBuyReboundPercent: trailingBuyReboundPercent[0],
-                trailingSellActivationPercent: trailingSellActivationPercent[0],
-                trailingSellPullbackPercent: trailingSellPullbackPercent[0]
-              },
-              warnings: [],
-              isValid: true
-            }
-          });
+              betaFactor: betaResult.betaFactor,
+              enableBetaScaling: true,
+              betaInfo: {
+                beta: betaResult.beta,
+                coefficient: betaResult.coefficient,
+                betaFactor: betaResult.betaFactor,
+                baseParameters: betaResult.userParameters,
+                adjustedParameters: betaResult.adjustedParameters,
+                warnings: betaResult.warnings,
+                isValid: betaResult.isValid
+              }
+            });
           } catch (error) {
             console.error(`Error calculating Beta parameters for Beta=${beta}, Coefficient=${coefficient}, Symbol=${symbol}:`, error);
             // Skip this combination if Beta calculation fails
@@ -341,6 +339,10 @@ async function runBatchBacktest(options, progressCallback = null) {
         avgProfitPerTrade: avgProfitPerTrade,
         maxDrawdownPercent: (result.maxDrawdownPercent || 0) / 100, // Convert to decimal for display
         capitalUtilizationRate: result.avgCapitalDeployed && result.totalCost ? result.avgCapitalDeployed / result.totalCost : 0,
+        // Include capital deployment metrics
+        totalPNL: result.totalPNL || 0,
+        avgCapitalDeployed: result.avgCapitalDeployed || 0,
+        maxCapitalDeployed: result.maxCapitalDeployed || 0,
         // Include CAGR metrics from performanceMetrics
         cagrOnMaxDeployed: result.performanceMetrics?.cagrOnMaxDeployed,
         cagrOnMaxDeployedPercent: result.performanceMetrics?.cagrOnMaxDeployedPercent,

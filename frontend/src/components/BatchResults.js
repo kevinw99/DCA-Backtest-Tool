@@ -114,11 +114,13 @@ const BatchResults = ({ data }) => {
       });
     }
 
-    // Add beta parameters if available
-    if (parameters.beta) urlParams.beta = parameters.beta;
-    if (parameters.coefficient) urlParams.coefficient = parameters.coefficient;
-    if (parameters.enableBetaScaling !== undefined) urlParams.enableBetaScaling = parameters.enableBetaScaling;
-    if (parameters.isManualBetaOverride !== undefined) urlParams.isManualBetaOverride = parameters.isManualBetaOverride;
+    // DO NOT add beta parameters when opening from batch results
+    // The parameters are already Beta-scaled, so we pass them as-is without Beta scaling metadata
+    // If we include enableBetaScaling=true, the single test will scale them AGAIN (double scaling bug)
+    // urlParams.beta - NOT included (for display only)
+    // urlParams.coefficient - NOT included (for display only)
+    // urlParams.enableBetaScaling - NOT included (parameters already scaled)
+    // urlParams.isManualBetaOverride - NOT included (not relevant)
 
     console.log(`🔄 PARAMETER CONVERSION (decimal → percentage for ${isShortStrategy ? 'SHORT' : 'LONG'} strategy URL):`);
     console.log(`  📊 Strategy Mode: ${urlParams.strategyMode}`);
@@ -441,7 +443,15 @@ const BatchResults = ({ data }) => {
                     {(result.parameters.betaFactor || 1.0).toFixed(2)}
                   </td>
                   <td className={`return-cell ${(result.summary?.totalReturn || 0) >= 0 ? 'positive' : 'negative'}`}>
-                    {formatPerformancePercent(result.summary?.totalReturn || 0)}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <div style={{ fontWeight: 'bold' }}>{formatCurrency(result.summary?.totalPNL || 0)}</div>
+                      <div style={{ fontSize: '0.85em' }}>
+                        {formatPerformancePercent(result.summary?.totalReturn || 0)} | Avg: {formatCurrency(result.summary?.avgCapitalDeployed || 0)}
+                      </div>
+                      <div style={{ fontSize: '0.85em', color: '#666' }}>
+                        Max: {formatCurrency(result.summary?.maxCapitalDeployed || 0)}
+                      </div>
+                    </div>
                   </td>
                   <td className={`return-cell ${(result.summary?.annualizedReturn || 0) >= 0 ? 'positive' : 'negative'}`}>
                     {formatPerformancePercent(result.summary?.annualizedReturn || 0)}

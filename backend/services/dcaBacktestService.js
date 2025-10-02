@@ -334,7 +334,52 @@ async function runDCABacktest(params) {
       }
     }
 
-    // 2. Get Combined Price and Technical Indicator Data
+    // 2. Check for data gaps and fetch missing data
+    const latestPriceDate = await database.getLastPriceDate(stock.id);
+    if (latestPriceDate) {
+      // Check if we have data up to the requested endDate
+      const latestDate = new Date(latestPriceDate);
+      const requestedEndDate = new Date(endDate);
+
+      if (latestDate < requestedEndDate) {
+        // Calculate next day after latest data
+        const nextDay = new Date(latestDate);
+        nextDay.setDate(nextDay.getDate() + 1);
+        const fromDate = nextDay.toISOString().split('T')[0];
+
+        console.log(`📡 Data gap detected for ${symbol}:`);
+        console.log(`   Database has data until: ${latestPriceDate}`);
+        console.log(`   Requested data until: ${endDate}`);
+        console.log(`   Fetching missing data from ${fromDate} to ${endDate}...`);
+
+        try {
+          const stockDataService = require('./stockDataService');
+          const startTime = Date.now();
+
+          await stockDataService.updateStockData(stock.id, symbol, {
+            updatePrices: true,
+            fromDate: fromDate,
+            updateFundamentals: false, // Don't re-fetch fundamentals
+            updateCorporateActions: false // Don't re-fetch corporate actions
+          });
+
+          const endTime = Date.now();
+          const duration = ((endTime - startTime) / 1000).toFixed(2);
+
+          // Get count of new records
+          const newLatestDate = await database.getLastPriceDate(stock.id);
+          console.log(`✅ Gap filled successfully in ${duration}s`);
+          console.log(`   New latest date: ${newLatestDate}`);
+
+        } catch (fetchError) {
+          console.error(`❌ Failed to fetch missing data: ${fetchError.message}`);
+          console.warn(`⚠️  Proceeding with available data (until ${latestPriceDate})`);
+          // Don't throw - allow backtest to proceed with available data
+        }
+      }
+    }
+
+    // 3. Get Combined Price and Technical Indicator Data
     const pricesWithIndicators = await database.getPricesWithIndicators(stock.id, startDate, endDate);
     if (pricesWithIndicators.length === 0) {
       throw new Error(`No price/indicator data found for ${symbol} between ${startDate} and ${endDate}.`);
