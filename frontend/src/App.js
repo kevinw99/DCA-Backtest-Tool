@@ -190,7 +190,8 @@ function AppContent() {
           ...chartResult,
           backtestParameters: parameters,
           transactions: backtestResult.data.transactions,
-          betaInfo: backtestResult.data.betaInfo
+          betaInfo: backtestResult.data.betaInfo,
+          scenarioAnalysis: backtestResult.data.summary?.scenarioAnalysis
         };
 
         setChartData(finalChartData);
@@ -310,7 +311,8 @@ function AppContent() {
           ...chartResult,
           backtestParameters: parameters,
           transactions: backtestResult.data.transactions,
-          betaInfo: backtestResult.data.betaInfo
+          betaInfo: backtestResult.data.betaInfo,
+          scenarioAnalysis: backtestResult.data.summary?.scenarioAnalysis
         };
 
         setChartData(finalChartData);

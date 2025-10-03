@@ -864,8 +864,15 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
       trailingBuyReboundPercent: finalParams.trailingBuyReboundPercent,
       trailingSellActivationPercent: finalParams.trailingSellActivationPercent,
       trailingSellPullbackPercent: finalParams.trailingSellPullbackPercent,
+      enableDynamicGrid: finalParams.enableDynamicGrid,
+      normalizeToReference: finalParams.normalizeToReference,
+      dynamicGridMultiplier: finalParams.dynamicGridMultiplier,
+      enableConsecutiveIncrementalSellProfit: finalParams.enableConsecutiveIncrementalSellProfit,
+      enableScenarioDetection: finalParams.enableScenarioDetection,
       verbose: false // Don't log to console for API calls
     });
+
+    console.log('📤 API Response - scenarioAnalysis:', JSON.stringify(results.scenarioAnalysis, null, 2));
 
     res.json({
       success: true,
@@ -885,7 +892,8 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
           sharpeRatio: results.sharpeRatio,
           winRate: results.winRate,
           volatility: results.volatility,
-          performanceMetrics: results.performanceMetrics
+          performanceMetrics: results.performanceMetrics,
+          scenarioAnalysis: results.scenarioAnalysis
         },
         transactions: (() => {
           const transactions = [];

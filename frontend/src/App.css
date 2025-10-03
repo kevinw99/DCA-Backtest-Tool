@@ -1728,3 +1728,169 @@
   font-size: 0.875rem;
   text-align: right;
 }
+
+/* ============================================================
+   SCENARIO ANALYSIS STYLES
+   ============================================================ */
+
+.scenario-analysis-card {
+  background: white;
+  border-radius: 8px;
+  padding: 0;
+  margin: 2rem 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.scenario-header {
+  padding: 1.5rem;
+  margin-bottom: 0;
+}
+
+.scenario-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.scenario-icon {
+  font-size: 1.75rem;
+}
+
+.scenario-title h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.confidence-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.scenario-description {
+  margin: 0.5rem 0;
+  color: #4a5568;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.scenario-analysis {
+  margin: 0.5rem 0 0 0;
+  color: #718096;
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+.scenario-metrics,
+.scenario-risk-metrics,
+.scenario-recommendations {
+  padding: 1.5rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.scenario-metrics h4,
+.scenario-risk-metrics h4,
+.scenario-recommendations h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.metric-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  background: #f7fafc;
+  border-radius: 6px;
+}
+
+.metric-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #718096;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metric-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.recommendations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.recommendation-item {
+  padding: 1rem;
+  background: #f7fafc;
+  border-radius: 6px;
+  border-left-width: 3px;
+  border-left-style: solid;
+}
+
+.recommendation-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.priority-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.recommendation-action {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.recommendation-reason,
+.recommendation-suggestion {
+  margin: 0.5rem 0;
+  font-size: 0.875rem;
+  color: #4a5568;
+  line-height: 1.5;
+}
+
+.recommendation-reason strong,
+.recommendation-suggestion strong {
+  color: #2d3748;
+}
+
+@media (max-width: 768px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .scenario-title {
+    flex-wrap: wrap;
+  }
+
+  .confidence-badge {
+    width: 100%;
+    text-align: center;
+  }
+}

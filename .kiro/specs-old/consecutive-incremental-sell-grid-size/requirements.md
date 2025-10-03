@@ -1,8 +1,29 @@
-# Requirements Document
+# Consecutive Incremental Sell Grid - Requirements
 
-## Introduction
+## Problem Statement
 
-This feature introduces a consecutive-incremental sell grid size system for the DCA trading platform. Instead of using fixed profit requirements for all sell orders, the system will dynamically calculate increasing profit margins for consecutive sell orders using a mathematical sequence generator. This enhancement aims to optimize selling behavior by spacing sell orders more strategically as the price rises from the lowest price held in current holdings.
+Current DCA strategy uses a fixed profit requirement for all sells, which can lead to:
+
+- **Selling too early during strong uptrends**: Missing larger profit opportunities when price momentum is strong
+- **Not capturing runaway price increases**: When price rapidly increases, we sell at minimum profit and miss the ride
+- **Inefficient profit capture**: Not adapting sell strategy to market momentum
+
+The goal is to implement an **adaptive profit requirement** that increases for consecutive sells during uptrends, allowing the strategy to "let winners run" while still taking profits systematically.
+
+## Core Concept
+
+**Dynamic Profit Requirement on Consecutive Sells**
+
+When the price is rising and we execute consecutive sells (no buys in between), increase the profit requirement progressively by adding the current grid size. This creates a "trailing profit ladder" that captures more upside during strong trends.
+
+### Key Conditions
+
+The profit requirement increases **ONLY** when **BOTH** conditions are met:
+
+1. **Consecutive sell**: The last action was a sell (no buy in between)
+2. **Price going up**: Current price > last sell price
+
+If either condition fails, reset to base profit requirement.
 
 ## Requirements
 

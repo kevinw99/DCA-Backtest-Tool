@@ -14,6 +14,7 @@ import {
   Legend
 } from 'recharts';
 import PerformanceSummary from './PerformanceSummary';
+import ScenarioAnalysis from './ScenarioAnalysis';
 import { formatCurrency, formatPercent, formatParameterPercent, formatDate } from '../utils/formatters';
 
 const BacktestResults = ({ data, chartData: priceData }) => {
@@ -635,6 +636,34 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                 </div>
               </>
             )}
+
+            {/* Dynamic Grid Parameters */}
+            <div className="parameter-card">
+              <span className="parameter-label">Dynamic Grid</span>
+              <span className="parameter-value">{priceData.backtestParameters.enableDynamicGrid !== false ? 'Enabled' : 'Disabled'}</span>
+            </div>
+            {priceData.backtestParameters.enableDynamicGrid !== false && (
+              <>
+                <div className="parameter-card">
+                  <span className="parameter-label">Normalize to Reference</span>
+                  <span className="parameter-value">{priceData.backtestParameters.normalizeToReference !== false ? 'Yes' : 'No'}</span>
+                </div>
+                <div className="parameter-card">
+                  <span className="parameter-label">Grid Multiplier</span>
+                  <span className="parameter-value">{(priceData.backtestParameters.dynamicGridMultiplier || 1.0).toFixed(1)}</span>
+                </div>
+              </>
+            )}
+
+            {/* Consecutive Incremental Parameters */}
+            <div className="parameter-card">
+              <span className="parameter-label">Consecutive Incremental Buy</span>
+              <span className="parameter-value">{priceData.backtestParameters.enableConsecutiveIncremental !== false ? 'Enabled' : 'Disabled'}</span>
+            </div>
+            <div className="parameter-card">
+              <span className="parameter-label">Consecutive Incremental Sell Profit</span>
+              <span className="parameter-value">{priceData.backtestParameters.enableConsecutiveIncrementalSellProfit !== false ? 'Enabled' : 'Disabled'}</span>
+            </div>
 
             {/* Beta Scaling Information */}
             {priceData.backtestParameters.enableBetaScaling && (
@@ -1459,6 +1488,11 @@ const BacktestResults = ({ data, chartData: priceData }) => {
       {/* Performance Metrics Summary */}
       {summary.performanceMetrics && (
         <PerformanceSummary performanceMetrics={summary.performanceMetrics} />
+      )}
+
+      {/* Scenario Analysis */}
+      {priceData?.scenarioAnalysis && (
+        <ScenarioAnalysis scenarioAnalysis={priceData.scenarioAnalysis} />
       )}
 
       {/* Strategy Summary */}

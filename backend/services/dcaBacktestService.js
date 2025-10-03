@@ -9,6 +9,7 @@ const {
   validateBacktestParameters,
   calculateDynamicGridSpacing
 } = require('./shared/backtestUtilities');
+const { detectScenario } = require('./scenarioDetectionService');
 
 /**
  * Core DCA Backtesting Service
@@ -307,6 +308,8 @@ async function runDCABacktest(params) {
     enableDynamicGrid = true, // Enable square root-based dynamic grid spacing
     normalizeToReference = true, // Normalize first trade price to $100 reference
     dynamicGridMultiplier = 1.0, // Grid width multiplier (1.0 = ~10% at $100)
+    enableConsecutiveIncrementalSellProfit = true, // Enable incremental profit req for consecutive uptrend sells
+    enableScenarioDetection = true, // Enable scenario detection and analysis
     verbose = true
   } = params;
 
@@ -422,6 +425,10 @@ async function runDCABacktest(params) {
     let activeStop = null;
     const dailyPortfolioValues = [];
     const dailyCapitalDeployed = [];
+
+    // Consecutive incremental profit tracking
+    let lastActionType = null; // 'buy' | 'sell' | null
+    let lastSellPrice = null; // Price of last sell, or null
 
     // Questionable events monitoring
     const questionableEvents = [];
@@ -584,6 +591,10 @@ async function runDCABacktest(params) {
               }
             }
 
+            // Update consecutive sell tracking state
+            lastActionType = 'buy';
+            lastSellPrice = null; // Reset on buy
+
             averageCost = recalculateAverageCost();
 
             // Calculate P&L values after trailing stop buy
@@ -662,16 +673,45 @@ async function runDCABacktest(params) {
 
         // Only set trailing stop if unrealized P&L > 0
         if (unrealizedPNL > 0) {
+          // Calculate lot-level profit requirement (dynamic for consecutive uptrend sells)
+          let lotProfitRequirement = profitRequirement; // Default to base
+          if (enableConsecutiveIncrementalSellProfit && lastActionType === 'sell' && lastSellPrice !== null && currentPrice > lastSellPrice) {
+            // Consecutive uptrend sell - calculate dynamic grid size
+            let gridSize;
+            if (enableDynamicGrid) {
+              gridSize = calculateDynamicGridSpacing(
+                currentPrice,
+                referencePrice || currentPrice,
+                dynamicGridMultiplier,
+                normalizeToReference
+              );
+              if (verbose) {
+                transactionLog.push(
+                  colorize(`  🔬 Grid calc: currentPrice=${currentPrice.toFixed(2)}, refPrice=${(referencePrice || currentPrice).toFixed(2)}, gridSize=${(gridSize * 100).toFixed(4)}%`, 'cyan')
+                );
+              }
+            } else {
+              gridSize = gridIntervalPercent;
+            }
+            lotProfitRequirement = profitRequirement + gridSize;
+
+            if (verbose) {
+              transactionLog.push(
+                colorize(`  📈 Consecutive uptrend sell: lot profit req ${(lotProfitRequirement * 100).toFixed(2)}% (base ${(profitRequirement * 100).toFixed(2)}% + grid ${(gridSize * 100).toFixed(2)}%)`, 'cyan')
+              );
+            }
+          }
+
           // Find the highest-priced lot that is eligible for selling
           // Calculate stop price using parameterized pullback percentage
           const stopPrice = currentPrice * (1 - trailingSellPullbackPercent);
-          const minProfitablePrice = averageCost * (1 + profitRequirement);
+          const minProfitablePrice = averageCost * (1 + profitRequirement); // ✅ BASE for average cost
 
-          transactionLog.push(colorize(`DEBUG LOT SELECTION: currentPrice=${currentPrice.toFixed(2)}, stopPrice=${stopPrice.toFixed(2)}, profitRequirement=${profitRequirement}, averageCost=${averageCost.toFixed(2)}, minProfitablePrice=${minProfitablePrice.toFixed(2)}`, 'cyan'));
+          transactionLog.push(colorize(`DEBUG LOT SELECTION: currentPrice=${currentPrice.toFixed(2)}, stopPrice=${stopPrice.toFixed(2)}, baseProfitReq=${profitRequirement}, lotProfitReq=${lotProfitRequirement}, averageCost=${averageCost.toFixed(2)}, minProfitablePrice=${minProfitablePrice.toFixed(2)}`, 'cyan'));
           transactionLog.push(colorize(`DEBUG ALL LOTS: ${lots.map(lot => `$${lot.price.toFixed(2)}`).join(', ')}`, 'cyan'));
 
           // Select lots that would be profitable to sell (meeting profit requirement)
-          const eligibleLots = lots.filter(lot => currentPrice > lot.price * (1 + profitRequirement));
+          const eligibleLots = lots.filter(lot => currentPrice > lot.price * (1 + lotProfitRequirement)); // 🔄 DYNAMIC for lot comparison
 
           transactionLog.push(colorize(`DEBUG ELIGIBLE LOTS: ${eligibleLots.map(lot => `$${lot.price.toFixed(2)}`).join(', ')} (${eligibleLots.length} eligible)`, 'cyan'));
 
@@ -714,8 +754,25 @@ async function runDCABacktest(params) {
           const oldStopPrice = activeStop.stopPrice;
           const oldLimitPrice = activeStop.limitPrice;
 
+          // Calculate lot-level profit requirement (same logic as activation)
+          let lotProfitRequirement = profitRequirement; // Default to base
+          if (enableConsecutiveIncrementalSellProfit && lastActionType === 'sell' && lastSellPrice !== null && currentPrice > lastSellPrice) {
+            let gridSize;
+            if (enableDynamicGrid) {
+              gridSize = calculateDynamicGridSpacing(
+                currentPrice,
+                referencePrice || currentPrice,
+                dynamicGridMultiplier,
+                normalizeToReference
+              );
+            } else {
+              gridSize = gridIntervalPercent;
+            }
+            lotProfitRequirement = profitRequirement + gridSize;
+          }
+
           // Recalculate lot selection with new stop price using profit requirement
-          const eligibleLots = lots.filter(lot => currentPrice > lot.price * (1 + profitRequirement));
+          const eligibleLots = lots.filter(lot => currentPrice > lot.price * (1 + lotProfitRequirement)); // 🔄 DYNAMIC
 
           if (eligibleLots.length > 0) {
             const sortedEligibleLots = eligibleLots.sort((a, b) => b.price - a.price);
@@ -953,6 +1010,10 @@ async function runDCABacktest(params) {
           transactionLog.push(
             colorize(`    Total PNL: ${pnl.toFixed(2)}, Remaining lots: ${getLotsPrices(lots)}, New Avg Cost: ${averageCost.toFixed(2)}`, 'red')
           );
+
+          // Update consecutive sell tracking state
+          lastActionType = 'sell';
+          lastSellPrice = executionPrice;
 
           // Clear active stop and reset peak/bottom tracking after sell
           activeStop = null;
@@ -1198,7 +1259,13 @@ async function runDCABacktest(params) {
     transactionLog.push('');
     transactionLog.push('============================================================');
 
-    return {
+    // Calculate trade statistics for scenario detection
+    const sellTransactions = enhancedTransactions.filter(t => t.type === 'SELL');
+    const winningTrades = sellTransactions.filter(t => t.realizedPNLFromTrade > 0).length;
+    const losingTrades = sellTransactions.filter(t => t.realizedPNLFromTrade <= 0).length;
+
+    // Prepare result object for scenario detection
+    const backtestResult = {
       strategy: 'SHARED_CORE',
       symbol: symbol,
       startDate: startDate,
@@ -1236,10 +1303,47 @@ async function runDCABacktest(params) {
       questionableEvents: questionableEvents,
 
       // Add comprehensive performance metrics
-      performanceMetrics: performanceMetrics
+      performanceMetrics: performanceMetrics,
+
+      // Add backtest parameters for reference
+      backtestParameters: {
+        symbol,
+        startDate,
+        endDate,
+        lotSizeUsd,
+        maxLots,
+        maxLotsToSell,
+        gridIntervalPercent,
+        profitRequirement,
+        trailingBuyActivationPercent,
+        trailingBuyReboundPercent,
+        trailingSellActivationPercent,
+        trailingSellPullbackPercent,
+        enableDynamicGrid,
+        normalizeToReference,
+        dynamicGridMultiplier,
+        enableConsecutiveIncrementalSellProfit,
+        enableScenarioDetection
+      },
+
+      // Add transactions for scenario analysis
+      transactions: enhancedTransactions,
+      winningTrades: winningTrades,
+      losingTrades: losingTrades,
+      buyAndHoldReturn: buyAndHoldResults.totalReturn
     };
 
+    // Run scenario detection if enabled
+    const scenarioAnalysis = detectScenario(backtestResult, enableScenarioDetection);
+
+    // Add scenario analysis to result
+    if (scenarioAnalysis) {
+      backtestResult.scenarioAnalysis = scenarioAnalysis;
+    }
+
     console.log(`🔍 DCA Backtest Debug - Enhanced Transactions: ${enhancedTransactions.length} total`);
+
+    return backtestResult;
 
   } catch (error) {
     if (verbose) {

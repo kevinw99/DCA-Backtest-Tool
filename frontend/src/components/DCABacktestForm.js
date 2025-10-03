@@ -45,7 +45,13 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
       trailingBuyActivationPercent: [10],
       trailingBuyReboundPercent: [5],
       trailingSellActivationPercent: [20],
-      trailingSellPullbackPercent: [10]
+      trailingSellPullbackPercent: [10],
+      enableDynamicGrid: true,
+      normalizeToReference: true,
+      dynamicGridMultiplier: [1.0],
+      enableConsecutiveIncremental: true,
+      enableConsecutiveIncrementalSellProfit: true,
+      enableScenarioDetection: true
     };
 
     if (saved) {
@@ -662,6 +668,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
           trailingBuyReboundPercent: batchParameters.trailingBuyReboundPercent.map(p => p / 100),
           trailingSellActivationPercent: batchParameters.trailingSellActivationPercent.map(p => p / 100),
           trailingSellPullbackPercent: batchParameters.trailingSellPullbackPercent.map(p => p / 100),
+          dynamicGridMultiplier: batchParameters.dynamicGridMultiplier,
           // Fixed parameters from single mode
           startDate: parameters.startDate,
           endDate: parameters.endDate,
@@ -670,6 +677,11 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
         },
         // Move enableBetaScaling to top level to match URL structure
         enableBetaScaling: batchParameters.enableBetaScaling,
+        enableDynamicGrid: batchParameters.enableDynamicGrid,
+        normalizeToReference: batchParameters.normalizeToReference,
+        enableConsecutiveIncremental: batchParameters.enableConsecutiveIncremental,
+        enableConsecutiveIncrementalSellProfit: batchParameters.enableConsecutiveIncrementalSellProfit,
+        enableScenarioDetection: batchParameters.enableScenarioDetection,
         sortBy: 'annualizedReturn'
       };
       onSubmit(batchOptions, true); // true indicates batch mode
@@ -1780,6 +1792,34 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                   </div>
                 )}
 
+                <div className="form-group checkbox-group">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={parameters.enableConsecutiveIncrementalSellProfit ?? true}
+                      onChange={(e) => handleChange('enableConsecutiveIncrementalSellProfit', e.target.checked)}
+                    />
+                    Enable Consecutive Incremental Sell Profit
+                  </label>
+                  <span className="form-help">
+                    Increase profit requirement for consecutive sells during uptrends (profit req + grid size)
+                  </span>
+                </div>
+
+                <div className="form-group checkbox-group">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={parameters.enableScenarioDetection ?? true}
+                      onChange={(e) => handleChange('enableScenarioDetection', e.target.checked)}
+                    />
+                    Enable Scenario Detection
+                  </label>
+                  <span className="form-help">
+                    Analyze market scenarios (Downtrend, Missed Rally, Oscillating Uptrend) with recommendations
+                  </span>
+                </div>
+
                 <div className="form-group">
                   <label htmlFor="trailingBuyActivationPercent">
                     Trailing Buy Activation (%)
@@ -2519,6 +2559,105 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                 </div>
               </>
             )}
+
+            {/* Dynamic Grid and Consecutive Incremental Options for Batch Mode */}
+            {batchMode && strategyMode === 'long' && (
+              <>
+                <div className="parameter-section">
+                  <h3>Dynamic Grid Multiplier (%)</h3>
+                  <div className="batch-actions">
+                    <button
+                      type="button"
+                      className="select-all-btn"
+                      onClick={() => handleBatchParameterChange('dynamicGridMultiplier', [0.5, 1.0, 1.5, 2.0])}
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      className="deselect-all-btn"
+                      onClick={() => handleBatchParameterChange('dynamicGridMultiplier', [1.0])}
+                    >
+                      Reset to Default
+                    </button>
+                  </div>
+                  <div className="checkbox-grid">
+                    {[0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0].map(val => (
+                      <label key={val} className="checkbox-item">
+                        <input
+                          type="checkbox"
+                          checked={(batchParameters.dynamicGridMultiplier || [1.0]).includes(val)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              handleBatchParameterChange('dynamicGridMultiplier', [...(batchParameters.dynamicGridMultiplier || []), val]);
+                            } else {
+                              handleBatchParameterChange('dynamicGridMultiplier', (batchParameters.dynamicGridMultiplier || []).filter(m => m !== val));
+                            }
+                          }}
+                        />
+                        <span>{val}x</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="parameter-section">
+                  <h3>Grid & Incremental Options</h3>
+                  <div className="form-group checkbox-group">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={batchParameters.enableDynamicGrid !== false}
+                        onChange={(e) => handleBatchParameterChange('enableDynamicGrid', e.target.checked)}
+                      />
+                      Enable Dynamic Grid
+                    </label>
+                  </div>
+                  {batchParameters.enableDynamicGrid !== false && (
+                    <div className="form-group checkbox-group">
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={batchParameters.normalizeToReference !== false}
+                          onChange={(e) => handleBatchParameterChange('normalizeToReference', e.target.checked)}
+                        />
+                        Normalize to Reference Price
+                      </label>
+                    </div>
+                  )}
+                  <div className="form-group checkbox-group">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={batchParameters.enableConsecutiveIncremental !== false}
+                        onChange={(e) => handleBatchParameterChange('enableConsecutiveIncremental', e.target.checked)}
+                      />
+                      Enable Consecutive Incremental Buy
+                    </label>
+                  </div>
+                  <div className="form-group checkbox-group">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={batchParameters.enableConsecutiveIncrementalSellProfit !== false}
+                        onChange={(e) => handleBatchParameterChange('enableConsecutiveIncrementalSellProfit', e.target.checked)}
+                      />
+                      Enable Consecutive Incremental Sell Profit
+                    </label>
+                  </div>
+                  <div className="form-group checkbox-group">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={batchParameters.enableScenarioDetection !== false}
+                        onChange={(e) => handleBatchParameterChange('enableScenarioDetection', e.target.checked)}
+                      />
+                      Enable Scenario Detection
+                    </label>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -2548,7 +2687,8 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                     batchParameters.trailingBuyActivationPercent.length *
                     batchParameters.trailingBuyReboundPercent.length *
                     batchParameters.trailingSellActivationPercent.length *
-                    batchParameters.trailingSellPullbackPercent.length
+                    batchParameters.trailingSellPullbackPercent.length *
+                    (batchParameters.dynamicGridMultiplier?.length || 1)
                   )
                 }
               </p>
