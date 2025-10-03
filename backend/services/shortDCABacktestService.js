@@ -5,7 +5,8 @@ const {
   calculateShortAndHold: calculateShortAndHoldUtil,
   calculateSharpeRatio,
   calculateWinRate,
-  validateBacktestParameters
+  validateBacktestParameters,
+  calculateDynamicGridSpacing
 } = require('./shared/backtestUtilities');
 
 /**
@@ -333,12 +334,20 @@ async function runShortDCABacktest(params) {
     hardStopLossPercent = 0.30,
     portfolioStopLossPercent = 0.25,
     cascadeStopLossPercent = 0.35,
+    enableDynamicGrid = true, // Enable square root-based dynamic grid spacing
+    normalizeToReference = true, // Normalize first trade price to $100 reference
+    dynamicGridMultiplier = 1.0, // Grid width multiplier (1.0 = ~10% at $100)
     verbose = true
   } = params;
 
   if (verbose) {
     console.log(`🎯 Starting SHORT DCA backtest for ${symbol}...`);
-    console.log(`📊 Parameters: ${lotSizeUsd} USD/short, ${maxShorts} max shorts, ${maxShortsToCovers} max shorts per cover, ${(gridIntervalPercent*100).toFixed(1)}% grid`);
+    if (enableDynamicGrid) {
+      console.log(`📊 Parameters: ${lotSizeUsd} USD/short, ${maxShorts} max shorts, ${maxShortsToCovers} max shorts per cover`);
+      console.log(`📐 Dynamic Grid: ${normalizeToReference ? 'Normalized' : 'Absolute'} (multiplier: ${dynamicGridMultiplier})`);
+    } else {
+      console.log(`📊 Parameters: ${lotSizeUsd} USD/short, ${maxShorts} max shorts, ${maxShortsToCovers} max shorts per cover, ${(gridIntervalPercent*100).toFixed(1)}% fixed grid`);
+    }
   }
 
   try {
@@ -412,6 +421,7 @@ async function runShortDCABacktest(params) {
     let mostRecentShortPrice = null; // Tracks the highest (most recent) short price for emergency cover triggers
     let mostRecentShortPeakPrice = null; // Tracks the peak price associated with the most recent short position
     let emergencyCoverTriggerPrice = null; // Emergency cover trigger price to prevent scope issues
+    let referencePrice = null; // Will be set on first trade for dynamic grid normalization
 
     const recalculateAverageShortCost = () => {
       if (shorts.length > 0) {
@@ -664,12 +674,33 @@ async function runShortDCABacktest(params) {
           if (shorts.length < maxShorts) {
             // NEW REQUIREMENT: Multi-lots only allowed when price is lower than previous short by grid interval
             // All shorted prices must be in strictly descending order
-            const respectsDescendingOrder = shorts.length === 0 || currentPrice < Math.min(...shorts.map(s => s.price)) * (1 - gridIntervalPercent);
+            // Calculate dynamic grid spacing for validation
+            const minShortPrice = Math.min(...shorts.map(s => s.price));
+            const ref = referencePrice || currentPrice; // Use current price if no reference yet
+
+            let gridSize;
+            if (enableDynamicGrid) {
+              const midPrice = (currentPrice + minShortPrice) / 2;
+              gridSize = calculateDynamicGridSpacing(midPrice, ref, dynamicGridMultiplier, normalizeToReference);
+            } else {
+              gridSize = gridIntervalPercent; // Legacy fixed percentage
+            }
+
+            const respectsDescendingOrder = shorts.length === 0 || currentPrice < minShortPrice * (1 - gridSize);
             if (respectsDescendingOrder) {
               // Execute the trailing stop short
               const shares = lotSizeUsd / currentPrice;
               const peakPriceAtExecution = trailingStopShort.lastUpdatePrice;
               shorts.push({ price: currentPrice, shares: shares, date: currentDate, peakPrice: peakPriceAtExecution });
+
+              // Set reference price on first trade (for normalized dynamic grid)
+              if (referencePrice === null) {
+                referencePrice = currentPrice;
+                if (verbose && enableDynamicGrid && normalizeToReference) {
+                  transactionLog.push(colorize(`  INFO: Reference price set to ${referencePrice.toFixed(2)} (normalized to $100)`, 'cyan'));
+                }
+              }
+
               averageShortCost = recalculateAverageShortCost();
 
               // Update most recent short price tracking and associated peak price

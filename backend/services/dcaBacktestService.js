@@ -6,7 +6,8 @@ const {
   calculateBuyAndHold: calculateBuyAndHoldUtil,
   calculateSharpeRatio,
   calculateWinRate,
-  validateBacktestParameters
+  validateBacktestParameters,
+  calculateDynamicGridSpacing
 } = require('./shared/backtestUtilities');
 
 /**
@@ -303,12 +304,20 @@ async function runDCABacktest(params) {
     trailingBuyReboundPercent = 0.05, // Default 5% rebound for trailing buy stop price
     trailingSellActivationPercent = 0.2, // Default 20% rise to activate trailing sell
     trailingSellPullbackPercent = 0.1, // Default 10% pullback for trailing sell stop price
+    enableDynamicGrid = true, // Enable square root-based dynamic grid spacing
+    normalizeToReference = true, // Normalize first trade price to $100 reference
+    dynamicGridMultiplier = 1.0, // Grid width multiplier (1.0 = ~10% at $100)
     verbose = true
   } = params;
 
   if (verbose) {
     console.log(`🎯 Starting DCA backtest for ${symbol}...`);
-    console.log(`📊 Parameters: ${lotSizeUsd} USD/lot, ${maxLots} max lots, ${maxLotsToSell} max lots per sell, ${(gridIntervalPercent*100).toFixed(1)}% grid`);
+    if (enableDynamicGrid) {
+      console.log(`📊 Parameters: ${lotSizeUsd} USD/lot, ${maxLots} max lots, ${maxLotsToSell} max lots per sell`);
+      console.log(`📐 Dynamic Grid: ${normalizeToReference ? 'Normalized' : 'Absolute'} (multiplier: ${dynamicGridMultiplier})`);
+    } else {
+      console.log(`📊 Parameters: ${lotSizeUsd} USD/lot, ${maxLots} max lots, ${maxLotsToSell} max lots per sell, ${(gridIntervalPercent*100).toFixed(1)}% fixed grid`);
+    }
   }
 
   try {
@@ -409,6 +418,7 @@ async function runDCABacktest(params) {
     const initialPrice = pricesWithIndicators[0].adjusted_close;
     const trailingAmount = initialPrice * gridIntervalPercent;
     const transactionLog = [];
+    let referencePrice = null; // Will be set on first trade for dynamic grid normalization
     let activeStop = null;
     const dailyPortfolioValues = [];
     const dailyCapitalDeployed = [];
@@ -547,11 +557,33 @@ async function runDCABacktest(params) {
         if (currentPrice <= trailingStopBuy.recentPeakReference) {
           // Trailing stop buy triggered - check if we can execute
           if (lots.length < maxLots) {
-            const respectsGridSpacing = lots.every(lot => Math.abs(currentPrice - lot.price) / lot.price >= gridIntervalPercent);
+            // Calculate dynamic grid spacing for validation
+            const respectsGridSpacing = lots.every(lot => {
+              const midPrice = (currentPrice + lot.price) / 2;
+              const ref = referencePrice || midPrice; // Use midPrice if no reference yet
+
+              let gridSize;
+              if (enableDynamicGrid) {
+                gridSize = calculateDynamicGridSpacing(midPrice, ref, dynamicGridMultiplier, normalizeToReference);
+              } else {
+                gridSize = gridIntervalPercent; // Legacy fixed percentage
+              }
+
+              return Math.abs(currentPrice - lot.price) / lot.price >= gridSize;
+            });
             if (respectsGridSpacing) {
             // Execute the trailing stop buy
             const shares = lotSizeUsd / currentPrice;
             lots.push({ price: currentPrice, shares: shares, date: currentDate });
+
+            // Set reference price on first trade (for normalized dynamic grid)
+            if (referencePrice === null) {
+              referencePrice = currentPrice;
+              if (verbose && enableDynamicGrid && normalizeToReference) {
+                transactionLog.push(colorize(`  INFO: Reference price set to ${referencePrice.toFixed(2)} (normalized to $100)`, 'cyan'));
+              }
+            }
+
             averageCost = recalculateAverageCost();
 
             // Calculate P&L values after trailing stop buy

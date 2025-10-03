@@ -1706,29 +1706,79 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                   </span>
                 </div>
 
-                <div className="form-group">
-                  <label htmlFor="gridIntervalPercent">
-                    Grid Interval (%)
-                    {enableBetaScaling && <span className="beta-adjusted-indicator" title="Beta-adjusted parameter">β</span>}
+                <div className="form-group checkbox-group">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={parameters.enableDynamicGrid ?? true}
+                      onChange={(e) => handleChange('enableDynamicGrid', e.target.checked)}
+                    />
+                    Enable Dynamic Grid Spacing
                   </label>
-                  <input
-                    id="gridIntervalPercent"
-                    type="number"
-                    value={parameters.gridIntervalPercent}
-                    onChange={(e) => handleChange('gridIntervalPercent', parseFloat(e.target.value))}
-                    min="1"
-                    max="20"
-                    step="0.1"
-                    required
-                    disabled={enableBetaScaling}
-                  />
                   <span className="form-help">
-                    {enableBetaScaling && adjustedParameters.gridIntervalPercent
-                      ? `Will be scaled to ${adjustedParameters.gridIntervalPercent.toFixed(2)}% (β-factor: ${betaFactor.toFixed(3)})`
-                      : 'Minimum price difference between lots'
-                    }
+                    Square root-based grid that adapts to price level (default: enabled)
                   </span>
                 </div>
+
+                {parameters.enableDynamicGrid !== false ? (
+                  <>
+                    <div className="form-group checkbox-group">
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={parameters.normalizeToReference ?? true}
+                          onChange={(e) => handleChange('normalizeToReference', e.target.checked)}
+                        />
+                        Normalize to Reference Price
+                      </label>
+                      <span className="form-help">
+                        Treat first trade as $100 for consistent grid behavior (default: enabled)
+                      </span>
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="dynamicGridMultiplier">
+                        Grid Multiplier: {(parameters.dynamicGridMultiplier ?? 1.0).toFixed(1)}
+                      </label>
+                      <input
+                        id="dynamicGridMultiplier"
+                        type="range"
+                        value={parameters.dynamicGridMultiplier ?? 1.0}
+                        onChange={(e) => handleChange('dynamicGridMultiplier', parseFloat(e.target.value))}
+                        min="0.5"
+                        max="2.0"
+                        step="0.1"
+                      />
+                      <span className="form-help">
+                        1.0 = ~10% at reference, higher = wider grids
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="form-group">
+                    <label htmlFor="gridIntervalPercent">
+                      Fixed Grid Interval (%)
+                      {enableBetaScaling && <span className="beta-adjusted-indicator" title="Beta-adjusted parameter">β</span>}
+                    </label>
+                    <input
+                      id="gridIntervalPercent"
+                      type="number"
+                      value={parameters.gridIntervalPercent}
+                      onChange={(e) => handleChange('gridIntervalPercent', parseFloat(e.target.value))}
+                      min="1"
+                      max="20"
+                      step="0.1"
+                      required
+                      disabled={enableBetaScaling}
+                    />
+                    <span className="form-help">
+                      {enableBetaScaling && adjustedParameters.gridIntervalPercent
+                        ? `Will be scaled to ${adjustedParameters.gridIntervalPercent.toFixed(2)}% (β-factor: ${betaFactor.toFixed(3)})`
+                        : 'Minimum price difference between lots'
+                      }
+                    </span>
+                  </div>
+                )}
 
                 <div className="form-group">
                   <label htmlFor="trailingBuyActivationPercent">

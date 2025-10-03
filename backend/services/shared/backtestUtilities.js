@@ -209,6 +209,63 @@ function validateBacktestParameters(params) {
   }
 }
 
+/**
+ * Calculate dynamic grid spacing based on square root of price
+ *
+ * This implements an adaptive grid system where:
+ * - High prices get tighter % spacing (but larger $ gaps)
+ * - Low prices get wider % spacing (but smaller $ gaps)
+ *
+ * Formula: gridDollar = sqrt(effectivePrice) × multiplier
+ *
+ * @param {number} currentPrice - Current market price
+ * @param {number} referencePrice - Reference price for normalization (typically first trade price)
+ * @param {number} multiplier - Grid width multiplier (default 1.0 for ~10% at $100)
+ * @param {boolean} normalizeToReference - Whether to normalize price to $100 reference
+ * @returns {number} Grid spacing as decimal percentage (e.g., 0.10 for 10%)
+ *
+ * @example
+ * // Without normalization (absolute prices)
+ * calculateDynamicGridSpacing(1000, 100, 1.0, false) // Returns ~0.032 (3.2% at $1000)
+ * calculateDynamicGridSpacing(100, 100, 1.0, false)  // Returns ~0.10 (10% at $100)
+ * calculateDynamicGridSpacing(25, 100, 1.0, false)   // Returns ~0.20 (20% at $25)
+ *
+ * @example
+ * // With normalization (first trade = $100)
+ * calculateDynamicGridSpacing(150, 150, 1.0, true) // Returns ~0.10 (first trade always ~10%)
+ * calculateDynamicGridSpacing(135, 150, 1.0, true) // Returns ~0.097 (normalized to $90)
+ */
+function calculateDynamicGridSpacing(currentPrice, referencePrice, multiplier = 1.0, normalizeToReference = true) {
+  // Input validation
+  if (currentPrice <= 0) {
+    throw new Error('currentPrice must be positive');
+  }
+  if (multiplier <= 0) {
+    throw new Error('multiplier must be positive');
+  }
+
+  let effectivePrice = currentPrice;
+
+  // Normalize price relative to reference if enabled
+  if (normalizeToReference && referencePrice > 0) {
+    // Scale current price so that referencePrice becomes $100
+    // e.g., if first trade was $150 and current is $135:
+    //   effectivePrice = (135 / 150) * 100 = 90
+    effectivePrice = (currentPrice / referencePrice) * 100;
+  }
+
+  // Square root grid formula: gridDollar = sqrt(effectivePrice) × multiplier
+  // At $100: sqrt(100) × 1.0 = 10, which is 10% of $100
+  // At $400: sqrt(400) × 1.0 = 20, which is 5% of $400
+  // At $25: sqrt(25) × 1.0 = 5, which is 20% of $25
+  const gridDollar = Math.sqrt(effectivePrice) * multiplier;
+
+  // Return as percentage of effective price
+  const gridPercent = gridDollar / effectivePrice;
+
+  return gridPercent;
+}
+
 module.exports = {
   calculatePortfolioDrawdown,
   assessMarketCondition,
@@ -216,5 +273,6 @@ module.exports = {
   calculateShortAndHold,
   calculateSharpeRatio,
   calculateWinRate,
-  validateBacktestParameters
+  validateBacktestParameters,
+  calculateDynamicGridSpacing
 };

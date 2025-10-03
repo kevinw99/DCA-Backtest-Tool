@@ -1,16 +1,16 @@
 {
-  "symbol": "APP",
-  "startDate": "2021-09-01",
-  "endDate": "2025-10-02",
+  "symbol": "TDOC",
+  "startDate": "2024-01-01",
+  "endDate": "2025-10-03",
   "lotSizeUsd": 10000,
   "maxLots": 10,
   "maxLotsToSell": 1,
-  "gridIntervalPercent": 0.05,
-  "profitRequirement": 0.1,
+  "gridIntervalPercent": 0.1,
+  "profitRequirement": 0,
   "trailingBuyActivationPercent": 0.1,
   "trailingBuyReboundPercent": 0,
   "trailingSellActivationPercent": 0.1,
-  "trailingSellPullbackPercent": 0.05,
+  "trailingSellPullbackPercent": 0,
   "availableSymbols": [
     "AAPL",
     "AMZN",
@@ -43,8 +43,11 @@
   "isManualBetaOverride": false,
   "strategyMode": "long",
   "coefficient": 1,
-  "betaFactor": 8.762,
+  "betaFactor": 1.848,
   "mode": "single",
   "source": "batch",
-  "enableConsecutiveIncremental": true
+  "enableConsecutiveIncremental": true,
+  "enableDynamicGrid": true,
+  "normalizeToReference": true,
+  "dynamicGridMultiplier": 1
 }
