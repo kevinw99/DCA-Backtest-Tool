@@ -43,7 +43,13 @@ async function generateParameterCombinations(paramRanges) {
     endDate = '2025-09-01',
     lotSizeUsd = 10000,
     maxLots = 10,
-    maxLotsToSell = [1]
+    maxLotsToSell = [1],
+    // Dynamic grid and incremental parameters
+    dynamicGridMultiplier = [1.0],
+    enableDynamicGrid = true,
+    normalizeToReference = true,
+    enableConsecutiveIncremental = true,
+    enableConsecutiveIncrementalSellProfit = true
   } = paramRanges;
 
   console.log('🔍 DEBUG: Parameter combinations input:', {
@@ -111,11 +117,16 @@ async function generateParameterCombinations(paramRanges) {
               trailingBuyReboundPercent: betaResult.adjustedParameters.trailingBuyReboundPercent,
               trailingSellActivationPercent: betaResult.adjustedParameters.trailingSellActivationPercent,
               trailingSellPullbackPercent: betaResult.adjustedParameters.trailingSellPullbackPercent,
+              dynamicGridMultiplier: dynamicGridMultiplier[0], // Use first value for beta scaling
               // Include Beta, coefficient, and beta_factor information for display
               beta: beta,
               coefficient: coefficient,
               betaFactor: betaResult.betaFactor,
               enableBetaScaling: true,
+              enableDynamicGrid,
+              normalizeToReference,
+              enableConsecutiveIncremental,
+              enableConsecutiveIncrementalSellProfit,
               betaInfo: {
                 beta: betaResult.beta,
                 coefficient: betaResult.coefficient,
@@ -144,24 +155,31 @@ async function generateParameterCombinations(paramRanges) {
               for (const buyRebound of trailingBuyReboundPercent) {
                 for (const sellActivation of trailingSellActivationPercent) {
                   for (const sellPullback of trailingSellPullbackPercent) {
-                    combinations.push({
-                      symbol,
-                      startDate,
-                      endDate,
-                      lotSizeUsd,
-                      maxLots,
-                      maxLotsToSell: lotsToSell,
-                    profitRequirement: profit,
-                    gridIntervalPercent: grid,
-                    trailingBuyActivationPercent: buyActivation,
-                    trailingBuyReboundPercent: buyRebound,
-                    trailingSellActivationPercent: sellActivation,
-                    trailingSellPullbackPercent: sellPullback,
-                    beta: 1.0,
-                    coefficient: 1.0,
-                    betaFactor: 1.0,
-                    enableBetaScaling: false
-                    });
+                    for (const gridMult of dynamicGridMultiplier) {
+                      combinations.push({
+                        symbol,
+                        startDate,
+                        endDate,
+                        lotSizeUsd,
+                        maxLots,
+                        maxLotsToSell: lotsToSell,
+                        profitRequirement: profit,
+                        gridIntervalPercent: grid,
+                        trailingBuyActivationPercent: buyActivation,
+                        trailingBuyReboundPercent: buyRebound,
+                        trailingSellActivationPercent: sellActivation,
+                        trailingSellPullbackPercent: sellPullback,
+                        dynamicGridMultiplier: gridMult,
+                        beta: 1.0,
+                        coefficient: 1.0,
+                        betaFactor: 1.0,
+                        enableBetaScaling: false,
+                        enableDynamicGrid,
+                        normalizeToReference,
+                        enableConsecutiveIncremental,
+                        enableConsecutiveIncrementalSellProfit
+                      });
+                    }
                   }
                 }
               }
@@ -224,6 +242,10 @@ async function runBatchBacktest(options, progressCallback = null, sessionId = nu
     symbols,
     parameterRanges,
     enableBetaScaling,
+    enableDynamicGrid,
+    normalizeToReference,
+    enableConsecutiveIncremental,
+    enableConsecutiveIncrementalSellProfit,
     includeComparison = true,
     sortBy = 'annualizedReturn' // 'totalReturn', 'annualizedReturn', 'winRate'
   } = options;
@@ -234,7 +256,11 @@ async function runBatchBacktest(options, progressCallback = null, sessionId = nu
   const mergedParameterRanges = {
     ...parameterRanges,
     symbols: symbols || parameterRanges.symbols, // Pass symbols from top-level to parameterRanges
-    enableBetaScaling: enableBetaScaling ?? parameterRanges.enableBetaScaling
+    enableBetaScaling: enableBetaScaling ?? parameterRanges.enableBetaScaling,
+    enableDynamicGrid: enableDynamicGrid ?? parameterRanges.enableDynamicGrid,
+    normalizeToReference: normalizeToReference ?? parameterRanges.normalizeToReference,
+    enableConsecutiveIncremental: enableConsecutiveIncremental ?? parameterRanges.enableConsecutiveIncremental,
+    enableConsecutiveIncrementalSellProfit: enableConsecutiveIncrementalSellProfit ?? parameterRanges.enableConsecutiveIncrementalSellProfit
   };
 
   console.log('🔍 DEBUG: Merged symbols into parameterRanges:', mergedParameterRanges.symbols);

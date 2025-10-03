@@ -238,6 +238,14 @@ class URLParameterManager {
       const compressed = urlParams.get('params');
       let parameters = compressed ? this.decompressParameters(compressed) : {};
 
+      // Check for individual parameter overrides in URL
+      // These should override the compressed parameters
+      const parameterOverrides = this._extractParameterOverrides(urlParams);
+      if (Object.keys(parameterOverrides).length > 0) {
+        console.log('🔄 Applying URL parameter overrides:', parameterOverrides);
+        parameters = { ...parameters, ...parameterOverrides };
+      }
+
       // Parse path components
       const parts = pathname.split('/').filter(p => p);
 
@@ -588,6 +596,77 @@ class URLParameterManager {
   _encodeDecimalArrayAsPercentage(decimalArray) {
     if (!Array.isArray(decimalArray)) return decimalArray?.toString() || '';
     return decimalArray.map(val => this._formatDecimalAsPercentage(val)).join(',');
+  }
+
+  /**
+   * Extract individual parameter overrides from URL query string
+   * Supports overriding parameters from compressed params
+   * @private
+   */
+  _extractParameterOverrides(urlParams) {
+    const overrides = {};
+
+    // List of all supported parameter names
+    const percentageParams = [
+      'gridIntervalPercent', 'profitRequirement',
+      'trailingBuyActivationPercent', 'trailingBuyReboundPercent',
+      'trailingSellActivationPercent', 'trailingSellPullbackPercent',
+      'trailingShortActivationPercent', 'trailingShortPullbackPercent',
+      'trailingCoverActivationPercent', 'trailingCoverReboundPercent',
+      'hardStopLossPercent', 'portfolioStopLossPercent', 'cascadeStopLossPercent'
+    ];
+
+    const numberParams = [
+      'lotSizeUsd', 'maxLots', 'maxLotsToSell',
+      'maxShorts', 'maxShortsToCovers',
+      'beta', 'coefficient', 'dynamicGridMultiplier'
+    ];
+
+    const booleanParams = [
+      'enableBetaScaling', 'isManualBetaOverride',
+      'enableConsecutiveIncremental', 'enableDynamicGrid',
+      'normalizeToReference', 'enableConsecutiveIncrementalSellProfit'
+    ];
+
+    const stringParams = ['symbol', 'startDate', 'endDate', 'strategyMode', 'source'];
+
+    // Extract percentage parameters (convert from percentage to decimal)
+    percentageParams.forEach(param => {
+      if (urlParams.has(param) && param !== 'params') {
+        const value = urlParams.get(param);
+        overrides[param] = this._parsePercentageAsDecimal(value, 0);
+        console.log(`  📊 Override ${param}: ${value}% → ${overrides[param]}`);
+      }
+    });
+
+    // Extract number parameters
+    numberParams.forEach(param => {
+      if (urlParams.has(param) && param !== 'params') {
+        const value = urlParams.get(param);
+        overrides[param] = this._parseNumber(value, 0);
+        console.log(`  🔢 Override ${param}: ${overrides[param]}`);
+      }
+    });
+
+    // Extract boolean parameters
+    booleanParams.forEach(param => {
+      if (urlParams.has(param) && param !== 'params') {
+        const value = urlParams.get(param);
+        overrides[param] = this._parseBoolean(value, false);
+        console.log(`  ✅ Override ${param}: ${overrides[param]}`);
+      }
+    });
+
+    // Extract string parameters
+    stringParams.forEach(param => {
+      if (urlParams.has(param) && param !== 'params') {
+        const value = urlParams.get(param);
+        overrides[param] = value;
+        console.log(`  📝 Override ${param}: ${overrides[param]}`);
+      }
+    });
+
+    return overrides;
   }
 }
 

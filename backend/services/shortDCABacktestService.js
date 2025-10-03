@@ -337,6 +337,7 @@ async function runShortDCABacktest(params) {
     enableDynamicGrid = true, // Enable square root-based dynamic grid spacing
     normalizeToReference = true, // Normalize first trade price to $100 reference
     dynamicGridMultiplier = 1.0, // Grid width multiplier (1.0 = ~10% at $100)
+    enableConsecutiveIncrementalSellProfit = true, // Enable incremental profit req for consecutive covers during downtrends
     verbose = true
   } = params;
 
@@ -422,6 +423,10 @@ async function runShortDCABacktest(params) {
     let mostRecentShortPeakPrice = null; // Tracks the peak price associated with the most recent short position
     let emergencyCoverTriggerPrice = null; // Emergency cover trigger price to prevent scope issues
     let referencePrice = null; // Will be set on first trade for dynamic grid normalization
+
+    // Consecutive incremental cover profit tracking (inverse logic for shorts)
+    let lastActionType = null; // 'short' | 'cover' | null
+    let lastCoverPrice = null; // Price of last cover, or null
 
     const recalculateAverageShortCost = () => {
       if (shorts.length > 0) {
@@ -707,6 +712,10 @@ async function runShortDCABacktest(params) {
               mostRecentShortPrice = currentPrice;
               mostRecentShortPeakPrice = peakPriceAtExecution; // Peak price when this short order was executed
 
+              // Update consecutive cover tracking state
+              lastActionType = 'short';
+              lastCoverPrice = null; // Reset on short
+
               // Calculate P&L values after trailing stop short
               const totalSharesShortAfterShort = shorts.reduce((sum, short) => sum + short.shares, 0);
               const totalValueOfShortPositionsAfterShort = shorts.reduce((sum, short) => sum + short.price * short.shares, 0);
@@ -790,15 +799,39 @@ async function runShortDCABacktest(params) {
 
         // Only set trailing stop if unrealized P&L > 0
         if (unrealizedPNL > 0) {
+          // Calculate short-level profit requirement (dynamic for consecutive downtrend covers)
+          let shortProfitRequirement = profitRequirement; // Default to base
+          if (enableConsecutiveIncrementalSellProfit && lastActionType === 'cover' && lastCoverPrice !== null && currentPrice < lastCoverPrice) {
+            // Consecutive downtrend cover - calculate dynamic grid size
+            let gridSize;
+            if (enableDynamicGrid) {
+              gridSize = calculateDynamicGridSpacing(
+                currentPrice,
+                referencePrice || currentPrice,
+                dynamicGridMultiplier,
+                normalizeToReference
+              );
+            } else {
+              gridSize = gridIntervalPercent;
+            }
+            shortProfitRequirement = profitRequirement + gridSize;
+
+            if (verbose) {
+              transactionLog.push(
+                colorize(`  📉 Consecutive downtrend cover: short profit req ${(shortProfitRequirement * 100).toFixed(2)}% (base ${(profitRequirement * 100).toFixed(2)}% + grid ${(gridSize * 100).toFixed(2)}%)`, 'cyan')
+              );
+            }
+          }
+
           // Find the lowest-priced shorts that are eligible for covering
           const stopPrice = currentPrice * (1 + trailingCoverReboundPercent);
-          const minProfitablePrice = averageShortCost * (1 - profitRequirement);
+          const minProfitablePrice = averageShortCost * (1 - profitRequirement); // ✅ BASE for average cost
 
           transactionLog.push(colorize(`DEBUG SHORT SELECTION: currentPrice=${currentPrice.toFixed(2)}, stopPrice=${stopPrice.toFixed(2)}, profitRequirement=${profitRequirement}, averageShortCost=${averageShortCost.toFixed(2)}, minProfitablePrice=${minProfitablePrice.toFixed(2)}`, 'cyan'));
           transactionLog.push(colorize(`DEBUG ALL SHORTS: ${shorts.map(short => `$${short.price.toFixed(2)}`).join(', ')}`, 'cyan'));
 
           // Select shorts that would be profitable to cover (meeting profit requirement)
-          const eligibleShorts = shorts.filter(short => currentPrice < short.price * (1 - profitRequirement));
+          const eligibleShorts = shorts.filter(short => currentPrice < short.price * (1 - shortProfitRequirement)); // 🔄 DYNAMIC for short comparison
 
           transactionLog.push(colorize(`DEBUG ELIGIBLE SHORTS: ${eligibleShorts.map(short => `$${short.price.toFixed(2)}`).join(', ')} (${eligibleShorts.length} eligible)`, 'cyan'));
 
@@ -811,9 +844,9 @@ async function runShortDCABacktest(params) {
 
             // Pricing logic as per requirements:
             // Stop Price: current price * (1 + trailingCoverReboundPercent) (default 10% above current price)
-            // Limit Price: targeted short position price * (1 - profitRequirement) (lowest-priced eligible short with profit requirement)
+            // Limit Price: targeted short position price * (1 - shortProfitRequirement) (lowest-priced eligible short with profit requirement)
             const stopPrice = currentPrice * (1 + trailingCoverReboundPercent);
-            const limitPrice = shortsToCover[0].price * (1 - profitRequirement);
+            const limitPrice = shortsToCover[0].price * (1 - shortProfitRequirement); // 🔄 DYNAMIC for short comparison
 
             // VALIDATION: Only activate when limit price > stop price (profitable enough to meet profit requirement)
             if (limitPrice <= stopPrice) {
@@ -847,8 +880,25 @@ async function runShortDCABacktest(params) {
           const oldStopPrice = activeStop.stopPrice;
           const oldLimitPrice = activeStop.limitPrice;
 
+          // Calculate short-level profit requirement (same logic as activation)
+          let shortProfitRequirement = profitRequirement; // Default to base
+          if (enableConsecutiveIncrementalSellProfit && lastActionType === 'cover' && lastCoverPrice !== null && currentPrice < lastCoverPrice) {
+            let gridSize;
+            if (enableDynamicGrid) {
+              gridSize = calculateDynamicGridSpacing(
+                currentPrice,
+                referencePrice || currentPrice,
+                dynamicGridMultiplier,
+                normalizeToReference
+              );
+            } else {
+              gridSize = gridIntervalPercent;
+            }
+            shortProfitRequirement = profitRequirement + gridSize;
+          }
+
           // Recalculate short selection with new stop price using profit requirement
-          const eligibleShorts = shorts.filter(short => currentPrice < short.price * (1 - profitRequirement));
+          const eligibleShorts = shorts.filter(short => currentPrice < short.price * (1 - shortProfitRequirement)); // 🔄 DYNAMIC
 
           if (eligibleShorts.length > 0) {
             const sortedEligibleShorts = eligibleShorts.sort((a, b) => a.price - b.price);
@@ -856,7 +906,7 @@ async function runShortDCABacktest(params) {
             const newShortsToCover = sortedEligibleShorts.slice(0, Math.min(maxShortsToCovers, sortedEligibleShorts.length));
 
             const newStopPrice = currentPrice * (1 + trailingCoverReboundPercent);
-            const newLimitPrice = newShortsToCover[0].price * (1 - profitRequirement);
+            const newLimitPrice = newShortsToCover[0].price * (1 - shortProfitRequirement); // 🔄 DYNAMIC
 
             // VALIDATION: Only update when limit price > stop price (profitable enough)
             if (newLimitPrice <= newStopPrice) {
@@ -1168,6 +1218,10 @@ async function runShortDCABacktest(params) {
             transactionLog.push(
               colorize(`    Total PNL: ${pnl.toFixed(2)}, Remaining shorts: ${getShortsPrices(shorts)}, New Avg Cost: ${averageShortCost.toFixed(2)}`, 'green')
             );
+
+            // Update consecutive cover tracking state
+            lastActionType = 'cover';
+            lastCoverPrice = executionPrice;
 
             // Clear active stop and reset peak/bottom tracking after cover
             activeStop = null;
