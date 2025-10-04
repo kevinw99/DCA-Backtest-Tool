@@ -130,12 +130,8 @@ function BatchProgressBanner({ progress, error, isConnected }) {
             <div className="best-result-content">
               <span className="best-symbol">{bestSoFar.symbol}</span>
               <span className="best-divider">•</span>
-              <span className="best-return">
-                {(bestSoFar.annualizedReturn * 100).toFixed(2)}% annualized
-              </span>
-              <span className="best-divider">•</span>
               <span className="best-total">
-                {(bestSoFar.totalReturn * 100).toFixed(2)}% total
+                {(bestSoFar.totalReturn * 100).toFixed(2)}% total return
               </span>
             </div>
           </div>

@@ -213,8 +213,8 @@ const BatchResults = ({ data }) => {
 
     // Sort by overall performance to maintain ranking
     return topUniqueResults.sort((a, b) => {
-      const aValue = a.summary?.annualizedReturn || 0;
-      const bValue = b.summary?.annualizedReturn || 0;
+      const aValue = a.summary?.totalReturn || 0;
+      const bValue = b.summary?.totalReturn || 0;
       return bValue - aValue;
     });
   }
@@ -264,8 +264,8 @@ const BatchResults = ({ data }) => {
           <div className="metric-card">
             <TrendingUp size={20} />
             <div>
-              <span className="metric-label">Average Annualized Return</span>
-              <span className="metric-value">{formatPerformancePercent(summary?.statistics?.averageAnnualizedReturn || 0)}</span>
+              <span className="metric-label">Average Total Return</span>
+              <span className="metric-value">{formatPerformancePercent(summary?.statistics?.averageTotalReturn || 0)}</span>
             </div>
           </div>
           <div className="metric-card">
@@ -278,8 +278,8 @@ const BatchResults = ({ data }) => {
           <div className="metric-card">
             <BarChart3 size={20} />
             <div>
-              <span className="metric-label">Max Annualized Return</span>
-              <span className="metric-value">{formatPercent(summary?.statistics?.maxAnnualizedReturn || 0)}</span>
+              <span className="metric-label">Max Total Return</span>
+              <span className="metric-value">{formatPercent(summary?.statistics?.maxTotalReturn || 0)}</span>
             </div>
           </div>
         </div>
@@ -293,7 +293,7 @@ const BatchResults = ({ data }) => {
             <div className="best-result-header">
               <h4>{summary.overallBest.parameters.symbol}</h4>
               <span className="return-badge">
-                {formatPerformancePercent(summary.overallBest?.summary?.annualizedReturn || 0)} Annual Return
+                {formatPerformancePercent(summary.overallBest?.summary?.totalReturn || 0)} Total Return
               </span>
             </div>
             <div className="best-params">
@@ -354,13 +354,12 @@ const BatchResults = ({ data }) => {
                 <div className="stock-header">
                   <h4>{symbol}</h4>
                   <div className="stock-returns">
-                    <span>Best Total: {formatPercent(bestParams?.bestByTotalReturn?.totalReturn || 0)}</span>
-                    <span>Best Annual: {formatPercent(bestParams?.bestByAnnualizedReturn?.annualizedReturn || 0)}</span>
+                    <span>Best Total Return: {formatPercent(bestParams?.bestByTotalReturn?.totalReturn || 0)}</span>
                   </div>
                 </div>
 
                 <div className="best-params-section">
-                  <h5>🎯 Best for Total Return</h5>
+                  <h5>🎯 Best Parameters for Total Return</h5>
                   <div className="mini-params">
                     <span>Profit: {formatParameterPercent(bestParams.bestByTotalReturn.parameters.profitRequirement)}</span>
                     <span>Grid: {formatParameterPercent(bestParams.bestByTotalReturn.parameters.gridIntervalPercent)}</span>
@@ -368,18 +367,6 @@ const BatchResults = ({ data }) => {
                     <span>{isShortStrategy ? 'Short Pullback' : 'Buy Rebound'}: {formatParameterPercent(bestParams.bestByTotalReturn.parameters[isShortStrategy ? 'trailingShortPullbackPercent' : 'trailingBuyReboundPercent'])}</span>
                     <span>{isShortStrategy ? 'Cover Activation' : 'Sell Activation'}: {formatParameterPercent(bestParams.bestByTotalReturn.parameters[isShortStrategy ? 'trailingCoverActivationPercent' : 'trailingSellActivationPercent'])}</span>
                     <span>{isShortStrategy ? 'Cover Rebound' : 'Sell Pullback'}: {formatParameterPercent(bestParams.bestByTotalReturn.parameters[isShortStrategy ? 'trailingCoverReboundPercent' : 'trailingSellPullbackPercent'])}</span>
-                  </div>
-                </div>
-
-                <div className="best-params-section">
-                  <h5>📊 Best for Annualized Return</h5>
-                  <div className="mini-params">
-                    <span>Profit: {formatParameterPercent(bestParams.bestByAnnualizedReturn.parameters.profitRequirement)}</span>
-                    <span>Grid: {formatParameterPercent(bestParams.bestByAnnualizedReturn.parameters.gridIntervalPercent)}</span>
-                    <span>{isShortStrategy ? 'Short Activation' : 'Buy Activation'}: {formatParameterPercent(bestParams.bestByAnnualizedReturn.parameters[isShortStrategy ? 'trailingShortActivationPercent' : 'trailingBuyActivationPercent'])}</span>
-                    <span>{isShortStrategy ? 'Short Pullback' : 'Buy Rebound'}: {formatParameterPercent(bestParams.bestByAnnualizedReturn.parameters[isShortStrategy ? 'trailingShortPullbackPercent' : 'trailingBuyReboundPercent'])}</span>
-                    <span>{isShortStrategy ? 'Cover Activation' : 'Sell Activation'}: {formatParameterPercent(bestParams.bestByAnnualizedReturn.parameters[isShortStrategy ? 'trailingCoverActivationPercent' : 'trailingSellActivationPercent'])}</span>
-                    <span>{isShortStrategy ? 'Cover Rebound' : 'Sell Pullback'}: {formatParameterPercent(bestParams.bestByAnnualizedReturn.parameters[isShortStrategy ? 'trailingCoverReboundPercent' : 'trailingSellPullbackPercent'])}</span>
                   </div>
                 </div>
               </div>
@@ -444,7 +431,6 @@ const BatchResults = ({ data }) => {
                 <th>Coeff</th>
                 <th>β-Factor</th>
                 <th>Total Return</th>
-                <th>Annual Return</th>
                 <th>CAGR on Max Deployed</th>
                 <th>CAGR on Avg Deployed</th>
                 <th>Return on Max Deployed</th>
@@ -499,9 +485,6 @@ const BatchResults = ({ data }) => {
                       </div>
                     </div>
                   </td>
-                  <td className={`return-cell ${(result.summary?.annualizedReturn || 0) >= 0 ? 'positive' : 'negative'}`}>
-                    {formatPerformancePercent(result.summary?.annualizedReturn || 0)}
-                  </td>
                   <td className={`return-cell ${(result.summary?.cagrOnMaxDeployed || 0) >= 0 ? 'positive' : 'negative'}`}>
                     {formatPerformancePercent(result.summary?.cagrOnMaxDeployed || 0)}
                   </td>
@@ -553,9 +536,6 @@ const BatchResults = ({ data }) => {
           </div>
           <div className="explanation-item">
             <strong>Total Return:</strong> (Final Portfolio Value - Initial Investment) / Initial Investment
-          </div>
-          <div className="explanation-item">
-            <strong>Annualized Return:</strong> (1 + Total Return) ^ (365 / Days in Period) - 1
           </div>
           <div className="explanation-item">
             <strong>CAGR on Max Deployed:</strong> Compound Annual Growth Rate based on maximum capital actually deployed (most realistic annualized return metric)

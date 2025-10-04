@@ -627,7 +627,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
             maxShorts: shortParameters.maxShorts,
             maxShortsToCovers: shortParameters.maxShortsToCovers
           },
-          sortBy: 'annualizedReturn',
+          sortBy: 'totalReturn',
           strategyMode: 'short'
         };
         console.log('Running short batch optimization with params:', shortBatchOptions);
@@ -682,7 +682,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
         enableConsecutiveIncremental: batchParameters.enableConsecutiveIncremental,
         enableConsecutiveIncrementalSellProfit: batchParameters.enableConsecutiveIncrementalSellProfit,
         enableScenarioDetection: batchParameters.enableScenarioDetection,
-        sortBy: 'annualizedReturn'
+        sortBy: 'totalReturn'
       };
       onSubmit(batchOptions, true); // true indicates batch mode
     } else {
@@ -2693,7 +2693,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                 }
               </p>
               <p>
-                The report will include: total return, annualized return, total trades, win rate,
+                The report will include: total return, CAGR, total trades, win rate,
                 average profit per trade, maximum drawdown, capital utilization rate, and best
                 parameter combinations for each stock.
               </p>

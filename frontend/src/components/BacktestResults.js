@@ -937,73 +937,40 @@ const BacktestResults = ({ data, chartData: priceData }) => {
       </div>
 
       {/* Strategy Comparison Section */}
-      {(tradeAnalysis || holdResults) && (
+      {holdResults && Object.keys(holdResults).length > 0 && (
         <div className="strategy-comparison-section">
           <h3>
             <Target size={20} />
-            Strategy Performance Analysis
+            {summary.strategy === 'SHORT_DCA' ? 'Short DCA vs Short & Hold Strategy' : 'DCA vs Buy & Hold Strategy'}
           </h3>
           <div className="comparison-grid">
-            {tradeAnalysis && (
-              <>
-                <div className="comparison-card">
-                  <h4>Average Annualized Return</h4>
-                  <p className={`value ${(tradeAnalysis.averageAnnualizedReturnPercent || 0) > 0 ? 'positive' : 'negative'}`}>
-                    {isNaN(tradeAnalysis.averageAnnualizedReturnPercent) || tradeAnalysis.averageAnnualizedReturnPercent == null
-                      ? 'N/A'
-                      : `${tradeAnalysis.averageAnnualizedReturnPercent.toFixed(2)}%`}
-                  </p>
-                  <small>All positions (trades + holdings)</small>
-                </div>
-                <div className="comparison-card">
-                  <h4>Completed Trades Only</h4>
-                  <p className={`value ${(tradeAnalysis.tradeOnlyAverageAnnualizedReturnPercent || 0) > 0 ? 'positive' : 'negative'}`}>
-                    {isNaN(tradeAnalysis.tradeOnlyAverageAnnualizedReturnPercent) || tradeAnalysis.tradeOnlyAverageAnnualizedReturnPercent == null
-                      ? 'N/A'
-                      : `${tradeAnalysis.tradeOnlyAverageAnnualizedReturnPercent.toFixed(2)}%`}
-                  </p>
-                  <small>{tradeAnalysis.individualTradeReturns?.length || 0} trades</small>
-                </div>
-                <div className="comparison-card">
-                  <h4>{summary.strategy === 'SHORT_DCA' ? 'Current Short Positions Only' : 'Current Holdings Only'}</h4>
-                  <p className={`value ${((summary.strategy === 'SHORT_DCA' ? tradeAnalysis.shortOnlyAverageAnnualizedReturnPercent : tradeAnalysis.holdingOnlyAverageAnnualizedReturnPercent) || 0) > 0 ? 'positive' : 'negative'}`}>
-                    {(() => {
-                      const value = summary.strategy === 'SHORT_DCA' ? tradeAnalysis.shortOnlyAverageAnnualizedReturnPercent : tradeAnalysis.holdingOnlyAverageAnnualizedReturnPercent;
-                      return isNaN(value) || value == null ? 'N/A' : `${value.toFixed(2)}%`;
-                    })()}
-                  </p>
-                  <small>{(summary.strategy === 'SHORT_DCA' ? tradeAnalysis.currentShortReturns?.length : tradeAnalysis.currentHoldingReturns?.length) || 0} {summary.strategy === 'SHORT_DCA' ? 'short positions' : 'holdings'}</small>
-                </div>
-              </>
-            )}
-            {holdResults && Object.keys(holdResults).length > 0 && (
-              <>
-                <div className="comparison-card buy-hold">
-                  <h4>{summary.strategy === 'SHORT_DCA' ? 'Short & Hold Strategy' : 'Buy & Hold Strategy'}</h4>
-                  <p className={`value ${(holdResults.totalReturnPercent || 0) > 0 ? 'positive' : 'negative'}`}>
-                    {isNaN(holdResults.annualizedReturnPercent) || holdResults.annualizedReturnPercent == null
-                      ? 'N/A'
-                      : `${holdResults.annualizedReturnPercent.toFixed(2)}% annualized`}
-                  </p>
-                  <small>Final Value: {isNaN(holdResults.finalValue) || holdResults.finalValue == null
-                    ? 'N/A'
-                    : formatCurrency(holdResults.finalValue)}</small>
-                </div>
-                <div className="comparison-card outperformance">
-                  <h4>{summary.strategy === 'SHORT_DCA' ? 'Short DCA vs Short & Hold' : 'DCA vs Buy & Hold'}</h4>
-                  <p className={`value ${(outperformancePercent || 0) > 0 ? 'positive' : 'negative'}`}>
-                    {isNaN(outperformancePercent) || outperformancePercent == null
-                      ? 'N/A'
-                      : `${outperformancePercent > 0 ? '+' : ''}${outperformancePercent.toFixed(2)}%`}
-                  </p>
-                  <small>
-                    {isNaN(outperformance) || outperformance == null
-                      ? 'N/A'
-                      : `${outperformancePercent > 0 ? 'Outperforming' : 'Underperforming'} by ${formatCurrency(Math.abs(outperformance))}`}
-                  </small>
-                </div>
-              </>
-            )}
+            <div className="comparison-card dca-strategy">
+              <h4>{summary.strategy === 'SHORT_DCA' ? 'Short DCA Strategy' : 'DCA Strategy'}</h4>
+              <p className={`value ${(summary.totalReturn || 0) > 0 ? 'positive' : 'negative'}`}>
+                {formatCurrency(summary.totalReturn)}
+              </p>
+              <small>{formatPercent(summary.totalReturnPercent)} Total Return</small>
+            </div>
+            <div className="comparison-card buy-hold">
+              <h4>{summary.strategy === 'SHORT_DCA' ? 'Short & Hold Strategy' : 'Buy & Hold Strategy'}</h4>
+              <p className={`value ${(holdResults.totalReturn || 0) > 0 ? 'positive' : 'negative'}`}>
+                {formatCurrency(holdResults.totalReturn)}
+              </p>
+              <small>{formatPercent(holdResults.totalReturnPercent)} Total Return</small>
+            </div>
+            <div className="comparison-card outperformance">
+              <h4>Outperformance</h4>
+              <p className={`value ${(outperformancePercent || 0) > 0 ? 'positive' : 'negative'}`}>
+                {isNaN(outperformancePercent) || outperformancePercent == null
+                  ? 'N/A'
+                  : `${outperformancePercent > 0 ? '+' : ''}${outperformancePercent.toFixed(2)}%`}
+              </p>
+              <small>
+                {isNaN(outperformance) || outperformance == null
+                  ? 'N/A'
+                  : `${outperformancePercent > 0 ? 'Outperforming' : 'Underperforming'} by ${formatCurrency(Math.abs(outperformance))}`}
+              </small>
+            </div>
           </div>
         </div>
       )}
@@ -1173,7 +1140,6 @@ const BacktestResults = ({ data, chartData: priceData }) => {
               <div>Holdings Value</div>
               <div>Unrealized P&L</div>
               <div>Realized P&L</div>
-              <div>Annual Return</div>
               <div>Total P&L</div>
               <div>Total P&L %</div>
             </div>
@@ -1261,35 +1227,6 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                       </small>
                     )}
                   </div>
-                  <div className={(transaction.type === 'SELL' || transaction.type === 'COVER' || transaction.type === 'EMERGENCY_COVER') ? (transaction.annualizedReturnPercent > 0 ? 'positive' : 'negative') : ''}>
-                    {(() => {
-                      // Handle both SELL (long) and COVER/EMERGENCY_COVER (short) transactions
-                      if (transaction.type === 'SELL' || transaction.type === 'COVER' || transaction.type === 'EMERGENCY_COVER') {
-                        const details = transaction.lotsDetails || transaction.shortsDetails;
-                        if (details && details.length > 0) {
-                          const tradedPosition = details[0];
-                          const purchaseDate = new Date(tradedPosition.date);
-                          const saleDate = new Date(transaction.date);
-                          const daysBetween = (saleDate - purchaseDate) / (1000 * 60 * 60 * 24);
-                          const yearsBetween = daysBetween / 365.25;
-
-                          if (yearsBetween > 0) {
-                            let totalReturn;
-                            if (transaction.type === 'SELL') {
-                              // Long position: profit when sale price > purchase price
-                              totalReturn = (transaction.price - tradedPosition.price) / tradedPosition.price;
-                            } else {
-                              // Short position: profit when cover price < short price
-                              totalReturn = (tradedPosition.price - transaction.price) / tradedPosition.price;
-                            }
-                            const annualizedReturn = totalReturn / yearsBetween * 100;
-                            return `${annualizedReturn.toFixed(2)}%`;
-                          }
-                        }
-                      }
-                      return 'N/A';
-                    })()}
-                  </div>
                   <div className={getMetricClass(transaction.totalPNL)}>
                     {formatCurrency(transaction.totalPNL)}
                   </div>
@@ -1368,7 +1305,6 @@ const BacktestResults = ({ data, chartData: priceData }) => {
               <div>Current Price</div>
               <div>Current Value</div>
               <div>P&L</div>
-              <div>Ann. Return</div>
             </div>
 
             {lots.map((lot, index) => {
@@ -1376,14 +1312,6 @@ const BacktestResults = ({ data, chartData: priceData }) => {
               const currentValue = lot.shares * currentPrice;
               const purchaseValue = lot.shares * lot.price;
               const pnl = currentValue - purchaseValue;
-
-              // Calculate annualized return for this holding
-              const actualDaysHeld = Math.max(1, Math.ceil((new Date(summary.endDate) - new Date(lot.date)) / (1000 * 60 * 60 * 24)));
-              const totalReturn = purchaseValue > 0 ? pnl / purchaseValue : 0;
-
-              // Simple linear annualization (matches backend calculation)
-              const annualizedReturn = totalReturn * (365 / actualDaysHeld);
-              const annualizedReturnPercent = annualizedReturn * 100;
 
               return (
                 <div key={index} className="table-row">
@@ -1394,9 +1322,6 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                   <div>{formatCurrency(currentValue)}</div>
                   <div className={getMetricClass(pnl)}>
                     {formatCurrency(pnl)}
-                  </div>
-                  <div className={annualizedReturnPercent > 0 ? 'positive' : 'negative'}>
-                    {annualizedReturnPercent.toFixed(2)}%
                   </div>
                 </div>
               );
@@ -1421,7 +1346,6 @@ const BacktestResults = ({ data, chartData: priceData }) => {
               <div>Current Price</div>
               <div>Current Value</div>
               <div>P&L</div>
-              <div>Ann. Return</div>
             </div>
 
             {shorts.map((short, index) => {
@@ -1429,15 +1353,6 @@ const BacktestResults = ({ data, chartData: priceData }) => {
               const currentValue = short.shares * currentPrice; // Current market value of the shorted shares
               const shortValue = short.shares * short.price; // Original value when shorted
               const pnl = (short.price - currentPrice) * short.shares; // P&L from short position (profit when price goes down)
-
-              // Calculate annualized return for this short position
-              const endDate = new Date(summary.endDate || priceData?.backtestParameters?.endDate);
-              const actualDaysHeld = Math.max(1, Math.ceil((endDate - new Date(short.date)) / (1000 * 60 * 60 * 24)));
-              const totalReturn = shortValue > 0 ? pnl / shortValue : 0;
-
-              // Simple linear annualization (matches backend calculation)
-              const annualizedReturn = totalReturn * (365 / actualDaysHeld);
-              const annualizedReturnPercent = annualizedReturn * 100;
 
               return (
                 <div key={index} className="table-row">
@@ -1448,9 +1363,6 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                   <div>{formatCurrency(currentValue)}</div>
                   <div className={getMetricClass(pnl)}>
                     {formatCurrency(pnl)}
-                  </div>
-                  <div className={annualizedReturnPercent > 0 ? 'positive' : 'negative'}>
-                    {isNaN(annualizedReturnPercent) ? 'N/A' : `${annualizedReturnPercent.toFixed(2)}%`}
                   </div>
                 </div>
               );
