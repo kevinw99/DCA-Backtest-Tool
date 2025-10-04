@@ -36,7 +36,7 @@ This feature introduces Beta-based parameter correlation to the DCA trading plat
 
 #### Acceptance Criteria
 
-1. WHEN beta_factor is applied to parameters THEN the system SHALL calculate profitRequirement = 0.05 _ beta_factor (where beta_factor = beta _ coefficient)
+1. WHEN beta*factor is applied to parameters THEN the system SHALL calculate profitRequirement = 0.05 * beta*factor (where beta_factor = beta * coefficient)
 2. WHEN beta_factor is applied to parameters THEN the system SHALL calculate gridIntervalPercent = 0.1 \* beta_factor
 3. WHEN beta or coefficient changes THEN the system SHALL automatically recalculate beta_factor and these dependent parameters
 4. WHEN displaying parameters THEN the system SHALL show the base values, beta value, coefficient, beta_factor, and the final calculated values

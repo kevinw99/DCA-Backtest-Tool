@@ -1,0 +1,1094 @@
+{
+  "statistics": {
+    "detectionDate": "2025-10-01T04:22:03.358Z",
+    "formats": {
+      "javascript": {
+        "sources": {
+          "frontend/src/components/TimeRangeControls.js": {
+            "lines": 30,
+            "tokens": 282,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "frontend/src/components/StockSearch.js": {
+            "lines": 238,
+            "tokens": 2043,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "frontend/src/components/PerformanceSummary.js": {
+            "lines": 243,
+            "tokens": 2546,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "frontend/src/components/MetricsSelector.js": {
+            "lines": 105,
+            "tokens": 978,
+            "sources": 1,
+            "clones": 2,
+            "duplicatedLines": 26,
+            "duplicatedTokens": 264,
+            "percentage": 24.76,
+            "percentageTokens": 26.99,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "frontend/src/components/Dashboard.js": {
+            "lines": 232,
+            "tokens": 2302,
+            "sources": 1,
+            "clones": 7,
+            "duplicatedLines": 121,
+            "duplicatedTokens": 1209,
+            "percentage": 52.16,
+            "percentageTokens": 52.52,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "frontend/src/components/D3Dashboard.js": {
+            "lines": 393,
+            "tokens": 4112,
+            "sources": 1,
+            "clones": 7,
+            "duplicatedLines": 121,
+            "duplicatedTokens": 1209,
+            "percentage": 30.79,
+            "percentageTokens": 29.4,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "frontend/src/components/ChartContainer.js": {
+            "lines": 540,
+            "tokens": 5001,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "frontend/src/components/BetaControls.js": {
+            "lines": 412,
+            "tokens": 3338,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "frontend/src/components/BatchResults.js": {
+            "lines": 539,
+            "tokens": 7269,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "frontend/src/components/BacktestChart.js": {
+            "lines": 619,
+            "tokens": 5437,
+            "sources": 1,
+            "clones": 4,
+            "duplicatedLines": 42,
+            "duplicatedTokens": 478,
+            "percentage": 6.79,
+            "percentageTokens": 8.79,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "backend/services/shared/batchUtilities.js": {
+            "lines": 151,
+            "tokens": 1148,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "backend/services/shared/backtestUtilities.js": {
+            "lines": 219,
+            "tokens": 1468,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "backend/services/providers/yfinanceProvider.js": {
+            "lines": 200,
+            "tokens": 779,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 23,
+            "duplicatedTokens": 227,
+            "percentage": 11.5,
+            "percentageTokens": 29.14,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "backend/services/providers/twelveDataProvider.js": {
+            "lines": 168,
+            "tokens": 1528,
+            "sources": 1,
+            "clones": 3,
+            "duplicatedLines": 37,
+            "duplicatedTokens": 340,
+            "percentage": 22.02,
+            "percentageTokens": 22.25,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "backend/services/providers/tiingoProvider.js": {
+            "lines": 155,
+            "tokens": 1437,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "backend/services/providers/iexProvider.js": {
+            "lines": 157,
+            "tokens": 1391,
+            "sources": 1,
+            "clones": 4,
+            "duplicatedLines": 53,
+            "duplicatedTokens": 464,
+            "percentage": 33.76,
+            "percentageTokens": 33.36,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "backend/services/providers/fmpProvider.js": {
+            "lines": 322,
+            "tokens": 3154,
+            "sources": 1,
+            "clones": 2,
+            "duplicatedLines": 22,
+            "duplicatedTokens": 202,
+            "percentage": 6.83,
+            "percentageTokens": 6.4,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "backend/services/providers/alphaVantageProvider.js": {
+            "lines": 370,
+            "tokens": 3470,
+            "sources": 1,
+            "clones": 3,
+            "duplicatedLines": 38,
+            "duplicatedTokens": 326,
+            "percentage": 10.27,
+            "percentageTokens": 9.39,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "backend/services/technicalIndicatorsService.js": {
+            "lines": 323,
+            "tokens": 2966,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "backend/services/stockDataService.js": {
+            "lines": 685,
+            "tokens": 6806,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "backend/services/shortBatchBacktestService.js": {
+            "lines": 274,
+            "tokens": 2312,
+            "sources": 1,
+            "clones": 4,
+            "duplicatedLines": 61,
+            "duplicatedTokens": 541,
+            "percentage": 22.26,
+            "percentageTokens": 23.4,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "backend/services/performanceCalculatorService.js": {
+            "lines": 572,
+            "tokens": 5280,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "backend/services/parameterCorrelationService.js": {
+            "lines": 211,
+            "tokens": 1792,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "backend/services/betaDataService.js": {
+            "lines": 439,
+            "tokens": 2791,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 23,
+            "duplicatedTokens": 227,
+            "percentage": 5.24,
+            "percentageTokens": 8.13,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "backend/services/batchBacktestService.js": {
+            "lines": 416,
+            "tokens": 3421,
+            "sources": 1,
+            "clones": 4,
+            "duplicatedLines": 61,
+            "duplicatedTokens": 541,
+            "percentage": 14.66,
+            "percentageTokens": 15.81,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          }
+        },
+        "total": {
+          "lines": 8013,
+          "tokens": 73051,
+          "sources": 25,
+          "clones": 21,
+          "duplicatedLines": 314,
+          "duplicatedTokens": 3014,
+          "percentage": 3.92,
+          "percentageTokens": 4.13,
+          "newDuplicatedLines": 0,
+          "newClones": 0
+        }
+      }
+    },
+    "total": {
+      "lines": 8013,
+      "tokens": 73051,
+      "sources": 25,
+      "clones": 21,
+      "duplicatedLines": 314,
+      "duplicatedTokens": 3014,
+      "percentage": 3.92,
+      "percentageTokens": 4.13,
+      "newDuplicatedLines": 0,
+      "newClones": 0
+    }
+  },
+  "duplicates": [
+    {
+      "format": "javascript",
+      "lines": 14,
+      "fragment": ".map(metric => (\n                  <label key={metric.id} className=\"metric-option\">\n                    <input\n                      type=\"checkbox\"\n                      checked={visibleMetrics.includes(metric.id)}\n                      onChange={() => handleMetricToggle(metric.id)}\n                    />\n                    <span className=\"metric-name\">{metric.name}</span>\n                    <span className=\"metric-type\">({metric.type})</span>\n                  </label>\n                ))}\n              </div>\n            </div>\n          )",
+      "tokens": 0,
+      "firstFile": {
+        "name": "frontend/src/components/MetricsSelector.js",
+        "start": 86,
+        "end": 99,
+        "startLoc": {
+          "line": 86,
+          "column": 18,
+          "position": 814
+        },
+        "endLoc": {
+          "line": 99,
+          "column": 2,
+          "position": 946
+        }
+      },
+      "secondFile": {
+        "name": "frontend/src/components/MetricsSelector.js",
+        "start": 68,
+        "end": 82,
+        "startLoc": {
+          "line": 68,
+          "column": 15,
+          "position": 635
+        },
+        "endLoc": {
+          "line": 82,
+          "column": 2,
+          "position": 768
+        }
+      }
+    },
+    {
+      "format": "javascript",
+      "lines": 15,
+      "fragment": "const [selectedTimeRange, setSelectedTimeRange] = useState('2Y');\n  const [visibleMetrics, setVisibleMetrics] = useState([\n    'price',\n    'revenue',\n    'earnings_surprises',\n    'yoy_revenue_growth',\n    'eps',\n    'pe_ratio',\n    'gross_margin',\n    'operating_margin',\n    'net_margin'\n  ]);\n  const [filteredData, setFilteredData] = useState(null);\n\n  useEffect",
+      "tokens": 0,
+      "firstFile": {
+        "name": "frontend/src/components/D3Dashboard.js",
+        "start": 9,
+        "end": 23,
+        "startLoc": {
+          "line": 9,
+          "column": 3,
+          "position": 90
+        },
+        "endLoc": {
+          "line": 23,
+          "column": 10,
+          "position": 183
+        }
+      },
+      "secondFile": {
+        "name": "frontend/src/components/Dashboard.js",
+        "start": 8,
+        "end": 21,
+        "startLoc": {
+          "line": 8,
+          "column": 3,
+          "position": 71
+        },
+        "endLoc": {
+          "line": 21,
+          "column": 6,
+          "position": 163
+        }
+      }
+    },
+    {
+      "format": "javascript",
+      "lines": 23,
+      "fragment": "]);\n\n  const filterDataByTimeRange = (data, timeRange) => {\n    const now = new Date();\n    let startDate;\n\n    switch (timeRange) {\n      case '1Y':\n        startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());\n        break;\n      case '2Y':\n        startDate = new Date(now.getFullYear() - 2, now.getMonth(), now.getDate());\n        break;\n      case '3Y':\n        startDate = new Date(now.getFullYear() - 3, now.getMonth(), now.getDate());\n        break;\n      case '5Y':\n        startDate = new Date(now.getFullYear() - 5, now.getMonth(), now.getDate());\n        break;\n      case 'All':\n      default:\n        return data;\n    }",
+      "tokens": 0,
+      "firstFile": {
+        "name": "frontend/src/components/D3Dashboard.js",
+        "start": 34,
+        "end": 56,
+        "startLoc": {
+          "line": 34,
+          "column": 15,
+          "position": 294
+        },
+        "endLoc": {
+          "line": 56,
+          "column": 2,
+          "position": 544
+        }
+      },
+      "secondFile": {
+        "name": "frontend/src/components/Dashboard.js",
+        "start": 62,
+        "end": 83,
+        "startLoc": {
+          "line": 62,
+          "column": 18,
+          "position": 644
+        },
+        "endLoc": {
+          "line": 83,
+          "column": 19,
+          "position": 893
+        }
+      }
+    },
+    {
+      "format": "javascript",
+      "lines": 20,
+      "fragment": "}\n\n    const startDateStr = startDate.toISOString().split('T')[0];\n\n    const filteredMetrics = {};\n    Object.keys(data.metrics).forEach(metricKey => {\n      if (Array.isArray(data.metrics[metricKey])) {\n        filteredMetrics[metricKey] = data.metrics[metricKey].filter(item => \n          item.date >= startDateStr\n        );\n      }\n    });\n\n    return {\n      ...data,\n      metrics: filteredMetrics\n    };\n  };\n\n  const drawCharts",
+      "tokens": 0,
+      "firstFile": {
+        "name": "frontend/src/components/D3Dashboard.js",
+        "start": 56,
+        "end": 75,
+        "startLoc": {
+          "line": 56,
+          "column": 5,
+          "position": 544
+        },
+        "endLoc": {
+          "line": 75,
+          "column": 11,
+          "position": 690
+        }
+      },
+      "secondFile": {
+        "name": "frontend/src/components/Dashboard.js",
+        "start": 84,
+        "end": 103,
+        "startLoc": {
+          "line": 84,
+          "column": 5,
+          "position": 896
+        },
+        "endLoc": {
+          "line": 103,
+          "column": 22,
+          "position": 1042
+        }
+      }
+    },
+    {
+      "format": "javascript",
+      "lines": 11,
+      "fragment": ".metrics).forEach(metricData => {\n      if (Array.isArray(metricData)) {\n        metricData.forEach(item => {\n          if (item.date) {\n            allDates.push(new Date(item.date));\n          }\n        });\n      }\n    });\n\n    if (allDates.length ===",
+      "tokens": 0,
+      "firstFile": {
+        "name": "frontend/src/components/D3Dashboard.js",
+        "start": 89,
+        "end": 99,
+        "startLoc": {
+          "line": 89,
+          "column": 13,
+          "position": 849
+        },
+        "endLoc": {
+          "line": 99,
+          "column": 4,
+          "position": 938
+        }
+      },
+      "secondFile": {
+        "name": "frontend/src/components/Dashboard.js",
+        "start": 37,
+        "end": 47,
+        "startLoc": {
+          "line": 37,
+          "column": 9,
+          "position": 348
+        },
+        "endLoc": {
+          "line": 47,
+          "column": 2,
+          "position": 438
+        }
+      }
+    },
+    {
+      "format": "javascript",
+      "lines": 22,
+      "fragment": ">\n        <div className=\"loading\">Loading dashboard...</div>\n      </div>\n    );\n  }\n\n  const availableMetrics = [\n    { id: 'price', name: 'Stock Price', type: 'line', unit: '$', smooth: true },\n    { id: 'revenue', name: 'Quarterly Revenue', type: 'line', unit: 'M' },\n    { id: 'earnings_surprises', name: 'Earnings Surprises', type: 'line', unit: '%' },\n    { id: 'yoy_revenue_growth', name: 'YoY Revenue Growth', type: 'line', unit: '%' },\n    { id: 'eps', name: 'TTM Net EPS', type: 'line', unit: '$' },\n    { id: 'pe_ratio', name: 'P/E Ratio', type: 'line', unit: '' },\n    { id: 'gross_margin', name: 'Gross Margin', type: 'line', unit: '%' },\n    { id: 'operating_margin', name: 'Operating Margin', type: 'line', unit: '%' },\n    { id: 'net_margin', name: 'Net Margin', type: 'line', unit: '%' },\n    { id: 'volume', name: 'Trading Volume', type: 'bar', unit: '' },\n    { id: 'yoy_eps_growth', name: 'YoY EPS Growth', type: 'line', unit: '%' }\n  ];\n\n  return (\n    <div className=\"d3-dashboard\"",
+      "tokens": 0,
+      "firstFile": {
+        "name": "frontend/src/components/D3Dashboard.js",
+        "start": 337,
+        "end": 358,
+        "startLoc": {
+          "line": 337,
+          "column": 15,
+          "position": 3459
+        },
+        "endLoc": {
+          "line": 358,
+          "column": 15,
+          "position": 3841
+        }
+      },
+      "secondFile": {
+        "name": "frontend/src/components/Dashboard.js",
+        "start": 114,
+        "end": 135,
+        "startLoc": {
+          "line": 114,
+          "column": 12,
+          "position": 1121
+        },
+        "endLoc": {
+          "line": 135,
+          "column": 12,
+          "position": 1503
+        }
+      }
+    },
+    {
+      "format": "javascript",
+      "lines": 24,
+      "fragment": ">\n      <div className=\"dashboard-header\">\n        <div className=\"stock-info\">\n          <h2>{stockData.symbol}</h2>\n          <span className=\"last-updated\">\n            Last updated: {stockData.lastUpdated || 'Just now'}\n          </span>\n        </div>\n        \n        <div className=\"dashboard-controls\">\n          <TimeRangeControls \n            selectedRange={selectedTimeRange}\n            onRangeChange={handleTimeRangeChange}\n          />\n        </div>\n      </div>\n\n      <MetricsSelector \n        availableMetrics={availableMetrics}\n        visibleMetrics={visibleMetrics}\n        onMetricsChange={handleMetricsChange}\n      />\n\n      <div className=\"charts-container\"",
+      "tokens": 0,
+      "firstFile": {
+        "name": "frontend/src/components/D3Dashboard.js",
+        "start": 358,
+        "end": 381,
+        "startLoc": {
+          "line": 358,
+          "column": 15,
+          "position": 3842
+        },
+        "endLoc": {
+          "line": 381,
+          "column": 19,
+          "position": 3997
+        }
+      },
+      "secondFile": {
+        "name": "frontend/src/components/Dashboard.js",
+        "start": 135,
+        "end": 158,
+        "startLoc": {
+          "line": 135,
+          "column": 12,
+          "position": 1504
+        },
+        "endLoc": {
+          "line": 158,
+          "column": 16,
+          "position": 1659
+        }
+      }
+    },
+    {
+      "format": "javascript",
+      "lines": 13,
+      "fragment": ">\n      </div>\n\n      {visibleMetrics.length === 0 && (\n        <div className=\"no-metrics\">\n          <p>No metrics selected. Please select metrics to display from the options above.</p>\n        </div>\n      )}\n    </div>\n  );\n};\n\nexport default D3Dashboard",
+      "tokens": 0,
+      "firstFile": {
+        "name": "frontend/src/components/D3Dashboard.js",
+        "start": 382,
+        "end": 394,
+        "startLoc": {
+          "line": 382,
+          "column": 4,
+          "position": 4017
+        },
+        "endLoc": {
+          "line": 394,
+          "column": 12,
+          "position": 4111
+        }
+      },
+      "secondFile": {
+        "name": "frontend/src/components/Dashboard.js",
+        "start": 221,
+        "end": 233,
+        "startLoc": {
+          "line": 221,
+          "column": 4,
+          "position": 2207
+        },
+        "endLoc": {
+          "line": 233,
+          "column": 10,
+          "position": 2301
+        }
+      }
+    },
+    {
+      "format": "javascript",
+      "lines": 12,
+      "fragment": ")</h3>\n          <ResponsiveContainer width=\"100%\" height={200}>\n            <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>\n              <CartesianGrid strokeDasharray=\"3 3\" stroke=\"#f0f0f0\" />\n              <XAxis\n                dataKey=\"date\"\n                tickFormatter={formatDate}\n                stroke=\"#666\"\n                domain={zoomRange || ['dataMin', 'dataMax']}\n              />\n              <YAxis\n                stroke",
+      "tokens": 0,
+      "firstFile": {
+        "name": "frontend/src/components/BacktestChart.js",
+        "start": 544,
+        "end": 555,
+        "startLoc": {
+          "line": 544,
+          "column": 11,
+          "position": 4805
+        },
+        "endLoc": {
+          "line": 555,
+          "column": 7,
+          "position": 4929
+        }
+      },
+      "secondFile": {
+        "name": "frontend/src/components/BacktestChart.js",
+        "start": 506,
+        "end": 517,
+        "startLoc": {
+          "line": 506,
+          "column": 6,
+          "position": 4469
+        },
+        "endLoc": {
+          "line": 517,
+          "column": 7,
+          "position": 4593
+        }
+      }
+    },
+    {
+      "format": "javascript",
+      "lines": 11,
+      "fragment": "data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>\n              <CartesianGrid strokeDasharray=\"3 3\" stroke=\"#f0f0f0\" />\n              <XAxis\n                dataKey=\"date\"\n                tickFormatter={formatDate}\n                stroke=\"#666\"\n                domain={zoomRange || ['dataMin', 'dataMax']}\n              />\n              <YAxis\n                stroke=\"#666\"\n                tickFormatter={(value) => `${(",
+      "tokens": 0,
+      "firstFile": {
+        "name": "frontend/src/components/BacktestChart.js",
+        "start": 583,
+        "end": 593,
+        "startLoc": {
+          "line": 583,
+          "column": 2,
+          "position": 5144
+        },
+        "endLoc": {
+          "line": 593,
+          "column": 2,
+          "position": 5259
+        }
+      },
+      "secondFile": {
+        "name": "frontend/src/components/BacktestChart.js",
+        "start": 508,
+        "end": 556,
+        "startLoc": {
+          "line": 508,
+          "column": 2,
+          "position": 4494
+        },
+        "endLoc": {
+          "line": 556,
+          "column": 6,
+          "position": 4945
+        }
+      }
+    },
+    {
+      "format": "javascript",
+      "lines": 16,
+      "fragment": ", existing);\n      });\n\n      // Convert to array and filter last 5 years\n      const fundamentalsData = Array.from(fundamentalsMap.values());\n      const fiveYearsAgo = new Date();\n      fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);\n\n      const filteredData = fundamentalsData.filter(data => {\n        const fiscalDate = new Date(data.fiscal_date_ending);\n        return fiscalDate >= fiveYearsAgo;\n      });\n\n      return filteredData;\n    } catch (error) {\n      console.error('Error fetching quarterly fundamentals from IEX:'",
+      "tokens": 0,
+      "firstFile": {
+        "name": "backend/services/providers/iexProvider.js",
+        "start": 105,
+        "end": 120,
+        "startLoc": {
+          "line": 105,
+          "column": 11,
+          "position": 919
+        },
+        "endLoc": {
+          "line": 120,
+          "column": 50,
+          "position": 1057
+        }
+      },
+      "secondFile": {
+        "name": "backend/services/providers/twelveDataProvider.js",
+        "start": 115,
+        "end": 130,
+        "startLoc": {
+          "line": 115,
+          "column": 12,
+          "position": 1043
+        },
+        "endLoc": {
+          "line": 130,
+          "column": 58,
+          "position": 1181
+        }
+      }
+    },
+    {
+      "format": "javascript",
+      "lines": 13,
+      "fragment": ");\n\n      // Convert to array and filter last 5 years\n      const fundamentalsData = Array.from(fundamentalsMap.values());\n      const fiveYearsAgo = new Date();\n      fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);\n\n      const filteredData = fundamentalsData.filter(data => {\n        const fiscalDate = new Date(data.fiscal_date_ending);\n        return fiscalDate >= fiveYearsAgo;\n      });\n\n      // Sort by fiscal date",
+      "tokens": 0,
+      "firstFile": {
+        "name": "backend/services/providers/fmpProvider.js",
+        "start": 217,
+        "end": 229,
+        "startLoc": {
+          "line": 217,
+          "column": 52,
+          "position": 2136
+        },
+        "endLoc": {
+          "line": 229,
+          "column": 23,
+          "position": 2245
+        }
+      },
+      "secondFile": {
+        "name": "backend/services/providers/twelveDataProvider.js",
+        "start": 116,
+        "end": 128,
+        "startLoc": {
+          "line": 116,
+          "column": 2,
+          "position": 1051
+        },
+        "endLoc": {
+          "line": 128,
+          "column": 7,
+          "position": 1160
+        }
+      }
+    },
+    {
+      "format": "javascript",
+      "lines": 11,
+      "fragment": "}\n  }\n\n  parseNumber(value) {\n    if (!value || value === 'None' || value === 'null' || value === 'N/A') return null;\n    const num = parseFloat(value);\n    return isNaN(num) ? null : num;\n  }\n}\n\nmodule.exports = FMPProvider",
+      "tokens": 0,
+      "firstFile": {
+        "name": "backend/services/providers/fmpProvider.js",
+        "start": 313,
+        "end": 323,
+        "startLoc": {
+          "line": 313,
+          "column": 5,
+          "position": 3060
+        },
+        "endLoc": {
+          "line": 323,
+          "column": 12,
+          "position": 3153
+        }
+      },
+      "secondFile": {
+        "name": "backend/services/providers/twelveDataProvider.js",
+        "start": 159,
+        "end": 169,
+        "startLoc": {
+          "line": 159,
+          "column": 5,
+          "position": 1434
+        },
+        "endLoc": {
+          "line": 169,
+          "column": 19,
+          "position": 1527
+        }
+      }
+    },
+    {
+      "format": "javascript",
+      "lines": 11,
+      "fragment": ",\n          revenue: this.parseNumber(report.totalRevenue),\n          gross_profit: this.parseNumber(report.grossProfit),\n          operating_income: this.parseNumber(report.operatingIncome),\n          net_income: this.parseNumber(report.netIncome),\n          shares_outstanding: null,\n          eps: null\n        });\n      });\n\n      // Add earnings data",
+      "tokens": 0,
+      "firstFile": {
+        "name": "backend/services/providers/alphaVantageProvider.js",
+        "start": 242,
+        "end": 252,
+        "startLoc": {
+          "line": 242,
+          "column": 17,
+          "position": 2319
+        },
+        "endLoc": {
+          "line": 252,
+          "column": 21,
+          "position": 2402
+        }
+      },
+      "secondFile": {
+        "name": "backend/services/providers/iexProvider.js",
+        "start": 77,
+        "end": 87,
+        "startLoc": {
+          "line": 77,
+          "column": 5,
+          "position": 621
+        },
+        "endLoc": {
+          "line": 87,
+          "column": 36,
+          "position": 704
+        }
+      }
+    },
+    {
+      "format": "javascript",
+      "lines": 16,
+      "fragment": "fiscalDate, existing);\n      });\n\n      // Convert to array and filter last 5 years\n      const fundamentalsData = Array.from(fundamentalsMap.values());\n      const fiveYearsAgo = new Date();\n      fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);\n\n      const filteredData = fundamentalsData.filter(data => {\n        const fiscalDate = new Date(data.fiscal_date_ending);\n        return fiscalDate >= fiveYearsAgo;\n      });\n\n      return filteredData;\n    } catch (error) {\n      console.error('Error fetching quarterly fundamentals from Alpha Vantage:'",
+      "tokens": 0,
+      "firstFile": {
+        "name": "backend/services/providers/alphaVantageProvider.js",
+        "start": 276,
+        "end": 291,
+        "startLoc": {
+          "line": 276,
+          "column": 2,
+          "position": 2625
+        },
+        "endLoc": {
+          "line": 291,
+          "column": 60,
+          "position": 2764
+        }
+      },
+      "secondFile": {
+        "name": "backend/services/providers/iexProvider.js",
+        "start": 105,
+        "end": 130,
+        "startLoc": {
+          "line": 105,
+          "column": 2,
+          "position": 918
+        },
+        "endLoc": {
+          "line": 130,
+          "column": 58,
+          "position": 1181
+        }
+      }
+    },
+    {
+      "format": "javascript",
+      "lines": 14,
+      "fragment": ", error.message);\n      return []; // Corporate actions are optional\n    }\n  }\n\n\n  parseNumber(value) {\n    if (!value || value === 'None' || value === 'null') return null;\n    const num = parseFloat(value);\n    return isNaN(num) ? null : num;\n  }\n}\n\nmodule.exports = AlphaVantageProvider",
+      "tokens": 0,
+      "firstFile": {
+        "name": "backend/services/providers/alphaVantageProvider.js",
+        "start": 358,
+        "end": 371,
+        "startLoc": {
+          "line": 358,
+          "column": 55,
+          "position": 3365
+        },
+        "endLoc": {
+          "line": 371,
+          "column": 21,
+          "position": 3469
+        }
+      },
+      "secondFile": {
+        "name": "backend/services/providers/iexProvider.js",
+        "start": 146,
+        "end": 158,
+        "startLoc": {
+          "line": 146,
+          "column": 45,
+          "position": 1287
+        },
+        "endLoc": {
+          "line": 158,
+          "column": 12,
+          "position": 1390
+        }
+      }
+    },
+    {
+      "format": "javascript",
+      "lines": 24,
+      "fragment": "return new Promise((resolve, reject) => {\n      const python = spawn('python3', ['-c', script]);\n\n      let stdout = '';\n      let stderr = '';\n\n      python.stdout.on('data', (data) => {\n        stdout += data.toString();\n      });\n\n      python.stderr.on('data', (data) => {\n        stderr += data.toString();\n      });\n\n      python.on('close', (code) => {\n        if (code !== 0) {\n          reject(new Error(`Python script failed: ${stderr}`));\n        } else {\n          resolve(stdout.trim());\n        }\n      });\n\n      python.on('error', (error) => {\n        reject(new Error(`Failed to spawn python process: ",
+      "tokens": 0,
+      "firstFile": {
+        "name": "backend/services/betaDataService.js",
+        "start": 411,
+        "end": 434,
+        "startLoc": {
+          "line": 411,
+          "column": 5,
+          "position": 2526
+        },
+        "endLoc": {
+          "line": 434,
+          "column": 34,
+          "position": 2753
+        }
+      },
+      "secondFile": {
+        "name": "backend/services/providers/yfinanceProvider.js",
+        "start": 172,
+        "end": 195,
+        "startLoc": {
+          "line": 172,
+          "column": 5,
+          "position": 518
+        },
+        "endLoc": {
+          "line": 195,
+          "column": 26,
+          "position": 745
+        }
+      }
+    },
+    {
+      "format": "javascript",
+      "lines": 20,
+      "fragment": ");\n\n  const results = [];\n  const errors = [];\n\n  // Run backtest for each combination\n  for (let i = 0; i < combinations.length; i++) {\n    const params = combinations[i];\n\n    try {\n      if (progressCallback) {\n        progressCallback({\n          current: i + 1,\n          total: combinations.length,\n          currentParams: params,\n          symbol: params.symbol\n        });\n      }\n\n      const",
+      "tokens": 0,
+      "firstFile": {
+        "name": "backend/services/batchBacktestService.js",
+        "start": 243,
+        "end": 262,
+        "startLoc": {
+          "line": 243,
+          "column": 25,
+          "position": 1758
+        },
+        "endLoc": {
+          "line": 262,
+          "column": 6,
+          "position": 1894
+        }
+      },
+      "secondFile": {
+        "name": "backend/services/shortBatchBacktestService.js",
+        "start": 123,
+        "end": 142,
+        "startLoc": {
+          "line": 123,
+          "column": 43,
+          "position": 846
+        },
+        "endLoc": {
+          "line": 142,
+          "column": 8,
+          "position": 982
+        }
+      }
+    },
+    {
+      "format": "javascript",
+      "lines": 13,
+      "fragment": "${params.symbol}:`, {\n        totalReturnPercent: result.totalReturnPercent,\n        annualizedReturnPercent: result.annualizedReturnPercent,\n        totalTrades: result.totalTrades,\n        winRate: result.winRate,\n        maxDrawdownPercent: result.maxDrawdownPercent\n      });\n\n      // Add parameter info to result\n      result.parameters = params;\n      result.testId = i + 1;\n\n      // Use the original totalReturnPercent from DCA service (already correctly calculated)",
+      "tokens": 0,
+      "firstFile": {
+        "name": "backend/services/batchBacktestService.js",
+        "start": 273,
+        "end": 285,
+        "startLoc": {
+          "line": 273,
+          "column": 20,
+          "position": 2042
+        },
+        "endLoc": {
+          "line": 285,
+          "column": 87,
+          "position": 2131
+        }
+      },
+      "secondFile": {
+        "name": "backend/services/shortBatchBacktestService.js",
+        "start": 150,
+        "end": 162,
+        "startLoc": {
+          "line": 150,
+          "column": 26,
+          "position": 1083
+        },
+        "endLoc": {
+          "line": 162,
+          "column": 61,
+          "position": 1172
+        }
+      }
+    },
+    {
+      "format": "javascript",
+      "lines": 11,
+      "fragment": "|| 0;\n\n      // Cap extreme values to prevent unrealistic returns\n      if (Math.abs(actualAnnualizedReturnPercent) > 1000) {\n        console.log(`⚠️ Capping extreme annualized return: ${actualAnnualizedReturnPercent}% -> 1000%`);\n        actualAnnualizedReturnPercent = actualAnnualizedReturnPercent > 0 ? 1000 : -1000;\n      }\n\n      // DEBUG: Log annualized return calculation (but limit output)\n      if (i < 3) { // Only log first 3 results to avoid spam\n        console.log(`🐛 Annualized Return Debug for ",
+      "tokens": 0,
+      "firstFile": {
+        "name": "backend/services/batchBacktestService.js",
+        "start": 300,
+        "end": 310,
+        "startLoc": {
+          "line": 300,
+          "column": 2,
+          "position": 2286
+        },
+        "endLoc": {
+          "line": 310,
+          "column": 33,
+          "position": 2374
+        }
+      },
+      "secondFile": {
+        "name": "backend/services/shortBatchBacktestService.js",
+        "start": 169,
+        "end": 179,
+        "startLoc": {
+          "line": 169,
+          "column": 2,
+          "position": 1282
+        },
+        "endLoc": {
+          "line": 179,
+          "column": 39,
+          "position": 1370
+        }
+      }
+    },
+    {
+      "format": "javascript",
+      "lines": 21,
+      "fragment": "${errors.length} errors`);\n\n  // Sort results by specified metric\n  results.sort((a, b) => {\n    // Add null checks to prevent undefined property access\n    const aValue = a.summary || {};\n    const bValue = b.summary || {};\n\n    if (sortBy === 'totalReturn') {\n      return (bValue.totalReturn || 0) - (aValue.totalReturn || 0);\n    }\n    if (sortBy === 'annualizedReturn') {\n      return (bValue.annualizedReturn || 0) - (aValue.annualizedReturn || 0);\n    }\n    if (sortBy === 'winRate') {\n      return (bValue.winRate || 0) - (aValue.winRate || 0);\n    }\n    return (bValue.annualizedReturn || 0) - (aValue.annualizedReturn || 0); // default\n  });\n\n  // Generate summary statistics",
+      "tokens": 0,
+      "firstFile": {
+        "name": "backend/services/batchBacktestService.js",
+        "start": 379,
+        "end": 399,
+        "startLoc": {
+          "line": 379,
+          "column": 24,
+          "position": 3097
+        },
+        "endLoc": {
+          "line": 399,
+          "column": 31,
+          "position": 3325
+        }
+      },
+      "secondFile": {
+        "name": "backend/services/shortBatchBacktestService.js",
+        "start": 236,
+        "end": 256,
+        "startLoc": {
+          "line": 236,
+          "column": 30,
+          "position": 1981
+        },
+        "endLoc": {
+          "line": 256,
+          "column": 52,
+          "position": 2209
+        }
+      }
+    }
+  ],
+  "filename": "/Users/kweng/.npm/_npx/652ead47bf63fe99/node_modules/@jscpd/html-reporter/dist/templates/main.pug"
+}

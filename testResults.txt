@@ -1,3 +1,8 @@
+one thing with DCA is with grid size of fixed percentage like 10%, it is bigger when the price is higher and much
+smaller if the price already dropped a lot. On the other hande, fixed dollar amount not sensitive to the price
+level., what would be a better way to do it? we need a system that space out more in term of percentage when the
+price goes lower, but less in term of abosulte price delta,  and space out less in terms of percentage when the
+price goes higher, but more in terms of absolute price delta.
 
 Similar to claude code use command line interface, can we skip the traditional UI, and use command line interface to
 run the DCA algorithm. e.g, if I want to run the DCA algorithm batch, I can use the following command:
@@ -7,16 +12,51 @@ Then the program already knows what is the best paramter for single run so far, 
 tweek, and make sure not to produce too many combinations, and only use sensible ones. User does not consider those
 . Just focus on the intent (what) and let AI figure out the how.
 
-even smarter, the program starts with a known best parameter set, and then it will try to tweek one parameter
+Instead of me runing a batch mode with all combinations, which is too many, and not efficient. I want you to take a
+ heuristic approach to tweek the parameters based on the past results. So it is not brute force, but more like a guided
+ search. So it is more efficient, and effective.
+1. the program starts with a known best parameter set, and then it will try to tweek one parameter
 depending on the results. e.g.
 http://localhost:3000/backtest?mode=single&symbol=TDOC&startDate=2021-09-01&endDate=2025-10-02&strategyMode=long&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=10&profitRequirement=10&trailingBuyActivationPercent=10&trailingBuyReboundPercent=0&trailingSellActivationPercent=10&trailingSellPullbackPercent=5&source=batch
-it should detect that perhaps the profitRequirement is too hight, so there is no sells to get out of the some of
+2. it should detect that perhaps the profitRequirement is too high, so there is no sells to get out of the some of
 the positions to take some short term profits.
-how ask AI to come up with a heuristic way to tweek the parameters based on the results
-AI needs to understand the how each parameter affects the trading behavior,
-So ask AI how it understand the parameters, and how it will tweek them based on the results
+3. it identify the most critical parameters that affect the trading behavior, and then it will tweek them one at a time, and
+see how it affects the results. It will not try all combinations, but only one at a time. As more individual tests are done, it will
+learn better about the parameters, and it has more results to find critical parameters to tune.
+To do that,,
+1. First you  need to have a basic understand the how each parameter affects the trading behavior and result, the
+along
+the
+tuing process, you learn more, and you should keep adding your learning to the knowledge base, so you can make
+better decision next time.
+2.So please document what you understand each parameters currenlty. Let's focus on long strategy first.
 
-.
+1.great, please create a KT document to capture the above understanding. then we can use it to guide the tuning
+process and be ready for adding more learning as you go along.
+
+2.Now I want you to devleop the requirements/design/tasks for implementing the above heuristic tuning process.
+You can check exmaples under .kior and create a new spec foc. You
+can create a new endpoint and a new UI page to support this. Once I click a button, it will start the tuning
+process.
+3. First it will shows the best known config it learn so far from other symbol, and the steps how it going to take
+to tune. Very much like an how an AI agent (like you, codex) plan its steps.
+4. then it will start the tuning process, and show the progress.
+I can see
+which configuration is currently being tested, and the results. I can see your reasoning on what to choose the next
+configuration to test... the above specifics are just some ideas to get you started. don;t be limited by them. You
+can
+come up
+with a better and
+complete design.
+5. As you tune, you will learn more about the parameters and their impact on the results. Please keep adding to the
+ KT document
+ 4. when you see the results to converge, you don't see much improvement, you can stop the tuning process. I can
+ also stop it.
+
+Actaully I have more fundamental question. Can you implemnet this as an AI agent by itself? can you implemnt using
+reinforcement learning? or the tuning process itself is a reinforcement learning process? I am not sure how to
+describe the rquest, so help me articulate it
+
 
 
 

@@ -1,0 +1,94 @@
+{
+  "default": {
+    "long": {
+      "startDate": "2021-09-01",
+      "endDate": "2025-09-01",
+      "lotSizeUsd": 10000,
+      "maxLots": 10,
+      "maxLotsToSell": 1,
+      "gridIntervalPercent": 10,
+      "profitRequirement": 10,
+      "trailingBuyActivationPercent": 10,
+      "trailingBuyReboundPercent": 0,
+      "trailingSellActivationPercent": 10,
+      "trailingSellPullbackPercent": 0
+    },
+    "short": {
+      "startDate": "2021-09-01",
+      "endDate": "2025-09-01",
+      "lotSizeUsd": 10000,
+      "maxShorts": 6,
+      "maxShortsToCovers": 3,
+      "gridIntervalPercent": 15,
+      "profitRequirement": 0,
+      "trailingShortActivationPercent": 20,
+      "trailingShortPullbackPercent": 9.8,
+      "trailingCoverActivationPercent": 20,
+      "trailingCoverReboundPercent": 10,
+      "hardStopLossPercent": 30,
+      "portfolioStopLossPercent": 25,
+      "cascadeStopLossPercent": 35
+    }
+  },
+  "TSLA": {
+    "long": {
+      "startDate": "2021-09-01",
+      "endDate": "2025-09-01",
+      "lotSizeUsd": 10000,
+      "maxLots": 10,
+      "maxLotsToSell": 1,
+      "gridIntervalPercent": 10,
+      "profitRequirement": 10,
+      "trailingBuyActivationPercent": 10,
+      "trailingBuyReboundPercent": 0,
+      "trailingSellActivationPercent": 10,
+      "trailingSellPullbackPercent": 0
+    },
+    "short": {
+      "startDate": "2021-09-01",
+      "endDate": "2025-09-01",
+      "lotSizeUsd": 10000,
+      "maxShorts": 6,
+      "maxShortsToCovers": 3,
+      "gridIntervalPercent": 15,
+      "profitRequirement": 0,
+      "trailingShortActivationPercent": 25,
+      "trailingShortPullbackPercent": 15,
+      "trailingCoverActivationPercent": 20,
+      "trailingCoverReboundPercent": 10,
+      "hardStopLossPercent": 30,
+      "portfolioStopLossPercent": 25,
+      "cascadeStopLossPercent": 35
+    }
+  },
+  "NVDA": {
+    "long": {
+      "startDate": "2021-09-01",
+      "endDate": "2025-09-01",
+      "lotSizeUsd": 10000,
+      "maxLots": 10,
+      "maxLotsToSell": 1,
+      "gridIntervalPercent": 10,
+      "profitRequirement": 10,
+      "trailingBuyActivationPercent": 10,
+      "trailingBuyReboundPercent": 0,
+      "trailingSellActivationPercent": 10,
+      "trailingSellPullbackPercent": 0
+    }
+  },
+  "TDOC": {
+    "long": {
+      "startDate": "2021-09-01",
+      "endDate": "2025-09-01",
+      "lotSizeUsd": 10000,
+      "maxLots": 10,
+      "maxLotsToSell": 1,
+      "gridIntervalPercent": 10,
+      "profitRequirement": 10,
+      "trailingBuyActivationPercent": 10,
+      "trailingBuyReboundPercent": 0,
+      "trailingSellActivationPercent": 10,
+      "trailingSellPullbackPercent": 0
+    }
+  }
+}

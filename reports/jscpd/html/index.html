@@ -1,0 +1,323 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Copy/Paste Detector Report</title><link href="styles/tailwind.css" rel="stylesheet"><link href="styles/prism.css" rel="stylesheet"></head><body class="bg-gray-100"><header class="bg-white shadow py-4"><div class="container mx-auto px-4"><h1 class="text-3xl font-semibold text-gray-800">jscpd - copy/paste report</h1></div></header><main class="container mx-auto my-8 p-4 bg-white shadow rounded"><section class="mb-8" id="dashboard"><h2 class="text-2xl font-semibold text-gray-700 mb-4">Dashboard</h2><div class="grid grid-cols-4 gap-4"><div class="bg-blue-200 p-4 rounded text-center"><h3 class="text-lg font-semibold text-blue-800 mb-2">Total Files</h3><span class="text-4xl font-bold text-blue-800">25</span></div><div class="bg-green-200 p-4 rounded text-center"><h3 class="text-lg font-semibold text-green-800 mb-2">Total Lines of Code</h3><span class="text-4xl font-bold text-green-800">8013</span></div><div class="bg-yellow-200 p-4 rounded text-center"><h3 class="text-lg font-semibold text-yellow-800 mb-2">Number of Clones</h3><span class="text-4xl font-bold text-yellow-800">21</span></div><div class="bg-red-200 p-4 rounded text-center"><h3 class="text-lg font-semibold text-red-800 mb-2">Duplicated Lines</h3><span class="text-4xl font-bold text-red-800">314 (3.92%)</span></div></div></section><section class="mb-8" id="formats"><h2 class="text-2xl font-semibold text-gray-700 mb-4">Formats with Duplications</h2><table class="w-full table-auto"><thead><tr class="bg-gray-200 text-gray-600 uppercase text-sm leading-normal"><th class="py-3 px-6 text-left">Format</th><th class="py-3 px-6 text-left">Files</th><th class="py-3 px-6 text-left">Lines</th><th class="py-3 px-6 text-left">Clones</th><th class="py-3 px-6 text-left">Duplicated Lines</th><th class="py-3 px-6 text-left">Duplicated Tokens</th></tr></thead><tbody><tr class="bg-white border-b border-gray-200 text-gray-800 text-sm"><td class="py-3 px-6"><a class="text-blue-600 hover:underline" href="#javascript-clones">javascript</a></td><td class="py-3 px-6">25</td><td class="py-3 px-6">8013</td><td class="py-3 px-6">21</td><td class="py-3 px-6">314</td><td class="py-3 px-6">3014</td></tr></tbody></table></section><section class="mb-8" id="txt-clones"><a name="javascript-clones"></a><h2 class="text-2xl font-semibold text-gray-700 mb-4">javascript</h2><div class="divide-y divide-gray-200 border-b-2"><div class="py-4"><p class="text-gray-600">frontend/src/components/MetricsSelector.js (Line 86:18 - Line 99:2), frontend/src/components/MetricsSelector.js (Line 68:15 - Line 82:2)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn0" onclick="toggleCodeBlock('cloneGroup0', 'expandBtn0', 'collapseBtn0')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn0" onclick="toggleCodeBlock('cloneGroup0', 'expandBtn0', 'collapseBtn0')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup0"><code class="language-javascript text-sm text-gray-800">.map(metric =&gt; (
+                  &lt;label key={metric.id} className=&quot;metric-option&quot;&gt;
+                    &lt;input
+                      type=&quot;checkbox&quot;
+                      checked={visibleMetrics.includes(metric.id)}
+                      onChange={() =&gt; handleMetricToggle(metric.id)}
+                    /&gt;
+                    &lt;span className=&quot;metric-name&quot;&gt;{metric.name}&lt;/span&gt;
+                    &lt;span className=&quot;metric-type&quot;&gt;({metric.type})&lt;/span&gt;
+                  &lt;/label&gt;
+                ))}
+              &lt;/div&gt;
+            &lt;/div&gt;
+          )</code></pre></div><div class="py-4"><p class="text-gray-600">frontend/src/components/D3Dashboard.js (Line 9:3 - Line 23:10), frontend/src/components/Dashboard.js (Line 8:3 - Line 21:6)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn1" onclick="toggleCodeBlock('cloneGroup1', 'expandBtn1', 'collapseBtn1')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn1" onclick="toggleCodeBlock('cloneGroup1', 'expandBtn1', 'collapseBtn1')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup1"><code class="language-javascript text-sm text-gray-800">const [selectedTimeRange, setSelectedTimeRange] = useState('2Y');
+  const [visibleMetrics, setVisibleMetrics] = useState([
+    'price',
+    'revenue',
+    'earnings_surprises',
+    'yoy_revenue_growth',
+    'eps',
+    'pe_ratio',
+    'gross_margin',
+    'operating_margin',
+    'net_margin'
+  ]);
+  const [filteredData, setFilteredData] = useState(null);
+
+  useEffect</code></pre></div><div class="py-4"><p class="text-gray-600">frontend/src/components/D3Dashboard.js (Line 34:15 - Line 56:2), frontend/src/components/Dashboard.js (Line 62:18 - Line 83:19)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn2" onclick="toggleCodeBlock('cloneGroup2', 'expandBtn2', 'collapseBtn2')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn2" onclick="toggleCodeBlock('cloneGroup2', 'expandBtn2', 'collapseBtn2')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup2"><code class="language-javascript text-sm text-gray-800">]);
+
+  const filterDataByTimeRange = (data, timeRange) =&gt; {
+    const now = new Date();
+    let startDate;
+
+    switch (timeRange) {
+      case '1Y':
+        startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+        break;
+      case '2Y':
+        startDate = new Date(now.getFullYear() - 2, now.getMonth(), now.getDate());
+        break;
+      case '3Y':
+        startDate = new Date(now.getFullYear() - 3, now.getMonth(), now.getDate());
+        break;
+      case '5Y':
+        startDate = new Date(now.getFullYear() - 5, now.getMonth(), now.getDate());
+        break;
+      case 'All':
+      default:
+        return data;
+    }</code></pre></div><div class="py-4"><p class="text-gray-600">frontend/src/components/D3Dashboard.js (Line 56:5 - Line 75:11), frontend/src/components/Dashboard.js (Line 84:5 - Line 103:22)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn3" onclick="toggleCodeBlock('cloneGroup3', 'expandBtn3', 'collapseBtn3')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn3" onclick="toggleCodeBlock('cloneGroup3', 'expandBtn3', 'collapseBtn3')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup3"><code class="language-javascript text-sm text-gray-800">}
+
+    const startDateStr = startDate.toISOString().split('T')[0];
+
+    const filteredMetrics = {};
+    Object.keys(data.metrics).forEach(metricKey =&gt; {
+      if (Array.isArray(data.metrics[metricKey])) {
+        filteredMetrics[metricKey] = data.metrics[metricKey].filter(item =&gt; 
+          item.date &gt;= startDateStr
+        );
+      }
+    });
+
+    return {
+      ...data,
+      metrics: filteredMetrics
+    };
+  };
+
+  const drawCharts</code></pre></div><div class="py-4"><p class="text-gray-600">frontend/src/components/D3Dashboard.js (Line 89:13 - Line 99:4), frontend/src/components/Dashboard.js (Line 37:9 - Line 47:2)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn4" onclick="toggleCodeBlock('cloneGroup4', 'expandBtn4', 'collapseBtn4')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn4" onclick="toggleCodeBlock('cloneGroup4', 'expandBtn4', 'collapseBtn4')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup4"><code class="language-javascript text-sm text-gray-800">.metrics).forEach(metricData =&gt; {
+      if (Array.isArray(metricData)) {
+        metricData.forEach(item =&gt; {
+          if (item.date) {
+            allDates.push(new Date(item.date));
+          }
+        });
+      }
+    });
+
+    if (allDates.length ===</code></pre></div><div class="py-4"><p class="text-gray-600">frontend/src/components/D3Dashboard.js (Line 337:15 - Line 358:15), frontend/src/components/Dashboard.js (Line 114:12 - Line 135:12)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn5" onclick="toggleCodeBlock('cloneGroup5', 'expandBtn5', 'collapseBtn5')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn5" onclick="toggleCodeBlock('cloneGroup5', 'expandBtn5', 'collapseBtn5')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup5"><code class="language-javascript text-sm text-gray-800">&gt;
+        &lt;div className=&quot;loading&quot;&gt;Loading dashboard...&lt;/div&gt;
+      &lt;/div&gt;
+    );
+  }
+
+  const availableMetrics = [
+    { id: 'price', name: 'Stock Price', type: 'line', unit: '$', smooth: true },
+    { id: 'revenue', name: 'Quarterly Revenue', type: 'line', unit: 'M' },
+    { id: 'earnings_surprises', name: 'Earnings Surprises', type: 'line', unit: '%' },
+    { id: 'yoy_revenue_growth', name: 'YoY Revenue Growth', type: 'line', unit: '%' },
+    { id: 'eps', name: 'TTM Net EPS', type: 'line', unit: '$' },
+    { id: 'pe_ratio', name: 'P/E Ratio', type: 'line', unit: '' },
+    { id: 'gross_margin', name: 'Gross Margin', type: 'line', unit: '%' },
+    { id: 'operating_margin', name: 'Operating Margin', type: 'line', unit: '%' },
+    { id: 'net_margin', name: 'Net Margin', type: 'line', unit: '%' },
+    { id: 'volume', name: 'Trading Volume', type: 'bar', unit: '' },
+    { id: 'yoy_eps_growth', name: 'YoY EPS Growth', type: 'line', unit: '%' }
+  ];
+
+  return (
+    &lt;div className=&quot;d3-dashboard&quot;</code></pre></div><div class="py-4"><p class="text-gray-600">frontend/src/components/D3Dashboard.js (Line 358:15 - Line 381:19), frontend/src/components/Dashboard.js (Line 135:12 - Line 158:16)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn6" onclick="toggleCodeBlock('cloneGroup6', 'expandBtn6', 'collapseBtn6')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn6" onclick="toggleCodeBlock('cloneGroup6', 'expandBtn6', 'collapseBtn6')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup6"><code class="language-javascript text-sm text-gray-800">&gt;
+      &lt;div className=&quot;dashboard-header&quot;&gt;
+        &lt;div className=&quot;stock-info&quot;&gt;
+          &lt;h2&gt;{stockData.symbol}&lt;/h2&gt;
+          &lt;span className=&quot;last-updated&quot;&gt;
+            Last updated: {stockData.lastUpdated || 'Just now'}
+          &lt;/span&gt;
+        &lt;/div&gt;
+        
+        &lt;div className=&quot;dashboard-controls&quot;&gt;
+          &lt;TimeRangeControls 
+            selectedRange={selectedTimeRange}
+            onRangeChange={handleTimeRangeChange}
+          /&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+
+      &lt;MetricsSelector 
+        availableMetrics={availableMetrics}
+        visibleMetrics={visibleMetrics}
+        onMetricsChange={handleMetricsChange}
+      /&gt;
+
+      &lt;div className=&quot;charts-container&quot;</code></pre></div><div class="py-4"><p class="text-gray-600">frontend/src/components/D3Dashboard.js (Line 382:4 - Line 394:12), frontend/src/components/Dashboard.js (Line 221:4 - Line 233:10)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn7" onclick="toggleCodeBlock('cloneGroup7', 'expandBtn7', 'collapseBtn7')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn7" onclick="toggleCodeBlock('cloneGroup7', 'expandBtn7', 'collapseBtn7')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup7"><code class="language-javascript text-sm text-gray-800">&gt;
+      &lt;/div&gt;
+
+      {visibleMetrics.length === 0 &amp;&amp; (
+        &lt;div className=&quot;no-metrics&quot;&gt;
+          &lt;p&gt;No metrics selected. Please select metrics to display from the options above.&lt;/p&gt;
+        &lt;/div&gt;
+      )}
+    &lt;/div&gt;
+  );
+};
+
+export default D3Dashboard</code></pre></div><div class="py-4"><p class="text-gray-600">frontend/src/components/BacktestChart.js (Line 544:11 - Line 555:7), frontend/src/components/BacktestChart.js (Line 506:6 - Line 517:7)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn8" onclick="toggleCodeBlock('cloneGroup8', 'expandBtn8', 'collapseBtn8')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn8" onclick="toggleCodeBlock('cloneGroup8', 'expandBtn8', 'collapseBtn8')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup8"><code class="language-javascript text-sm text-gray-800">)&lt;/h3&gt;
+          &lt;ResponsiveContainer width=&quot;100%&quot; height={200}&gt;
+            &lt;LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}&gt;
+              &lt;CartesianGrid strokeDasharray=&quot;3 3&quot; stroke=&quot;#f0f0f0&quot; /&gt;
+              &lt;XAxis
+                dataKey=&quot;date&quot;
+                tickFormatter={formatDate}
+                stroke=&quot;#666&quot;
+                domain={zoomRange || ['dataMin', 'dataMax']}
+              /&gt;
+              &lt;YAxis
+                stroke</code></pre></div><div class="py-4"><p class="text-gray-600">frontend/src/components/BacktestChart.js (Line 583:2 - Line 593:2), frontend/src/components/BacktestChart.js (Line 508:2 - Line 556:6)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn9" onclick="toggleCodeBlock('cloneGroup9', 'expandBtn9', 'collapseBtn9')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn9" onclick="toggleCodeBlock('cloneGroup9', 'expandBtn9', 'collapseBtn9')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup9"><code class="language-javascript text-sm text-gray-800">data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}&gt;
+              &lt;CartesianGrid strokeDasharray=&quot;3 3&quot; stroke=&quot;#f0f0f0&quot; /&gt;
+              &lt;XAxis
+                dataKey=&quot;date&quot;
+                tickFormatter={formatDate}
+                stroke=&quot;#666&quot;
+                domain={zoomRange || ['dataMin', 'dataMax']}
+              /&gt;
+              &lt;YAxis
+                stroke=&quot;#666&quot;
+                tickFormatter={(value) =&gt; `${(</code></pre></div><div class="py-4"><p class="text-gray-600">backend/services/providers/iexProvider.js (Line 105:11 - Line 120:50), backend/services/providers/twelveDataProvider.js (Line 115:12 - Line 130:58)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn10" onclick="toggleCodeBlock('cloneGroup10', 'expandBtn10', 'collapseBtn10')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn10" onclick="toggleCodeBlock('cloneGroup10', 'expandBtn10', 'collapseBtn10')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup10"><code class="language-javascript text-sm text-gray-800">, existing);
+      });
+
+      // Convert to array and filter last 5 years
+      const fundamentalsData = Array.from(fundamentalsMap.values());
+      const fiveYearsAgo = new Date();
+      fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+
+      const filteredData = fundamentalsData.filter(data =&gt; {
+        const fiscalDate = new Date(data.fiscal_date_ending);
+        return fiscalDate &gt;= fiveYearsAgo;
+      });
+
+      return filteredData;
+    } catch (error) {
+      console.error('Error fetching quarterly fundamentals from IEX:'</code></pre></div><div class="py-4"><p class="text-gray-600">backend/services/providers/fmpProvider.js (Line 217:52 - Line 229:23), backend/services/providers/twelveDataProvider.js (Line 116:2 - Line 128:7)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn11" onclick="toggleCodeBlock('cloneGroup11', 'expandBtn11', 'collapseBtn11')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn11" onclick="toggleCodeBlock('cloneGroup11', 'expandBtn11', 'collapseBtn11')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup11"><code class="language-javascript text-sm text-gray-800">);
+
+      // Convert to array and filter last 5 years
+      const fundamentalsData = Array.from(fundamentalsMap.values());
+      const fiveYearsAgo = new Date();
+      fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+
+      const filteredData = fundamentalsData.filter(data =&gt; {
+        const fiscalDate = new Date(data.fiscal_date_ending);
+        return fiscalDate &gt;= fiveYearsAgo;
+      });
+
+      // Sort by fiscal date</code></pre></div><div class="py-4"><p class="text-gray-600">backend/services/providers/fmpProvider.js (Line 313:5 - Line 323:12), backend/services/providers/twelveDataProvider.js (Line 159:5 - Line 169:19)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn12" onclick="toggleCodeBlock('cloneGroup12', 'expandBtn12', 'collapseBtn12')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn12" onclick="toggleCodeBlock('cloneGroup12', 'expandBtn12', 'collapseBtn12')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup12"><code class="language-javascript text-sm text-gray-800">}
+  }
+
+  parseNumber(value) {
+    if (!value || value === 'None' || value === 'null' || value === 'N/A') return null;
+    const num = parseFloat(value);
+    return isNaN(num) ? null : num;
+  }
+}
+
+module.exports = FMPProvider</code></pre></div><div class="py-4"><p class="text-gray-600">backend/services/providers/alphaVantageProvider.js (Line 242:17 - Line 252:21), backend/services/providers/iexProvider.js (Line 77:5 - Line 87:36)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn13" onclick="toggleCodeBlock('cloneGroup13', 'expandBtn13', 'collapseBtn13')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn13" onclick="toggleCodeBlock('cloneGroup13', 'expandBtn13', 'collapseBtn13')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup13"><code class="language-javascript text-sm text-gray-800">,
+          revenue: this.parseNumber(report.totalRevenue),
+          gross_profit: this.parseNumber(report.grossProfit),
+          operating_income: this.parseNumber(report.operatingIncome),
+          net_income: this.parseNumber(report.netIncome),
+          shares_outstanding: null,
+          eps: null
+        });
+      });
+
+      // Add earnings data</code></pre></div><div class="py-4"><p class="text-gray-600">backend/services/providers/alphaVantageProvider.js (Line 276:2 - Line 291:60), backend/services/providers/iexProvider.js (Line 105:2 - Line 130:58)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn14" onclick="toggleCodeBlock('cloneGroup14', 'expandBtn14', 'collapseBtn14')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn14" onclick="toggleCodeBlock('cloneGroup14', 'expandBtn14', 'collapseBtn14')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup14"><code class="language-javascript text-sm text-gray-800">fiscalDate, existing);
+      });
+
+      // Convert to array and filter last 5 years
+      const fundamentalsData = Array.from(fundamentalsMap.values());
+      const fiveYearsAgo = new Date();
+      fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+
+      const filteredData = fundamentalsData.filter(data =&gt; {
+        const fiscalDate = new Date(data.fiscal_date_ending);
+        return fiscalDate &gt;= fiveYearsAgo;
+      });
+
+      return filteredData;
+    } catch (error) {
+      console.error('Error fetching quarterly fundamentals from Alpha Vantage:'</code></pre></div><div class="py-4"><p class="text-gray-600">backend/services/providers/alphaVantageProvider.js (Line 358:55 - Line 371:21), backend/services/providers/iexProvider.js (Line 146:45 - Line 158:12)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn15" onclick="toggleCodeBlock('cloneGroup15', 'expandBtn15', 'collapseBtn15')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn15" onclick="toggleCodeBlock('cloneGroup15', 'expandBtn15', 'collapseBtn15')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup15"><code class="language-javascript text-sm text-gray-800">, error.message);
+      return []; // Corporate actions are optional
+    }
+  }
+
+
+  parseNumber(value) {
+    if (!value || value === 'None' || value === 'null') return null;
+    const num = parseFloat(value);
+    return isNaN(num) ? null : num;
+  }
+}
+
+module.exports = AlphaVantageProvider</code></pre></div><div class="py-4"><p class="text-gray-600">backend/services/betaDataService.js (Line 411:5 - Line 434:34), backend/services/providers/yfinanceProvider.js (Line 172:5 - Line 195:26)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn16" onclick="toggleCodeBlock('cloneGroup16', 'expandBtn16', 'collapseBtn16')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn16" onclick="toggleCodeBlock('cloneGroup16', 'expandBtn16', 'collapseBtn16')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup16"><code class="language-javascript text-sm text-gray-800">return new Promise((resolve, reject) =&gt; {
+      const python = spawn('python3', ['-c', script]);
+
+      let stdout = '';
+      let stderr = '';
+
+      python.stdout.on('data', (data) =&gt; {
+        stdout += data.toString();
+      });
+
+      python.stderr.on('data', (data) =&gt; {
+        stderr += data.toString();
+      });
+
+      python.on('close', (code) =&gt; {
+        if (code !== 0) {
+          reject(new Error(`Python script failed: ${stderr}`));
+        } else {
+          resolve(stdout.trim());
+        }
+      });
+
+      python.on('error', (error) =&gt; {
+        reject(new Error(`Failed to spawn python process: </code></pre></div><div class="py-4"><p class="text-gray-600">backend/services/batchBacktestService.js (Line 243:25 - Line 262:6), backend/services/shortBatchBacktestService.js (Line 123:43 - Line 142:8)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn17" onclick="toggleCodeBlock('cloneGroup17', 'expandBtn17', 'collapseBtn17')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn17" onclick="toggleCodeBlock('cloneGroup17', 'expandBtn17', 'collapseBtn17')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup17"><code class="language-javascript text-sm text-gray-800">);
+
+  const results = [];
+  const errors = [];
+
+  // Run backtest for each combination
+  for (let i = 0; i &lt; combinations.length; i++) {
+    const params = combinations[i];
+
+    try {
+      if (progressCallback) {
+        progressCallback({
+          current: i + 1,
+          total: combinations.length,
+          currentParams: params,
+          symbol: params.symbol
+        });
+      }
+
+      const</code></pre></div><div class="py-4"><p class="text-gray-600">backend/services/batchBacktestService.js (Line 273:20 - Line 285:87), backend/services/shortBatchBacktestService.js (Line 150:26 - Line 162:61)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn18" onclick="toggleCodeBlock('cloneGroup18', 'expandBtn18', 'collapseBtn18')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn18" onclick="toggleCodeBlock('cloneGroup18', 'expandBtn18', 'collapseBtn18')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup18"><code class="language-javascript text-sm text-gray-800">${params.symbol}:`, {
+        totalReturnPercent: result.totalReturnPercent,
+        annualizedReturnPercent: result.annualizedReturnPercent,
+        totalTrades: result.totalTrades,
+        winRate: result.winRate,
+        maxDrawdownPercent: result.maxDrawdownPercent
+      });
+
+      // Add parameter info to result
+      result.parameters = params;
+      result.testId = i + 1;
+
+      // Use the original totalReturnPercent from DCA service (already correctly calculated)</code></pre></div><div class="py-4"><p class="text-gray-600">backend/services/batchBacktestService.js (Line 300:2 - Line 310:33), backend/services/shortBatchBacktestService.js (Line 169:2 - Line 179:39)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn19" onclick="toggleCodeBlock('cloneGroup19', 'expandBtn19', 'collapseBtn19')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn19" onclick="toggleCodeBlock('cloneGroup19', 'expandBtn19', 'collapseBtn19')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup19"><code class="language-javascript text-sm text-gray-800">|| 0;
+
+      // Cap extreme values to prevent unrealistic returns
+      if (Math.abs(actualAnnualizedReturnPercent) &gt; 1000) {
+        console.log(`⚠️ Capping extreme annualized return: ${actualAnnualizedReturnPercent}% -&gt; 1000%`);
+        actualAnnualizedReturnPercent = actualAnnualizedReturnPercent &gt; 0 ? 1000 : -1000;
+      }
+
+      // DEBUG: Log annualized return calculation (but limit output)
+      if (i &lt; 3) { // Only log first 3 results to avoid spam
+        console.log(`🐛 Annualized Return Debug for </code></pre></div><div class="py-4"><p class="text-gray-600">backend/services/batchBacktestService.js (Line 379:24 - Line 399:31), backend/services/shortBatchBacktestService.js (Line 236:30 - Line 256:52)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn20" onclick="toggleCodeBlock('cloneGroup20', 'expandBtn20', 'collapseBtn20')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn20" onclick="toggleCodeBlock('cloneGroup20', 'expandBtn20', 'collapseBtn20')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup20"><code class="language-javascript text-sm text-gray-800">${errors.length} errors`);
+
+  // Sort results by specified metric
+  results.sort((a, b) =&gt; {
+    // Add null checks to prevent undefined property access
+    const aValue = a.summary || {};
+    const bValue = b.summary || {};
+
+    if (sortBy === 'totalReturn') {
+      return (bValue.totalReturn || 0) - (aValue.totalReturn || 0);
+    }
+    if (sortBy === 'annualizedReturn') {
+      return (bValue.annualizedReturn || 0) - (aValue.annualizedReturn || 0);
+    }
+    if (sortBy === 'winRate') {
+      return (bValue.winRate || 0) - (aValue.winRate || 0);
+    }
+    return (bValue.annualizedReturn || 0) - (aValue.annualizedReturn || 0); // default
+  });
+
+  // Generate summary statistics</code></pre></div><!-- Add more clone groups for .txt format as needed         // Add more clone groups for .txt format as needed--></div></section><!-- Add more sections for other formats and clone groups as needed--></main><footer class="bg-white shadow mt-8 py-4"><div class="container mx-auto px-4 text-center"><p class="text-sm text-gray-600">This report is generated by jscpd, an open-source copy/paste detector.</p><p class="text-sm text-gray-600">jscpd is licensed under the MIT License.</p><a class="text-blue-500 text-sm" href="https://github.com/kucherenko/jscpd" target="_blank" rel="noopener noreferrer">View jscpd on GitHub</a></div></footer><script src="js/prism.js"></script><script>function toggleCodeBlock(codeBlockId, expandBtnId, collapseBtnId) {
+  const codeBlock = document.getElementById(codeBlockId);
+  const expandBtn = document.getElementById(expandBtnId);
+  const collapseBtn = document.getElementById(collapseBtnId);
+
+  codeBlock.classList.toggle('hidden');
+  expandBtn.classList.toggle('hidden');
+  collapseBtn.classList.toggle('hidden');
+}</script></body></html>
