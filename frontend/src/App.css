@@ -1894,3 +1894,89 @@
     text-align: center;
   }
 }
+
+/* Total Return Card */
+.total-return-card {
+  background: white;
+  border: 2px solid #10b981;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.total-return-card h4 {
+  margin: 0 0 0.75rem 0;
+  color: #10b981;
+  font-size: 1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.total-return-card .metrics {
+  color: #4b5563;
+  font-size: 0.95rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+/* Buy & Hold Card - same style as Total Return */
+.buy-hold-card {
+  background: white;
+  border: 2px solid #3b82f6;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.buy-hold-card h4 {
+  margin: 0 0 0.75rem 0;
+  color: #3b82f6;
+  font-size: 1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.buy-hold-card .metrics {
+  color: #4b5563;
+  font-size: 0.95rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+/* Compact Metrics */
+.compact-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  padding: 1rem;
+  background: #f9fafb;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  border: 1px solid #e5e7eb;
+}
+
+.compact-metrics span {
+  color: #374151;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.compact-metrics strong {
+  color: #1f2937;
+  margin-right: 0.25rem;
+}
+
+@media (max-width: 768px) {
+  .compact-metrics {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+}

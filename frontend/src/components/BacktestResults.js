@@ -56,6 +56,10 @@ const BacktestResults = ({ data, chartData: priceData }) => {
     // Check if this is short selling strategy
     const isShortSelling = summary?.strategy === 'SHORT_DCA';
 
+    // Initialize cumulative capital tracking for average capital deployed calculation
+    let cumulativeCapitalDeployed = 0;
+    let capitalDeployedDays = 0;
+
     return priceData.dailyPrices.map(day => {
       const transaction = transactionMap[day.date];
       const currentPrice = parseFloat(day.adjusted_close || day.close || 0);
@@ -74,8 +78,15 @@ const BacktestResults = ({ data, chartData: priceData }) => {
         // Use totalPNL directly from transaction (matches Enhanced Transaction History table)
         totalPNL = transaction.totalPNL || 0;
 
-        if (totalCapitalDeployed > 0) {
-          totalPNLPercent = (totalPNL / totalCapitalDeployed) * 100;
+        // Update cumulative capital deployed
+        cumulativeCapitalDeployed += totalCapitalDeployed;
+        capitalDeployedDays += 1;
+
+        // Calculate average capital deployed up to this point
+        const avgCapitalDeployed = capitalDeployedDays > 0 ? cumulativeCapitalDeployed / capitalDeployedDays : 0;
+
+        if (avgCapitalDeployed > 0) {
+          totalPNLPercent = (totalPNL / avgCapitalDeployed) * 100;
         }
       } else {
         // Find most recent transaction for capital deployed calculation
@@ -112,14 +123,45 @@ const BacktestResults = ({ data, chartData: priceData }) => {
 
           totalPNL = unrealizedPNL + (mostRecentTransaction.realizedPNL || 0);
 
-          if (totalCapitalDeployed > 0) {
-            totalPNLPercent = (totalPNL / totalCapitalDeployed) * 100;
+          // Update cumulative capital deployed for non-transaction days too
+          cumulativeCapitalDeployed += totalCapitalDeployed;
+          capitalDeployedDays += 1;
+
+          // Calculate average capital deployed up to this point
+          const avgCapitalDeployed = capitalDeployedDays > 0 ? cumulativeCapitalDeployed / capitalDeployedDays : 0;
+
+          if (avgCapitalDeployed > 0) {
+            totalPNLPercent = (totalPNL / avgCapitalDeployed) * 100;
           }
         }
       }
 
       // Calculate Buy & Hold P&L % (simple percentage change from start)
       const buyAndHoldPercent = startPrice > 0 ? ((currentPrice - startPrice) / startPrice) * 100 : 0;
+
+      // Calculate break-even value (capital deployed)
+      const breakEvenValue = totalCapitalDeployed;
+
+      // Calculate lots deployed as percentage (0-100%) for the chart
+      const maxLotsParam = priceData?.backtestParameters?.maxLots || summary?.maxLots || 10;
+      let currentLotsCount = 0;
+
+      if (transaction) {
+        // For transaction days, use current transaction's lots
+        currentLotsCount = transaction.lotsAfterTransaction ? transaction.lotsAfterTransaction.length :
+                          (transaction.shortsAfterTransaction ? transaction.shortsAfterTransaction.length : 0);
+      } else {
+        // For non-transaction days, find most recent transaction
+        for (let i = transactionsToUse.length - 1; i >= 0; i--) {
+          if (new Date(transactionsToUse[i].date) <= new Date(day.date)) {
+            currentLotsCount = transactionsToUse[i].lotsAfterTransaction ? transactionsToUse[i].lotsAfterTransaction.length :
+                              (transactionsToUse[i].shortsAfterTransaction ? transactionsToUse[i].shortsAfterTransaction.length : 0);
+            break;
+          }
+        }
+      }
+
+      const lotsDeployedPercent = maxLotsParam > 0 ? (currentLotsCount / maxLotsParam) * 100 : 0;
 
       return {
         date: day.date,
@@ -135,6 +177,8 @@ const BacktestResults = ({ data, chartData: priceData }) => {
         totalPNLPercent: totalPNLPercent,
         totalPNL: totalPNL,
         buyAndHoldPercent: buyAndHoldPercent,
+        breakEvenValue: breakEvenValue,
+        lotsDeployedPercent: lotsDeployedPercent,
 
         // Different buy markers based on transaction type
         // Transaction markers - only relevant ones based on strategy mode
@@ -314,6 +358,9 @@ const BacktestResults = ({ data, chartData: priceData }) => {
     const pricesData = priceData?.dailyPrices || dailyPrices || [];
     if (!pricesData || pricesData.length === 0) return [];
 
+    // Get start price for Buy & Hold calculation
+    const startPrice = parseFloat(pricesData[0]?.adjusted_close || pricesData[0]?.close || 0);
+
     // Use enhanced transactions which have complete portfolio state
     const transactionsToUse = enhancedTransactions?.length > 0 ? enhancedTransactions : transactions || [];
 
@@ -326,6 +373,10 @@ const BacktestResults = ({ data, chartData: priceData }) => {
     transactionsToUse.forEach(transaction => {
       transactionMap.set(transaction.date, transaction);
     });
+
+    // Initialize cumulative capital tracking for average capital deployed calculation (across ALL days)
+    let cumulativeCapitalDeployed = 0;
+    let totalDays = 0;
 
     return pricesData.map((daily) => {
       const date = daily.date;
@@ -367,14 +418,33 @@ const BacktestResults = ({ data, chartData: priceData }) => {
         const cumulativeRealizedPNL = transaction.realizedPNL || 0;
         const totalPNL = transaction.totalPNL || 0;
 
+        // Calculate Buy & Hold percentage from start price
+        const buyAndHoldPercent = startPrice > 0 ? ((currentPrice - startPrice) / startPrice) * 100 : 0;
+
+        // Track cumulative capital deployed for average calculation
+        const capitalDeployed = currentLots * lotSizeUsd;
+        cumulativeCapitalDeployed += capitalDeployed;
+        totalDays += 1;
+
+        // Calculate Total P&L % based on AVERAGE capital deployed (not end capital!)
+        const avgCapitalDeployed = totalDays > 0 ? cumulativeCapitalDeployed / totalDays : 0;
+        const totalPNLPercent = avgCapitalDeployed > 0 ? (totalPNL / avgCapitalDeployed) * 100 : null;
+
+        // Calculate lots deployed as percentage (0-100%)
+        const lotsDeployedPercent = maxLots > 0 ? (currentLots / maxLots) * 100 : 0;
+
         return {
           date: new Date(date).toLocaleDateString(),
           totalPNL: totalPNL,
+          totalPNLPercent: totalPNLPercent,
+          avgCapitalDeployed: avgCapitalDeployed,
           holdingsValue: holdingsMarketValue,
           realizedPNL: cumulativeRealizedPNL,
           breakEvenValue: breakEvenValue,
+          lotsDeployedPercent: lotsDeployedPercent,
           stockPrice: currentPrice,
           currentLots: currentLots,
+          buyAndHoldPercent: buyAndHoldPercent,
           hasBuy: transaction && ['BUY', 'INITIAL_BUY', 'TRAILING_STOP_LIMIT_BUY'].includes(transaction.type),
           hasSell: transaction && transaction.type === 'SELL'
         };
@@ -424,14 +494,33 @@ const BacktestResults = ({ data, chartData: priceData }) => {
           holdingsMarketValue - breakEvenValue;
         const totalPNL = unrealizedPNL + cumulativeRealizedPNL;
 
+        // Calculate Buy & Hold percentage from start price
+        const buyAndHoldPercent = startPrice > 0 ? ((currentPrice - startPrice) / startPrice) * 100 : 0;
+
+        // Track cumulative capital deployed for average calculation
+        const capitalDeployed = currentLots * lotSizeUsd;
+        cumulativeCapitalDeployed += capitalDeployed;
+        totalDays += 1;
+
+        // Calculate Total P&L % based on AVERAGE capital deployed (not end capital!)
+        const avgCapitalDeployed = totalDays > 0 ? cumulativeCapitalDeployed / totalDays : 0;
+        const totalPNLPercent = avgCapitalDeployed > 0 ? (totalPNL / avgCapitalDeployed) * 100 : null;
+
+        // Calculate lots deployed as percentage (0-100%)
+        const lotsDeployedPercent = maxLots > 0 ? (currentLots / maxLots) * 100 : 0;
+
         return {
           date: new Date(date).toLocaleDateString(),
           totalPNL: totalPNL,
+          totalPNLPercent: totalPNLPercent,
+          avgCapitalDeployed: avgCapitalDeployed,
           holdingsValue: holdingsMarketValue,
           realizedPNL: cumulativeRealizedPNL,
           breakEvenValue: breakEvenValue,
+          lotsDeployedPercent: lotsDeployedPercent,
           stockPrice: currentPrice,
           currentLots: currentLots,
+          buyAndHoldPercent: buyAndHoldPercent,
           hasBuy: false,
           hasSell: false
         };
@@ -442,14 +531,25 @@ const BacktestResults = ({ data, chartData: priceData }) => {
       const hasBuy = transaction && ['BUY', 'INITIAL_BUY', 'TRAILING_STOP_LIMIT_BUY'].includes(transaction.type);
       const hasSell = transaction && transaction.type === 'SELL';
 
+      // Calculate Buy & Hold percentage from start price
+      const buyAndHoldPercent = startPrice > 0 ? ((currentPrice - startPrice) / startPrice) * 100 : 0;
+
+      // No capital deployed yet
+      cumulativeCapitalDeployed += 0;
+      totalDays += 1;
+
       return {
         date: new Date(date).toLocaleDateString(),
         totalPNL: 0,
+        totalPNLPercent: null,
+        avgCapitalDeployed: 0,
         holdingsValue: 0,
         realizedPNL: 0,
         breakEvenValue: 0,
+        lotsDeployedPercent: 0,
         stockPrice: currentPrice,
         currentLots: 0,
+        buyAndHoldPercent: buyAndHoldPercent,
         hasBuy: false,
         hasSell: false
       };
@@ -820,6 +920,17 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                 </>
               )}
 
+              {/* Lots Deployed % line on percent Y-axis */}
+              <Line
+                yAxisId="percent"
+                type="monotone"
+                dataKey="lotsDeployedPercent"
+                stroke="#f97316"
+                strokeWidth={1}
+                dot={false}
+                name="Lots Deployed %"
+              />
+
               {/* 0% P/L Reference Line on right Y-axis */}
               <ReferenceLine
                 yAxisId="percent"
@@ -839,255 +950,93 @@ const BacktestResults = ({ data, chartData: priceData }) => {
         <span>{summary.startDate} to {summary.endDate}</span>
       </div>
 
-      {/* Key Metrics Grid */}
-      <div className="results-grid">
-        <div className="metric-card">
-          <h4>Total Return</h4>
-          <p className={`value ${getMetricClass(summary.totalReturn)}`}>
-            {formatCurrency(summary.totalReturn)}
-          </p>
-          <small className={getMetricClass(summary.totalReturnPercent)}>
-            {(() => {
-              // Calculate total return % using average capital deployed
-              if (enhancedTransactions && enhancedTransactions.length > 0) {
-                const lotSizeUsd = priceData?.backtestParameters?.lotSizeUsd || 10000;
-                let totalCapitalDeployed = 0;
-                let dayCount = 0;
+      {/* Total Return Card */}
+      <div className="metric-card total-return-card">
+        <h4>Total Return</h4>
+        <div className={`metrics ${getMetricClass(summary.totalReturnPercent)}`}>
+          {(() => {
+            // Get the final Total P&L % from price chart data (matches chart display)
+            if (chartData && chartData.length > 0) {
+              const finalDataPoint = chartData[chartData.length - 1];
+              const returnPercent = finalDataPoint.totalPNLPercent;
 
-                // Calculate average capital deployed over time (correctly for short selling)
-                enhancedTransactions.forEach(transaction => {
-                  const positions = transaction.lotsAfterTransaction || transaction.shortsAfterTransaction;
-                  if (positions) {
-                    // For short selling, capital deployed is the cash received from shorting
-                    // For long, capital deployed is the cash spent on purchases
-                    // Both use lotSizeUsd per position since each position represents $lotSizeUsd invested/received
-                    const capitalDeployed = positions.length * lotSizeUsd;
-                    totalCapitalDeployed += capitalDeployed;
-                    dayCount += 1;
+              if (returnPercent !== null && returnPercent !== undefined) {
+                // Calculate annualized return (CAGR) based on backtest period
+                const startDate = new Date(summary.startDate || priceData?.backtestParameters?.startDate);
+                const endDate = new Date(summary.endDate || priceData?.backtestParameters?.endDate);
+                const years = (endDate - startDate) / (1000 * 60 * 60 * 24 * 365.25);
+
+                let cagrText = '';
+                if (years > 0) {
+                  const finalValue = 1 + (returnPercent / 100);
+                  if (finalValue > 0) {
+                    const cagr = Math.pow(finalValue, 1 / years) - 1;
+                    const cagrPercent = cagr * 100;
+                    cagrText = ` | CAGR: ${cagrPercent.toFixed(2)}%`;
                   }
-                });
+                }
 
-                const averageCapitalDeployed = dayCount > 0 ? totalCapitalDeployed / dayCount : 0;
-                if (averageCapitalDeployed > 0) {
-                  const returnPercent = (summary.totalReturn / averageCapitalDeployed) * 100;
+                // Calculate average capital deployed for display
+                const avgCapital = returnPercent !== 0 ? (summary.totalReturn / returnPercent) * 100 : 0;
 
-                  // Calculate annualized return (CAGR) based on backtest period
+                return `${formatCurrency(summary.totalReturn)} | ${formatPercent(returnPercent)} | Avg Capital: ${formatCurrency(avgCapital)}${cagrText}`;
+              }
+            }
+
+            // Fallback to backend value if chart data not available
+            return `${formatCurrency(summary.totalReturn)} | ${formatPercent(summary.totalReturnPercent)}`;
+          })()}
+        </div>
+      </div>
+
+      {/* Buy & Hold Card */}
+      {holdResults && Object.keys(holdResults).length > 0 && (
+        <div className="metric-card buy-hold-card">
+          <h4>{summary.strategy === 'SHORT_DCA' ? 'Short & Hold' : 'Buy & Hold'}</h4>
+          <div className={`metrics ${(holdResults.totalReturn || 0) > 0 ? 'positive' : 'negative'}`}>
+            {(() => {
+              // Use the final Buy & Hold % from price chart data (same as chart display)
+              if (chartData && chartData.length > 0) {
+                const finalDataPoint = chartData[chartData.length - 1];
+                const buyHoldPercent = finalDataPoint.buyAndHoldPercent;
+
+                if (buyHoldPercent !== null && buyHoldPercent !== undefined) {
+                  // Calculate annualized return (CAGR) for Buy & Hold
                   const startDate = new Date(summary.startDate || priceData?.backtestParameters?.startDate);
                   const endDate = new Date(summary.endDate || priceData?.backtestParameters?.endDate);
                   const years = (endDate - startDate) / (1000 * 60 * 60 * 24 * 365.25);
 
-                  let annualizedReturnText = '';
+                  let cagrText = '';
                   if (years > 0) {
-                    const finalValue = 1 + (returnPercent / 100);
+                    const finalValue = 1 + (buyHoldPercent / 100);
                     if (finalValue > 0) {
                       const cagr = Math.pow(finalValue, 1 / years) - 1;
                       const cagrPercent = cagr * 100;
-                      annualizedReturnText = ` | CAGR: ${cagrPercent.toFixed(2)}%`;
+                      cagrText = ` | CAGR: ${cagrPercent.toFixed(2)}%`;
                     }
                   }
 
-                  return `${formatPercent(returnPercent)} | Avg Capital: ${formatCurrency(averageCapitalDeployed)}${annualizedReturnText}`;
-                } else {
-                  // If no enhanced transactions, fallback to showing basic info
-                  return `${formatPercent(summary.totalReturnPercent)} | Enhanced data unavailable`;
+                  // For Buy & Hold, average capital = initial capital (fixed investment)
+                  const avgCapital = buyHoldPercent !== 0 ? (holdResults.totalReturn / buyHoldPercent) * 100 : 0;
+
+                  return `${formatCurrency(holdResults.totalReturn)} | ${formatPercent(buyHoldPercent)} | Avg Capital: ${formatCurrency(avgCapital)}${cagrText}`;
                 }
-              } else {
-                // If no enhanced transactions at all, show basic percentage
-                return `${formatPercent(summary.totalReturnPercent)} | No transaction data`;
               }
-              return formatPercent(summary.totalReturnPercent);
+
+              // Fallback to backend value if chart data not available
+              return `${formatCurrency(holdResults.totalReturn)} | ${formatPercent(holdResults.totalReturnPercent)}`;
             })()}
-          </small>
-        </div>
-
-        <div className="metric-card">
-          <h4>Final Portfolio Value</h4>
-          <p className="value">
-            {formatCurrency(summary.finalValue)}
-          </p>
-        </div>
-
-        <div className="metric-card">
-          <h4>Max Capital Deployed</h4>
-          <p className="value">
-            {formatCurrency(summary.totalCost)}
-          </p>
-        </div>
-
-        <div className="metric-card">
-          <h4>{summary.strategy === 'SHORT_DCA' ? 'Shorts Held' : 'Lots Held'}</h4>
-          <p className="value">
-            {summary.lotsHeld}
-          </p>
-        </div>
-
-        <div className="metric-card">
-          <h4>Total Trades</h4>
-          <p className="value">
-            {summary.totalTrades}
-          </p>
-        </div>
-
-        <div className="metric-card">
-          <h4>Win Rate</h4>
-          <p className="value">
-            {summary.winRate ? formatPercent(summary.winRate) : 'N/A'}
-          </p>
-        </div>
-      </div>
-
-      {/* Strategy Comparison Section */}
-      {holdResults && Object.keys(holdResults).length > 0 && (
-        <div className="strategy-comparison-section">
-          <h3>
-            <Target size={20} />
-            {summary.strategy === 'SHORT_DCA' ? 'Short DCA vs Short & Hold Strategy' : 'DCA vs Buy & Hold Strategy'}
-          </h3>
-          <div className="comparison-grid">
-            <div className="comparison-card dca-strategy">
-              <h4>{summary.strategy === 'SHORT_DCA' ? 'Short DCA Strategy' : 'DCA Strategy'}</h4>
-              <p className={`value ${(summary.totalReturn || 0) > 0 ? 'positive' : 'negative'}`}>
-                {formatCurrency(summary.totalReturn)}
-              </p>
-              <small>{formatPercent(summary.totalReturnPercent)} Total Return</small>
-            </div>
-            <div className="comparison-card buy-hold">
-              <h4>{summary.strategy === 'SHORT_DCA' ? 'Short & Hold Strategy' : 'Buy & Hold Strategy'}</h4>
-              <p className={`value ${(holdResults.totalReturn || 0) > 0 ? 'positive' : 'negative'}`}>
-                {formatCurrency(holdResults.totalReturn)}
-              </p>
-              <small>{formatPercent(holdResults.totalReturnPercent)} Total Return</small>
-            </div>
-            <div className="comparison-card outperformance">
-              <h4>Outperformance</h4>
-              <p className={`value ${(outperformancePercent || 0) > 0 ? 'positive' : 'negative'}`}>
-                {isNaN(outperformancePercent) || outperformancePercent == null
-                  ? 'N/A'
-                  : `${outperformancePercent > 0 ? '+' : ''}${outperformancePercent.toFixed(2)}%`}
-              </p>
-              <small>
-                {isNaN(outperformance) || outperformance == null
-                  ? 'N/A'
-                  : `${outperformancePercent > 0 ? 'Outperforming' : 'Underperforming'} by ${formatCurrency(Math.abs(outperformance))}`}
-              </small>
-            </div>
           </div>
         </div>
       )}
 
-      {/* Portfolio Performance Chart */}
-      <div className="performance-section">
-        <h3>Portfolio Value Over Time</h3>
-        <div className="performance-chart">
-          {chartData && chartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={400}>
-              <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                <XAxis
-                  dataKey="date"
-                  stroke="#666"
-                  fontSize={12}
-                  interval="preserveStartEnd"
-                />
-                <YAxis
-                  stroke="#666"
-                  fontSize={12}
-                  tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
-                />
-                <Tooltip
-                  formatter={(value, name, props) => {
-                    const label = name === 'totalPNL' ? 'Total P&L' :
-                                name === 'holdingsValue' ? 'Current Holdings Value' :
-                                name === 'realizedPNL' ? 'Cumulative Realized P&L' :
-                                name === 'breakEvenValue' ? 'Break-even Value (Dynamic)' :
-                                name;
-                    return [formatCurrency(value), label];
-                  }}
-                  labelStyle={{ color: '#333' }}
-                  contentStyle={{
-                    backgroundColor: '#fff',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px'
-                  }}
-                />
-
-                {/* Total P&L Line */}
-                <Line
-                  type="monotone"
-                  dataKey="totalPNL"
-                  stroke="#2563eb"
-                  strokeWidth={3}
-                  dot={false}
-                  name="Total P&L"
-                />
-
-                {/* Holdings Market Value Line */}
-                <Line
-                  type="monotone"
-                  dataKey="holdingsValue"
-                  stroke="#059669"
-                  strokeWidth={2}
-                  dot={false}
-                  name="Current Holdings Value"
-                />
-
-                {/* Cumulative Realized P&L Line */}
-                <Line
-                  type="monotone"
-                  dataKey="realizedPNL"
-                  stroke="#dc2626"
-                  strokeWidth={2}
-                  dot={false}
-                  name="Cumulative Realized P&L"
-                />
-
-
-                {/* Dynamic Break-even Line (Average Cost of Holdings) */}
-                <Line
-                  type="monotone"
-                  dataKey="breakEvenValue"
-                  stroke="#f97316"
-                  strokeWidth={3}
-                  strokeDasharray="10 6"
-                  dot={false}
-                  name="Break-even Value (Dynamic)"
-                />
-
-                {/* 0% P/L Reference Line */}
-                <ReferenceLine
-                  y={0}
-                  stroke="#6b7280"
-                  strokeWidth={2}
-                  strokeDasharray="8 4"
-                  label={{ value: "0% P/L", position: "right", style: { fill: "#6b7280", fontSize: "12px" } }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="chart-placeholder">
-              <p>No data available for chart visualization</p>
-            </div>
-          )}
-
-          <div className="chart-legend">
-            <div className="legend-item">
-              <span className="legend-color" style={{ backgroundColor: '#2563eb' }}></span>
-              <span>Total P&L</span>
-            </div>
-            <div className="legend-item">
-              <span className="legend-color" style={{ backgroundColor: '#059669' }}></span>
-              <span>Current Holdings Value</span>
-            </div>
-            <div className="legend-item">
-              <span className="legend-color" style={{ backgroundColor: '#dc2626' }}></span>
-              <span>Cumulative Realized P&L</span>
-            </div>
-            <div className="legend-item">
-              <span className="legend-color" style={{ backgroundColor: '#f97316', borderStyle: 'dashed' }}></span>
-              <span>Break-even Value (Dynamic)</span>
-            </div>
-          </div>
-        </div>
+      {/* Compact Metrics Section */}
+      <div className="compact-metrics">
+        <span><strong>Final Portfolio:</strong> {formatCurrency(summary.finalValue)}</span>
+        <span><strong>Max Capital:</strong> {formatCurrency(summary.totalCost)}</span>
+        <span><strong>{summary.strategy === 'SHORT_DCA' ? 'Shorts' : 'Lots'} Held:</strong> {summary.lotsHeld}</span>
+        <span><strong>Total Trades:</strong> {summary.totalTrades}</span>
+        <span><strong>Win Rate:</strong> {summary.winRate ? formatPercent(summary.winRate) : 'N/A'}</span>
       </div>
 
       {/* Questionable Events Section */}

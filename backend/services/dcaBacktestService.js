@@ -223,9 +223,8 @@ function calculateBuyAndHold(prices, initialCapital, avgCapitalForComparison = n
   const finalValue = shares * endPrice;
   const totalReturn = finalValue - initialCapital;
 
-  // Use average capital for comparison if provided, otherwise use initial capital
-  const denominator = avgCapitalForComparison || initialCapital;
-  const totalReturnPercent = (totalReturn / denominator) * 100;
+  // Buy & Hold invests full initialCapital upfront, so return % is based on that
+  const totalReturnPercent = (totalReturn / initialCapital) * 100;
 
   // Calculate annualized return: (1 + total return) ^ (365 / days) - 1
   const totalDays = prices.length;
