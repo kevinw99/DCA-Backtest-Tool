@@ -1511,8 +1511,8 @@
 /* Grid layout for inline metrics in Total Return and Buy & Hold cards */
 .metric-card .metrics-grid {
   display: grid;
-  grid-template-columns: auto auto auto auto auto auto auto auto auto;
-  gap: 0.75rem;
+  grid-template-columns: 145px 25px 135px 25px 130px 145px 25px 70px 100px;
+  gap: 0.5rem;
   align-items: center;
   font-size: 1.1rem;
   font-weight: 600;
@@ -1521,20 +1521,19 @@
 .metric-card .metrics-grid .metric-value {
   font-size: 1.1rem;
   text-align: left;
-  min-width: fit-content;
 }
 
 .metric-card .metrics-grid .metric-label {
   font-size: 1.1rem;
   font-weight: 600;
   text-align: right;
-  min-width: fit-content;
 }
 
 .metric-card .metrics-grid .metric-separator {
   font-size: 1.1rem;
   color: #a0aec0;
   font-weight: 400;
+  text-align: center;
 }
 
 /* Best Result Section */
