@@ -1,14 +1,68 @@
-I have git mess up. I thought I was working on
-/Users/kweng/AI/DCA-Claude-Kiro/DCA-Claude-Kiro-b4IncrementalGrid, but in fact I was working on
-/Users/kweng/AI/DCA-Claude-Kiro, now I have some uncommitted changes in /Users/kweng/AI/DCA-Claude-Kiro, help me
-merge those into /Users/kweng/AI/DCA-Claude-Kiro/DCA-Claude-Kiro-b4IncrementalGrid, there two directory are from
-git worktree, please tell me the steps you will take before take any action.,
 
-I only want the uncommitted changes in /Users/kweng/AI/DCA-Claude-Kiro, not the committed changes, so it is the
-delta that I need to merge into /Users/kweng/AI/DCA-Claude-Kiro/DCA-Claude-Kiro-b4IncrementalGrid, please tell me
-the steps. Is it the patch that we need to create in /Users/kweng/AI/DCA-Claude-Kiro, then apply the patch to
-/Users/kweng/AI/DCA-Claude-Kiro/DCA-Claude-Kiro-b4IncrementalGrid??
-,
+1.
+make these 2 lines perfectly align vertically, regardelss the words and number length difference:
+Total Return
+$508,659.67 | +1124.75% | Avg Capital: $45,224.17 | CAGR: 84.43%
+Buy & Hold
+$613,931.29 | +613.93% | Avg Capital: $100,000.00 | CAGR: 61.64%
+
+You mentioned file like frontend/src/components/DCABacktestForm.js is large, should we refactor it into smaller
+files?
+
+2. I noticed earlier you updated CLAUDE.md under ~/AI/DCA-Claude-Kiro, but not under
+~/AI/DCA-Claude-Kiro/DCA-Claude-Kiro-b4IncrementalGrid..
+why do you update AI/DCA-Claude-Kiro/CLAUDE.md , it should be under
+AI/DCA-Claude-Kiro/DCA-Claude-Kiro-b4IncrementalGrid/CLAUDE.md, right?
+Update(~/AI/DCA-Claude-Kiro/CLAUDE.md)
+  ⎿  Updated ../CLAUDE.md with 10 additions
+       40
+       41    This streamlined approach enables faster problem resolution while maintaining systematic
+            documentation.
+       42
+       43 +  ### Spec Directory Naming Convention
+       44 +
+
+3
+~/AI/DCA-Claude-Kiro and ~/AI/DCA-Claude-Kiro/DCA-Claude-Kiro-b4IncrementalGrid are two worktree, should I move
+~/AI/DCA-Claude-Kiro/DCA-Claude-Kiro-b4IncrementalGrid out ~/AI/DCA-Claude-Kiro, will it affect the git repo?
+branch and commit history??
+
+
+
+
+Develop a new spec for ticker specific default parameters.
+1. Current Implementation:
+   - The current implementation uses global default parameters for all tickers.
+2. We want to implement ticker-specific default parameters, so that each stock can have its own set of
+   optimized default parameters based on its historical performance and volatility.
+3. need to add a button on parameter page (individual backtest mode) to "Save as Default". When clicked, it saves the
+   current parameters as the default for that ticker. If it does not exist, it creates a new entry backtestDefaults
+   .json. We want this to be edited manually if needed.
+
+ 4. The current "Reset to Default" button should reset to the ticker-specific default if it exists, otherwise fall back to
+  global default.
+5. you can reuse the existing backtestDefaults.json file to store the ticker-specific defaults. The structure can be:
+{
+  "AAPL": {
+    "lotSizeUsd": 10000,
+    "maxLots": 10,
+    "gridIntervalPercent": 10,
+    "profitRequirement": 10,
+    ...
+  },
+  "TSLA": {
+    "lotSizeUsd": 15000,
+    "maxLots": 8,
+    "gridIntervalPercent": 15,
+    "profitRequirement": 15,
+    ...
+  },
+  ...
+}
+6. you can keep the global defaults in the code as fallback values. and when ticker-specific defaults are not
+fouund or not suitable, the global defaults will be used.
+
+
 
 
 
@@ -523,29 +577,6 @@ Anyway you should look at how long batch mode is implemented and how parameters 
 sure short batch mode follow the same pattern.
 Also make sure to handel all parameters the same way, so it won't be like some parameteres are captured and passed
 but some are not.,
-
-
-I see a problem we need to change code now.
-I select MSFT for short batch mode, and run the batch backtest, it shows result for TSLA. In the console log, it shows:
-Batch Mode: true
-DCABacktestForm.js:443 ==============================
-DCABacktestForm.js:469 Running short batch optimization with params: {symbol: 'TSLA', startDate: '2021-09-01', endDate: '2025-09-01', lotSizeUsd: 10000, maxShorts: 6, …}
-App.js:55 Starting batch optimization for undefined
-App.js:79 === DEBUG: Batch API Call Info ===
-App.js:80 Strategy Mode: undefined
-App.js:81 Batch Endpoint: http://localhost:3001/api/backtest/batch
-App.js:82 ===================================
-BatchResults.js:8
-It is alreay wrong.
-
-
-I thought I already request long time ago to remove immediate buy for the first lot. All buys should be trailing
-buy only. Please update the doc and code if not otherwise.
-
-
-1. Tell me how you handle long batch mode, list the steps.
-2. Tell me how you handle short batch mode, list the steps.
-
 
 
 1.  in long backtest, in Enhanced Transaction History table, it shows two types of buy order: Buy and Trail Buy, but it should be just

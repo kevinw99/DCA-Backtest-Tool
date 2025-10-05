@@ -1,3 +1,14 @@
+1.       "grid": {
+           "gridIntervalPercent": 10,
+           "profitRequirement": 10
+         },
+should be grouped under both "longStrategy" and "shortStrategy". each of them have a separate grid setting..
+
+2. "        "maxLots": 10,
+            "maxLotsToSell": 1,
+" should be group under "longStrategy".
+
+
 Use TA again?
 Actually once you control the buy and sell, then the whole algo is adjusted.
 
