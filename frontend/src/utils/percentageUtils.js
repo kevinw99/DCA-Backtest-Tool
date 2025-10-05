@@ -1,18 +1,18 @@
 /**
  * Frontend Percentage Utilities
  *
- * Standardizes percentage/decimal conversions in the frontend.
+ * Standardizes percentage handling in the frontend.
  *
  * CONVENTION (matches backend):
- * - API responses: ALWAYS use decimals (0.05 = 5%, 1.0 = 100%)
- * - Display: Convert to percentage for user readability
- * - Form inputs: Parse user input percentages to decimals for API
+ * - API requests/responses: ALWAYS use whole numbers (10 = 10%, 100 = 100%)
+ * - Display: Show as-is with % symbol
+ * - Form inputs: Use whole numbers directly (no conversion)
  *
- * This prevents the common bug where percentages get divided by 100 twice
- * or multiplied by 100 twice.
+ * This prevents conversion bugs. All percentages are stored as whole numbers everywhere.
  */
 
 /**
+ * @deprecated Use whole numbers directly (10 = 10%). No conversion needed.
  * Convert decimal to percentage value
  * @param {number} decimal - Decimal value (e.g., 0.05, 1.0, 2.24)
  * @returns {number} Percentage value (e.g., 5, 100, 224)
@@ -23,13 +23,15 @@ export const toPercent = (decimal) => {
 };
 
 /**
+ * @deprecated Use whole numbers directly (10 = 10%). No conversion needed.
  * Convert percentage value to decimal
  * @param {number} percent - Percentage value (e.g., 5, 100, 224)
  * @returns {number} Decimal value (e.g., 0.05, 1.0, 2.24)
  */
 export const toDecimal = (percent) => {
   if (percent === null || percent === undefined) return null;
-  return percent / 100;
+  // DEPRECATED: Return as-is since we use whole numbers everywhere now
+  return percent;
 };
 
 /**

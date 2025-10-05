@@ -6,6 +6,7 @@ const stockDataService = require('./services/stockDataService');
 const validation = require('./middleware/validation');
 const sessionManager = require('./utils/sessionManager');
 const sseHelpers = require('./utils/sseHelpers');
+const ConfigService = require('./services/configService');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -83,10 +84,10 @@ app.get('/api/stocks/:symbol', validation.validateSymbolParam, validation.valida
       const start = new Date(startDate);
       const end = new Date(endDate);
       const today = new Date();
-      const fiveYearsAgo = new Date(today.getFullYear() - 5, today.getMonth(), today.getDate());
+      const thirtyYearsAgo = new Date(today.getFullYear() - 30, today.getMonth(), today.getDate());
 
-      if (start < fiveYearsAgo) {
-        dataValidationErrors.push(`Start date ${startDate} is older than 5 years. Available data limited to ${fiveYearsAgo.toISOString().split('T')[0]} onwards.`);
+      if (start < thirtyYearsAgo) {
+        dataValidationErrors.push(`Start date ${startDate} is older than 30 years. Available data limited to ${thirtyYearsAgo.toISOString().split('T')[0]} onwards.`);
       }
 
       if (end > today) {
@@ -562,6 +563,9 @@ app.delete('/api/clear-all-data', async (req, res) => {
 // Import shared config
 const backtestConfig = require('./config/backtestConfig');
 
+// Initialize configService for ticker-specific defaults
+const configService = new ConfigService();
+
 // Get default parameters endpoint
 app.get('/api/backtest/defaults', (req, res) => {
   try {
@@ -574,6 +578,86 @@ app.get('/api/backtest/defaults', (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to load default parameters',
+      message: error.message
+    });
+  }
+});
+
+// Get ticker-specific default parameters
+app.get('/api/backtest/defaults/:symbol', async (req, res) => {
+  try {
+    const { symbol } = req.params;
+
+    // Sanitize symbol (alphanumeric only)
+    const sanitizedSymbol = symbol.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+
+    if (!sanitizedSymbol) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid symbol'
+      });
+    }
+
+    const defaults = await configService.getTickerDefaults(sanitizedSymbol);
+
+    res.json({
+      success: true,
+      defaults: defaults
+    });
+  } catch (error) {
+    console.error(`Error fetching defaults for ${req.params.symbol}:`, error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to load ticker defaults',
+      message: error.message
+    });
+  }
+});
+
+// Save ticker-specific default parameters
+app.post('/api/backtest/defaults/:symbol', async (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const { parameters } = req.body;
+
+    // Sanitize symbol (alphanumeric only)
+    const sanitizedSymbol = symbol.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+
+    if (!sanitizedSymbol) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid symbol'
+      });
+    }
+
+    if (!parameters || typeof parameters !== 'object') {
+      return res.status(400).json({
+        success: false,
+        error: 'Parameters object is required'
+      });
+    }
+
+    // Save ticker-specific defaults (validation is done inside the service)
+    await configService.saveTickerDefaults(sanitizedSymbol, parameters);
+
+    res.json({
+      success: true,
+      message: `Saved defaults for ${sanitizedSymbol}`
+    });
+  } catch (error) {
+    console.error(`Error saving defaults for ${req.params.symbol}:`, error);
+
+    // Check if it's a validation error
+    if (error.message.includes('Invalid parameters')) {
+      return res.status(400).json({
+        success: false,
+        error: error.message
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: 'Failed to save ticker defaults',
       message: error.message
     });
   }
@@ -750,34 +834,8 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
       });
     }
 
-    // Validate date range (5-year limit and logical dates)
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const today = new Date();
-    const fiveYearsAgo = new Date(today.getFullYear() - 5, today.getMonth(), today.getDate());
-
-    if (start < fiveYearsAgo) {
-      return res.status(400).json({
-        error: 'Date range out of bounds',
-        message: `Start date ${startDate} is older than 5 years. Backtesting limited to data from ${fiveYearsAgo.toISOString().split('T')[0]} onwards.`,
-        availableFrom: fiveYearsAgo.toISOString().split('T')[0]
-      });
-    }
-
-    if (end > today) {
-      return res.status(400).json({
-        error: 'Date range out of bounds',
-        message: `End date ${endDate} is in the future. Latest available date is ${today.toISOString().split('T')[0]}.`,
-        availableTo: today.toISOString().split('T')[0]
-      });
-    }
-
-    if (start >= end) {
-      return res.status(400).json({
-        error: 'Invalid date range',
-        message: `Start date ${startDate} must be before end date ${endDate}.`
-      });
-    }
+    // Note: Date range validation is handled by the validation middleware
+    // No need for duplicate validation here
 
     // Get or create stock record and ensure data is available
     let stock = await database.getStock(symbol);
@@ -845,6 +903,7 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
     // Use the shared core algorithm
     const { runDCABacktest } = require('./services/dcaBacktestService');
 
+    // Convert percentage parameters from whole numbers (10 = 10%) to decimals (0.1 = 10%) for the algorithm
     const results = await runDCABacktest({
       symbol: finalParams.symbol,
       startDate: finalParams.startDate,
@@ -852,13 +911,13 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
       lotSizeUsd: finalParams.lotSizeUsd,
       maxLots: finalParams.maxLots,
       maxLotsToSell: finalParams.maxLotsToSell,
-      gridIntervalPercent: finalParams.gridIntervalPercent, // Already in decimal format from config
-      remainingLotsLossTolerance: finalParams.remainingLotsLossTolerance, // Already in decimal format from config
-      profitRequirement: finalParams.profitRequirement,
-      trailingBuyActivationPercent: finalParams.trailingBuyActivationPercent,
-      trailingBuyReboundPercent: finalParams.trailingBuyReboundPercent,
-      trailingSellActivationPercent: finalParams.trailingSellActivationPercent,
-      trailingSellPullbackPercent: finalParams.trailingSellPullbackPercent,
+      gridIntervalPercent: finalParams.gridIntervalPercent / 100,
+      remainingLotsLossTolerance: finalParams.remainingLotsLossTolerance / 100,
+      profitRequirement: finalParams.profitRequirement / 100,
+      trailingBuyActivationPercent: finalParams.trailingBuyActivationPercent / 100,
+      trailingBuyReboundPercent: finalParams.trailingBuyReboundPercent / 100,
+      trailingSellActivationPercent: finalParams.trailingSellActivationPercent / 100,
+      trailingSellPullbackPercent: finalParams.trailingSellPullbackPercent / 100,
       enableDynamicGrid: finalParams.enableDynamicGrid,
       normalizeToReference: finalParams.normalizeToReference,
       dynamicGridMultiplier: finalParams.dynamicGridMultiplier,
@@ -983,7 +1042,21 @@ app.post('/api/backtest/short-dca', validation.validateShortDCABacktestParams, a
     // Save updated parameters to config (for consistency between CLI and UI)
     backtestConfig.saveDefaults({ ...normalizedParams, strategyMode: 'short' });
 
-    const results = await runShortDCABacktest(normalizedParams);
+    // Convert percentage parameters from whole numbers (10 = 10%) to decimals (0.1 = 10%) for the algorithm
+    const algoParams = {
+      ...normalizedParams,
+      gridIntervalPercent: normalizedParams.gridIntervalPercent / 100,
+      profitRequirement: normalizedParams.profitRequirement / 100,
+      trailingShortActivationPercent: normalizedParams.trailingShortActivationPercent / 100,
+      trailingShortPullbackPercent: normalizedParams.trailingShortPullbackPercent / 100,
+      trailingCoverActivationPercent: normalizedParams.trailingCoverActivationPercent / 100,
+      trailingCoverReboundPercent: normalizedParams.trailingCoverReboundPercent / 100,
+      hardStopLossPercent: normalizedParams.hardStopLossPercent / 100,
+      portfolioStopLossPercent: normalizedParams.portfolioStopLossPercent / 100,
+      cascadeStopLossPercent: normalizedParams.cascadeStopLossPercent / 100
+    };
+
+    const results = await runShortDCABacktest(algoParams);
     const executionTime = Date.now() - startTime;
 
     console.log(`\n✅ Short DCA backtest completed in ${(executionTime/1000).toFixed(1)}s`);

@@ -252,6 +252,12 @@ const BacktestResults = ({ data, chartData: priceData }) => {
             Buy & Hold %: {data.buyAndHoldPercent.toFixed(2)}%
           </p>
 
+          {data.lotsDeployedPercent !== undefined && data.lotsDeployedPercent !== null && (
+            <p className="tooltip-lots">
+              Lots Deployed %: {data.lotsDeployedPercent.toFixed(2)}%
+            </p>
+          )}
+
           {data.transaction && (
             <div>
               <p className={`tooltip-transaction ${data.transaction.type.toLowerCase()}`}>

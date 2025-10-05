@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, DollarSign, TrendingUp, Settings, Info, Zap, Target, ArrowUpDown } from 'lucide-react';
 import BetaControls from './BetaControls';
-import { getDefaultParameters, resetToDefaults } from '../utils/strategyDefaults';
+import { getTickerDefaults, saveTickerDefaults, extractTickerSpecificParams } from '../utils/strategyDefaults';
 import URLParameterManager from '../utils/URLParameterManager';
 
 const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setAppTestMode }) => {
@@ -14,16 +14,42 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
   }); // 'long' or 'short'
 
   const [parameters, setParameters] = useState(() => {
-    // Initialize from localStorage just like strategyMode, with fallback defaults
+    // Initialize from localStorage with minimal fallback (useEffect will load full defaults from API)
     const saved = localStorage.getItem('dca-single-parameters');
-    return saved ? JSON.parse(saved) : getDefaultParameters('TSLA', 'long');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Always override endDate to today
+      parsed.endDate = new Date().toISOString().split('T')[0];
+      return parsed;
+    }
+
+    // Default dates: fixed start, current end
+    return {
+      symbol: 'TSLA',
+      strategyMode: 'long',
+      startDate: '2001-09-01',
+      endDate: new Date().toISOString().split('T')[0]
+    };
   });
 
   // Short selling specific parameters
   const [shortParameters, setShortParameters] = useState(() => {
-    // Initialize from localStorage just like strategyMode, with fallback defaults
+    // Initialize from localStorage with minimal fallback (useEffect will load full defaults from API)
     const saved = localStorage.getItem('dca-short-single-parameters');
-    return saved ? JSON.parse(saved) : getDefaultParameters('TSLA', 'short');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Always override endDate to today
+      parsed.endDate = new Date().toISOString().split('T')[0];
+      return parsed;
+    }
+
+    // Default dates: fixed start, current end
+    return {
+      symbol: 'TSLA',
+      strategyMode: 'SHORT_DCA',
+      startDate: '2001-09-01',
+      endDate: new Date().toISOString().split('T')[0]
+    };
   });
 
   const [batchMode, setBatchMode] = useState(() => {
@@ -143,6 +169,10 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
   // Local input states to prevent NaN validation errors during typing
   const [localInputValues, setLocalInputValues] = useState({});
 
+  // Ticker-specific defaults state
+  const [tickerDefaults, setTickerDefaults] = useState(null);
+  const [feedbackMessage, setFeedbackMessage] = useState('');
+
   // Helper function to calculate betaFactor based on scaling state
   const calculateBetaFactor = (betaValue, coefficientValue, enableScaling) => {
     // Validate inputs to prevent NaN
@@ -186,18 +216,18 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
         if (response.ok) {
           const result = await response.json();
           if (result.success && result.data) {
-            // Convert decimal values to percentages for UI
+            // Use whole numbers directly (10 = 10%), no conversion needed
             const uiParams = {
               ...result.data,
-              gridIntervalPercent: (result.data.gridIntervalPercent || 0.1) * 100,
-              profitRequirement: (result.data.profitRequirement ?? 0.05) * 100,
-              trailingBuyActivationPercent: (result.data.trailingBuyActivationPercent || 0.1) * 100,
-              trailingBuyReboundPercent: (result.data.trailingBuyReboundPercent || 0.05) * 100,
-              trailingSellActivationPercent: (result.data.trailingSellActivationPercent || 0.2) * 100,
-              trailingSellPullbackPercent: (result.data.trailingSellPullbackPercent || 0.1) * 100
+              gridIntervalPercent: result.data.gridIntervalPercent || 10,
+              profitRequirement: result.data.profitRequirement ?? 5,
+              trailingBuyActivationPercent: result.data.trailingBuyActivationPercent || 10,
+              trailingBuyReboundPercent: result.data.trailingBuyReboundPercent || 5,
+              trailingSellActivationPercent: result.data.trailingSellActivationPercent || 20,
+              trailingSellPullbackPercent: result.data.trailingSellPullbackPercent || 10
             };
             console.log('📥 Backend defaults loaded:', result.data);
-            console.log('📊 UI params after conversion:', uiParams);
+            console.log('📊 UI params (no conversion needed):', uiParams);
 
             // Backend defaults are only used if localStorage is completely empty
             // This respects the localStorage-first pattern like strategyMode
@@ -220,15 +250,15 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
               console.log('📥 No localStorage found, applying backend defaults for short parameters');
               const shortUiParams = {
                 ...result.data,
-                gridIntervalPercent: (result.data.gridIntervalPercent || 0.15) * 100,
-                profitRequirement: (result.data.profitRequirement !== undefined ? result.data.profitRequirement : 0) * 100,
-                trailingShortActivationPercent: (result.data.trailingShortActivationPercent || 0.25) * 100,
-                trailingShortPullbackPercent: (result.data.trailingShortPullbackPercent || 0.15) * 100,
-                trailingCoverActivationPercent: (result.data.trailingCoverActivationPercent || 0.2) * 100,
-                trailingCoverReboundPercent: (result.data.trailingCoverReboundPercent || 0.1) * 100,
-                hardStopLossPercent: (result.data.hardStopLossPercent || 0.3) * 100,
-                portfolioStopLossPercent: (result.data.portfolioStopLossPercent || 0.25) * 100,
-                cascadeStopLossPercent: (result.data.cascadeStopLossPercent || 0.35) * 100
+                gridIntervalPercent: result.data.gridIntervalPercent || 15,
+                profitRequirement: result.data.profitRequirement !== undefined ? result.data.profitRequirement : 0,
+                trailingShortActivationPercent: result.data.trailingShortActivationPercent || 25,
+                trailingShortPullbackPercent: result.data.trailingShortPullbackPercent || 15,
+                trailingCoverActivationPercent: result.data.trailingCoverActivationPercent || 20,
+                trailingCoverReboundPercent: result.data.trailingCoverReboundPercent || 10,
+                hardStopLossPercent: result.data.hardStopLossPercent || 30,
+                portfolioStopLossPercent: result.data.portfolioStopLossPercent || 25,
+                cascadeStopLossPercent: result.data.cascadeStopLossPercent || 35
               };
               setShortParameters(prev => ({ ...prev, ...shortUiParams }));
             }
@@ -409,15 +439,15 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
       setTimeout(() => {
         // Trigger form submission programmatically
         if (!batchMode) {
-          // Convert percentages back to decimals for single backtest
+          // Use whole numbers directly (10 = 10%) - no conversion needed
           const backendParams = {
             ...parameters,
-            gridIntervalPercent: parameters.gridIntervalPercent / 100,
-            profitRequirement: parameters.profitRequirement / 100,
-            trailingBuyActivationPercent: parameters.trailingBuyActivationPercent / 100,
-            trailingBuyReboundPercent: parameters.trailingBuyReboundPercent / 100,
-            trailingSellActivationPercent: parameters.trailingSellActivationPercent / 100,
-            trailingSellPullbackPercent: parameters.trailingSellPullbackPercent / 100,
+            gridIntervalPercent: parameters.gridIntervalPercent,
+            profitRequirement: parameters.profitRequirement,
+            trailingBuyActivationPercent: parameters.trailingBuyActivationPercent,
+            trailingBuyReboundPercent: parameters.trailingBuyReboundPercent,
+            trailingSellActivationPercent: parameters.trailingSellActivationPercent,
+            trailingSellPullbackPercent: parameters.trailingSellPullbackPercent,
             // Add strategy mode
             strategyMode: strategyMode
           };
@@ -470,6 +500,19 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
     console.log('💾 Saving shortParameters to localStorage:', shortParameters);
     localStorage.setItem('dca-short-single-parameters', JSON.stringify(shortParameters));
   }, [shortParameters]);
+
+  // Load ticker-specific defaults when symbol changes (only in single mode)
+  useEffect(() => {
+    if (!batchMode && parameters.symbol) {
+      const loadDefaults = async () => {
+        const defaults = await getTickerDefaults(parameters.symbol);
+        // Always use today as endDate (don't load from saved defaults)
+        defaults.endDate = new Date().toISOString().split('T')[0];
+        setTickerDefaults(defaults);
+      };
+      loadDefaults();
+    }
+  }, [parameters.symbol, batchMode]);
 
   // Fetch Beta data when symbol changes
   useEffect(() => {
@@ -611,15 +654,15 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
         const shortBatchOptions = {
           parameterRanges: {
             symbols: shortBatchParameters.symbols,
-            profitRequirement: shortBatchParameters.profitRequirement.map(p => p / 100),
-            gridIntervalPercent: shortBatchParameters.gridIntervalPercent.map(p => p / 100),
-            trailingShortActivationPercent: shortBatchParameters.trailingShortActivationPercent.map(p => p / 100),
-            trailingShortPullbackPercent: shortBatchParameters.trailingShortPullbackPercent.map(p => p / 100),
-            trailingCoverActivationPercent: shortBatchParameters.trailingCoverActivationPercent.map(p => p / 100),
-            trailingCoverReboundPercent: shortBatchParameters.trailingCoverReboundPercent.map(p => p / 100),
-            hardStopLossPercent: shortBatchParameters.hardStopLossPercent.map(p => p / 100),
-            portfolioStopLossPercent: shortBatchParameters.portfolioStopLossPercent.map(p => p / 100),
-            cascadeStopLossPercent: shortBatchParameters.cascadeStopLossPercent.map(p => p / 100),
+            profitRequirement: shortBatchParameters.profitRequirement,
+            gridIntervalPercent: shortBatchParameters.gridIntervalPercent,
+            trailingShortActivationPercent: shortBatchParameters.trailingShortActivationPercent,
+            trailingShortPullbackPercent: shortBatchParameters.trailingShortPullbackPercent,
+            trailingCoverActivationPercent: shortBatchParameters.trailingCoverActivationPercent,
+            trailingCoverReboundPercent: shortBatchParameters.trailingCoverReboundPercent,
+            hardStopLossPercent: shortBatchParameters.hardStopLossPercent,
+            portfolioStopLossPercent: shortBatchParameters.portfolioStopLossPercent,
+            cascadeStopLossPercent: shortBatchParameters.cascadeStopLossPercent,
             // Fixed parameters from single mode
             startDate: shortParameters.startDate,
             endDate: shortParameters.endDate,
@@ -637,15 +680,15 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
         // Short single mode
         const shortBackendParams = {
           ...shortParameters,
-          gridIntervalPercent: shortParameters.gridIntervalPercent / 100,
-          profitRequirement: shortParameters.profitRequirement / 100,
-          trailingShortActivationPercent: shortParameters.trailingShortActivationPercent / 100,
-          trailingShortPullbackPercent: shortParameters.trailingShortPullbackPercent / 100,
-          trailingCoverActivationPercent: shortParameters.trailingCoverActivationPercent / 100,
-          trailingCoverReboundPercent: shortParameters.trailingCoverReboundPercent / 100,
-          hardStopLossPercent: shortParameters.hardStopLossPercent / 100,
-          portfolioStopLossPercent: shortParameters.portfolioStopLossPercent / 100,
-          cascadeStopLossPercent: shortParameters.cascadeStopLossPercent / 100,
+          gridIntervalPercent: shortParameters.gridIntervalPercent,
+          profitRequirement: shortParameters.profitRequirement,
+          trailingShortActivationPercent: shortParameters.trailingShortActivationPercent,
+          trailingShortPullbackPercent: shortParameters.trailingShortPullbackPercent,
+          trailingCoverActivationPercent: shortParameters.trailingCoverActivationPercent,
+          trailingCoverReboundPercent: shortParameters.trailingCoverReboundPercent,
+          hardStopLossPercent: shortParameters.hardStopLossPercent,
+          portfolioStopLossPercent: shortParameters.portfolioStopLossPercent,
+          cascadeStopLossPercent: shortParameters.cascadeStopLossPercent,
           // Add strategy mode to parameters
           strategyMode: 'short'
         };
@@ -656,18 +699,18 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
 
     // Long DCA strategy (existing logic)
     if (batchMode) {
-      // Convert percentage arrays to decimal arrays for batch testing
+      // Use whole numbers directly (10 = 10%) - no conversion needed
       const batchOptions = {
         parameterRanges: {
           symbols: batchParameters.symbols,
           coefficients: batchParameters.coefficients,
           maxLotsToSell: batchParameters.maxLotsToSell,
-          profitRequirement: batchParameters.profitRequirement.map(p => p / 100),
-          gridIntervalPercent: batchParameters.gridIntervalPercent.map(p => p / 100),
-          trailingBuyActivationPercent: batchParameters.trailingBuyActivationPercent.map(p => p / 100),
-          trailingBuyReboundPercent: batchParameters.trailingBuyReboundPercent.map(p => p / 100),
-          trailingSellActivationPercent: batchParameters.trailingSellActivationPercent.map(p => p / 100),
-          trailingSellPullbackPercent: batchParameters.trailingSellPullbackPercent.map(p => p / 100),
+          profitRequirement: batchParameters.profitRequirement,
+          gridIntervalPercent: batchParameters.gridIntervalPercent,
+          trailingBuyActivationPercent: batchParameters.trailingBuyActivationPercent,
+          trailingBuyReboundPercent: batchParameters.trailingBuyReboundPercent,
+          trailingSellActivationPercent: batchParameters.trailingSellActivationPercent,
+          trailingSellPullbackPercent: batchParameters.trailingSellPullbackPercent,
           dynamicGridMultiplier: batchParameters.dynamicGridMultiplier,
           // Fixed parameters from single mode
           startDate: parameters.startDate,
@@ -686,15 +729,15 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
       };
       onSubmit(batchOptions, true); // true indicates batch mode
     } else {
-      // Convert percentages back to decimals for single backtest
+      // Use whole numbers directly (10 = 10%) - no conversion needed
       const backendParams = {
         ...parameters,
-        gridIntervalPercent: parameters.gridIntervalPercent / 100,
-        profitRequirement: parameters.profitRequirement / 100,
-        trailingBuyActivationPercent: parameters.trailingBuyActivationPercent / 100,
-        trailingBuyReboundPercent: parameters.trailingBuyReboundPercent / 100,
-        trailingSellActivationPercent: parameters.trailingSellActivationPercent / 100,
-        trailingSellPullbackPercent: parameters.trailingSellPullbackPercent / 100,
+        gridIntervalPercent: parameters.gridIntervalPercent,
+        profitRequirement: parameters.profitRequirement,
+        trailingBuyActivationPercent: parameters.trailingBuyActivationPercent,
+        trailingBuyReboundPercent: parameters.trailingBuyReboundPercent,
+        trailingSellActivationPercent: parameters.trailingSellActivationPercent,
+        trailingSellPullbackPercent: parameters.trailingSellPullbackPercent,
         // Add Beta information
         beta: beta,
         coefficient: coefficient,
@@ -708,25 +751,59 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
     }
   };
 
-  const handleResetParameters = () => {
+  const handleResetParameters = async () => {
     if (window.confirm('Reset all parameters to default values?')) {
       if (strategyMode === 'long') {
-        // Reset long DCA parameters using centralized defaults
         const currentSymbol = parameters.symbol || 'TSLA';
-        const defaults = resetToDefaults(currentSymbol, 'long');
-        setParameters(defaults);
-        setBeta(1.0);
-        setCoefficient(1.0);
-        setEnableBetaScaling(false);
-        setIsManualBetaOverride(false);
+        // Load ticker-specific defaults from backend API
+        const defaults = await getTickerDefaults(currentSymbol);
+        setParameters({ ...defaults, symbol: currentSymbol });
+        setBeta(defaults.beta || 1.0);
+        setCoefficient(defaults.coefficient || 1.0);
+        setEnableBetaScaling(defaults.enableBetaScaling || false);
+        setIsManualBetaOverride(defaults.isManualBetaOverride || false);
         setAdjustedParameters({});
+        setFeedbackMessage(tickerDefaults ? `Reset to ${currentSymbol} defaults` : 'Reset to global defaults');
       } else {
-        // Reset short DCA parameters using centralized defaults
         const currentSymbol = shortParameters.symbol || 'TSLA';
-        const defaults = resetToDefaults(currentSymbol, 'short');
-        setShortParameters(defaults);
+        const defaults = await getTickerDefaults(currentSymbol);
+        setShortParameters({ ...defaults, symbol: currentSymbol });
+        setFeedbackMessage(tickerDefaults ? `Reset to ${currentSymbol} defaults` : 'Reset to global defaults');
       }
+      setTimeout(() => setFeedbackMessage(''), 3000);
       console.log('✅ Parameters reset to defaults');
+    }
+  };
+
+  const handleSaveAsDefault = async () => {
+    try {
+      const currentSymbol = strategyMode === 'short' ? shortParameters.symbol : parameters.symbol;
+      const currentParams = strategyMode === 'short' ? shortParameters : parameters;
+
+      if (!currentSymbol) {
+        setFeedbackMessage('❌ No symbol selected');
+        setTimeout(() => setFeedbackMessage(''), 3000);
+        return;
+      }
+
+      // Extract only ticker-specific parameters
+      // Backend will handle merging with global defaults and validation
+      const extractedParams = extractTickerSpecificParams(currentParams);
+
+      // Save to backend
+      const result = await saveTickerDefaults(currentSymbol, extractedParams);
+
+      if (result.success) {
+        setFeedbackMessage(`✅ Saved defaults for ${currentSymbol}`);
+        setTickerDefaults(extractedParams);
+      } else {
+        setFeedbackMessage(`❌ Failed to save: ${result.message}`);
+      }
+
+      setTimeout(() => setFeedbackMessage(''), 3000);
+    } catch (error) {
+      setFeedbackMessage(`❌ Error: ${error.message}`);
+      setTimeout(() => setFeedbackMessage(''), 3000);
     }
   };
 
@@ -942,14 +1019,14 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
     setBetaLoading(true);
     setBetaError(null);
 
-    // Use current form parameters (convert from percentages to decimals for API)
+    // Use current form parameters (whole numbers, 10 = 10%)
     const baseParams = {
-      profitRequirement: parameters.profitRequirement / 100, // Convert % to decimal
-      gridIntervalPercent: parameters.gridIntervalPercent / 100, // Convert % to decimal
-      trailingBuyActivationPercent: parameters.trailingBuyActivationPercent / 100, // Convert % to decimal
-      trailingBuyReboundPercent: parameters.trailingBuyReboundPercent / 100, // Convert % to decimal
-      trailingSellActivationPercent: parameters.trailingSellActivationPercent / 100, // Convert % to decimal
-      trailingSellPullbackPercent: parameters.trailingSellPullbackPercent / 100 // Convert % to decimal
+      profitRequirement: parameters.profitRequirement,
+      gridIntervalPercent: parameters.gridIntervalPercent,
+      trailingBuyActivationPercent: parameters.trailingBuyActivationPercent,
+      trailingBuyReboundPercent: parameters.trailingBuyReboundPercent,
+      trailingSellActivationPercent: parameters.trailingSellActivationPercent,
+      trailingSellPullbackPercent: parameters.trailingSellPullbackPercent
     };
 
     try {
@@ -2756,6 +2833,22 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
           <Settings size={18} />
           Reset to Defaults
         </button>
+        {!batchMode && (
+          <button
+            type="button"
+            className="save-default-button"
+            onClick={handleSaveAsDefault}
+            disabled={loading}
+          >
+            <Target size={18} />
+            Save as Default for {strategyMode === 'short' ? shortParameters.symbol : parameters.symbol}
+          </button>
+        )}
+        {feedbackMessage && (
+          <div className={`feedback-message ${feedbackMessage.includes('❌') ? 'error' : 'success'}`}>
+            {feedbackMessage}
+          </div>
+        )}
         <button
           type="submit"
           className="submit-button"

@@ -168,13 +168,14 @@ class URLParameterManager {
   }
 
   /**
-   * Generate semantic URL with path-based routing and compressed parameters
+   * Generate semantic URL with path-based routing and parameters
    * @param {Object} parameters - Backtest parameters
    * @param {string} mode - 'single' or 'batch'
    * @param {boolean} includeResults - Include /results suffix
+   * @param {boolean} useCompression - Use compression for parameters (default: false for readability)
    * @returns {string} Semantic URL
    */
-  generateSemanticURL(parameters, mode, includeResults = false) {
+  generateSemanticURL(parameters, mode, includeResults = false, useCompression = false) {
     try {
       let path = '';
 
@@ -200,23 +201,43 @@ class URLParameterManager {
         path += '/results';
       }
 
-      // Compress all parameters except those in the path
-      const paramsToCompress = { ...parameters };
-      // Don't include path parameters in compressed params (redundant)
+      // Prepare parameters (excluding path parameters to avoid redundancy)
+      const paramsToEncode = { ...parameters };
       if (mode === 'single') {
-        delete paramsToCompress.symbol;
-        delete paramsToCompress.strategyMode;
+        delete paramsToEncode.symbol;
+        delete paramsToEncode.strategyMode;
       } else if (mode === 'batch') {
-        delete paramsToCompress.symbols;
+        delete paramsToEncode.symbols;
       }
 
-      const compressed = this.compressParameters(paramsToCompress);
-      const url = `${this.baseURL}${path}?params=${compressed}`;
+      let url;
+      if (useCompression) {
+        // Use compressed format
+        const compressed = this.compressParameters(paramsToEncode);
+        url = `${this.baseURL}${path}?params=${compressed}`;
+        console.log(`🔗 Generated semantic URL (${mode}, compressed):`, url);
+        console.log(`   Original size: ${JSON.stringify(parameters).length} chars`);
+        console.log(`   Compressed size: ${compressed.length} chars`);
+        console.log(`   Compression ratio: ${(compressed.length / JSON.stringify(parameters).length * 100).toFixed(1)}%`);
+      } else {
+        // Use uncompressed query parameters for readability
+        const queryParams = new URLSearchParams();
 
-      console.log(`🔗 Generated semantic URL (${mode}):`, url);
-      console.log(`   Original size: ${JSON.stringify(parameters).length} chars`);
-      console.log(`   Compressed size: ${compressed.length} chars`);
-      console.log(`   Compression ratio: ${(compressed.length / JSON.stringify(parameters).length * 100).toFixed(1)}%`);
+        // Add all parameters as individual query params
+        for (const [key, value] of Object.entries(paramsToEncode)) {
+          if (value !== undefined && value !== null && value !== '') {
+            if (typeof value === 'object') {
+              queryParams.set(key, JSON.stringify(value));
+            } else {
+              queryParams.set(key, value.toString());
+            }
+          }
+        }
+
+        url = `${this.baseURL}${path}?${queryParams.toString()}`;
+        console.log(`🔗 Generated semantic URL (${mode}, uncompressed):`, url);
+        console.log(`   URL length: ${url.length} chars`);
+      }
 
       return url;
     } catch (error) {
@@ -234,12 +255,55 @@ class URLParameterManager {
       const pathname = window.location.pathname;
       const urlParams = new URLSearchParams(window.location.search);
 
-      // Check for compressed params
-      const compressed = urlParams.get('params');
-      let parameters = compressed ? this.decompressParameters(compressed) : {};
+      let parameters = {};
 
-      // Check for individual parameter overrides in URL
-      // These should override the compressed parameters
+      // Check for compressed params first
+      const compressed = urlParams.get('params');
+      if (compressed) {
+        parameters = this.decompressParameters(compressed) || {};
+        console.log('📦 Decompressed parameters from URL:', Object.keys(parameters));
+      } else {
+        // No compression - extract all query parameters directly
+        const percentageParams = [
+          'gridIntervalPercent', 'profitRequirement',
+          'trailingBuyActivationPercent', 'trailingBuyReboundPercent',
+          'trailingSellActivationPercent', 'trailingSellPullbackPercent',
+          'trailingShortActivationPercent', 'trailingShortPullbackPercent',
+          'trailingCoverActivationPercent', 'trailingCoverReboundPercent',
+          'hardStopLossPercent', 'portfolioStopLossPercent', 'cascadeStopLossPercent'
+        ];
+
+        for (const [key, value] of urlParams.entries()) {
+          // Try to parse JSON values (for objects/arrays)
+          try {
+            if (value.startsWith('{') || value.startsWith('[')) {
+              parameters[key] = JSON.parse(value);
+            } else {
+              // Parse as appropriate type
+              if (value === 'true') parameters[key] = true;
+              else if (value === 'false') parameters[key] = false;
+              else if (!isNaN(value) && value !== '') {
+                const numValue = parseFloat(value);
+                // Convert decimal percentages to whole numbers (0.1 -> 10)
+                if (percentageParams.includes(key) && numValue < 1 && numValue > 0) {
+                  parameters[key] = numValue * 100;
+                } else {
+                  parameters[key] = numValue;
+                }
+              }
+              else parameters[key] = value;
+            }
+          } catch (e) {
+            parameters[key] = value;
+          }
+        }
+
+        if (Object.keys(parameters).length > 0) {
+          console.log('📋 Extracted uncompressed parameters from URL:', Object.keys(parameters));
+        }
+      }
+
+      // Check for individual parameter overrides in URL (these override compressed params)
       const parameterOverrides = this._extractParameterOverrides(urlParams);
       if (Object.keys(parameterOverrides).length > 0) {
         console.log('🔄 Applying URL parameter overrides:', parameterOverrides);
@@ -530,22 +594,19 @@ class URLParameterManager {
   }
 
   /**
-   * Parse percentage value from URL and convert to decimal for backend
-   * URL contains percentage values (e.g., 10 = 10%)
-   * Backend expects decimal values (e.g., 0.1 = 10%)
+   * Parse percentage value from URL (now whole numbers everywhere)
+   * Both URL and backend use whole numbers (e.g., 10 = 10%)
    */
   _parsePercentageAsDecimal(str, defaultPercentage) {
-    const percentageValue = this._parseNumber(str, defaultPercentage);
-    return percentageValue / 100; // Convert percentage to decimal
+    return this._parseNumber(str, defaultPercentage);
   }
 
   /**
-   * Convert decimal value to percentage for URL encoding
-   * Internal decimal values (e.g., 0.1 = 10%)
-   * URL stores percentage values (e.g., 10 = 10%)
+   * Format percentage value for URL (now whole numbers everywhere)
+   * Both URL and backend use whole numbers (e.g., 10 = 10%)
    */
   _formatDecimalAsPercentage(decimalValue) {
-    return decimalValue * 100; // Convert decimal to percentage
+    return decimalValue; // No conversion needed
   }
 
   /**
@@ -571,31 +632,31 @@ class URLParameterManager {
     if (distanceToBase < distanceToScaled) {
       // URL value is closer to base value, apply scaling
       console.log(`🔢 Applying Beta scaling: ${urlValue}% (base) → ${(urlValue * betaFactor).toFixed(2)}% (scaled) with β-factor ${betaFactor.toFixed(3)}`);
-      return (urlValue * betaFactor) / 100; // Scale then convert to decimal
+      return urlValue * betaFactor; // Scale (no decimal conversion)
     } else {
       // URL value is closer to scaled value, already scaled
       console.log(`🔢 Using Beta-scaled value: ${urlValue}% (already scaled)`);
-      return urlValue / 100; // Just convert to decimal
+      return urlValue; // No conversion needed
     }
   }
 
   /**
-   * Decode percentage array from URL and convert to decimal array for backend
+   * Decode percentage array from URL (now whole numbers everywhere)
    */
   _decodePercentageArray(str, defaultPercentageArray = []) {
-    if (!str) return defaultPercentageArray.map(p => p / 100); // Convert defaults to decimals
+    if (!str) return defaultPercentageArray; // Return defaults as-is
     return str.split(',').map(s => {
       const num = parseFloat(s.trim());
-      return isNaN(num) ? 0 : (num / 100); // Convert percentage to decimal
+      return isNaN(num) ? 0 : num; // No conversion needed
     }).filter(n => n >= 0);
   }
 
   /**
-   * Encode decimal array to percentage array for URL
+   * Encode percentage array for URL (now whole numbers everywhere)
    */
   _encodeDecimalArrayAsPercentage(decimalArray) {
     if (!Array.isArray(decimalArray)) return decimalArray?.toString() || '';
-    return decimalArray.map(val => this._formatDecimalAsPercentage(val)).join(',');
+    return decimalArray.join(','); // No conversion needed
   }
 
   /**

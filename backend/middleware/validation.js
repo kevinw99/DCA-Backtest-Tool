@@ -51,9 +51,10 @@ function validateDateRange(startDate, endDate) {
     throw new Error('Invalid date range: endDate cannot be in the future');
   }
 
-  const fiveYearsAgo = new Date(today.getFullYear() - 5, today.getMonth(), today.getDate());
-  if (start < fiveYearsAgo) {
-    throw new Error(`Invalid date range: startDate cannot be older than ${fiveYearsAgo.toISOString().split('T')[0]}`);
+  // Allow backtesting up to 30 years back (reasonable historical data limit)
+  const thirtyYearsAgo = new Date(today.getFullYear() - 30, today.getMonth(), today.getDate());
+  if (start < thirtyYearsAgo) {
+    throw new Error(`Invalid date range: startDate cannot be older than ${thirtyYearsAgo.toISOString().split('T')[0]} (30 years limit)`);
   }
 }
 
@@ -93,14 +94,14 @@ function validateNumeric(value, name, options = {}) {
 }
 
 /**
- * Validate percentage parameter (0-1 range)
+ * Validate percentage parameter (0-100 range as whole numbers)
  * @param {any} value - Value to validate
  * @param {string} name - Parameter name
  * @param {boolean} required - Whether parameter is required
  * @throws {Error} If value is invalid
  */
 function validatePercentage(value, name, required = true) {
-  validateNumeric(value, name, { min: 0, max: 1, required });
+  validateNumeric(value, name, { min: 0, max: 100, required });
 }
 
 /**
@@ -122,6 +123,17 @@ function validateDCABacktestParams(req, res, next) {
       trailingSellPullbackPercent
     } = req.body;
 
+    console.log('🔍 Validating DCA Parameters:');
+    console.log(`   symbol: ${symbol}`);
+    console.log(`   startDate: ${startDate}, endDate: ${endDate}`);
+    console.log(`   lotSizeUsd: ${lotSizeUsd}, maxLots: ${maxLots}`);
+    console.log(`   profitRequirement: ${profitRequirement}`);
+    console.log(`   gridIntervalPercent: ${gridIntervalPercent}`);
+    console.log(`   trailingBuyActivationPercent: ${trailingBuyActivationPercent}`);
+    console.log(`   trailingBuyReboundPercent: ${trailingBuyReboundPercent}`);
+    console.log(`   trailingSellActivationPercent: ${trailingSellActivationPercent}`);
+    console.log(`   trailingSellPullbackPercent: ${trailingSellPullbackPercent}`);
+
     // Validate required parameters
     validateSymbol(symbol);
     validateDateRange(startDate, endDate);
@@ -136,8 +148,10 @@ function validateDCABacktestParams(req, res, next) {
     validatePercentage(trailingSellActivationPercent, 'trailingSellActivationPercent');
     validatePercentage(trailingSellPullbackPercent, 'trailingSellPullbackPercent');
 
+    console.log('✅ Validation passed');
     next();
   } catch (error) {
+    console.error('❌ Validation failed:', error.message);
     res.status(400).json({
       error: 'Validation Error',
       message: error.message

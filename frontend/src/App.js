@@ -292,7 +292,9 @@ function AppContent() {
         });
 
         if (!backtestResponse.ok) {
-          throw new Error(`Backtest failed: ${backtestResponse.statusText}`);
+          const errorData = await backtestResponse.json();
+          console.error('🚨 Backend Error Response:', errorData);
+          throw new Error(errorData.message || errorData.error || `Backtest failed: ${backtestResponse.statusText}`);
         }
 
         const backtestResult = await backtestResponse.json();

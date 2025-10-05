@@ -1,66 +1,76 @@
-import defaultsConfig from '../config/strategyDefaults.json';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
 /**
- * Get default parameters for a specific symbol and strategy mode
- * Falls back to 'default' if symbol-specific config doesn't exist
- *
- * @param {string} symbol - The stock symbol (e.g., 'TSLA', 'NVDA')
- * @param {string} strategyMode - 'long' or 'short'
- * @returns {object} Default parameters for the strategy
+ * Get ticker-specific defaults from backend API
+ * Backend returns ticker-specific defaults merged with global defaults
+ * @param {string} symbol - Stock ticker symbol
+ * @returns {Promise<object>} Default parameters for the ticker
  */
-export const getDefaultParameters = (symbol, strategyMode = 'long') => {
-  // Try to get symbol-specific defaults
-  const symbolDefaults = defaultsConfig[symbol]?.[strategyMode];
+export async function getTickerDefaults(symbol) {
+  const response = await fetch(`${API_BASE_URL}/api/backtest/defaults/${symbol}`);
+  const data = await response.json();
 
-  // Fall back to global defaults if symbol-specific doesn't exist
-  const defaults = symbolDefaults || defaultsConfig.default[strategyMode];
-
-  if (!defaults) {
-    console.error(`No defaults found for symbol: ${symbol}, strategy: ${strategyMode}`);
-    return {};
+  if (!data.success || !data.defaults) {
+    throw new Error(data.message || 'Failed to load defaults');
   }
 
-  // Return a copy to prevent mutation
-  return { ...defaults, symbol };
-};
+  console.log(`✅ Loaded defaults for ${symbol}`);
+  return data.defaults;
+}
 
 /**
- * Get all available symbols that have custom defaults
- *
- * @returns {string[]} Array of symbol names
+ * Save ticker-specific defaults to backend API
+ * @param {string} symbol - Stock ticker symbol
+ * @param {object} parameters - Parameters to save (ticker-specific only)
+ * @returns {Promise<object>} API response
  */
-export const getAvailableSymbols = () => {
-  return Object.keys(defaultsConfig).filter(key => key !== 'default');
-};
+export async function saveTickerDefaults(symbol, parameters) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/backtest/defaults/${symbol}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ parameters })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      console.log(`✅ Saved defaults for ${symbol}`);
+    } else {
+      console.error(`❌ Failed to save defaults for ${symbol}:`, data.message);
+    }
+
+    return data;
+  } catch (error) {
+    console.error(`❌ Error saving defaults for ${symbol}:`, error.message);
+    throw error;
+  }
+}
 
 /**
- * Check if a symbol has custom defaults
- *
- * @param {string} symbol - The stock symbol
- * @returns {boolean} True if custom defaults exist
+ * Extract ticker-specific parameters from form state
+ * Removes non-ticker-specific fields like symbol, dates, mode, source
+ * @param {object} allParameters - Complete form state
+ * @returns {object} Ticker-specific parameters only
  */
-export const hasCustomDefaults = (symbol) => {
-  return defaultsConfig[symbol] !== undefined;
-};
+export function extractTickerSpecificParams(allParameters) {
+  const {
+    symbol,
+    startDate,
+    endDate,
+    availableSymbols,
+    mode,
+    source,
+    ...tickerParams
+  } = allParameters;
 
-/**
- * Reset parameters to defaults for current symbol and strategy
- * This is the single source of truth for reset operations
- *
- * @param {string} symbol - Current symbol
- * @param {string} strategyMode - Current strategy mode
- * @returns {object} Default parameters
- */
-export const resetToDefaults = (symbol, strategyMode) => {
-  console.log(`🔄 Resetting to defaults for ${symbol} (${strategyMode})`);
-  const defaults = getDefaultParameters(symbol, strategyMode);
-  console.log('📋 Loaded defaults:', defaults);
-  return defaults;
-};
+  return tickerParams;
+}
 
 export default {
-  getDefaultParameters,
-  getAvailableSymbols,
-  hasCustomDefaults,
-  resetToDefaults
+  getTickerDefaults,
+  saveTickerDefaults,
+  extractTickerSpecificParams
 };
