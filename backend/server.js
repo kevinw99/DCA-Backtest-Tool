@@ -798,25 +798,30 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
       }
     }
 
-    // Check if stock has any price data
-    if (!needsDataFetch) {
-      const existingPrices = await database.getDailyPrices(stock.id, startDate, endDate);
-      if (!existingPrices || existingPrices.length === 0) {
-        console.log(`📊 No price data found for ${symbol}, fetching data...`);
-        needsDataFetch = true;
-      }
-    }
+    // Get daily prices for the backtest period
+    let dailyPrices = await database.getDailyPrices(stock.id, startDate, endDate);
 
-    // Fetch data if needed
-    if (needsDataFetch) {
+    // If stock exists but has no price data, fetch it
+    if (!dailyPrices || dailyPrices.length === 0) {
+      console.log(`📡 Stock ${symbol} exists but has no price data for ${startDate} to ${endDate}. Fetching...`);
       try {
-        console.log(`📡 Fetching data for ${symbol}...`);
         await stockDataService.updateStockData(stock.id, symbol, {
           updatePrices: true,
           updateFundamentals: true,
           updateCorporateActions: true
         });
         await database.updateStockTimestamp(stock.id);
+
+        // Retry getting daily prices after fetch
+        dailyPrices = await database.getDailyPrices(stock.id, startDate, endDate);
+
+        if (!dailyPrices || dailyPrices.length === 0) {
+          return res.status(404).json({
+            error: 'No data available for backtest period',
+            message: `No price data found for ${symbol} between ${startDate} and ${endDate} even after fetching.`,
+            suggestion: 'The symbol may not have been listed during this period, or the data provider may not have this data.'
+          });
+        }
       } catch (fetchError) {
         return res.status(503).json({
           error: 'Unable to fetch stock data',
@@ -826,17 +831,7 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
       }
     }
 
-    // Get daily prices for the backtest period
-    const dailyPrices = await database.getDailyPrices(stock.id, startDate, endDate);
-
     // Validate sufficient data for backtesting
-    if (!dailyPrices || dailyPrices.length === 0) {
-      return res.status(404).json({
-        error: 'No data available for backtest period',
-        message: `No price data found for ${symbol} between ${startDate} and ${endDate} even after attempting to fetch data.`,
-        suggestion: 'The symbol may not have been listed during this period or may not exist.'
-      });
-    }
 
     if (dailyPrices.length < 30) {
       return res.status(400).json({
