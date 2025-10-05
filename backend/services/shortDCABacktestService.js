@@ -1,4 +1,5 @@
 const database = require('../database');
+const AdaptiveStrategyService = require('./adaptiveStrategyService');
 const {
   calculatePortfolioDrawdown,
   assessMarketCondition,
@@ -351,6 +352,31 @@ async function runShortDCABacktest(params) {
     }
   }
 
+  // Initialize Adaptive Strategy
+  let adaptiveStrategy = null;
+  let currentParams = {
+    ...params,
+    buyEnabled: true,  // Default: buying (shorting) enabled
+    sellEnabled: true  // Default: selling (covering) enabled
+  };
+
+  if (params.enableAdaptiveStrategy) {
+    adaptiveStrategy = new AdaptiveStrategyService({
+      enableAdaptiveStrategy: params.enableAdaptiveStrategy,
+      adaptationCheckIntervalDays: params.adaptationCheckIntervalDays || 30,
+      adaptationRollingWindowDays: params.adaptationRollingWindowDays || 90,
+      minDataDaysBeforeAdaptation: params.minDataDaysBeforeAdaptation || 90,
+      confidenceThreshold: params.confidenceThreshold || 0.7
+    });
+
+    if (verbose) {
+      console.log(`🔄 Adaptive Strategy ENABLED`);
+      console.log(`   Check interval: ${params.adaptationCheckIntervalDays || 30} days`);
+      console.log(`   Rolling window: ${params.adaptationRollingWindowDays || 90} days`);
+      console.log(`   Confidence threshold: ${params.confidenceThreshold || 0.7}`);
+    }
+  }
+
   try {
     // 1. Get or create Stock ID
     let stock = await database.getStock(symbol);
@@ -672,6 +698,14 @@ async function runShortDCABacktest(params) {
 
     // Check if trailing stop short should execute
     const checkTrailingStopShortExecution = (currentPrice, currentDate) => {
+      // Check if shorting is disabled by adaptive strategy
+      if (!currentParams.buyEnabled) {
+        if (trailingStopShort && verbose) {
+          transactionLog.push(colorize(`  INFO: Trailing stop short BLOCKED - Shorting disabled by adaptive strategy (${currentParams.buyPauseReason || 'regime detected'})`, 'yellow'));
+        }
+        return false;
+      }
+
       if (trailingStopShort && currentPrice <= trailingStopShort.stopPrice) {
         // Check if price is still within limit (above bottom)
         if (currentPrice >= trailingStopShort.limitPrice) {
@@ -954,6 +988,46 @@ async function runShortDCABacktest(params) {
 
       const marketCondition = assessMarketCondition(dayData);
 
+      // Adaptive Strategy: Check and adjust parameters based on market regime
+      if (adaptiveStrategy && adaptiveStrategy.shouldCheckScenario(i)) {
+        const adaptationResult = await adaptiveStrategy.checkAndAdapt({
+          priceHistory: pricesWithIndicators.slice(0, i + 1),
+          transactionHistory: enhancedTransactions,
+          currentParameters: currentParams,
+          currentDate: dayData.date,
+          dayIndex: i
+        });
+
+        if (adaptationResult.regimeChange && verbose) {
+          const scenario = adaptationResult.scenario;
+          transactionLog.push(colorize(`\n🔄 REGIME CHANGE DETECTED on ${dayData.date}`, 'magenta'));
+          transactionLog.push(colorize(`   Scenario: ${scenario.type.toUpperCase()}`, 'magenta'));
+          transactionLog.push(colorize(`   Confidence: ${(scenario.confidence * 100).toFixed(1)}%`, 'magenta'));
+          transactionLog.push(colorize(`   Short Operations: ${adaptationResult.adjustedParameters.buyEnabled ? '✅ ENABLED' : '🛑 DISABLED'}`, 'magenta'));
+          transactionLog.push(colorize(`   Cover Operations: ${adaptationResult.adjustedParameters.sellEnabled ? '✅ ENABLED' : '🛑 DISABLED'}`, 'magenta'));
+          if (adaptationResult.adjustedParameters.buyPauseReason) {
+            transactionLog.push(colorize(`   Short Pause Reason: ${adaptationResult.adjustedParameters.buyPauseReason}`, 'yellow'));
+          }
+          if (adaptationResult.adjustedParameters.sellPauseReason) {
+            transactionLog.push(colorize(`   Cover Pause Reason: ${adaptationResult.adjustedParameters.sellPauseReason}`, 'yellow'));
+          }
+        }
+
+        // Update current parameters with adjusted values
+        currentParams = adaptationResult.adjustedParameters;
+
+        // Extract updated parameters for use in short/cover logic
+        gridIntervalPercent = currentParams.gridIntervalPercent;
+        profitRequirement = currentParams.profitRequirement;
+        maxShorts = currentParams.maxLots;
+        maxShortsToCovers = currentParams.maxLotsToSell;
+        trailingShortActivationPercent = currentParams.trailingBuyActivationPercent;
+        trailingShortPullbackPercent = currentParams.trailingBuyReboundPercent;
+        trailingCoverActivationPercent = currentParams.trailingSellActivationPercent;
+        trailingCoverReboundPercent = currentParams.trailingSellPullbackPercent;
+        hardStopLossPercent = currentParams.stopLossPercent;
+      }
+
       // Daily PNL Calculation for short positions
       const totalSharesShort = shortsAtStartOfDay.reduce((sum, short) => sum + short.shares, 0);
       const totalValueOfShorts = shortsAtStartOfDay.reduce((sum, short) => sum + short.price * short.shares, 0);
@@ -1082,14 +1156,22 @@ async function runShortDCABacktest(params) {
 
         // SECOND PRIORITY: Execute trailing stop covers
         if (activeStop && currentPrice >= activeStop.stopPrice) {
-          const { stopPrice, limitPrice, shortsToCover } = activeStop;
+          // Check if covering is disabled by adaptive strategy
+          if (!currentParams.sellEnabled) {
+            if (verbose) {
+              transactionLog.push(colorize(`  INFO: Trailing stop cover BLOCKED - Covering disabled by adaptive strategy (${currentParams.sellPauseReason || 'regime detected'})`, 'yellow'));
+            }
+            // Cancel the stop since we can't execute it
+            activeStop = null;
+          } else {
+            const { stopPrice, limitPrice, shortsToCover } = activeStop;
 
-          // Always use current price as execution price
-          const executionPrice = currentPrice;
+            // Always use current price as execution price
+            const executionPrice = currentPrice;
 
-          // Execute only if execution price < limit price AND execution price < average short cost * (1 - profitRequirement)
-          const maxProfitablePrice = averageShortCost * (1 - profitRequirement);
-          if (executionPrice < limitPrice && executionPrice < maxProfitablePrice) {
+            // Execute only if execution price < limit price AND execution price < average short cost * (1 - profitRequirement)
+            const maxProfitablePrice = averageShortCost * (1 - profitRequirement);
+            if (executionPrice < limitPrice && executionPrice < maxProfitablePrice) {
             let totalCoverValue = 0;
             let costOfCoveredShorts = 0;
 
@@ -1235,6 +1317,7 @@ async function runShortDCABacktest(params) {
             transactionLog.push(
               colorize(`  INFO: Trailing stop execution BLOCKED - ${reason}`, 'yellow')
             );
+          }
           }
         }
 
@@ -1396,7 +1479,45 @@ async function runShortDCABacktest(params) {
       transactionLog: transactionLog,
       shorts: shorts,
       enhancedTransactions: enhancedTransactions,
-      questionableEvents: questionableEvents
+      questionableEvents: questionableEvents,
+
+      // Add backtest parameters for reference
+      backtestParameters: {
+        symbol,
+        startDate,
+        endDate,
+        lotSizeUsd,
+        maxShorts,
+        maxShortsToCovers,
+        gridIntervalPercent,
+        profitRequirement,
+        trailingShortActivationPercent,
+        trailingShortPullbackPercent,
+        trailingCoverActivationPercent,
+        trailingCoverReboundPercent,
+        hardStopLossPercent,
+        portfolioStopLossPercent,
+        cascadeStopLossPercent,
+        enableDynamicGrid,
+        normalizeToReference,
+        dynamicGridMultiplier,
+        enableConsecutiveIncrementalSellProfit,
+        enableAdaptiveStrategy: params.enableAdaptiveStrategy || false,
+        adaptationCheckIntervalDays: params.adaptationCheckIntervalDays || 30,
+        adaptationRollingWindowDays: params.adaptationRollingWindowDays || 90,
+        minDataDaysBeforeAdaptation: params.minDataDaysBeforeAdaptation || 90,
+        confidenceThreshold: params.confidenceThreshold || 0.7
+      },
+
+      // Add adaptive strategy results if enabled
+      adaptiveStrategy: adaptiveStrategy ? {
+        enabled: true,
+        adaptationHistory: adaptiveStrategy.getAdaptationHistory(),
+        regimeChanges: adaptiveStrategy.regimeChangeCount,
+        finalScenario: adaptiveStrategy.currentScenario
+      } : {
+        enabled: false
+      }
     };
 
     console.log(`🔍 Short DCA Backtest Debug - Enhanced Transactions: ${enhancedTransactions.length} total`);

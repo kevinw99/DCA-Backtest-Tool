@@ -869,6 +869,11 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
       dynamicGridMultiplier: finalParams.dynamicGridMultiplier,
       enableConsecutiveIncrementalSellProfit: finalParams.enableConsecutiveIncrementalSellProfit,
       enableScenarioDetection: finalParams.enableScenarioDetection,
+      enableAdaptiveStrategy: finalParams.enableAdaptiveStrategy,
+      adaptationCheckIntervalDays: finalParams.adaptationCheckIntervalDays,
+      adaptationRollingWindowDays: finalParams.adaptationRollingWindowDays,
+      minDataDaysBeforeAdaptation: finalParams.minDataDaysBeforeAdaptation,
+      confidenceThreshold: finalParams.confidenceThreshold,
       verbose: false // Don't log to console for API calls
     });
 
@@ -893,7 +898,8 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
           winRate: results.winRate,
           volatility: results.volatility,
           performanceMetrics: results.performanceMetrics,
-          scenarioAnalysis: results.scenarioAnalysis
+          scenarioAnalysis: results.scenarioAnalysis,
+          adaptiveStrategy: results.adaptiveStrategy
         },
         transactions: (() => {
           const transactions = [];

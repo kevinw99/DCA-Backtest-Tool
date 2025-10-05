@@ -1,3 +1,8 @@
+Use TA again?
+Actually once you control the buy and sell, then the whole algo is adjusted.
+
+
+
 one thing with DCA is with grid size of fixed percentage like 10%, it is bigger when the price is higher and much
 smaller if the price already dropped a lot. On the other hande, fixed dollar amount not sensitive to the price
 level., what would be a better way to do it? we need a system that space out more in term of percentage when the

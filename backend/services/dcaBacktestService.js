@@ -1,5 +1,6 @@
 const database = require('../database');
 const PerformanceCalculatorService = require('./performanceCalculatorService');
+const AdaptiveStrategyService = require('./adaptiveStrategyService');
 const {
   calculatePortfolioDrawdown,
   assessMarketCondition,
@@ -323,6 +324,31 @@ async function runDCABacktest(params) {
     }
   }
 
+  // Initialize Adaptive Strategy
+  let adaptiveStrategy = null;
+  let currentParams = {
+    ...params,
+    buyEnabled: true,  // Default: buying enabled
+    sellEnabled: true  // Default: selling enabled
+  };
+
+  if (params.enableAdaptiveStrategy) {
+    adaptiveStrategy = new AdaptiveStrategyService({
+      enableAdaptiveStrategy: params.enableAdaptiveStrategy,
+      adaptationCheckIntervalDays: params.adaptationCheckIntervalDays || 30,
+      adaptationRollingWindowDays: params.adaptationRollingWindowDays || 90,
+      minDataDaysBeforeAdaptation: params.minDataDaysBeforeAdaptation || 90,
+      confidenceThreshold: params.confidenceThreshold || 0.7
+    });
+
+    if (verbose) {
+      console.log(`🔄 Adaptive Strategy ENABLED`);
+      console.log(`   Check interval: ${params.adaptationCheckIntervalDays || 30} days`);
+      console.log(`   Rolling window: ${params.adaptationRollingWindowDays || 90} days`);
+      console.log(`   Confidence threshold: ${params.confidenceThreshold || 0.7}`);
+    }
+  }
+
   try {
     // 1. Get or create Stock ID
     let stock = await database.getStock(symbol);
@@ -559,6 +585,14 @@ async function runDCABacktest(params) {
 
     // Check if trailing stop buy should execute
     const checkTrailingStopBuyExecution = (currentPrice, currentDate) => {
+      // Check if buying is disabled by adaptive strategy
+      if (!currentParams.buyEnabled) {
+        if (trailingStopBuy && verbose) {
+          transactionLog.push(colorize(`  INFO: Trailing stop buy BLOCKED - Buying disabled by adaptive strategy (${currentParams.buyPauseReason || 'regime detected'})`, 'yellow'));
+        }
+        return false;
+      }
+
       if (trailingStopBuy && currentPrice >= trailingStopBuy.stopPrice) {
         // Check if price is still within limit (below peak)
         if (currentPrice <= trailingStopBuy.recentPeakReference) {
@@ -819,6 +853,35 @@ async function runDCABacktest(params) {
 
       const marketCondition = assessMarketCondition(dayData);
 
+      // Adaptive Strategy: Check and adjust parameters based on market regime
+      if (adaptiveStrategy && adaptiveStrategy.shouldCheckScenario(i)) {
+        const adaptationResult = await adaptiveStrategy.checkAndAdapt({
+          priceHistory: pricesWithIndicators.slice(0, i + 1),
+          transactionHistory: enhancedTransactions,
+          currentParameters: currentParams,
+          currentDate: dayData.date,
+          dayIndex: i
+        });
+
+        if (adaptationResult.regimeChange && verbose) {
+          const scenario = adaptationResult.scenario;
+          transactionLog.push(colorize(`\n🔄 REGIME CHANGE DETECTED on ${dayData.date}`, 'magenta'));
+          transactionLog.push(colorize(`   Scenario: ${scenario.type.toUpperCase()}`, 'magenta'));
+          transactionLog.push(colorize(`   Confidence: ${(scenario.confidence * 100).toFixed(1)}%`, 'magenta'));
+          transactionLog.push(colorize(`   Buy Operations: ${adaptationResult.adjustedParameters.buyEnabled ? '✅ ENABLED' : '🛑 DISABLED'}`, 'magenta'));
+          transactionLog.push(colorize(`   Sell Operations: ${adaptationResult.adjustedParameters.sellEnabled ? '✅ ENABLED' : '🛑 DISABLED'}`, 'magenta'));
+          if (adaptationResult.adjustedParameters.buyPauseReason) {
+            transactionLog.push(colorize(`   Buy Pause Reason: ${adaptationResult.adjustedParameters.buyPauseReason}`, 'yellow'));
+          }
+          if (adaptationResult.adjustedParameters.sellPauseReason) {
+            transactionLog.push(colorize(`   Sell Pause Reason: ${adaptationResult.adjustedParameters.sellPauseReason}`, 'yellow'));
+          }
+        }
+
+        // Update current parameters with adjusted values
+        currentParams = adaptationResult.adjustedParameters;
+      }
+
       // Daily PNL Calculation
       const totalSharesHeld = holdingsAtStartOfDay.reduce((sum, lot) => sum + lot.shares, 0);
       const totalCostOfHeldLots = holdingsAtStartOfDay.reduce((sum, lot) => sum + lot.price * lot.shares, 0);
@@ -862,14 +925,22 @@ async function runDCABacktest(params) {
 
       // HIGHEST PRIORITY: Execute trailing stop sells first
       if (activeStop && currentPrice <= activeStop.stopPrice) {
-        const { stopPrice, limitPrice, lotsToSell } = activeStop;
+        // Check if selling is disabled by adaptive strategy
+        if (!currentParams.sellEnabled) {
+          if (verbose) {
+            transactionLog.push(colorize(`  INFO: Trailing stop sell BLOCKED - Selling disabled by adaptive strategy (${currentParams.sellPauseReason || 'regime detected'})`, 'yellow'));
+          }
+          // Cancel the stop since we can't execute it
+          activeStop = null;
+        } else {
+          const { stopPrice, limitPrice, lotsToSell } = activeStop;
 
-        // Always use current price as execution price
-        const executionPrice = currentPrice;
+          // Always use current price as execution price
+          const executionPrice = currentPrice;
 
-        // Execute only if execution price > limit price AND execution price > average cost * (1 + profitRequirement)
-        const minProfitablePrice = averageCost * (1 + profitRequirement);
-        if (executionPrice > limitPrice && executionPrice > minProfitablePrice) {
+          // Execute only if execution price > limit price AND execution price > average cost * (1 + profitRequirement)
+          const minProfitablePrice = averageCost * (1 + profitRequirement);
+          if (executionPrice > limitPrice && executionPrice > minProfitablePrice) {
           let totalSaleValue = 0;
           let costOfSoldLots = 0;
 
@@ -1027,6 +1098,7 @@ async function runDCABacktest(params) {
           transactionLog.push(
             colorize(`  INFO: Trailing stop execution BLOCKED - ${reason}`, 'yellow')
           );
+        }
         }
       }
 
@@ -1323,7 +1395,22 @@ async function runDCABacktest(params) {
         normalizeToReference,
         dynamicGridMultiplier,
         enableConsecutiveIncrementalSellProfit,
-        enableScenarioDetection
+        enableScenarioDetection,
+        enableAdaptiveStrategy: params.enableAdaptiveStrategy || false,
+        adaptationCheckIntervalDays: params.adaptationCheckIntervalDays || 30,
+        adaptationRollingWindowDays: params.adaptationRollingWindowDays || 90,
+        minDataDaysBeforeAdaptation: params.minDataDaysBeforeAdaptation || 90,
+        confidenceThreshold: params.confidenceThreshold || 0.7
+      },
+
+      // Add adaptive strategy results if enabled
+      adaptiveStrategy: adaptiveStrategy ? {
+        enabled: true,
+        adaptationHistory: adaptiveStrategy.getAdaptationHistory(),
+        regimeChanges: adaptiveStrategy.regimeChangeCount,
+        finalScenario: adaptiveStrategy.currentScenario
+      } : {
+        enabled: false
       },
 
       // Add transactions for scenario analysis
