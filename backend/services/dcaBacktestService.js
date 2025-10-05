@@ -757,9 +757,9 @@ async function runDCABacktest(params) {
 
             // New pricing logic based on requirements:
             // Stop Price: current price * (1 - trailingSellPullbackPercent) below current price
-            // Limit Price: the highest-priced lot among selected lots
+            // Limit Price: current price (the peak price we're selling at)
             const stopPrice = currentPrice * (1 - trailingSellPullbackPercent);
-            const limitPrice = lotsToSell[0].price; // Highest price among selected lots
+            const limitPrice = currentPrice; // Current peak price for selling
 
             activeStop = {
               stopPrice: stopPrice,
@@ -813,12 +813,12 @@ async function runDCABacktest(params) {
             const newLotsToSell = sortedEligibleLots.slice(0, Math.min(maxLotsToSell, sortedEligibleLots.length));
 
             activeStop.stopPrice = newStopPrice;
-            activeStop.limitPrice = newLotsToSell[0].price; // Highest price among selected lots
+            activeStop.limitPrice = currentPrice; // Current peak price for selling
             activeStop.lotsToSell = newLotsToSell; // Now supports multiple lots
             activeStop.highestPrice = currentPrice;
             activeStop.lastUpdatePrice = currentPrice;
 
-            transactionLog.push(colorize(`  ACTION: TRAILING STOP SELL UPDATED from stop ${oldStopPrice.toFixed(2)} to ${newStopPrice.toFixed(2)}, limit ${oldLimitPrice.toFixed(2)} to ${newLotsToSell[0].price.toFixed(2)}, lots: ${newLotsToSell.map(lot => `$${lot.price.toFixed(2)}`).join(', ')} (High: ${currentPrice.toFixed(2)})`, 'cyan'));
+            transactionLog.push(colorize(`  ACTION: TRAILING STOP SELL UPDATED from stop ${oldStopPrice.toFixed(2)} to ${newStopPrice.toFixed(2)}, limit ${oldLimitPrice.toFixed(2)} to ${currentPrice.toFixed(2)}, lots: ${newLotsToSell.map(lot => `$${lot.price.toFixed(2)}`).join(', ')} (High: ${currentPrice.toFixed(2)})`, 'cyan'));
             transactionLog.push(colorize(`  DEBUG: Updated eligible lots: ${eligibleLots.map(lot => `$${lot.price.toFixed(2)}`).join(', ')}, selected: ${newLotsToSell.map(lot => `$${lot.price.toFixed(2)}`).join(', ')}`, 'cyan'));
           } else {
             // No eligible lots, cancel the stop

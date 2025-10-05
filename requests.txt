@@ -1,4 +1,4 @@
-
+Please remove this box from UI "Note: Sharpe/Sortino/Calmar ratios use a 4% annual risk-free rate. Returns on deployed capital account for actual capital usage, not maximum available capital."
 1.
 make these 2 lines perfectly align vertically, regardelss the words and number length difference:
 Total Return
