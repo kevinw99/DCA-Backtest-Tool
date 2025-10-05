@@ -959,7 +959,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
       {/* Total Return Card */}
       <div className="metric-card total-return-card">
         <h4>Total Return</h4>
-        <div className={`metrics ${getMetricClass(summary.totalReturnPercent)}`}>
+        <div className={`metrics-grid ${getMetricClass(summary.totalReturnPercent)}`}>
           {(() => {
             // Get the final Total P&L % from price chart data (matches chart display)
             if (chartData && chartData.length > 0) {
@@ -972,25 +972,45 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                 const endDate = new Date(summary.endDate || priceData?.backtestParameters?.endDate);
                 const years = (endDate - startDate) / (1000 * 60 * 60 * 24 * 365.25);
 
-                let cagrText = '';
+                let cagr = null;
                 if (years > 0) {
                   const finalValue = 1 + (returnPercent / 100);
                   if (finalValue > 0) {
-                    const cagr = Math.pow(finalValue, 1 / years) - 1;
-                    const cagrPercent = cagr * 100;
-                    cagrText = ` | CAGR: ${cagrPercent.toFixed(2)}%`;
+                    cagr = Math.pow(finalValue, 1 / years) - 1;
                   }
                 }
 
                 // Calculate average capital deployed for display
                 const avgCapital = returnPercent !== 0 ? (summary.totalReturn / returnPercent) * 100 : 0;
 
-                return `${formatCurrency(summary.totalReturn)} | ${formatPercent(returnPercent)} | Avg Capital: ${formatCurrency(avgCapital)}${cagrText}`;
+                return (
+                  <>
+                    <span className="metric-value">{formatCurrency(summary.totalReturn)}</span>
+                    <span className="metric-separator">|</span>
+                    <span className="metric-value">{formatPercent(returnPercent)}</span>
+                    <span className="metric-separator">|</span>
+                    <span className="metric-label">Avg Capital:</span>
+                    <span className="metric-value">{formatCurrency(avgCapital)}</span>
+                    {cagr !== null && (
+                      <>
+                        <span className="metric-separator">|</span>
+                        <span className="metric-label">CAGR:</span>
+                        <span className="metric-value">{(cagr * 100).toFixed(2)}%</span>
+                      </>
+                    )}
+                  </>
+                );
               }
             }
 
             // Fallback to backend value if chart data not available
-            return `${formatCurrency(summary.totalReturn)} | ${formatPercent(summary.totalReturnPercent)}`;
+            return (
+              <>
+                <span className="metric-value">{formatCurrency(summary.totalReturn)}</span>
+                <span className="metric-separator">|</span>
+                <span className="metric-value">{formatPercent(summary.totalReturnPercent)}</span>
+              </>
+            );
           })()}
         </div>
       </div>
@@ -999,7 +1019,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
       {holdResults && Object.keys(holdResults).length > 0 && (
         <div className="metric-card buy-hold-card">
           <h4>{summary.strategy === 'SHORT_DCA' ? 'Short & Hold' : 'Buy & Hold'}</h4>
-          <div className={`metrics ${(holdResults.totalReturn || 0) > 0 ? 'positive' : 'negative'}`}>
+          <div className={`metrics-grid ${(holdResults.totalReturn || 0) > 0 ? 'positive' : 'negative'}`}>
             {(() => {
               // Use the final Buy & Hold % from price chart data (same as chart display)
               if (chartData && chartData.length > 0) {
@@ -1012,25 +1032,45 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                   const endDate = new Date(summary.endDate || priceData?.backtestParameters?.endDate);
                   const years = (endDate - startDate) / (1000 * 60 * 60 * 24 * 365.25);
 
-                  let cagrText = '';
+                  let cagr = null;
                   if (years > 0) {
                     const finalValue = 1 + (buyHoldPercent / 100);
                     if (finalValue > 0) {
-                      const cagr = Math.pow(finalValue, 1 / years) - 1;
-                      const cagrPercent = cagr * 100;
-                      cagrText = ` | CAGR: ${cagrPercent.toFixed(2)}%`;
+                      cagr = Math.pow(finalValue, 1 / years) - 1;
                     }
                   }
 
                   // For Buy & Hold, average capital = initial capital (fixed investment)
                   const avgCapital = buyHoldPercent !== 0 ? (holdResults.totalReturn / buyHoldPercent) * 100 : 0;
 
-                  return `${formatCurrency(holdResults.totalReturn)} | ${formatPercent(buyHoldPercent)} | Avg Capital: ${formatCurrency(avgCapital)}${cagrText}`;
+                  return (
+                    <>
+                      <span className="metric-value">{formatCurrency(holdResults.totalReturn)}</span>
+                      <span className="metric-separator">|</span>
+                      <span className="metric-value">{formatPercent(buyHoldPercent)}</span>
+                      <span className="metric-separator">|</span>
+                      <span className="metric-label">Avg Capital:</span>
+                      <span className="metric-value">{formatCurrency(avgCapital)}</span>
+                      {cagr !== null && (
+                        <>
+                          <span className="metric-separator">|</span>
+                          <span className="metric-label">CAGR:</span>
+                          <span className="metric-value">{(cagr * 100).toFixed(2)}%</span>
+                        </>
+                      )}
+                    </>
+                  );
                 }
               }
 
               // Fallback to backend value if chart data not available
-              return `${formatCurrency(holdResults.totalReturn)} | ${formatPercent(holdResults.totalReturnPercent)}`;
+              return (
+                <>
+                  <span className="metric-value">{formatCurrency(holdResults.totalReturn)}</span>
+                  <span className="metric-separator">|</span>
+                  <span className="metric-value">{formatPercent(holdResults.totalReturnPercent)}</span>
+                </>
+              );
             })()}
           </div>
         </div>
