@@ -144,18 +144,26 @@ const nextBuyPrice = currentBuyPrice * (1 - nextGridSize);
 - Sell resets consecutive count to 0
 - After sell, next buy uses base 10% grid
 
-#### Example 2: Price Rebounds (Reset Condition)
+#### Example 2: Grid Size Reset After Sell
 
 **Scenario**:
 
-| Step | Event              | Price | Last Buy | Consecutive Count | Grid Size                        | Action |
-| ---- | ------------------ | ----- | -------- | ----------------- | -------------------------------- | ------ |
-| 1    | Buy                | $100  | null     | 0→1               | 10%                              | BUY    |
-| 2    | Buy                | $90   | $100     | 1                 | 15%                              | BUY    |
-| 3    | **Price rebounds** | $95   | $90      | 2                 | 10% (reset: price > last buy)    | -      |
-| 4    | Buy                | $92   | $90      | 2                 | 10% (base, not consecutive down) | BUY    |
+| Step | Event            | Price | Last Buy | Consecutive | Grid Size Calc                | Next Buy At | Action            |
+| ---- | ---------------- | ----- | -------- | ----------- | ----------------------------- | ----------- | ----------------- |
+| 1    | First buy        | $100  | null     | 0→1         | 10% (base)                    | $90         | BUY               |
+| 2    | Price drops      | $90   | $100     | 1→2         | 15% (10% + 1×5%)              | $76.50      | BUY               |
+| 3    | Price rebounds   | $95   | $90      | 2           | -                             | -           | -                 |
+| 4    | Price drops      | $85   | $90      | 2           | -                             | -           | NO BUY (> $76.50) |
+| 5    | Price continues  | $76   | $90      | 2→3         | 20% (10% + 2×5%, consecutive) | $60.80      | BUY               |
+| 6    | **SELL happens** | $80   | $76      | 3→0         | -                             | -           | SELL              |
+| 7    | Price drops      | $75   | null     | 0→1         | 10% (base, reset after sell)  | $67.50      | BUY               |
 
-**Key observation**: Grid resets to base when buy price is not lower than previous buy
+**Key observations**:
+
+- Grid size determines the trigger price for next buy
+- Buy only executes when price reaches the calculated trigger price
+- Consecutive count increments only when buy executes
+- Grid resets to base after a sell (step 7)
 
 #### Example 3: Feature Disabled
 

@@ -6,6 +6,7 @@ $508,659.67 | +1124.75% | Avg Capital: $45,224.17 | CAGR: 84.43%
 Buy & Hold
 $613,931.29 | +613.93% | Avg Capital: $100,000.00 | CAGR: 61.64%
 
+
 2. I noticed earlier you updated CLAUDE.md under ~/AI/DCA-Claude-Kiro, but not under
 ~/AI/DCA-Claude-Kiro/DCA-Claude-Kiro-b4IncrementalGrid..
 why do you update AI/DCA-Claude-Kiro/CLAUDE.md , it should be under
@@ -27,6 +28,17 @@ branch and commit history??
 You mentioned file like frontend/src/components/DCABacktestForm.js is large, should we refactor it into smaller
 files?
 
+I want to make some changes to the spec.
+0 you can use Spec documents (.kiro/specs-old/consecutive-incremental-grid-size/) as reference, but create a new
+spec under .kiro/specs/consecutive-incremental-buy-grid-size/, there would be some changes.
+1. change Config parameter (enableConsecutiveIncremental) to enableConsecutiveIncrementalBuyGrid
+2. enableConsecutiveIncrementalBuyGrid only apply when buy price goes lower than the prior buy price, otherwise it is
+reset to base grid size.
+3 no need to call generate_sequence function, just use this simple formula: next_consecutive_buy_grid_size = base_grid_size + ith *
+ grid_consecutive_increment
+where ith is the consecutive buy count, starting from 0, grid_consecutive_increment is a new parameter, default to
+5%, add it to the parameter set, and handle the same way as other parameters in both single and batch mode, like in
+ default config, or in URL parameters , UI etc.
 
 
 

@@ -1,12 +1,15 @@
-1.       "grid": {
-           "gridIntervalPercent": 10,
-           "profitRequirement": 10
-         },
-should be grouped under both "longStrategy" and "shortStrategy". each of them have a separate grid setting..
+Tuning steps:
+Result saved in result dir.
+1. PLTR tunning 1
+http://localhost:3000/backtest/long/PLTR/results?lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=10&profitRequirement=10&trailingBuyActivationPercent=10&trailingBuyReboundPercent=5&trailingSellActivationPercent=20&trailingSellPullbackPercent=10&maxShorts=6&maxShortsToCovers=3&trailingShortActivationPercent=25&trailingShortPullbackPercent=15&trailingCoverActivationPercent=20&trailingCoverReboundPercent=10&hardStopLossPercent=30&portfolioStopLossPercent=25&cascadeStopLossPercent=35&enableBetaScaling=false&beta=2.592&betaFactor=2.592&coefficient=1&isManualBetaOverride=false&enableDynamicGrid=false&dynamicGridMultiplier=1&enableConsecutiveIncremental=true&enableConsecutiveIncrementalSellProfit=false&enableScenarioDetection=false&normalizeToReference=true&enableAdaptiveStrategy=false&adaptationCheckIntervalDays=30&adaptationRollingWindowDays=90&minDataDaysBeforeAdaptation=90&confidenceThreshold=0.7&startDate=2021-09-01&endDate=2025-10-05
 
-2. "        "maxLots": 10,
-            "maxLotsToSell": 1,
-" should be group under "longStrategy".
+lower buying threshold to 8, 5?  -> should see more buys
+enable consecutive incremental buy -> should reduce period of buysing with small gaps
+
+
+
+
+
 
 
 Use TA again?
