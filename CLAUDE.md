@@ -85,6 +85,28 @@ When a bug is reported:
 6. **Document**: Update relevant docs and provide verification URLs
 7. **Commit**: Suggest git commit when appropriate
 
+## Spec Creation Workflow
+
+For problem fixes or new features:
+
+1. **Auto-generate** requirements.md, design.md, and tasks.md without asking approval
+2. **Proceed directly** to implementation after creating complete spec
+3. **Only ask clarification** if problem description is unclear or missing critical information
+4. **Create comprehensive specs** covering all aspects systematically
+
+This streamlined approach enables faster problem resolution while maintaining systematic documentation.
+
+### Spec Directory Naming Convention
+
+All spec directories must be numbered sequentially:
+
+- Format: `##_descriptive-name` (e.g., `01_algo-performance-calculation`, `16_ticker-specific-default-parameters`)
+- Use two-digit zero-padded numbers (01, 02, ... 10, 11, etc.)
+- Separate number from name with underscore
+- Use kebab-case for descriptive names
+- Check existing specs to determine the next available number
+- Location: `.kiro/specs/`
+
 ## Parallel Task Strategy
 
 Use Task tool with parallel agents for both **testing** and **information gathering**:
