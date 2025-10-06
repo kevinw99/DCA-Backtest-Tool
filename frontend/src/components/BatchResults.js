@@ -147,7 +147,7 @@ const BatchResults = ({ data }) => {
   const stocks = [...new Set(results.map(r => r.parameters.symbol))];
   const coefficients = [...new Set(results.map(r => r.parameters.coefficient || 1.0))].sort((a, b) => a - b);
 
-  // Filter results by selected stock and coefficient, then limit to top 5 per stock
+  // Filter results by selected stock and coefficient, then limit based on view mode
   let filteredByFilters = results;
 
   if (selectedStock !== 'all') {
@@ -158,9 +158,11 @@ const BatchResults = ({ data }) => {
     filteredByFilters = filteredByFilters.filter(r => (r.parameters.coefficient || 1.0) === parseFloat(selectedBeta));
   }
 
+  // Single stock view: show top 10 results
+  // Multiple stocks view: show top 5 per stock
   const filteredResults = selectedStock === 'all' && selectedBeta === 'all'
-    ? getTop2UniquePerStock(filteredByFilters)
-    : filteredByFilters.slice(0, 5);
+    ? getTopNPerStock(filteredByFilters, 5)
+    : filteredByFilters.slice(0, 10);
 
   // Helper function to create a unique key for parameter configuration
   function getParameterKey(params) {
@@ -173,8 +175,8 @@ const BatchResults = ({ data }) => {
     }
   }
 
-  // Helper function to get top 2 unique results per stock
-  function getTop2UniquePerStock(results) {
+  // Helper function to get top N results per stock (sorted by Total Return %)
+  function getTopNPerStock(results, n) {
     const resultsByStock = {};
 
     // Group results by stock symbol
@@ -186,33 +188,18 @@ const BatchResults = ({ data }) => {
       resultsByStock[symbol].push(result);
     });
 
-    // Get top 2 unique configurations for each stock and combine
-    const topUniqueResults = [];
+    // Get top N results for each stock and combine
+    const topResults = [];
     Object.keys(resultsByStock).forEach(symbol => {
       const stockResults = resultsByStock[symbol];
-      const seenConfigs = new Set();
-      const uniqueResults = [];
 
-      // Iterate through results and add only unique configurations
-      for (const result of stockResults) {
-        const configKey = getParameterKey(result.parameters);
-
-        if (!seenConfigs.has(configKey)) {
-          seenConfigs.add(configKey);
-          uniqueResults.push(result);
-
-          // Stop after finding 2 unique configurations
-          if (uniqueResults.length >= 2) {
-            break;
-          }
-        }
-      }
-
-      topUniqueResults.push(...uniqueResults);
+      // Take top N results (already sorted by totalReturn from backend)
+      const topN = stockResults.slice(0, n);
+      topResults.push(...topN);
     });
 
     // Sort by overall performance to maintain ranking
-    return topUniqueResults.sort((a, b) => {
+    return topResults.sort((a, b) => {
       const aValue = a.summary?.totalReturn || 0;
       const bValue = b.summary?.totalReturn || 0;
       return bValue - aValue;
@@ -387,13 +374,13 @@ const BatchResults = ({ data }) => {
                 value={selectedStock}
                 onChange={(e) => setSelectedStock(e.target.value)}
               >
-                <option value="all">All Stocks (top 2 unique configs per stock, {filteredResults.length} total results)</option>
+                <option value="all">All Stocks (top 5 per stock, {filteredResults.length} total results)</option>
                 {stocks.map(stock => {
                   const stockResultsCount = results.filter(r => r.parameters.symbol === stock).length;
-                  const displayCount = Math.min(stockResultsCount, 2);
+                  const displayCount = Math.min(stockResultsCount, 10);
                   return (
                     <option key={stock} value={stock}>
-                      {stock} (top {displayCount} unique of {stockResultsCount} results)
+                      {stock} (top {displayCount} of {stockResultsCount} results)
                     </option>
                   );
                 })}

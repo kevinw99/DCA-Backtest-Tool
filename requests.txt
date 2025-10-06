@@ -1,9 +1,7 @@
 
-~/AI/DCA-Claude-Kiro and ~/AI/DCA-Claude-Kiro/DCA-Claude-Kiro-b4IncrementalGrid are two worktree, should I move
-~/AI/DCA-Claude-Kiro/DCA-Claude-Kiro-b4IncrementalGrid out ~/AI/DCA-Claude-Kiro, will it affect the git repo?
-branch and commit history??
+For batch mode, if single stock, then show 10 best result, best in terms of Total Return %
 
-lets git worktree move ~/AI/DCA-Claude-Kiro/DCA-Claude-Kiro-b4IncrementalGrid to ~/AI/DCA-Claude-Kiro-b4IncrementalGrid
+if multipel stocks, then show 5 best result for each stock, best in terms of Total Return %
 
 
   Next Phase: Real-Time Adaptive Strategy
