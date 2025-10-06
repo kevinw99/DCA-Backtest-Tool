@@ -230,13 +230,6 @@ const PerformanceSummary = ({ performanceMetrics }) => {
           </div>
         </div>
       </div>
-
-      <div className="metric-notes">
-        <p className="note">
-          <strong>Note:</strong> Sharpe/Sortino/Calmar ratios use a 4% annual risk-free rate.
-          Returns on deployed capital account for actual capital usage, not maximum available capital.
-        </p>
-      </div>
     </div>
   );
 };
