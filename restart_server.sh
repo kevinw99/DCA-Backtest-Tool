@@ -15,9 +15,21 @@ pkill -f "react-scripts start" 2>/dev/null || true
 # Wait a moment for processes to terminate
 sleep 2
 
+# Check and install backend dependencies if needed
+if [ ! -d "$SCRIPT_DIR/backend/node_modules" ]; then
+  echo "📦 Installing backend dependencies..."
+  cd "$SCRIPT_DIR/backend" && npm install
+fi
+
+# Check and install frontend dependencies if needed
+if [ ! -d "$SCRIPT_DIR/frontend/node_modules" ]; then
+  echo "📦 Installing frontend dependencies..."
+  cd "$SCRIPT_DIR/frontend" && npm install
+fi
+
 # Start the backend server
 echo "🚀 Starting backend server on port 3001..."
-cd "$SCRIPT_DIR/backend" && npm start &
+cd "$SCRIPT_DIR/backend" && npm start > /dev/null 2>&1 &
 BACKEND_PID=$!
 
 # Wait for backend to start
@@ -25,7 +37,7 @@ sleep 3
 
 # Start the frontend server
 echo "🚀 Starting frontend server on port 3000..."
-cd "$SCRIPT_DIR/frontend" && npm start &
+cd "$SCRIPT_DIR/frontend" && npm start > /dev/null 2>&1 &
 FRONTEND_PID=$!
 
 echo "✅ Backend server started with PID: $BACKEND_PID"
