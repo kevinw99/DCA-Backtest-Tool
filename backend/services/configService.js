@@ -86,7 +86,8 @@ class ConfigService {
       // Dynamic features
       enableDynamicGrid: 'dynamicFeatures',
       dynamicGridMultiplier: 'dynamicFeatures',
-      enableConsecutiveIncremental: 'dynamicFeatures',
+      enableConsecutiveIncrementalBuyGrid: 'dynamicFeatures',
+      gridConsecutiveIncrement: 'dynamicFeatures',
       enableConsecutiveIncrementalSellProfit: 'dynamicFeatures',
       enableScenarioDetection: 'dynamicFeatures',
       normalizeToReference: 'dynamicFeatures',
@@ -166,6 +167,28 @@ class ConfigService {
   }
 
   /**
+   * Deep merge two objects
+   * @param {object} target - Target object (existing config)
+   * @param {object} source - Source object (new parameters)
+   * @returns {object} Merged object
+   */
+  deepMerge(target, source) {
+    const result = { ...target };
+
+    for (const key in source) {
+      if (source[key] !== null && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+        // Recursively merge nested objects
+        result[key] = this.deepMerge(result[key] || {}, source[key]);
+      } else {
+        // Overwrite primitive values
+        result[key] = source[key];
+      }
+    }
+
+    return result;
+  }
+
+  /**
    * Save ticker-specific defaults
    * @param {string} symbol - Stock ticker symbol
    * @param {object} parameters - Parameters to save (flat structure)
@@ -195,8 +218,9 @@ class ConfigService {
       // Convert flat parameters to nested structure
       const nestedParameters = this.flatToNested(parameters);
 
-      // Update ticker-specific defaults
-      config[symbol] = nestedParameters;
+      // Merge with existing ticker defaults (deep merge to preserve unmodified sections)
+      const existingDefaults = config[symbol] || {};
+      config[symbol] = this.deepMerge(existingDefaults, nestedParameters);
 
       // Write back to file
       await fs.writeFile(
@@ -283,7 +307,8 @@ class ConfigService {
     // Validate boolean fields
     const booleanFields = [
       'enableBetaScaling', 'isManualBetaOverride',
-      'enableConsecutiveIncremental', 'enableDynamicGrid',
+      'enableDynamicGrid',
+      'enableConsecutiveIncrementalBuyGrid',
       'enableConsecutiveIncrementalSellProfit',
       'enableScenarioDetection', 'enableAdaptiveStrategy',
       'normalizeToReference'

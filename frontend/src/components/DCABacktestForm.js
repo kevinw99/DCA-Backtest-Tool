@@ -1866,20 +1866,6 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                   </span>
                 </div>
 
-                <div className="form-group checkbox-group">
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={parameters.enableConsecutiveIncrementalSellProfit ?? true}
-                      onChange={(e) => handleChange('enableConsecutiveIncrementalSellProfit', e.target.checked)}
-                    />
-                    Enable Consecutive Incremental Sell Profit
-                  </label>
-                  <span className="form-help">
-                    Increase profit requirement for consecutive sells during uptrends (profit req + grid size)
-                  </span>
-                </div>
-
                 {parameters.enableConsecutiveIncrementalBuyGrid && (
                   <div className="form-group">
                     <label htmlFor="gridConsecutiveIncrement">
@@ -1900,6 +1886,20 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                     </span>
                   </div>
                 )}
+
+                <div className="form-group checkbox-group">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={parameters.enableConsecutiveIncrementalSellProfit ?? true}
+                      onChange={(e) => handleChange('enableConsecutiveIncrementalSellProfit', e.target.checked)}
+                    />
+                    Enable Consecutive Incremental Sell Profit
+                  </label>
+                  <span className="form-help">
+                    Increase profit requirement for consecutive sells during uptrends (profit req + grid size)
+                  </span>
+                </div>
 
                 <div className="form-group checkbox-group">
                   <label>

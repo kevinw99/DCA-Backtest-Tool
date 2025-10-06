@@ -44,9 +44,11 @@ const BacktestResults = ({ data, chartData: priceData }) => {
     // Use the enhanced transactions which have more details
     const transactionsToUse = enhancedTransactions?.length > 0 ? enhancedTransactions : transactions || [];
 
-    // Create transaction map by date
+    // Create transaction map by date (exclude aborted events as they don't affect portfolio state)
     const transactionMap = transactionsToUse.reduce((acc, transaction) => {
-      acc[transaction.date] = transaction;
+      if (!['ABORTED_BUY', 'ABORTED_SELL'].includes(transaction.type)) {
+        acc[transaction.date] = transaction;
+      }
       return acc;
     }, {});
 
@@ -187,7 +189,11 @@ const BacktestResults = ({ data, chartData: priceData }) => {
 
         // For long DCA: only relevant markers
         trailingStopBuyMarker: (transaction?.type === 'TRAILING_STOP_LIMIT_BUY') ? currentPrice : null,
-        trailingStopSellMarker: (transaction?.type === 'SELL') ? currentPrice : null
+        trailingStopSellMarker: (transaction?.type === 'SELL') ? currentPrice : null,
+
+        // Aborted transaction markers (consecutive buy/sell condition failures)
+        abortedBuyMarker: (transaction?.type === 'ABORTED_BUY') ? currentPrice : null,
+        abortedSellMarker: (transaction?.type === 'ABORTED_SELL') ? currentPrice : null
       };
     });
   }, [data, priceData]);
@@ -373,9 +379,12 @@ const BacktestResults = ({ data, chartData: priceData }) => {
     const lotSizeUsd = priceData?.backtestParameters?.lotSizeUsd || summary?.lotSizeUsd || 10000;
 
     // Create a map of transaction dates to get the enhanced transaction data for each day
+    // Exclude aborted events from the map as they don't affect portfolio state
     const transactionMap = new Map();
     transactionsToUse.forEach(transaction => {
-      transactionMap.set(transaction.date, transaction);
+      if (!['ABORTED_BUY', 'ABORTED_SELL'].includes(transaction.type)) {
+        transactionMap.set(transaction.date, transaction);
+      }
     });
 
     // Initialize cumulative capital tracking for average capital deployed calculation (across ALL days)
@@ -388,6 +397,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
       const transaction = transactionMap.get(date);
 
       // If there's a transaction on this date, use its calculated portfolio state
+      // (Aborted events are already filtered out when creating the map)
       if (transaction) {
         // Get the number of positions from lotsAfterTransaction or shortsAfterTransaction
         const currentLots = transaction.lotsAfterTransaction ? transaction.lotsAfterTransaction.length :
@@ -455,10 +465,11 @@ const BacktestResults = ({ data, chartData: priceData }) => {
       }
 
       // For days without transactions, we need to calculate using the most recent transaction state
-      // Find the most recent transaction before this date
+      // Find the most recent transaction before this date (skip aborted events)
       let mostRecentTransaction = null;
       for (let i = transactionsToUse.length - 1; i >= 0; i--) {
-        if (new Date(transactionsToUse[i].date) <= new Date(date)) {
+        if (new Date(transactionsToUse[i].date) <= new Date(date) &&
+            !['ABORTED_BUY', 'ABORTED_SELL'].includes(transactionsToUse[i].type)) {
           mostRecentTransaction = transactionsToUse[i];
           break;
         }
@@ -876,9 +887,8 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                 type="monotone"
                 dataKey="buyAndHoldPercent"
                 stroke="#059669"
-                strokeWidth={2}
+                strokeWidth={1.5}
                 dot={false}
-                strokeDasharray="5 5"
                 name="Buy & Hold %"
               />
 
@@ -927,6 +937,20 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                     shape="wye"
                     name="Trailing Stop Sell"
                   />
+                  <Scatter
+                    yAxisId="price"
+                    dataKey="abortedBuyMarker"
+                    fill="#90EE90"
+                    shape="circle"
+                    name="Aborted Buy"
+                  />
+                  <Scatter
+                    yAxisId="price"
+                    dataKey="abortedSellMarker"
+                    fill="#FFB6C1"
+                    shape="circle"
+                    name="Aborted Sell"
+                  />
                 </>
               )}
 
@@ -946,8 +970,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                 yAxisId="percent"
                 y={0}
                 stroke="#6b7280"
-                strokeWidth={2}
-                strokeDasharray="8 4"
+                strokeWidth={1}
                 label={{ value: "0% P/L", position: "right", style: { fill: "#6b7280", fontSize: "12px" } }}
               />
             </ComposedChart>
@@ -1163,8 +1186,10 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                 if (type === 'TRAILING_STOP_LIMIT_BUY') return <><TrendingUp size={16} /> BUY</>;
                 if (type === 'OCO_LIMIT_BUY') return <><TrendingUp size={16} /> OCO LIMIT</>;
                 if (type === 'OCO_TRAILING_BUY') return <><TrendingUp size={16} /> OCO TRAIL</>;
+                if (type === 'ABORTED_BUY') return <><span style={{color: '#90EE90'}}>🚫</span> ABORTED BUY</>;
+                if (type === 'ABORTED_SELL') return <><span style={{color: '#FFB6C1'}}>🚫</span> ABORTED SELL</>;
                 // Debug: Log unknown transaction types
-                if (type && !['SELL', 'SHORT', 'COVER', 'EMERGENCY_COVER', 'TRAILING_STOP_LIMIT_SHORT', 'TRAILING_STOP_LIMIT_BUY', 'OCO_LIMIT_BUY', 'OCO_TRAILING_BUY', 'BUY', 'INITIAL_BUY'].includes(type)) {
+                if (type && !['SELL', 'SHORT', 'COVER', 'EMERGENCY_COVER', 'TRAILING_STOP_LIMIT_SHORT', 'TRAILING_STOP_LIMIT_BUY', 'OCO_LIMIT_BUY', 'OCO_TRAILING_BUY', 'BUY', 'INITIAL_BUY', 'ABORTED_BUY', 'ABORTED_SELL'].includes(type)) {
                   console.warn('🐛 Unknown transaction type:', type);
                 }
                 return <><TrendingUp size={16} /> BUY</>;
@@ -1178,19 +1203,21 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                   </div>
                   <div>{formatCurrency(transaction.price)}</div>
                   <div className="trailing-stop-buy-details">
-                    {transaction.type === 'TRAILING_STOP_LIMIT_BUY' ? formatTrailingStopBuyDetails(transaction.trailingStopDetail) : ''}
+                    {transaction.type === 'TRAILING_STOP_LIMIT_BUY' ? formatTrailingStopBuyDetails(transaction.trailingStopDetail) :
+                     transaction.type === 'ABORTED_BUY' ? <span style={{color: '#90EE90', fontSize: '0.85em'}}>{transaction.abortReason}</span> : ''}
                   </div>
                   <div className="trailing-stop-sell-details">
-                    {transaction.type === 'SELL' ? formatTrailingStopSellDetails(transaction.trailingStopDetail) : ''}
+                    {transaction.type === 'SELL' ? formatTrailingStopSellDetails(transaction.trailingStopDetail) :
+                     transaction.type === 'ABORTED_SELL' ? <span style={{color: '#FFB6C1', fontSize: '0.85em'}}>{transaction.abortReason}</span> : ''}
                   </div>
                   <div>{transaction.shares !== undefined ? transaction.shares.toFixed(4) : 'N/A'}</div>
                   <div>
-                    {transaction.type === 'TRAILING_STOP_LIMIT_BUY' && transaction.buyGridSize !== undefined
+                    {(transaction.type === 'TRAILING_STOP_LIMIT_BUY' || transaction.type === 'ABORTED_BUY') && transaction.buyGridSize !== undefined
                       ? `${(transaction.buyGridSize * 100).toFixed(1)}%`
                       : '-'}
                   </div>
                   <div>
-                    {transaction.type === 'SELL' && transaction.lotProfitRequirement !== undefined
+                    {(transaction.type === 'SELL' || transaction.type === 'ABORTED_SELL') && transaction.lotProfitRequirement !== undefined
                       ? `${(transaction.lotProfitRequirement * 100).toFixed(1)}%`
                       : '-'}
                   </div>
