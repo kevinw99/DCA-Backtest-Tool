@@ -704,6 +704,33 @@ async function runDCABacktest(params) {
                 const countMsg = consecutiveBuyCount > 0 ? `count: ${consecutiveBuyCount}` : `count: 0`;
                 transactionLog.push(colorize(`  BLOCKED: Buy prevented - Price ${currentPrice.toFixed(2)} >= last buy ${lastBuyPrice.toFixed(2)} (${countMsg})`, 'yellow'));
               }
+
+              // Track aborted buy event if consecutive buy grid is enabled
+              if (enableConsecutiveIncrementalBuyGrid && consecutiveBuyCount > 0) {
+                enhancedTransactions.push({
+                  date: currentDate,
+                  type: 'ABORTED_BUY',
+                  price: currentPrice,
+                  shares: 0,
+                  value: 0,
+                  lotsDetails: null,
+                  lotsAfterTransaction: [...lots],
+                  averageCost: averageCost,
+                  unrealizedPNL: null,
+                  realizedPNL: realizedPNL,
+                  totalPNL: null,
+                  realizedPNLFromTrade: 0,
+                  abortReason: `Price ${currentPrice.toFixed(2)} not lower than last buy ${lastBuyPrice.toFixed(2)}`,
+                  consecutiveBuyCount: consecutiveBuyCount,
+                  buyGridSize: buyGridSize,
+                  lastBuyPrice: lastBuyPrice
+                });
+
+                if (verbose) {
+                  transactionLog.push(colorize(`  🚫 ABORTED BUY: Consecutive buy condition failed - Price must be < ${lastBuyPrice.toFixed(2)}`, 'yellow'));
+                }
+              }
+
               // Cancel the trailing stop buy since we can't execute it
               trailingStopBuy = null;
               return false;
@@ -830,7 +857,7 @@ async function runDCABacktest(params) {
     };
 
     // Check if trailing stop sell should be activated (when price rises from recent bottom)
-    const checkTrailingStopSellActivation = (currentPrice) => {
+    const checkTrailingStopSellActivation = (currentPrice, currentDate) => {
       if (lots.length > 0 && currentPrice > averageCost && !activeStop && recentBottom && currentPrice >= recentBottom * (1 + trailingSellActivationPercent)) {
         // Price rose {trailingSellActivationPercent}% from recent bottom - activate trailing stop sell
         // Calculate current unrealized P&L
@@ -920,6 +947,33 @@ async function runDCABacktest(params) {
             transactionLog.push(colorize(`  ACTION: TRAILING STOP SELL ACTIVATED - Stop: ${stopPrice.toFixed(2)}, Limit: ${limitPrice.toFixed(2)}, Triggered by ${(trailingSellActivationPercent * 100).toFixed(1)}% rise from bottom ${recentBottom.toFixed(2)} (Unrealized P&L: ${unrealizedPNL.toFixed(2)})`, 'yellow'));
             if (enableConsecutiveIncrementalSellProfit && lotProfitRequirement !== profitRequirement) {
               transactionLog.push(colorize(`  📈 CONSECUTIVE SELL: Lot profit requirement ${(lotProfitRequirement * 100).toFixed(2)}% (base ${(profitRequirement * 100).toFixed(2)}%)`, 'cyan'));
+            }
+          } else if (enableConsecutiveIncrementalSellProfit && isConsecutiveSell) {
+            // Track aborted sell event when consecutive sell conditions fail
+            const totalSharesHeld = lots.reduce((sum, lot) => sum + lot.shares, 0);
+            const unrealizedPNL = (totalSharesHeld * currentPrice) - lots.reduce((sum, lot) => sum + lot.price * lot.shares, 0);
+
+            enhancedTransactions.push({
+              date: currentDate,
+              type: 'ABORTED_SELL',
+              price: currentPrice,
+              shares: 0,
+              value: 0,
+              lotsDetails: null,
+              lotsAfterTransaction: [...lots],
+              averageCost: averageCost,
+              unrealizedPNL: unrealizedPNL,
+              realizedPNL: realizedPNL,
+              totalPNL: unrealizedPNL + realizedPNL,
+              realizedPNLFromTrade: 0,
+              abortReason: `Insufficient profit for consecutive sell - Required ${(lotProfitRequirement * 100).toFixed(2)}% from last sell ${lastSellPrice.toFixed(2)}`,
+              consecutiveSellCount: consecutiveSellCount,
+              lotProfitRequirement: lotProfitRequirement,
+              lastSellPrice: lastSellPrice
+            });
+
+            if (verbose) {
+              transactionLog.push(colorize(`  🚫 ABORTED SELL: Consecutive sell profit requirement not met - Need ${(lotProfitRequirement * 100).toFixed(2)}% from ${lastSellPrice.toFixed(2)}`, 'yellow'));
             }
           }
         }
@@ -1080,7 +1134,7 @@ async function runDCABacktest(params) {
       // Price movements alone do NOT trigger resets (per Spec #17 update)
 
       // Check if trailing stop sell should be activated (price rises 10% from recent bottom)
-      checkTrailingStopSellActivation(currentPrice);
+      checkTrailingStopSellActivation(currentPrice, dayData.date);
 
       // Update trailing stop if price has moved higher
       updateTrailingStop(currentPrice);

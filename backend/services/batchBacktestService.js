@@ -48,7 +48,7 @@ async function generateParameterCombinations(paramRanges) {
     dynamicGridMultiplier = [1.0],
     enableDynamicGrid = true,
     normalizeToReference = true,
-    enableConsecutiveIncremental = true,
+    enableConsecutiveIncrementalBuyGrid = false,
     enableConsecutiveIncrementalSellProfit = true
   } = paramRanges;
 
@@ -125,7 +125,7 @@ async function generateParameterCombinations(paramRanges) {
               enableBetaScaling: true,
               enableDynamicGrid,
               normalizeToReference,
-              enableConsecutiveIncremental,
+              enableConsecutiveIncrementalBuyGrid,
               enableConsecutiveIncrementalSellProfit,
               betaInfo: {
                 beta: betaResult.beta,
@@ -176,7 +176,7 @@ async function generateParameterCombinations(paramRanges) {
                         enableBetaScaling: false,
                         enableDynamicGrid,
                         normalizeToReference,
-                        enableConsecutiveIncremental,
+                        enableConsecutiveIncrementalBuyGrid,
                         enableConsecutiveIncrementalSellProfit
                       });
                     }
@@ -244,7 +244,7 @@ async function runBatchBacktest(options, progressCallback = null, sessionId = nu
     enableBetaScaling,
     enableDynamicGrid,
     normalizeToReference,
-    enableConsecutiveIncremental,
+    enableConsecutiveIncrementalBuyGrid,
     enableConsecutiveIncrementalSellProfit,
     includeComparison = true,
     sortBy = 'annualizedReturn' // 'totalReturn', 'annualizedReturn', 'winRate'
@@ -259,7 +259,7 @@ async function runBatchBacktest(options, progressCallback = null, sessionId = nu
     enableBetaScaling: enableBetaScaling ?? parameterRanges.enableBetaScaling,
     enableDynamicGrid: enableDynamicGrid ?? parameterRanges.enableDynamicGrid,
     normalizeToReference: normalizeToReference ?? parameterRanges.normalizeToReference,
-    enableConsecutiveIncremental: enableConsecutiveIncremental ?? parameterRanges.enableConsecutiveIncremental,
+    enableConsecutiveIncrementalBuyGrid: enableConsecutiveIncrementalBuyGrid ?? parameterRanges.enableConsecutiveIncrementalBuyGrid,
     enableConsecutiveIncrementalSellProfit: enableConsecutiveIncrementalSellProfit ?? parameterRanges.enableConsecutiveIncrementalSellProfit
   };
 

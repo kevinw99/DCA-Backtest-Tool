@@ -686,7 +686,7 @@ class URLParameterManager {
 
     const booleanParams = [
       'enableBetaScaling', 'isManualBetaOverride',
-      'enableConsecutiveIncremental', 'enableDynamicGrid',
+      'enableDynamicGrid',
       'normalizeToReference', 'enableConsecutiveIncrementalSellProfit',
       'enableConsecutiveIncrementalBuyGrid'
     ];

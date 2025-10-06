@@ -1,6 +1,27 @@
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
 /**
+ * Ensure all required parameters exist with default values
+ * This prevents undefined parameters from causing issues when saving
+ * @param {object} parameters - Parameters object (may have missing values)
+ * @returns {object} Complete parameters object with defaults for missing values
+ */
+function ensureCompleteParameters(parameters) {
+  const requiredDefaults = {
+    // Dynamic features
+    enableDynamicGrid: false,
+    dynamicGridMultiplier: 1,
+    enableConsecutiveIncrementalBuyGrid: false,
+    enableConsecutiveIncrementalSellProfit: false,
+    enableScenarioDetection: false,
+    normalizeToReference: false,
+    gridConsecutiveIncrement: 5
+  };
+
+  return { ...requiredDefaults, ...parameters };
+}
+
+/**
  * Get ticker-specific defaults from backend API
  * Backend returns ticker-specific defaults merged with global defaults
  * @param {string} symbol - Stock ticker symbol
@@ -15,7 +36,8 @@ export async function getTickerDefaults(symbol) {
   }
 
   console.log(`✅ Loaded defaults for ${symbol}`);
-  return data.defaults;
+  // Ensure all required parameters exist
+  return ensureCompleteParameters(data.defaults);
 }
 
 /**

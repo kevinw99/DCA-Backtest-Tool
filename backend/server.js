@@ -768,8 +768,8 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
       }
     }
 
-    // Save updated parameters to config (for consistency between CLI and UI)
-    backtestConfig.saveDefaults({ ...finalParams, strategyMode: 'long' });
+    // Note: No longer saving to backtestDefaults.json on every request to avoid polluting config file
+    // Use POST /api/backtest/defaults/:symbol endpoint to explicitly save ticker-specific defaults
 
     console.log(`🔄 DCA Backtest request for ${symbol} (${startDate} to ${endDate})`);
 
@@ -1041,8 +1041,8 @@ app.post('/api/backtest/short-dca', validation.validateShortDCABacktestParams, a
 
     console.log('Normalized parameters:', JSON.stringify(normalizedParams, null, 2));
 
-    // Save updated parameters to config (for consistency between CLI and UI)
-    backtestConfig.saveDefaults({ ...normalizedParams, strategyMode: 'short' });
+    // Note: No longer saving to backtestDefaults.json on every request to avoid polluting config file
+    // Use POST /api/backtest/defaults/:symbol endpoint to explicitly save ticker-specific defaults
 
     // Convert percentage parameters from whole numbers (10 = 10%) to decimals (0.1 = 10%) for the algorithm
     const algoParams = {

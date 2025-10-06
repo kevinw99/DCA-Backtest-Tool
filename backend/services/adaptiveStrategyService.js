@@ -294,7 +294,8 @@ class AdaptiveStrategyService {
       confirmationPeriod: rules.confirmationPeriod || 0,
 
       // Feature Toggles
-      enableConsecutiveIncremental: rules.enableConsecutiveIncremental,
+      enableConsecutiveIncrementalBuyGrid: rules.enableConsecutiveIncrementalBuyGrid,
+      enableConsecutiveIncrementalSellProfit: rules.enableConsecutiveIncrementalSellProfit,
       enableDynamicGrid: rules.enableDynamicGrid,
 
       // Volatility Thresholds (for mixed scenario)
@@ -354,7 +355,8 @@ class AdaptiveStrategyService {
         exitUrgencyMultiplier: 1.0,
 
         // Feature Toggles
-        enableConsecutiveIncremental: true,
+        enableConsecutiveIncrementalBuyGrid: false,
+        enableConsecutiveIncrementalSellProfit: true,
         enableDynamicGrid: true,
 
         riskLevel: 'MODERATE_AGGRESSIVE'
@@ -389,7 +391,8 @@ class AdaptiveStrategyService {
         exitUrgencyMultiplier: 1.5,      // 50% faster exits
 
         // Feature Toggles
-        enableConsecutiveIncremental: false,
+        enableConsecutiveIncrementalBuyGrid: false,
+        enableConsecutiveIncrementalSellProfit: false,
         enableDynamicGrid: true,
 
         riskLevel: 'DEFENSIVE'
@@ -425,7 +428,8 @@ class AdaptiveStrategyService {
         minHoldingPeriod: 7,             // Hold at least 7 days
 
         // Feature Toggles
-        enableConsecutiveIncremental: true,
+        enableConsecutiveIncrementalBuyGrid: true,
+        enableConsecutiveIncrementalSellProfit: false,
         enableDynamicGrid: true,
 
         riskLevel: 'AGGRESSIVE'
@@ -459,7 +463,8 @@ class AdaptiveStrategyService {
         confirmationPeriod: 2,
 
         // Feature Toggles
-        enableConsecutiveIncremental: true,
+        enableConsecutiveIncrementalBuyGrid: true,
+        enableConsecutiveIncrementalSellProfit: true,
         enableDynamicGrid: true,
 
         // Conditional pausing based on volatility
@@ -499,7 +504,8 @@ class AdaptiveStrategyService {
       'trailingSellPullbackPercent',
       'hardStopLossPercent',
       'entryDelay',
-      'enableConsecutiveIncremental',
+      'enableConsecutiveIncrementalBuyGrid',
+      'enableConsecutiveIncrementalSellProfit',
       'enableDynamicGrid'
     ];
 
