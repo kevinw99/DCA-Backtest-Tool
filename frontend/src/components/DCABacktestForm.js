@@ -1003,13 +1003,14 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
     setBetaError(null);
 
     // Use current form parameters (whole numbers, 10 = 10%)
+    // Convert parameters from percentage format (10) to decimal format (0.1) for backend
     const baseParams = {
-      profitRequirement: parameters.profitRequirement,
-      gridIntervalPercent: parameters.gridIntervalPercent,
-      trailingBuyActivationPercent: parameters.trailingBuyActivationPercent,
-      trailingBuyReboundPercent: parameters.trailingBuyReboundPercent,
-      trailingSellActivationPercent: parameters.trailingSellActivationPercent,
-      trailingSellPullbackPercent: parameters.trailingSellPullbackPercent
+      profitRequirement: parameters.profitRequirement / 100,
+      gridIntervalPercent: parameters.gridIntervalPercent / 100,
+      trailingBuyActivationPercent: parameters.trailingBuyActivationPercent / 100,
+      trailingBuyReboundPercent: parameters.trailingBuyReboundPercent / 100,
+      trailingSellActivationPercent: parameters.trailingSellActivationPercent / 100,
+      trailingSellPullbackPercent: parameters.trailingSellPullbackPercent / 100
     };
 
     try {
