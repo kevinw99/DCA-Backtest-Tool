@@ -1040,7 +1040,7 @@ async function runDCABacktest(params) {
           } else {
             // No eligible lots, cancel the stop
             activeStop = null;
-            transactionLog.push(colorize(`  ACTION: TRAILING STOP CANCELLED - No eligible lots at price ${currentPrice.toFixed(2)} with maxEligiblePrice ${maxEligiblePrice.toFixed(2)}`, 'yellow'));
+            transactionLog.push(colorize(`  ACTION: TRAILING STOP CANCELLED - No eligible lots at price ${currentPrice.toFixed(2)} (profit requirement: ${(lotProfitRequirement * 100).toFixed(2)}%)`, 'yellow'));
           }
         }
       }
