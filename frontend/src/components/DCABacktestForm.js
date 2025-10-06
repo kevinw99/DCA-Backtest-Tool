@@ -27,7 +27,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
     return {
       symbol: 'TSLA',
       strategyMode: 'long',
-      startDate: '2001-09-01',
+      startDate: '2021-09-01',
       endDate: new Date().toISOString().split('T')[0]
     };
   });
@@ -47,7 +47,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
     return {
       symbol: 'TSLA',
       strategyMode: 'SHORT_DCA',
-      startDate: '2001-09-01',
+      startDate: '2021-09-01',
       endDate: new Date().toISOString().split('T')[0]
     };
   });
