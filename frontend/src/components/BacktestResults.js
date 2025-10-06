@@ -1044,8 +1044,10 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                     }
                   }
 
-                  // For Buy & Hold, use the same average capital as DCA strategy for comparison
-                  const avgCapital = summary.performanceMetrics?.avgDeployedCapital || 0;
+                  // For Buy & Hold, use fixed capital (lotSizeUsd * maxLots)
+                  const lotSizeUsd = priceData?.backtestParameters?.lotSizeUsd || summary?.lotSizeUsd || 10000;
+                  const maxLots = priceData?.backtestParameters?.maxLots || summary?.maxLots || 10;
+                  const fixedCapital = lotSizeUsd * maxLots;
 
                   return (
                     <>
@@ -1053,8 +1055,8 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                       <span className="metric-separator">|</span>
                       <span className="metric-value">{formatPercent(buyHoldPercent)}</span>
                       <span className="metric-separator">|</span>
-                      <span className="metric-label">Avg Capital:</span>
-                      <span className="metric-value">{formatCurrency(avgCapital)}</span>
+                      <span className="metric-label">Capital:</span>
+                      <span className="metric-value">{formatCurrency(fixedCapital)}</span>
                       {cagr !== null && (
                         <>
                           <span className="metric-separator">|</span>

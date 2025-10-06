@@ -2002,6 +2002,8 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  min-width: 150px;
+  display: inline-block;
 }
 
 .total-return-card .metrics {
@@ -2030,6 +2032,8 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  min-width: 150px;
+  display: inline-block;
 }
 
 .buy-hold-card .metrics {
@@ -2054,7 +2058,7 @@
 
 .compact-metrics span {
   color: #374151;
-  font-size: 0.9rem;
+  font-size: 1.1rem;
   white-space: nowrap;
 }
 
