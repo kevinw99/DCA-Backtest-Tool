@@ -48,15 +48,17 @@ If either condition fails, reset to base grid size.
 2. **Consecutive buy count resets to 0 when**:
    - **A.** A sell order executes
      - Reset both `consecutiveBuyCount = 0` and `lastBuyPrice = null`
-   - **B.** A buy order executes at a price >= average cost of all held lots
+   - **B.** A buy order executes at a price >= lastBuyPrice
      - This buy must still respect **base grid spacing** from all existing lots
      - After this buy executes, reset `consecutiveBuyCount = 0`
      - **Keep `lastBuyPrice` unchanged** (do NOT reset to null)
-     - This allows next buy to use base grid, but still requires price < lastBuyPrice
+     - **Rationale**: If buy price >= lastBuyPrice, we're NOT in a consecutive downtrend anymore
+     - This allows next buy to use base grid, but still requires price < lastBuyPrice if price continues down
+     - If price goes up further, then it's not a consecutive buy, so next buy can execute at any price (as long as other conditions like grid spacing are met)
 
 3. **After count reset (consecutiveBuyCount = 0)**:
    - If `lastBuyPrice = null` (after sell): Next buy can execute at any price (only grid spacing required)
-   - If `lastBuyPrice` is kept (after buy >= avg cost): Next buy still requires price < lastBuyPrice
+   - If `lastBuyPrice` is kept (after buy >= lastBuyPrice): Next buy still requires price < lastBuyPrice
    - Grid size always uses base grid when count = 0
 
 ## Detailed Requirements
