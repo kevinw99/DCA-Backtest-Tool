@@ -336,11 +336,21 @@ class URLParameterManager {
 
         console.log('📥 Parsed semantic URL (batch):', { symbols, hasResults });
 
+        // Build raw params object from URL params (not processed) for _decodeBatchParameters
+        const rawParams = {};
+        for (const [key, value] of urlParams.entries()) {
+          rawParams[key] = value; // Keep as string
+        }
+        rawParams.symbols = symbols.join(',');
+
+        // Decode batch parameters properly with parameterRanges as arrays
+        const batchParams = this._decodeBatchParameters(rawParams);
+
         return {
           mode: 'batch',
           symbols,
           hasResults,
-          parameters: { ...parameters, symbols }
+          parameters: batchParams
         };
       }
 
@@ -641,22 +651,29 @@ class URLParameterManager {
   }
 
   /**
-   * Decode percentage array from URL (now whole numbers everywhere)
+   * Decode percentage array from URL (whole numbers in URL, decimals for backend)
+   * Converts 5,10 -> [0.05, 0.10] for backend compatibility
    */
   _decodePercentageArray(str, defaultPercentageArray = []) {
     if (!str) return defaultPercentageArray; // Return defaults as-is
     return str.split(',').map(s => {
       const num = parseFloat(s.trim());
-      return isNaN(num) ? 0 : num; // No conversion needed
+      if (isNaN(num)) return 0;
+      // Convert whole number percentages to decimals for backend
+      // 5 -> 0.05, 10 -> 0.10, etc.
+      return num / 100;
     }).filter(n => n >= 0);
   }
 
   /**
-   * Encode percentage array for URL (now whole numbers everywhere)
+   * Encode percentage array for URL (decimals from backend to whole numbers for URL)
+   * Converts [0.05, 0.10] -> "5,10" for URL
    */
   _encodeDecimalArrayAsPercentage(decimalArray) {
     if (!Array.isArray(decimalArray)) return decimalArray?.toString() || '';
-    return decimalArray.join(','); // No conversion needed
+    // Convert decimals to whole number percentages for URL
+    // 0.05 -> 5, 0.10 -> 10, etc.
+    return decimalArray.map(d => d * 100).join(',');
   }
 
   /**
