@@ -3,7 +3,7 @@
 ~/AI/DCA-Claude-Kiro/DCA-Claude-Kiro-b4IncrementalGrid out ~/AI/DCA-Claude-Kiro, will it affect the git repo?
 branch and commit history??
 
-
+lets git worktree move ~/AI/DCA-Claude-Kiro/DCA-Claude-Kiro-b4IncrementalGrid to ~/AI/DCA-Claude-Kiro-b4IncrementalGrid
 
 
   Next Phase: Real-Time Adaptive Strategy
