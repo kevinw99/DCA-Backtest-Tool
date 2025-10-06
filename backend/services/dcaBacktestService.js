@@ -501,6 +501,7 @@ async function runDCABacktest(params) {
     // Consecutive incremental profit tracking
     let lastActionType = null; // 'buy' | 'sell' | null
     let lastSellPrice = null; // Price of last sell, or null
+    let consecutiveSellCount = 0; // Number of consecutive sells in uptrend (0, 1, 2, 3, ...)
 
     // Consecutive incremental buy grid tracking
     let consecutiveBuyCount = 0; // Number of consecutive buys (0, 1, 2, 3, ...)
@@ -731,6 +732,7 @@ async function runDCABacktest(params) {
             // Update consecutive sell tracking state
             lastActionType = 'buy';
             lastSellPrice = null; // Reset on buy
+            consecutiveSellCount = 0; // Reset on buy
 
             // Update consecutive buy tracking state
             consecutiveBuyCount++;
@@ -835,9 +837,12 @@ async function runDCABacktest(params) {
 
         // Only set trailing stop if unrealized P&L > 0
         if (unrealizedPNL > 0) {
+          // Determine if this is a consecutive sell scenario
+          const isConsecutiveSell = (lastSellPrice !== null && currentPrice > lastSellPrice);
+
           // Calculate lot-level profit requirement (dynamic for consecutive uptrend sells)
           let lotProfitRequirement = profitRequirement; // Default to base
-          if (enableConsecutiveIncrementalSellProfit && lastActionType === 'sell' && lastSellPrice !== null && currentPrice > lastSellPrice) {
+          if (enableConsecutiveIncrementalSellProfit && isConsecutiveSell) {
             // Consecutive uptrend sell - calculate dynamic grid size
             let gridSize;
             if (enableDynamicGrid) {
@@ -859,7 +864,7 @@ async function runDCABacktest(params) {
 
             if (verbose) {
               transactionLog.push(
-                colorize(`  📈 Consecutive uptrend sell: lot profit req ${(lotProfitRequirement * 100).toFixed(2)}% (base ${(profitRequirement * 100).toFixed(2)}% + grid ${(gridSize * 100).toFixed(2)}%)`, 'cyan')
+                colorize(`  📈 Consecutive uptrend sell (count: ${consecutiveSellCount}): lot profit req ${(lotProfitRequirement * 100).toFixed(2)}% (base ${(profitRequirement * 100).toFixed(2)}% + grid ${(gridSize * 100).toFixed(2)}%)`, 'cyan')
               );
             }
           }
@@ -869,13 +874,20 @@ async function runDCABacktest(params) {
           const stopPrice = currentPrice * (1 - trailingSellPullbackPercent);
           const minProfitablePrice = averageCost * (1 + profitRequirement); // ✅ BASE for average cost
 
-          transactionLog.push(colorize(`DEBUG LOT SELECTION: currentPrice=${currentPrice.toFixed(2)}, stopPrice=${stopPrice.toFixed(2)}, baseProfitReq=${profitRequirement}, lotProfitReq=${lotProfitRequirement}, averageCost=${averageCost.toFixed(2)}, minProfitablePrice=${minProfitablePrice.toFixed(2)}`, 'cyan'));
+          // Reference price for profit requirement check
+          const referenceForProfit = isConsecutiveSell ? lastSellPrice : null;
+
+          transactionLog.push(colorize(`DEBUG LOT SELECTION: currentPrice=${currentPrice.toFixed(2)}, stopPrice=${stopPrice.toFixed(2)}, baseProfitReq=${profitRequirement}, lotProfitReq=${lotProfitRequirement}, averageCost=${averageCost.toFixed(2)}, minProfitablePrice=${minProfitablePrice.toFixed(2)}, isConsecutiveSell=${isConsecutiveSell}, lastSellPrice=${lastSellPrice ? lastSellPrice.toFixed(2) : 'null'}, consecutiveSellCount=${consecutiveSellCount}`, 'cyan'));
           transactionLog.push(colorize(`DEBUG ALL LOTS: ${lots.map(lot => `$${lot.price.toFixed(2)}`).join(', ')}`, 'cyan'));
 
           // Select lots that would be profitable to sell (meeting profit requirement)
-          const eligibleLots = lots.filter(lot => currentPrice > lot.price * (1 + lotProfitRequirement)); // 🔄 DYNAMIC for lot comparison
+          // Use lastSellPrice as reference if consecutive sell, otherwise use lot price
+          const eligibleLots = lots.filter(lot => {
+            let refPrice = isConsecutiveSell ? lastSellPrice : lot.price;
+            return currentPrice > refPrice * (1 + lotProfitRequirement);
+          });
 
-          transactionLog.push(colorize(`DEBUG ELIGIBLE LOTS: ${eligibleLots.map(lot => `$${lot.price.toFixed(2)}`).join(', ')} (${eligibleLots.length} eligible)`, 'cyan'));
+          transactionLog.push(colorize(`DEBUG ELIGIBLE LOTS: ${eligibleLots.map(lot => `$${lot.price.toFixed(2)}`).join(', ')} (${eligibleLots.length} eligible)${isConsecutiveSell ? `, using lastSellPrice=$${lastSellPrice.toFixed(2)} as reference` : ', using lot prices as reference'}`, 'cyan'));
 
           if (eligibleLots.length > 0) {
             const sortedEligibleLots = eligibleLots.sort((a, b) => b.price - a.price);
@@ -921,9 +933,12 @@ async function runDCABacktest(params) {
           const oldStopPrice = activeStop.stopPrice;
           const oldLimitPrice = activeStop.limitPrice;
 
+          // Determine if this is a consecutive sell scenario
+          const isConsecutiveSell = (lastSellPrice !== null && currentPrice > lastSellPrice);
+
           // Calculate lot-level profit requirement (same logic as activation)
           let lotProfitRequirement = profitRequirement; // Default to base
-          if (enableConsecutiveIncrementalSellProfit && lastActionType === 'sell' && lastSellPrice !== null && currentPrice > lastSellPrice) {
+          if (enableConsecutiveIncrementalSellProfit && isConsecutiveSell) {
             let gridSize;
             if (enableDynamicGrid) {
               gridSize = calculateDynamicGridSpacing(
@@ -939,7 +954,11 @@ async function runDCABacktest(params) {
           }
 
           // Recalculate lot selection with new stop price using profit requirement
-          const eligibleLots = lots.filter(lot => currentPrice > lot.price * (1 + lotProfitRequirement)); // 🔄 DYNAMIC
+          // Use lastSellPrice as reference if consecutive sell, otherwise use lot price
+          const eligibleLots = lots.filter(lot => {
+            let refPrice = isConsecutiveSell ? lastSellPrice : lot.price;
+            return currentPrice > refPrice * (1 + lotProfitRequirement);
+          });
 
           if (eligibleLots.length > 0) {
             const sortedEligibleLots = eligibleLots.sort((a, b) => b.price - a.price);
@@ -1247,6 +1266,13 @@ async function runDCABacktest(params) {
 
           // Update consecutive sell tracking state
           lastActionType = 'sell';
+
+          // Update consecutiveSellCount
+          if (lastSellPrice !== null && executionPrice > lastSellPrice) {
+            consecutiveSellCount++;
+          } else {
+            consecutiveSellCount = 1; // First sell or price declined
+          }
           lastSellPrice = executionPrice;
 
           // Reset consecutive buy tracking state (sell breaks the consecutive buy chain)
