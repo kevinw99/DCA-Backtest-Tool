@@ -1,17 +1,60 @@
-some  changes:
-1. To monitor the behavior of Incremental Grid Size for Consecutive Buys feature, please added the aborted buy
-event to "Enhanced Transaction History", Type = 'Aborted Buy', and the reason for aborting the buy, how it does not
- satisfy the condition for consecutive buy, e.g. price is not lower than last buy price, or it does not satisfy the
- increased grid size condition. Also in "Daily Transaction Log", explicit label the aborted buy event, so I can
- correlate it with the "Enhanced Transaction History" table.
-2. Do the same for Incremental Profit Requirement for Consecutive Sells feature, add Aborted Sell event to "Enhanced Transaction
- History" and "Daily Transaction Log", with reason for aborting the sell.
+1. good the aborted events shows on the the chart. However you can there are spike down at those aborted events on
+the Total P/L % curve, please fix it as there is no actual transaction, so it should not affect the P/L curve. 2.
+on parameter page, please move "Grid Consecutive Increment (%)" next to Enable Consecutive Incremental Buy Grid. 3.
+ on individual backtest result page, it seems "Grid Consecutive Increment (%)" is missing, please add it
+ conditionally next to "Enable Consecutive Incremental Buy Grid" if it is enabled.
 
-3. Price Chart with Transaction Markers: plot "Buy & Hold %" as a thin solid line, not dashed line.
-4. plot the 0% horizontal line in the Price Chart line as a thin solid line, not dashed line.
-5. plot the 'Aborted Buy' and 'Aborted Sell' events in the Price Chart with Transaction Markers chart, with
-different marker type and color. , use light green and light red color for the markers, so they are not too
-obtrusive.
+
+BUG!
+Without Beta scaling:, parameter are correct like Profit Requirement
+                                                  10.00%
+When applying beta scaling, it does 100x scale:
+Beta (Market Volatility)
+1.11
+
+Beta (Yahoo Finance):
+1.11
+Coefficient:
+0.50
+
+β-Factor:
+0.554
+= 1.11 × 0.50
+Yahoo Finance
+Updated: 9/30/2025
+Beta measures stock volatility vs. market:
+
+Beta = 1.0: Moves with market
+Beta > 1.0: More volatile than market
+Beta < 1.0: Less volatile than market
+Enable Beta Scaling
+Manual Override
+Parameter Adjustments (based on β-factor: 0.554)
+Some adjusted parameters are extreme. Consider manual override.
+Profit Requirement
+1000.00%
+→
+554.50%
+Grid Interval
+1000.00%
+→
+554.50%
+Trailing Buy Activation
+1000.00%
+→
+554.50%
+Trailing Buy Rebound
+500.00%
+→
+277.25%
+Trailing Sell Activation
+1000.00%
+→
+554.50%
+Trailing Sell Pullback
+0.00%
+→
+0.00%
 
 
 ~/AI/DCA-Claude-Kiro and ~/AI/DCA-Claude-Kiro/DCA-Claude-Kiro-b4IncrementalGrid are two worktree, should I move
