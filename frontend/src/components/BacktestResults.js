@@ -1140,6 +1140,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
               <div>Trailing Stop Sell</div>
               <div>Shares</div>
               <div>Grid Size</div>
+              <div>Profit Req</div>
               <div>Value</div>
               <div>Lots</div>
               <div>Avg Cost</div>
@@ -1184,6 +1185,11 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                   <div>
                     {transaction.type === 'TRAILING_STOP_LIMIT_BUY' && transaction.buyGridSize !== undefined
                       ? `${(transaction.buyGridSize * 100).toFixed(1)}%`
+                      : '-'}
+                  </div>
+                  <div>
+                    {transaction.type === 'SELL' && transaction.lotProfitRequirement !== undefined
+                      ? `${(transaction.lotProfitRequirement * 100).toFixed(1)}%`
                       : '-'}
                   </div>
                   <div>{formatCurrency(transaction.value)}</div>

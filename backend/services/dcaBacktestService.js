@@ -899,9 +899,13 @@ async function runDCABacktest(params) {
               recentBottomReference: recentBottom,
               triggerCondition: 'recent_bottom_10pct_rise',
               priceWhenOrderSet: currentPrice,  // Track the price when the trailing stop was first set
-              lastUpdatePrice: currentPrice  // Track the actual peak price when order was last updated
+              lastUpdatePrice: currentPrice,  // Track the actual peak price when order was last updated
+              lotProfitRequirement: lotProfitRequirement  // Store for transaction history
             };
             transactionLog.push(colorize(`  ACTION: TRAILING STOP SELL ACTIVATED - Stop: ${stopPrice.toFixed(2)}, Limit: ${limitPrice.toFixed(2)}, Triggered by ${(trailingSellActivationPercent * 100).toFixed(1)}% rise from bottom ${recentBottom.toFixed(2)} (Unrealized P&L: ${unrealizedPNL.toFixed(2)})`, 'yellow'));
+            if (enableConsecutiveIncrementalSellProfit && lotProfitRequirement !== profitRequirement) {
+              transactionLog.push(colorize(`  📈 CONSECUTIVE SELL: Lot profit requirement ${(lotProfitRequirement * 100).toFixed(2)}% (base ${(profitRequirement * 100).toFixed(2)}%)`, 'cyan'));
+            }
           }
         }
       }
@@ -950,9 +954,13 @@ async function runDCABacktest(params) {
             activeStop.lotsToSell = newLotsToSell; // Now supports multiple lots
             activeStop.highestPrice = currentPrice;
             activeStop.lastUpdatePrice = currentPrice;
+            activeStop.lotProfitRequirement = lotProfitRequirement; // Update for transaction history
 
             transactionLog.push(colorize(`  ACTION: TRAILING STOP SELL UPDATED from stop ${oldStopPrice.toFixed(2)} to ${newStopPrice.toFixed(2)}, limit ${oldLimitPrice.toFixed(2)} to ${newLimitPrice.toFixed(2)}, lots: ${newLotsToSell.map(lot => `$${lot.price.toFixed(2)}`).join(', ')} (High: ${currentPrice.toFixed(2)})`, 'cyan'));
             transactionLog.push(colorize(`  DEBUG: Updated eligible lots: ${eligibleLots.map(lot => `$${lot.price.toFixed(2)}`).join(', ')}, selected: ${newLotsToSell.map(lot => `$${lot.price.toFixed(2)}`).join(', ')}`, 'cyan'));
+            if (enableConsecutiveIncrementalSellProfit && lotProfitRequirement !== profitRequirement) {
+              transactionLog.push(colorize(`  📈 CONSECUTIVE SELL: Lot profit requirement ${(lotProfitRequirement * 100).toFixed(2)}% (base ${(profitRequirement * 100).toFixed(2)}%)`, 'cyan'));
+            }
           } else {
             // No eligible lots, cancel the stop
             activeStop = null;
@@ -1165,6 +1173,7 @@ async function runDCABacktest(params) {
               annualizedReturn: lotAnnualizedReturn, // Individual lot annualized return
               annualizedReturnPercent: lotAnnualizedReturn * 100,
               actualDaysHeld: actualDaysHeldForLot, // Individual lot holding period
+              lotProfitRequirement: activeStop.lotProfitRequirement || profitRequirement, // Profit requirement used for this sell
               ocoOrderDetail: null,
               trailingStopDetail: {
                 triggered: true,
@@ -1188,6 +1197,25 @@ async function runDCABacktest(params) {
           transactionLog.push(
             colorize(`  ACTION: TRAILING STOP SELL EXECUTED - ${lotsToSell.length} lots at ${executionPrice.toFixed(2)} (stop: ${stopPrice.toFixed(2)})`, 'red')
           );
+
+          // Log consecutive sell profit information if applicable
+          const lotProfitReq = activeStop.lotProfitRequirement || profitRequirement;
+          if (enableConsecutiveIncrementalSellProfit) {
+            if (lotProfitReq !== profitRequirement) {
+              transactionLog.push(
+                colorize(`  📈 CONSECUTIVE SELL PROFIT: Lot profit requirement was ${(lotProfitReq * 100).toFixed(2)}% (base ${(profitRequirement * 100).toFixed(2)}%)`, 'cyan')
+              );
+              if (lastSellPrice !== null) {
+                transactionLog.push(
+                  colorize(`  📊 Last sell price: $${lastSellPrice.toFixed(2)}, Current price: $${executionPrice.toFixed(2)}, Uptrend: ${((executionPrice / lastSellPrice - 1) * 100).toFixed(2)}%`, 'cyan')
+                );
+              }
+            } else {
+              transactionLog.push(
+                colorize(`  ℹ️  CONSECUTIVE SELL: Not in consecutive uptrend (using base profit req ${(profitRequirement * 100).toFixed(2)}%)`, 'cyan')
+              );
+            }
+          }
 
           // Log individual lot sales
           lotsToSell.forEach((soldLot, index) => {
