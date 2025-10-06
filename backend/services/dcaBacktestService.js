@@ -277,6 +277,51 @@ function calculateBuyAndHold(prices, initialCapital, avgCapitalForComparison = n
     shares: shares
   };
 }
+/**
+ * Calculate grid size for next buy based on consecutive buy count
+ *
+ * Formula: base_grid + (consecutive_count * increment)
+ * Only applies when both conditions are met:
+ * 1. Feature is enabled
+ * 2. Consecutive buy (last action was buy)
+ * 3. Price going down (currentBuyPrice < lastBuyPrice)
+ *
+ * @param {number} gridIntervalPercent - Base grid size (e.g., 0.10 for 10%)
+ * @param {number} gridConsecutiveIncrement - Increment per consecutive buy (e.g., 0.05 for 5%)
+ * @param {number} consecutiveBuyCount - Current consecutive buy count
+ * @param {number|null} lastBuyPrice - Price of last buy (null if no previous buy)
+ * @param {number} currentBuyPrice - Current potential buy price
+ * @param {boolean} enableConsecutiveIncrementalBuyGrid - Feature enabled?
+ * @returns {number} Grid size to use for next buy (as decimal, e.g., 0.10 for 10%)
+ */
+function calculateBuyGridSize(
+  gridIntervalPercent,
+  gridConsecutiveIncrement,
+  consecutiveBuyCount,
+  lastBuyPrice,
+  currentBuyPrice,
+  enableConsecutiveIncrementalBuyGrid
+) {
+  // Default to base grid size
+  let nextGridSize = gridIntervalPercent;
+
+  // Apply incremental spacing only if:
+  // 1. Feature is enabled
+  // 2. There was a previous buy (consecutiveBuyCount > 0)
+  // 3. Last buy price exists
+  // 4. Current buy price is lower than last buy price (downtrend)
+  if (
+    enableConsecutiveIncrementalBuyGrid &&
+    consecutiveBuyCount > 0 &&
+    lastBuyPrice !== null &&
+    currentBuyPrice < lastBuyPrice
+  ) {
+    // Formula: base_grid + (consecutive_count * increment)
+    nextGridSize = gridIntervalPercent + (consecutiveBuyCount * gridConsecutiveIncrement);
+  }
+
+  return nextGridSize;
+}
 
 /**
  * Core DCA Backtest Algorithm
@@ -309,6 +354,8 @@ async function runDCABacktest(params) {
     normalizeToReference = true, // Normalize first trade price to $100 reference
     dynamicGridMultiplier = 1.0, // Grid width multiplier (1.0 = ~10% at $100)
     enableConsecutiveIncrementalSellProfit = true, // Enable incremental profit req for consecutive uptrend sells
+    enableConsecutiveIncrementalBuyGrid = false, // Enable incremental grid spacing for consecutive downtrend buys
+    gridConsecutiveIncrement = 0.05, // Grid increment per consecutive buy (default 0.05 for 5%)
     enableScenarioDetection = true, // Enable scenario detection and analysis
     verbose = true
   } = params;
@@ -455,6 +502,13 @@ async function runDCABacktest(params) {
     let lastActionType = null; // 'buy' | 'sell' | null
     let lastSellPrice = null; // Price of last sell, or null
 
+    // Consecutive incremental buy grid tracking
+    let consecutiveBuyCount = 0; // Number of consecutive buys (0, 1, 2, 3, ...)
+    let lastBuyPrice = null; // Price of last buy, or null
+    let maxConsecutiveBuyCount = 0; // Track maximum consecutive buy count reached
+    let totalGridSizeUsed = 0; // Sum of all grid sizes used for buys
+    let totalBuysCount = 0; // Total number of buys executed
+
     // Questionable events monitoring
     const questionableEvents = [];
     const dailyTransactionTypes = new Map(); // Track transaction types per date
@@ -597,21 +651,71 @@ async function runDCABacktest(params) {
         if (currentPrice <= trailingStopBuy.recentPeakReference) {
           // Trailing stop buy triggered - check if we can execute
           if (lots.length < maxLots) {
+            // Calculate grid size for this buy FIRST (before validation)
+            const buyGridSize = calculateBuyGridSize(
+              gridIntervalPercent,
+              gridConsecutiveIncrement,
+              consecutiveBuyCount,
+              lastBuyPrice,
+              currentPrice,
+              enableConsecutiveIncrementalBuyGrid
+            );
+
+            if (verbose && enableConsecutiveIncrementalBuyGrid) {
+              transactionLog.push(colorize(`  DEBUG: Before spacing check - consecutiveBuyCount: ${consecutiveBuyCount}, buyGridSize: ${(buyGridSize * 100).toFixed(1)}%, enabledFlag: ${enableConsecutiveIncrementalBuyGrid}`, 'cyan'));
+            }
+
             // Calculate dynamic grid spacing for validation
-            const respectsGridSpacing = lots.every(lot => {
+            const respectsGridSpacing = lots.every((lot, index) => {
               const midPrice = (currentPrice + lot.price) / 2;
               const ref = referencePrice || midPrice; // Use midPrice if no reference yet
 
               let gridSize;
               if (enableDynamicGrid) {
                 gridSize = calculateDynamicGridSpacing(midPrice, ref, dynamicGridMultiplier, normalizeToReference);
+              } else if (enableConsecutiveIncrementalBuyGrid) {
+                // For consecutive incremental buy grid:
+                // - Check spacing from LAST buy (most recent) using buyGridSize
+                // - Check spacing from OTHER buys using base gridIntervalPercent
+                const isLastBuy = (index === lots.length - 1);
+                gridSize = isLastBuy ? buyGridSize : gridIntervalPercent;
               } else {
                 gridSize = gridIntervalPercent; // Legacy fixed percentage
               }
 
-              return Math.abs(currentPrice - lot.price) / lot.price >= gridSize;
+              const spacing = Math.abs(currentPrice - lot.price) / lot.price;
+              const meetsSpacing = spacing >= gridSize;
+
+              if (verbose && enableConsecutiveIncrementalBuyGrid) {
+                transactionLog.push(colorize(`    Lot #${index} at $${lot.price.toFixed(2)}: spacing=${(spacing*100).toFixed(1)}%, required=${(gridSize*100).toFixed(1)}%, isLast=${index === lots.length - 1}, passes=${meetsSpacing}`, 'cyan'));
+              }
+
+              return meetsSpacing;
             });
             if (respectsGridSpacing) {
+
+            // PRICE RESTRICTION CHECK:
+            // If lastBuyPrice exists, only allow buys at prices LOWER than last buy
+            // This applies regardless of consecutiveBuyCount value (even when count = 0)
+            // This prevents buying on uptrends during consecutive buy sequences
+            if (lastBuyPrice !== null && currentPrice >= lastBuyPrice) {
+              if (verbose) {
+                const countMsg = consecutiveBuyCount > 0 ? `count: ${consecutiveBuyCount}` : `count: 0`;
+                transactionLog.push(colorize(`  BLOCKED: Buy prevented - Price ${currentPrice.toFixed(2)} >= last buy ${lastBuyPrice.toFixed(2)} (${countMsg})`, 'yellow'));
+              }
+              // Cancel the trailing stop buy since we can't execute it
+              trailingStopBuy = null;
+              return false;
+            }
+
+            if (verbose && enableConsecutiveIncrementalBuyGrid) {
+              transactionLog.push(colorize(`  DEBUG: Consecutive Buy Grid - Count: ${consecutiveBuyCount}, Last Buy: ${lastBuyPrice ? lastBuyPrice.toFixed(2) : 'null'}, Grid Size: ${(buyGridSize * 100).toFixed(1)}%`, 'cyan'));
+            }
+
+            // Capture OLD average cost BEFORE executing this buy
+            // This is needed to determine if count should reset after buy
+            const oldAverageCost = averageCost;
+
             // Execute the trailing stop buy
             const shares = lotSizeUsd / currentPrice;
             lots.push({ price: currentPrice, shares: shares, date: currentDate });
@@ -628,7 +732,25 @@ async function runDCABacktest(params) {
             lastActionType = 'buy';
             lastSellPrice = null; // Reset on buy
 
+            // Update consecutive buy tracking state
+            consecutiveBuyCount++;
+            lastBuyPrice = currentPrice;
+            maxConsecutiveBuyCount = Math.max(maxConsecutiveBuyCount, consecutiveBuyCount);
+            totalGridSizeUsed += buyGridSize;
+            totalBuysCount++;
+
             averageCost = recalculateAverageCost();
+
+            // CHECK IF COUNT SHOULD RESET (but NOT lastBuyPrice):
+            // If this buy was at price >= old average cost, reset count to 0
+            // This allows next buy to use base grid, but still requires price < lastBuyPrice
+            if (oldAverageCost > 0 && currentPrice >= oldAverageCost) {
+              if (verbose) {
+                transactionLog.push(colorize(`  RESET: Consecutive buy count reset from ${consecutiveBuyCount} to 0 - Buy price ${currentPrice.toFixed(2)} >= old avg cost ${oldAverageCost.toFixed(2)} (lastBuyPrice kept at ${lastBuyPrice.toFixed(2)})`, 'cyan'));
+              }
+              consecutiveBuyCount = 0;
+              // Do NOT reset lastBuyPrice - keep it as the reference
+            }
 
             // Calculate P&L values after trailing stop buy
             const totalSharesHeldAfterBuy = lots.reduce((sum, lot) => sum + lot.shares, 0);
@@ -667,13 +789,20 @@ async function runDCABacktest(params) {
                 priceWhenOrderSet: trailingStopBuy.triggeredAt, // Price when trailing stop was triggered
                 lastUpdatePrice: trailingStopBuy.lastUpdatePrice, // Actual bottom price when order was last updated
                 executionPrice: currentPrice
-              }
+              },
+              // Consecutive incremental buy grid data
+              consecutiveBuyCount: consecutiveBuyCount, // Count AFTER this buy (1, 2, 3, ...)
+              buyGridSize: buyGridSize // Grid size used for this buy (decimal, e.g., 0.10 for 10%)
             });
 
             // Track this buy transaction for questionable event detection
             trackTransaction(currentDate, 'BUY', currentPrice, buyDetails);
 
-            transactionLog.push(colorize(`  ACTION: TRAILING STOP BUY EXECUTED at ${currentPrice.toFixed(2)} (stop: ${trailingStopBuy.stopPrice.toFixed(2)}). Lots: ${getLotsPrices(lots)}, New Avg Cost: ${averageCost.toFixed(2)}`, 'green'));
+            // Add consecutive buy grid info if enabled
+            const buyGridInfo = enableConsecutiveIncrementalBuyGrid
+              ? `, Consecutive Buy: ${consecutiveBuyCount}, Grid: ${(buyGridSize * 100).toFixed(1)}%`
+              : '';
+            transactionLog.push(colorize(`  ACTION: TRAILING STOP BUY EXECUTED at ${currentPrice.toFixed(2)} (stop: ${trailingStopBuy.stopPrice.toFixed(2)}). Lots: ${getLotsPrices(lots)}, New Avg Cost: ${averageCost.toFixed(2)}${buyGridInfo}`, 'green'));
 
             // Clear trailing stop buy and reset peak/bottom tracking
             trailingStopBuy = null;
@@ -772,7 +901,7 @@ async function runDCABacktest(params) {
               priceWhenOrderSet: currentPrice,  // Track the price when the trailing stop was first set
               lastUpdatePrice: currentPrice  // Track the actual peak price when order was last updated
             };
-            transactionLog.push(colorize(`  ACTION: TRAILING STOP SELL ACTIVATED - Stop: ${stopPrice.toFixed(2)}, Limit: ${limitPrice.toFixed(2)}, Triggered by 20% rise from bottom ${recentBottom.toFixed(2)} (Unrealized P&L: ${unrealizedPNL.toFixed(2)})`, 'yellow'));
+            transactionLog.push(colorize(`  ACTION: TRAILING STOP SELL ACTIVATED - Stop: ${stopPrice.toFixed(2)}, Limit: ${limitPrice.toFixed(2)}, Triggered by ${(trailingSellActivationPercent * 100).toFixed(1)}% rise from bottom ${recentBottom.toFixed(2)} (Unrealized P&L: ${unrealizedPNL.toFixed(2)})`, 'yellow'));
           }
         }
       }
@@ -916,6 +1045,9 @@ async function runDCABacktest(params) {
 
       // Update recent peak and bottom tracking
       updatePeakBottomTracking(currentPrice);
+
+      // NOTE: Consecutive buy count is ONLY reset on actual buy/sell execution
+      // Price movements alone do NOT trigger resets (per Spec #17 update)
 
       // Check if trailing stop sell should be activated (price rises 10% from recent bottom)
       checkTrailingStopSellActivation(currentPrice);
@@ -1088,6 +1220,14 @@ async function runDCABacktest(params) {
           // Update consecutive sell tracking state
           lastActionType = 'sell';
           lastSellPrice = executionPrice;
+
+          // Reset consecutive buy tracking state (sell breaks the consecutive buy chain)
+          // Both count and lastBuyPrice are reset to allow new buy cycle at any price
+          if (verbose && enableConsecutiveIncrementalBuyGrid && consecutiveBuyCount > 0) {
+            transactionLog.push(colorize(`  RESET: Consecutive buy count reset from ${consecutiveBuyCount} to 0 and lastBuyPrice reset to null after sell`, 'cyan'));
+          }
+          consecutiveBuyCount = 0;
+          lastBuyPrice = null;
 
           // Clear active stop and reset peak/bottom tracking after sell
           activeStop = null;
@@ -1377,6 +1517,14 @@ async function runDCABacktest(params) {
       enhancedTransactions: enhancedTransactions,
       questionableEvents: questionableEvents,
 
+      // Consecutive incremental buy grid statistics
+      consecutiveIncrementalBuyGridStats: {
+        enabled: enableConsecutiveIncrementalBuyGrid,
+        gridConsecutiveIncrement: gridConsecutiveIncrement,
+        maxConsecutiveBuyCount: maxConsecutiveBuyCount,
+        avgGridSizeUsed: totalBuysCount > 0 ? (totalGridSizeUsed / totalBuysCount) : gridIntervalPercent
+      },
+
       // Add comprehensive performance metrics
       performanceMetrics: performanceMetrics,
 
@@ -1398,6 +1546,8 @@ async function runDCABacktest(params) {
         normalizeToReference,
         dynamicGridMultiplier,
         enableConsecutiveIncrementalSellProfit,
+        enableConsecutiveIncrementalBuyGrid,
+        gridConsecutiveIncrement,
         enableScenarioDetection,
         enableAdaptiveStrategy: params.enableAdaptiveStrategy || false,
         adaptationCheckIntervalDays: params.adaptationCheckIntervalDays || 30,

@@ -36,6 +36,29 @@ The grid spacing increases **ONLY** when **BOTH** conditions are met:
 
 If either condition fails, reset to base grid size.
 
+### Consecutive Buy Restrictions
+
+**IMPORTANT**: These restrictions apply **regardless of whether `enableConsecutiveIncrementalBuyGrid` is enabled or disabled**.
+
+1. **Price restriction when `lastBuyPrice` exists (not null)**:
+   - Buy orders can **ONLY** execute when `currentPrice < lastBuyPrice`
+   - This applies whether `consecutiveBuyCount > 0` or `consecutiveBuyCount = 0`
+   - If price rises above or equals last buy price, the trailing stop buy is **canceled**
+
+2. **Consecutive buy count resets to 0 when**:
+   - **A.** A sell order executes
+     - Reset both `consecutiveBuyCount = 0` and `lastBuyPrice = null`
+   - **B.** A buy order executes at a price >= average cost of all held lots
+     - This buy must still respect **base grid spacing** from all existing lots
+     - After this buy executes, reset `consecutiveBuyCount = 0`
+     - **Keep `lastBuyPrice` unchanged** (do NOT reset to null)
+     - This allows next buy to use base grid, but still requires price < lastBuyPrice
+
+3. **After count reset (consecutiveBuyCount = 0)**:
+   - If `lastBuyPrice = null` (after sell): Next buy can execute at any price (only grid spacing required)
+   - If `lastBuyPrice` is kept (after buy >= avg cost): Next buy still requires price < lastBuyPrice
+   - Grid size always uses base grid when count = 0
+
 ## Detailed Requirements
 
 ### 1. Configuration
@@ -64,14 +87,66 @@ Track the following variables during backtest:
 - **`consecutiveBuyCount`**: number
   - Initialized to `0` at start
   - Incremented after each buy execution
-  - Reset to `0` after any sell execution
+  - Reset to `0` when:
+    - A sell order executes, OR
+    - Price rises above average cost of all held lots
 
 - **`lastBuyPrice`**: number | null
   - Initialized to `null` at start
   - Updated to the buy price after every buy execution
-  - Used to determine if current buy price is lower
+  - Reset to `null` when consecutiveBuyCount is reset
+  - Used to enforce consecutive buy price restriction (buy only when currentPrice < lastBuyPrice)
 
 ### 3. Grid Size Calculation Logic
+
+#### Price Restriction Check Before Buy Execution
+
+**CRITICAL**: Before executing any buy order, check price restrictions:
+
+```javascript
+// PRICE RESTRICTION CHECK
+// If lastBuyPrice exists, only allow buys when price < lastBuyPrice
+// This applies regardless of consecutiveBuyCount value
+if (lastBuyPrice !== null && currentPrice >= lastBuyPrice) {
+  // Block the buy and cancel trailing stop buy
+  if (verbose) {
+    const countMsg = consecutiveBuyCount > 0 ? `count: ${consecutiveBuyCount}` : `count: 0`;
+    log(`BLOCKED: Buy prevented - Price ${currentPrice} >= last buy ${lastBuyPrice} (${countMsg})`);
+  }
+  cancelTrailingStopBuy();
+  return false; // Do not execute buy
+}
+```
+
+#### Reset Consecutive Buy Count
+
+Reset **ONLY** when:
+
+**A. After sell execution:**
+
+```javascript
+// After sell executes
+consecutiveBuyCount = 0;
+lastBuyPrice = null;
+```
+
+**B. After buy execution at price >= average cost:**
+
+```javascript
+// After buy executes, check if we need to reset count
+// IMPORTANT: Get OLD average cost BEFORE this buy was added
+const oldAverageCost = calculateOldAverageCost(); // Before current buy
+
+if (oldAverageCost > 0 && currentBuyPrice >= oldAverageCost) {
+  // This buy was at or above average cost
+  // Reset consecutive count but KEEP lastBuyPrice
+  consecutiveBuyCount = 0;
+  // Do NOT reset lastBuyPrice - keep the reference
+  // Log the reset
+}
+```
+
+**IMPORTANT**: Do NOT reset based on price movements alone. Only reset when an actual buy or sell executes.
 
 #### Calculate Dynamic Grid Size
 
@@ -92,9 +167,10 @@ if (
 
 **Reset conditions** (nextGridSize = gridIntervalPercent):
 
-- No previous buy (first buy)
-- Last action was a sell
-- Current buy price ≥ last buy price (price not declining)
+- No previous buy (first buy, consecutiveBuyCount = 0)
+- Last action was a sell (consecutiveBuyCount reset to 0)
+- Previous buy was at or above average cost (consecutiveBuyCount reset to 0)
+- Current buy price ≥ last buy price (price not declining - incremental grid not applicable)
 
 #### Calculate Next Buy Price
 
@@ -165,13 +241,53 @@ const nextBuyPrice = currentBuyPrice * (1 - nextGridSize);
 - Consecutive count increments only when buy executes
 - Grid resets to base after a sell (step 7)
 
-#### Example 3: Feature Disabled
+#### Example 3: Consecutive Buy Restrictions
+
+**Configuration**:
+
+- `gridIntervalPercent`: 0.10 (10%)
+- `gridConsecutiveIncrement`: 0.05 (5%)
+- `enableConsecutiveIncrementalBuyGrid`: true
+
+**Scenario**: Downtrend followed by price recovery
+
+| Day | Event              | Price | Avg Cost | Last Buy | Consecutive | Action                              | Reason                                           |
+| --- | ------------------ | ----- | -------- | -------- | ----------- | ----------------------------------- | ------------------------------------------------ |
+| 1   | First buy          | $100  | $100     | null     | 0→1         | BUY                                 | First buy (count=0)                              |
+| 2   | Price drops        | $90   | $100     | $100     | 1→2         | BUY                                 | $90 < $100 (last buy), grid met                  |
+| 3   | Price drops        | $76   | $88.67   | $90      | 2→3         | BUY                                 | $76 < $90 (last buy), grid met                   |
+| 4   | Price rises        | $80   | $88.67   | $76      | 3           | BLOCKED                             | $80 >= $76 (last buy), consecutive mode          |
+| 5   | Price rises        | $85   | $88.67   | $76      | 3           | BLOCKED                             | $85 >= $76 (last buy), consecutive mode          |
+| 6   | Price rises        | $92   | $88.67   | $76      | 3           | BLOCKED                             | $92 >= $76 (last buy), consecutive mode          |
+| 7   | Price rises        | $95   | $88.67   | $76      | 3           | BLOCKED                             | $95 >= $76 (last buy), consecutive mode          |
+| 8   | Trailing stop hits | $93   | $88.67   | $76      | 3→0         | BUY, RESET (count to 0)             | $93 >= $88.67 (avg), count→0, lastBuy stays $76  |
+| 9   | Price drops        | $88   | $90.25   | $76      | 0           | BLOCKED                             | $88 >= $76 (last buy), still in consecutive mode |
+| 10  | Price drops        | $75   | $90.25   | $76      | 0→1         | BUY                                 | $75 < $76 (last buy), count=0 so base grid       |
+| 11  | Price drops        | $68   | $84.00   | $75      | 1→2         | BUY                                 | $68 < $75 (last buy), incremental grid applies   |
+| 12  | Sell executes      | $85   | varies   | $68      | 2→0         | SELL, RESET (count & lastBuy to 0)  | Sell resets both count and lastBuyPrice to null  |
+| 13  | New buy cycle      | $80   | varies   | null     | 0→1         | BUY (if trailing stop buy triggers) | Count=0, lastBuy=null, no price restrictions     |
+
+**Key observations**:
+
+- Days 4-7: Buys blocked because price rose above last buy price ($76) during consecutive mode
+- Day 8: Buy at $93 (>= avg cost $88.67), count resets to 0, but lastBuyPrice stays $76
+- Day 9: Still blocked because $88 >= $76 (lastBuyPrice not reset)
+- Day 10: Buy allowed at $75 < $76, uses base grid (count=0)
+- Day 11: Incremental grid resumes (count=1, so 15% grid for next buy)
+- Day 12: Sell resets BOTH count and lastBuyPrice to null
+- Day 13: After sell, no price restrictions (lastBuyPrice is null)
+
+#### Example 4: Feature Disabled
 
 **Configuration**:
 
 - `enableConsecutiveIncrementalBuyGrid`: false
 
-**Result**: All buys use fixed 10% grid spacing regardless of consecutive count
+**Result**:
+
+- All buys use fixed 10% grid spacing regardless of consecutive count
+- **Consecutive buy restrictions still apply** (price < lastBuyPrice during consecutive mode)
+- Consecutive count still tracked and reset on sell or when buy executes at price >= average cost
 
 ## Implementation Requirements
 
@@ -183,10 +299,12 @@ const nextBuyPrice = currentBuyPrice * (1 - nextGridSize);
 
 2. **Update DCA backtest service** (`dcaBacktestService.js`):
    - Add state tracking: `consecutiveBuyCount`, `lastBuyPrice`
+   - Implement consecutive buy price restriction (block buy if price >= lastBuyPrice during consecutive mode)
+   - Implement consecutive buy reset logic (reset when price rises above average cost)
    - Implement grid size calculation logic before buy execution
    - Update buy logic to use dynamic grid size
-   - Update transaction logging to show grid size used
-   - Reset consecutive count on sell
+   - Update transaction logging to show grid size used and consecutive buy resets
+   - Reset consecutive count on sell execution
 
 3. **Validation** (`backend/middleware/validation.js`):
    - `enableConsecutiveIncrementalBuyGrid`: boolean, optional
@@ -223,19 +341,26 @@ const nextBuyPrice = currentBuyPrice * (1 - nextGridSize);
 ## Success Criteria
 
 1. **Correct calculation**: Grid size = base + (count × increment) only when conditions met
-2. **Proper resets**: Resets to base on sell or when price not declining
-3. **Performance improvement**: Better capital deployment during extended downtrends
-4. **Backward compatibility**: Can be disabled to reproduce legacy behavior
-5. **Clear logging**: Transaction logs show grid size used for each buy
-6. **UI integration**: Parameter easily configurable in both single and batch modes
+2. **Proper resets**:
+   - Count resets to 0 on sell (also resets lastBuyPrice to null)
+   - Count resets to 0 on buy >= avg cost (keeps lastBuyPrice)
+   - Price movements alone do NOT trigger resets
+3. **Price restrictions enforced**: Buys only execute when price < lastBuyPrice (when lastBuyPrice exists)
+4. **Performance improvement**: Better capital deployment during extended downtrends
+5. **Backward compatibility**: Can be disabled to reproduce legacy behavior
+6. **Clear logging**: Transaction logs show grid size used for each buy and reset events
+7. **UI integration**: Parameter easily configurable in both single and batch modes
 
 ## Edge Cases
 
-1. **First buy of backtest**: Uses base grid (consecutive count = 0)
-2. **All lots sold**: Resets consecutive count to 0
-3. **Price rebounds during downtrend**: Resets to base grid
-4. **Very high consecutive count**: Grid size can grow very large (consider max cap?)
-5. **Trailing stop buy cancellation**: Does not affect consecutive count
+1. **First buy of backtest**: Uses base grid (count = 0, lastBuyPrice = null), can execute at any price
+2. **All lots sold**: Resets count to 0 and lastBuyPrice to null, next buy can execute at any price
+3. **Buy executes at price >= average cost**: Resets count to 0 but KEEPS lastBuyPrice, next buy must still be < lastBuyPrice
+4. **Price rebounds above average cost (no buy)**: NO reset occurs, count and lastBuyPrice unchanged
+5. **Price rises above lastBuyPrice (with or without count)**: Trailing stop buy is canceled, no buy executes
+6. **Very high consecutive count**: Grid size can grow very large (consider max cap?)
+7. **Average cost = 0**: Skip buy-price-vs-avg-cost reset check (no positions held)
+8. **Consecutive buy blocked multiple times**: Each day the check runs and cancels the trailing stop buy if needed
 
 ## Testing Strategy
 

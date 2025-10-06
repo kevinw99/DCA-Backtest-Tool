@@ -117,6 +117,8 @@ function validateDCABacktestParams(req, res, next) {
       maxLots,
       profitRequirement,
       gridIntervalPercent,
+      gridConsecutiveIncrement,
+      enableConsecutiveIncrementalBuyGrid,
       trailingBuyActivationPercent,
       trailingBuyReboundPercent,
       trailingSellActivationPercent,
@@ -147,6 +149,14 @@ function validateDCABacktestParams(req, res, next) {
     validatePercentage(trailingBuyReboundPercent, 'trailingBuyReboundPercent');
     validatePercentage(trailingSellActivationPercent, 'trailingSellActivationPercent');
     validatePercentage(trailingSellPullbackPercent, 'trailingSellPullbackPercent');
+
+    // Validate consecutive incremental buy grid parameters (optional)
+    if (gridConsecutiveIncrement !== undefined) {
+      validatePercentage(gridConsecutiveIncrement, 'gridConsecutiveIncrement', false);
+    }
+    if (enableConsecutiveIncrementalBuyGrid !== undefined && typeof enableConsecutiveIncrementalBuyGrid !== 'boolean') {
+      throw new Error('enableConsecutiveIncrementalBuyGrid must be boolean');
+    }
 
     console.log('✅ Validation passed');
     next();

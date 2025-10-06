@@ -674,7 +674,8 @@ class URLParameterManager {
       'trailingSellActivationPercent', 'trailingSellPullbackPercent',
       'trailingShortActivationPercent', 'trailingShortPullbackPercent',
       'trailingCoverActivationPercent', 'trailingCoverReboundPercent',
-      'hardStopLossPercent', 'portfolioStopLossPercent', 'cascadeStopLossPercent'
+      'hardStopLossPercent', 'portfolioStopLossPercent', 'cascadeStopLossPercent',
+      'gridConsecutiveIncrement'
     ];
 
     const numberParams = [
@@ -686,7 +687,8 @@ class URLParameterManager {
     const booleanParams = [
       'enableBetaScaling', 'isManualBetaOverride',
       'enableConsecutiveIncremental', 'enableDynamicGrid',
-      'normalizeToReference', 'enableConsecutiveIncrementalSellProfit'
+      'normalizeToReference', 'enableConsecutiveIncrementalSellProfit',
+      'enableConsecutiveIncrementalBuyGrid'
     ];
 
     const stringParams = ['symbol', 'startDate', 'endDate', 'strategyMode', 'source'];

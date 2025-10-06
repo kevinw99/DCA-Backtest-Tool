@@ -28,19 +28,900 @@ branch and commit history??
 You mentioned file like frontend/src/components/DCABacktestForm.js is large, should we refactor it into smaller
 files?
 
-I want to make some changes to the spec.
-0 you can use Spec documents (.kiro/specs-old/consecutive-incremental-grid-size/) as reference, but create a new
-spec under .kiro/specs/consecutive-incremental-buy-grid-size/, there would be some changes.
-1. change Config parameter (enableConsecutiveIncremental) to enableConsecutiveIncrementalBuyGrid
-2. enableConsecutiveIncrementalBuyGrid only apply when buy price goes lower than the prior buy price, otherwise it is
-reset to base grid size.
-3 no need to call generate_sequence function, just use this simple formula: next_consecutive_buy_grid_size = base_grid_size + ith *
- grid_consecutive_increment
-where ith is the consecutive buy count, starting from 0, grid_consecutive_increment is a new parameter, default to
-5%, add it to the parameter set, and handle the same way as other parameters in both single and batch mode, like in
- default config, or in URL parameters , UI etc.
+
+Need to make one more change to doc and code:
+When it is consecutive buy,  only price lower than the last buy price can trigger a new buy.
+If price rises above the last buy price, then no buy can be triggered. Only one of these 2 condition can reset
+consecutive buy count to 0.
+A. there is a sell
+B. price rises above the average cost of all lots held.
+Once consecutive buy count is reset to 0, then next buy can be at any price as long as other conditions are met.
+
+This is true regardelss whether  Consecutive Incremental Buy Grid is Enabled or disabled.
 
 
+--- 2021-09-10 ---
+Price: 31.27      | R.PNL: 0          | U.PNL: 0          | T.PNL: 0          | Holdings: []
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 32.83, Triggered by 5.0% drop from peak 33.20[0m
+--- 2021-09-13 ---
+Price: 30.51      | R.PNL: 0          | U.PNL: 0          | T.PNL: 0          | Holdings: []
+[34m  ACTION: TRAILING STOP BUY UPDATED from 32.83 to 32.04 (Price: 30.51)[0m
+--- 2021-09-14 ---
+Price: 29.97      | R.PNL: 0          | U.PNL: 0          | T.PNL: 0          | Holdings: []
+[34m  ACTION: TRAILING STOP BUY UPDATED from 32.04 to 31.47 (Price: 29.97)[0m
+--- 2021-09-15 ---
+Price: 29.37      | R.PNL: 0          | U.PNL: 0          | T.PNL: 0          | Holdings: []
+[34m  ACTION: TRAILING STOP BUY UPDATED from 31.47 to 30.84 (Price: 29.37)[0m
+--- 2021-09-16 ---
+Price: 29.14      | R.PNL: 0          | U.PNL: 0          | T.PNL: 0          | Holdings: []
+[34m  ACTION: TRAILING STOP BUY UPDATED from 30.84 to 30.60 (Price: 29.14)[0m
+--- 2021-09-20 ---
+Price: 27.05      | R.PNL: 0          | U.PNL: 0          | T.PNL: 0          | Holdings: []
+[34m  ACTION: TRAILING STOP BUY UPDATED from 30.60 to 28.40 (Price: 27.05)[0m
+--- 2021-09-23 ---
+Price: 28.63      | R.PNL: 0          | U.PNL: 0          | T.PNL: 0          | Holdings: []
+[32m  ACTION: TRAILING STOP BUY EXECUTED at 28.63 (stop: 28.40). Lots: [28.63], New Avg Cost: 28.63, Consecutive Buy: 1, Grid: 10.0%[0m
+[36m  ACTION: Reset peak/bottom tracking - Peak: 28.63, Bottom: 28.63[0m
+--- 2021-09-27 ---
+Price: 29.13      | R.PNL: 0          | U.PNL: 175        | T.PNL: 175        | Holdings: [28.63]
+[36mDEBUG LOT SELECTION: currentPrice=29.13, stopPrice=29.13, baseProfitReq=0.05, lotProfitReq=0.05, averageCost=28.63, minProfitablePrice=30.06[0m
+[36mDEBUG ALL LOTS: $28.63[0m
+[36mDEBUG ELIGIBLE LOTS:  (0 eligible)[0m
+--- 2021-09-29 ---
+Price: 27.37      | R.PNL: 0          | U.PNL: -440       | T.PNL: -440       | Holdings: [28.63]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 28.74, Triggered by 5.0% drop from peak 29.13[0m
+--- 2021-09-30 ---
+Price: 29.00      | R.PNL: 0          | U.PNL: 129        | T.PNL: 129        | Holdings: [28.63]
+[36mDEBUG LOT SELECTION: currentPrice=29.00, stopPrice=29.00, baseProfitReq=0.05, lotProfitReq=0.05, averageCost=28.63, minProfitablePrice=30.06[0m
+[36mDEBUG ALL LOTS: $28.63[0m
+[36mDEBUG ELIGIBLE LOTS:  (0 eligible)[0m
+[33m  INFO: TRAILING STOP BUY blocked at 29.00 - violates grid spacing rule[0m
+--- 2021-10-01 ---
+Price: 27.36      | R.PNL: 0          | U.PNL: -444       | T.PNL: -444       | Holdings: [28.63]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 28.74 to 28.73 (Price: 27.36)[0m
+--- 2021-10-04 ---
+Price: 25.55      | R.PNL: 0          | U.PNL: -1076      | T.PNL: -1076      | Holdings: [28.63]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 28.73 to 26.83 (Price: 25.55)[0m
+--- 2021-10-07 ---
+Price: 27.46      | R.PNL: 0          | U.PNL: -409       | T.PNL: -409       | Holdings: [28.63]
+[33m  INFO: TRAILING STOP BUY blocked at 27.46 - violates grid spacing rule[0m
+--- 2021-10-08 ---
+Price: 27.68      | R.PNL: 0          | U.PNL: -332       | T.PNL: -332       | Holdings: [28.63]
+[33m  INFO: TRAILING STOP BUY blocked at 27.68 - violates grid spacing rule[0m
+--- 2021-10-11 ---
+Price: 27.71      | R.PNL: 0          | U.PNL: -321       | T.PNL: -321       | Holdings: [28.63]
+[33m  INFO: TRAILING STOP BUY blocked at 27.71 - violates grid spacing rule[0m
+--- 2021-10-13 ---
+Price: 28.50      | R.PNL: 0          | U.PNL: -45        | T.PNL: -45        | Holdings: [28.63]
+[33m  INFO: TRAILING STOP BUY blocked at 28.50 - violates grid spacing rule[0m
+--- 2021-10-14 ---
+Price: 27.72      | R.PNL: 0          | U.PNL: -318       | T.PNL: -318       | Holdings: [28.63]
+[33m  INFO: TRAILING STOP BUY blocked at 27.72 - violates grid spacing rule[0m
+--- 2021-10-15 ---
+Price: 28.00      | R.PNL: 0          | U.PNL: -220       | T.PNL: -220       | Holdings: [28.63]
+[33m  INFO: TRAILING STOP BUY blocked at 28.00 - violates grid spacing rule[0m
+--- 2021-10-18 ---
+Price: 27.07      | R.PNL: 0          | U.PNL: -545       | T.PNL: -545       | Holdings: [28.63]
+[33m  INFO: TRAILING STOP BUY blocked at 27.07 - violates grid spacing rule[0m
+--- 2021-10-20 ---
+Price: 27.72      | R.PNL: 0          | U.PNL: -318       | T.PNL: -318       | Holdings: [28.63]
+[33m  INFO: TRAILING STOP BUY blocked at 27.72 - violates grid spacing rule[0m
+--- 2021-10-21 ---
+Price: 28.13      | R.PNL: 0          | U.PNL: -175       | T.PNL: -175       | Holdings: [28.63]
+[33m  INFO: TRAILING STOP BUY blocked at 28.13 - violates grid spacing rule[0m
+--- 2021-10-22 ---
+Price: 27.40      | R.PNL: 0          | U.PNL: -430       | T.PNL: -430       | Holdings: [28.63]
+[33m  INFO: TRAILING STOP BUY blocked at 27.40 - violates grid spacing rule[0m
+--- 2021-10-25 ---
+Price: 27.00      | R.PNL: 0          | U.PNL: -569       | T.PNL: -569       | Holdings: [28.63]
+[33m  INFO: TRAILING STOP BUY blocked at 27.00 - violates grid spacing rule[0m
+--- 2021-10-27 ---
+Price: 24.70      | R.PNL: 0          | U.PNL: -1373      | T.PNL: -1373      | Holdings: [28.63]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 26.83 to 25.94 (Price: 24.70)[0m
+--- 2021-10-28 ---
+Price: 24.05      | R.PNL: 0          | U.PNL: -1600      | T.PNL: -1600      | Holdings: [28.63]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 25.94 to 25.25 (Price: 24.05)[0m
+--- 2021-10-29 ---
+Price: 21.80      | R.PNL: 0          | U.PNL: -2386      | T.PNL: -2386      | Holdings: [28.63]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 25.25 to 22.89 (Price: 21.80)[0m
+--- 2021-11-01 ---
+Price: 23.78      | R.PNL: 0          | U.PNL: -1694      | T.PNL: -1694      | Holdings: [28.63]
+[32m  ACTION: TRAILING STOP BUY EXECUTED at 23.78 (stop: 22.89). Lots: [28.63, 23.78], New Avg Cost: 25.98, Consecutive Buy: 1, Grid: 10.0%[0m
+[36m  ACTION: Reset peak/bottom tracking - Peak: 23.78, Bottom: 23.78[0m
+--- 2021-11-03 ---
+Price: 22.53      | R.PNL: 0          | U.PNL: -2656      | T.PNL: -2656      | Holdings: [28.63, 23.78]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 23.66, Triggered by 5.0% drop from peak 23.78[0m
+--- 2021-11-04 ---
+Price: 22.32      | R.PNL: 0          | U.PNL: -2818      | T.PNL: -2818      | Holdings: [28.63, 23.78]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 23.66 to 23.44 (Price: 22.32)[0m
+--- 2021-11-05 ---
+Price: 22.01      | R.PNL: 0          | U.PNL: -3057      | T.PNL: -3057      | Holdings: [28.63, 23.78]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 23.44 to 23.11 (Price: 22.01)[0m
+--- 2021-11-08 ---
+Price: 23.78      | R.PNL: 0          | U.PNL: -1694      | T.PNL: -1694      | Holdings: [28.63, 23.78]
+[33m  INFO: TRAILING STOP BUY blocked at 23.78 - violates grid spacing rule[0m
+--- 2021-11-09 ---
+Price: 23.25      | R.PNL: 0          | U.PNL: -2102      | T.PNL: -2102      | Holdings: [28.63, 23.78]
+[33m  INFO: TRAILING STOP BUY blocked at 23.25 - violates grid spacing rule[0m
+--- 2021-11-11 ---
+Price: 25.18      | R.PNL: 0          | U.PNL: -616       | T.PNL: -616       | Holdings: [28.63, 23.78]
+[33m  ACTION: TRAILING STOP BUY CANCELLED - Price 25.18 > limit price 23.78 (peak)[0m
+--- 2021-11-12 ---
+Price: 26.37      | R.PNL: 0          | U.PNL: 300        | T.PNL: 300        | Holdings: [28.63, 23.78]
+[36mDEBUG LOT SELECTION: currentPrice=26.37, stopPrice=26.37, baseProfitReq=0.05, lotProfitReq=0.05, averageCost=25.98, minProfitablePrice=27.28[0m
+[36mDEBUG ALL LOTS: $28.63, $23.78[0m
+[36mDEBUG ELIGIBLE LOTS: $23.78 (1 eligible)[0m
+[36mDEBUG SELECTED LOTS: $23.78 (1 of 1 eligible, max 1)[0m
+[33m  ACTION: TRAILING STOP SELL ACTIVATED - Stop: 26.37, Limit: 25.05, Triggered by 20% rise from bottom 22.01 (Unrealized P&L: 299.77)[0m
+[33m  ACTION: TRAILING STOP CANCELLED - Price 26.37 <= min profitable price 27.28 (avg cost 25.98, profit requirement 5.0%, stop was 26.37)[0m
+--- 2021-11-15 ---
+Price: 26.37      | R.PNL: 0          | U.PNL: 300        | T.PNL: 300        | Holdings: [28.63, 23.78]
+[36mDEBUG LOT SELECTION: currentPrice=26.37, stopPrice=26.37, baseProfitReq=0.05, lotProfitReq=0.05, averageCost=25.98, minProfitablePrice=27.28[0m
+[36mDEBUG ALL LOTS: $28.63, $23.78[0m
+[36mDEBUG ELIGIBLE LOTS: $23.78 (1 eligible)[0m
+[36mDEBUG SELECTED LOTS: $23.78 (1 of 1 eligible, max 1)[0m
+[33m  ACTION: TRAILING STOP SELL ACTIVATED - Stop: 26.37, Limit: 25.05, Triggered by 20% rise from bottom 22.01 (Unrealized P&L: 299.77)[0m
+[33m  ACTION: TRAILING STOP CANCELLED - Price 26.37 <= min profitable price 27.28 (avg cost 25.98, profit requirement 5.0%, stop was 26.37)[0m
+--- 2021-11-16 ---
+Price: 26.04      | R.PNL: 0          | U.PNL: 46         | T.PNL: 46         | Holdings: [28.63, 23.78]
+[36mDEBUG LOT SELECTION: currentPrice=26.04, stopPrice=26.04, baseProfitReq=0.05, lotProfitReq=0.05, averageCost=25.98, minProfitablePrice=27.28[0m
+[36mDEBUG ALL LOTS: $28.63, $23.78[0m
+[36mDEBUG ELIGIBLE LOTS: $23.78 (1 eligible)[0m
+[36mDEBUG SELECTED LOTS: $23.78 (1 of 1 eligible, max 1)[0m
+[33m  ACTION: TRAILING STOP SELL ACTIVATED - Stop: 26.04, Limit: 24.74, Triggered by 20% rise from bottom 22.01 (Unrealized P&L: 45.73)[0m
+[33m  ACTION: TRAILING STOP CANCELLED - Price 26.04 <= min profitable price 27.28 (avg cost 25.98, profit requirement 5.0%, stop was 26.04)[0m
+--- 2021-11-17 ---
+Price: 24.97      | R.PNL: 0          | U.PNL: -778       | T.PNL: -778       | Holdings: [28.63, 23.78]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 26.22, Triggered by 5.0% drop from peak 26.37[0m
+--- 2021-11-18 ---
+Price: 23.53      | R.PNL: 0          | U.PNL: -1886      | T.PNL: -1886      | Holdings: [28.63, 23.78]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 26.22 to 24.71 (Price: 23.53)[0m
+--- 2021-11-19 ---
+Price: 22.70      | R.PNL: 0          | U.PNL: -2525      | T.PNL: -2525      | Holdings: [28.63, 23.78]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 24.71 to 23.84 (Price: 22.70)[0m
+--- 2021-11-22 ---
+Price: 22.01      | R.PNL: 0          | U.PNL: -3057      | T.PNL: -3057      | Holdings: [28.63, 23.78]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 23.84 to 23.11 (Price: 22.01)[0m
+--- 2021-11-23 ---
+Price: 20.88      | R.PNL: 0          | U.PNL: -3926      | T.PNL: -3926      | Holdings: [28.63, 23.78]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 23.11 to 21.92 (Price: 20.88)[0m
+--- 2021-11-24 ---
+Price: 20.43      | R.PNL: 0          | U.PNL: -4273      | T.PNL: -4273      | Holdings: [28.63, 23.78]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 21.92 to 21.45 (Price: 20.43)[0m
+--- 2021-11-26 ---
+Price: 20.36      | R.PNL: 0          | U.PNL: -4327      | T.PNL: -4327      | Holdings: [28.63, 23.78]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 21.45 to 21.38 (Price: 20.36)[0m
+--- 2021-12-01 ---
+Price: 18.92      | R.PNL: 0          | U.PNL: -5435      | T.PNL: -5435      | Holdings: [28.63, 23.78]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 21.38 to 19.87 (Price: 18.92)[0m
+--- 2021-12-02 ---
+Price: 18.42      | R.PNL: 0          | U.PNL: -5820      | T.PNL: -5820      | Holdings: [28.63, 23.78]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 19.87 to 19.34 (Price: 18.42)[0m
+--- 2021-12-03 ---
+Price: 16.83      | R.PNL: 0          | U.PNL: -7044      | T.PNL: -7044      | Holdings: [28.63, 23.78]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 19.34 to 17.67 (Price: 16.83)[0m
+--- 2021-12-07 ---
+Price: 18.99      | R.PNL: 0          | U.PNL: -5381      | T.PNL: -5381      | Holdings: [28.63, 23.78]
+[32m  ACTION: TRAILING STOP BUY EXECUTED at 18.99 (stop: 17.67). Lots: [28.63, 23.78, 18.99], New Avg Cost: 23.14, Consecutive Buy: 1, Grid: 10.0%[0m
+[36m  ACTION: Reset peak/bottom tracking - Peak: 18.99, Bottom: 18.99[0m
+--- 2021-12-13 ---
+Price: 17.32      | R.PNL: 0          | U.PNL: -7546      | T.PNL: -7546      | Holdings: [28.63, 23.78, 18.99]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 18.19, Triggered by 5.0% drop from peak 18.99[0m
+--- 2021-12-14 ---
+Price: 17.13      | R.PNL: 0          | U.PNL: -7793      | T.PNL: -7793      | Holdings: [28.63, 23.78, 18.99]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 18.19 to 17.99 (Price: 17.13)[0m
+--- 2021-12-15 ---
+Price: 16.53      | R.PNL: 0          | U.PNL: -8571      | T.PNL: -8571      | Holdings: [28.63, 23.78, 18.99]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 17.99 to 17.36 (Price: 16.53)[0m
+--- 2021-12-16 ---
+Price: 16.01      | R.PNL: 0          | U.PNL: -9245      | T.PNL: -9245      | Holdings: [28.63, 23.78, 18.99]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 17.36 to 16.81 (Price: 16.01)[0m
+--- 2021-12-17 ---
+Price: 17.17      | R.PNL: 0          | U.PNL: -7741      | T.PNL: -7741      | Holdings: [28.63, 23.78, 18.99]
+[33m  INFO: TRAILING STOP BUY blocked at 17.17 - violates grid spacing rule[0m
+--- 2021-12-20 ---
+Price: 15.93      | R.PNL: 0          | U.PNL: -9348      | T.PNL: -9348      | Holdings: [28.63, 23.78, 18.99]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 16.81 to 16.73 (Price: 15.93)[0m
+--- 2021-12-21 ---
+Price: 16.89      | R.PNL: 0          | U.PNL: -8104      | T.PNL: -8104      | Holdings: [28.63, 23.78, 18.99]
+[33m  INFO: TRAILING STOP BUY blocked at 16.89 - violates grid spacing rule[0m
+--- 2021-12-22 ---
+Price: 16.92      | R.PNL: 0          | U.PNL: -8065      | T.PNL: -8065      | Holdings: [28.63, 23.78, 18.99]
+[33m  INFO: TRAILING STOP BUY blocked at 16.92 - violates grid spacing rule[0m
+--- 2021-12-28 ---
+Price: 15.92      | R.PNL: 0          | U.PNL: -9361      | T.PNL: -9361      | Holdings: [28.63, 23.78, 18.99]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 16.73 to 16.72 (Price: 15.92)[0m
+--- 2021-12-29 ---
+Price: 14.79      | R.PNL: 0          | U.PNL: -10826     | T.PNL: -10826     | Holdings: [28.63, 23.78, 18.99]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 16.72 to 15.53 (Price: 14.79)[0m
+--- 2021-12-30 ---
+Price: 16.94      | R.PNL: 0          | U.PNL: -8039      | T.PNL: -8039      | Holdings: [28.63, 23.78, 18.99]
+[33m  INFO: TRAILING STOP BUY blocked at 16.94 - violates grid spacing rule[0m
+--- 2021-12-31 ---
+Price: 16.21      | R.PNL: 0          | U.PNL: -8985      | T.PNL: -8985      | Holdings: [28.63, 23.78, 18.99]
+[33m  INFO: TRAILING STOP BUY blocked at 16.21 - violates grid spacing rule[0m
+--- 2022-01-03 ---
+Price: 15.79      | R.PNL: 0          | U.PNL: -9530      | T.PNL: -9530      | Holdings: [28.63, 23.78, 18.99]
+[33m  INFO: TRAILING STOP BUY blocked at 15.79 - violates grid spacing rule[0m
+--- 2022-01-04 ---
+Price: 14.75      | R.PNL: 0          | U.PNL: -10878     | T.PNL: -10878     | Holdings: [28.63, 23.78, 18.99]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 15.53 to 15.49 (Price: 14.75)[0m
+--- 2022-01-05 ---
+Price: 13.94      | R.PNL: 0          | U.PNL: -11928     | T.PNL: -11928     | Holdings: [28.63, 23.78, 18.99]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 15.49 to 14.64 (Price: 13.94)[0m
+--- 2022-01-11 ---
+Price: 14.80      | R.PNL: 0          | U.PNL: -10813     | T.PNL: -10813     | Holdings: [28.63, 23.78, 18.99]
+[32m  ACTION: TRAILING STOP BUY EXECUTED at 14.80 (stop: 14.64). Lots: [28.63, 23.78, 18.99, 14.80], New Avg Cost: 20.28, Consecutive Buy: 2, Grid: 20.0%[0m
+[36m  ACTION: Reset peak/bottom tracking - Peak: 14.80, Bottom: 14.80[0m
+--- 2022-01-13 ---
+Price: 13.72      | R.PNL: 0          | U.PNL: -12943     | T.PNL: -12943     | Holdings: [28.63, 23.78, 18.99, 14.80]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 14.41, Triggered by 5.0% drop from peak 15.36[0m
+--- 2022-01-14 ---
+Price: 13.42      | R.PNL: 0          | U.PNL: -13535     | T.PNL: -13535     | Holdings: [28.63, 23.78, 18.99, 14.80]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 14.41 to 14.09 (Price: 13.42)[0m
+--- 2022-01-18 ---
+Price: 12.47      | R.PNL: 0          | U.PNL: -15408     | T.PNL: -15408     | Holdings: [28.63, 23.78, 18.99, 14.80]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 14.09 to 13.09 (Price: 12.47)[0m
+--- 2022-01-19 ---
+Price: 12.16      | R.PNL: 0          | U.PNL: -16020     | T.PNL: -16020     | Holdings: [28.63, 23.78, 18.99, 14.80]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 13.09 to 12.77 (Price: 12.16)[0m
+--- 2022-01-21 ---
+Price: 11.61      | R.PNL: 0          | U.PNL: -17104     | T.PNL: -17104     | Holdings: [28.63, 23.78, 18.99, 14.80]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 12.77 to 12.19 (Price: 11.61)[0m
+--- 2022-01-24 ---
+Price: 11.10      | R.PNL: 0          | U.PNL: -18110     | T.PNL: -18110     | Holdings: [28.63, 23.78, 18.99, 14.80]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 12.19 to 11.66 (Price: 11.10)[0m
+--- 2022-01-25 ---
+Price: 10.37      | R.PNL: 0          | U.PNL: -19550     | T.PNL: -19550     | Holdings: [28.63, 23.78, 18.99, 14.80]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 11.66 to 10.89 (Price: 10.37)[0m
+--- 2022-01-26 ---
+Price: 9.77       | R.PNL: 0          | U.PNL: -20733     | T.PNL: -20733     | Holdings: [28.63, 23.78, 18.99, 14.80]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 10.89 to 10.26 (Price: 9.77)[0m
+--- 2022-01-27 ---
+Price: 9.29       | R.PNL: 0          | U.PNL: -21679     | T.PNL: -21679     | Holdings: [28.63, 23.78, 18.99, 14.80]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 10.26 to 9.75 (Price: 9.29)[0m
+--- 2022-01-31 ---
+Price: 11.43      | R.PNL: 0          | U.PNL: -17459     | T.PNL: -17459     | Holdings: [28.63, 23.78, 18.99, 14.80]
+[33m  INFO: TRAILING STOP BUY blocked at 11.43 - violates grid spacing rule[0m
+--- 2022-02-01 ---
+Price: 11.28      | R.PNL: 0          | U.PNL: -17755     | T.PNL: -17755     | Holdings: [28.63, 23.78, 18.99, 14.80]
+[33m  INFO: TRAILING STOP BUY blocked at 11.28 - violates grid spacing rule[0m
+--- 2022-02-02 ---
+Price: 10.60      | R.PNL: 0          | U.PNL: -19096     | T.PNL: -19096     | Holdings: [28.63, 23.78, 18.99, 14.80]
+[33m  INFO: TRAILING STOP BUY blocked at 10.60 - violates grid spacing rule[0m
+--- 2022-02-03 ---
+Price: 10.27      | R.PNL: 0          | U.PNL: -19747     | T.PNL: -19747     | Holdings: [28.63, 23.78, 18.99, 14.80]
+[32m  ACTION: TRAILING STOP BUY EXECUTED at 10.27 (stop: 9.75). Lots: [28.63, 23.78, 18.99, 14.80, 10.27], New Avg Cost: 16.97, Consecutive Buy: 3, Grid: 30.0%[0m
+[36m  ACTION: Reset peak/bottom tracking - Peak: 10.27, Bottom: 10.27[0m
+--- 2022-02-11 ---
+Price: 10.82      | R.PNL: 0          | U.PNL: -18127     | T.PNL: -18127     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 11.36, Triggered by 5.0% drop from peak 11.59[0m
+--- 2022-02-14 ---
+Price: 10.74      | R.PNL: 0          | U.PNL: -18362     | T.PNL: -18362     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 11.36 to 11.28 (Price: 10.74)[0m
+--- 2022-02-17 ---
+Price: 10.43      | R.PNL: 0          | U.PNL: -19275     | T.PNL: -19275     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 11.28 to 10.95 (Price: 10.43)[0m
+--- 2022-02-18 ---
+Price: 8.94       | R.PNL: 0          | U.PNL: -23665     | T.PNL: -23665     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 10.95 to 9.39 (Price: 8.94)[0m
+--- 2022-02-22 ---
+Price: 10.02      | R.PNL: 0          | U.PNL: -20483     | T.PNL: -20483     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[33m  INFO: TRAILING STOP BUY blocked at 10.02 - violates grid spacing rule[0m
+--- 2022-02-23 ---
+Price: 10.76      | R.PNL: 0          | U.PNL: -18303     | T.PNL: -18303     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[33m  INFO: TRAILING STOP BUY blocked at 10.76 - violates grid spacing rule[0m
+--- 2022-03-02 ---
+Price: 11.18      | R.PNL: 0          | U.PNL: -17066     | T.PNL: -17066     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 11.74, Triggered by 5.0% drop from peak 12.08[0m
+--- 2022-03-03 ---
+Price: 11.09      | R.PNL: 0          | U.PNL: -17331     | T.PNL: -17331     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 11.74 to 11.64 (Price: 11.09)[0m
+--- 2022-03-04 ---
+Price: 9.97       | R.PNL: 0          | U.PNL: -20631     | T.PNL: -20631     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 11.64 to 10.47 (Price: 9.97)[0m
+--- 2022-03-07 ---
+Price: 9.61       | R.PNL: 0          | U.PNL: -21691     | T.PNL: -21691     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 10.47 to 10.09 (Price: 9.61)[0m
+--- 2022-03-09 ---
+Price: 11.13      | R.PNL: 0          | U.PNL: -17213     | T.PNL: -17213     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[33m  INFO: TRAILING STOP BUY blocked at 11.13 - violates grid spacing rule[0m
+--- 2022-03-11 ---
+Price: 8.26       | R.PNL: 0          | U.PNL: -25668     | T.PNL: -25668     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 10.09 to 8.67 (Price: 8.26)[0m
+--- 2022-03-14 ---
+Price: 6.57       | R.PNL: 0          | U.PNL: -30646     | T.PNL: -30646     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 8.67 to 6.90 (Price: 6.57)[0m
+--- 2022-03-15 ---
+Price: 7.07       | R.PNL: 0          | U.PNL: -29173     | T.PNL: -29173     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[33m  INFO: TRAILING STOP BUY blocked at 7.07 - violates grid spacing rule[0m
+--- 2022-03-16 ---
+Price: 10.41      | R.PNL: 0          | U.PNL: -19334     | T.PNL: -19334     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[33m  INFO: TRAILING STOP BUY blocked at 10.41 - violates grid spacing rule[0m
+--- 2022-03-17 ---
+Price: 9.80       | R.PNL: 0          | U.PNL: -21131     | T.PNL: -21131     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[33m  INFO: TRAILING STOP BUY blocked at 9.80 - violates grid spacing rule[0m
+--- 2022-03-18 ---
+Price: 11.09      | R.PNL: 0          | U.PNL: -17331     | T.PNL: -17331     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[33m  INFO: TRAILING STOP BUY blocked at 11.09 - violates grid spacing rule[0m
+--- 2022-03-21 ---
+Price: 10.72      | R.PNL: 0          | U.PNL: -18421     | T.PNL: -18421     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[33m  INFO: TRAILING STOP BUY blocked at 10.72 - violates grid spacing rule[0m
+--- 2022-03-22 ---
+Price: 11.29      | R.PNL: 0          | U.PNL: -16742     | T.PNL: -16742     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[33m  INFO: TRAILING STOP BUY blocked at 11.29 - violates grid spacing rule[0m
+--- 2022-03-24 ---
+Price: 11.37      | R.PNL: 0          | U.PNL: -16506     | T.PNL: -16506     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 11.94, Triggered by 5.0% drop from peak 12.08[0m
+--- 2022-03-25 ---
+Price: 10.37      | R.PNL: 0          | U.PNL: -19452     | T.PNL: -19452     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 11.94 to 10.89 (Price: 10.37)[0m
+--- 2022-03-29 ---
+Price: 11.05      | R.PNL: 0          | U.PNL: -17449     | T.PNL: -17449     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[33m  INFO: TRAILING STOP BUY blocked at 11.05 - violates grid spacing rule[0m
+--- 2022-03-31 ---
+Price: 9.94       | R.PNL: 0          | U.PNL: -20719     | T.PNL: -20719     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 10.89 to 10.44 (Price: 9.94)[0m
+--- 2022-04-04 ---
+Price: 11.11      | R.PNL: 0          | U.PNL: -17272     | T.PNL: -17272     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[33m  INFO: TRAILING STOP BUY blocked at 11.11 - violates grid spacing rule[0m
+--- 2022-04-06 ---
+Price: 9.61       | R.PNL: 0          | U.PNL: -21691     | T.PNL: -21691     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 10.44 to 10.09 (Price: 9.61)[0m
+--- 2022-04-07 ---
+Price: 9.01       | R.PNL: 0          | U.PNL: -23458     | T.PNL: -23458     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 10.09 to 9.46 (Price: 9.01)[0m
+--- 2022-04-08 ---
+Price: 8.92       | R.PNL: 0          | U.PNL: -23724     | T.PNL: -23724     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 9.46 to 9.37 (Price: 8.92)[0m
+--- 2022-04-11 ---
+Price: 8.81       | R.PNL: 0          | U.PNL: -24048     | T.PNL: -24048     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 9.37 to 9.25 (Price: 8.81)[0m
+--- 2022-04-12 ---
+Price: 8.24       | R.PNL: 0          | U.PNL: -25727     | T.PNL: -25727     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 9.25 to 8.65 (Price: 8.24)[0m
+--- 2022-04-14 ---
+Price: 7.85       | R.PNL: 0          | U.PNL: -26876     | T.PNL: -26876     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 8.65 to 8.24 (Price: 7.85)[0m
+--- 2022-04-18 ---
+Price: 7.10       | R.PNL: 0          | U.PNL: -29085     | T.PNL: -29085     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 8.24 to 7.45 (Price: 7.10)[0m
+--- 2022-04-20 ---
+Price: 6.96       | R.PNL: 0          | U.PNL: -29497     | T.PNL: -29497     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 7.45 to 7.31 (Price: 6.96)[0m
+--- 2022-04-21 ---
+Price: 6.85       | R.PNL: 0          | U.PNL: -29821     | T.PNL: -29821     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 7.31 to 7.19 (Price: 6.85)[0m
+--- 2022-04-22 ---
+Price: 6.80       | R.PNL: 0          | U.PNL: -29969     | T.PNL: -29969     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 7.19 to 7.14 (Price: 6.80)[0m
+--- 2022-04-26 ---
+Price: 6.71       | R.PNL: 0          | U.PNL: -30234     | T.PNL: -30234     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 7.14 to 7.05 (Price: 6.71)[0m
+--- 2022-04-29 ---
+Price: 7.37       | R.PNL: 0          | U.PNL: -28290     | T.PNL: -28290     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[33m  INFO: TRAILING STOP BUY blocked at 7.37 - violates grid spacing rule[0m
+--- 2022-05-02 ---
+Price: 7.21       | R.PNL: 0          | U.PNL: -28761     | T.PNL: -28761     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[33m  INFO: TRAILING STOP BUY blocked at 7.21 - violates grid spacing rule[0m
+--- 2022-05-03 ---
+Price: 7.64       | R.PNL: 0          | U.PNL: -27494     | T.PNL: -27494     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[33m  INFO: TRAILING STOP BUY blocked at 7.64 - violates grid spacing rule[0m
+--- 2022-05-04 ---
+Price: 7.61       | R.PNL: 0          | U.PNL: -27583     | T.PNL: -27583     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[33m  INFO: TRAILING STOP BUY blocked at 7.61 - violates grid spacing rule[0m
+--- 2022-05-05 ---
+Price: 7.10       | R.PNL: 0          | U.PNL: -29085     | T.PNL: -29085     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[33m  INFO: TRAILING STOP BUY blocked at 7.10 - violates grid spacing rule[0m
+--- 2022-05-06 ---
+Price: 6.67       | R.PNL: 0          | U.PNL: -30352     | T.PNL: -30352     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 7.05 to 7.00 (Price: 6.67)[0m
+--- 2022-05-09 ---
+Price: 6.24       | R.PNL: 0          | U.PNL: -31618     | T.PNL: -31618     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 7.00 to 6.55 (Price: 6.24)[0m
+--- 2022-05-10 ---
+Price: 6.20       | R.PNL: 0          | U.PNL: -31736     | T.PNL: -31736     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 6.55 to 6.51 (Price: 6.20)[0m
+--- 2022-05-11 ---
+Price: 5.90       | R.PNL: 0          | U.PNL: -32620     | T.PNL: -32620     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 6.51 to 6.20 (Price: 5.90)[0m
+--- 2022-05-13 ---
+Price: 6.61       | R.PNL: 0          | U.PNL: -30528     | T.PNL: -30528     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[33m  INFO: TRAILING STOP BUY blocked at 6.61 - violates grid spacing rule[0m
+--- 2022-05-16 ---
+Price: 6.70       | R.PNL: 0          | U.PNL: -30263     | T.PNL: -30263     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[33m  INFO: TRAILING STOP BUY blocked at 6.70 - violates grid spacing rule[0m
+--- 2022-05-17 ---
+Price: 7.16       | R.PNL: 0          | U.PNL: -28908     | T.PNL: -28908     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[33m  INFO: TRAILING STOP BUY blocked at 7.16 - violates grid spacing rule[0m
+--- 2022-05-18 ---
+Price: 6.73       | R.PNL: 0          | U.PNL: -30175     | T.PNL: -30175     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[33m  INFO: TRAILING STOP BUY blocked at 6.73 - violates grid spacing rule[0m
+--- 2022-05-19 ---
+Price: 6.99       | R.PNL: 0          | U.PNL: -29409     | T.PNL: -29409     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[33m  INFO: TRAILING STOP BUY blocked at 6.99 - violates grid spacing rule[0m
+--- 2022-05-20 ---
+Price: 6.99       | R.PNL: 0          | U.PNL: -29409     | T.PNL: -29409     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[33m  INFO: TRAILING STOP BUY blocked at 6.99 - violates grid spacing rule[0m
+--- 2022-05-23 ---
+Price: 6.70       | R.PNL: 0          | U.PNL: -30263     | T.PNL: -30263     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[33m  INFO: TRAILING STOP BUY blocked at 6.70 - violates grid spacing rule[0m
+--- 2022-05-24 ---
+Price: 5.38       | R.PNL: 0          | U.PNL: -34152     | T.PNL: -34152     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 6.20 to 5.65 (Price: 5.38)[0m
+--- 2022-05-26 ---
+Price: 5.82       | R.PNL: 0          | U.PNL: -32856     | T.PNL: -32856     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27]
+[32m  ACTION: TRAILING STOP BUY EXECUTED at 5.82 (stop: 5.65). Lots: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82], New Avg Cost: 12.86, Consecutive Buy: 4, Grid: 40.0%[0m
+[36m  ACTION: Reset peak/bottom tracking - Peak: 5.82, Bottom: 5.82[0m
+--- 2022-06-03 ---
+Price: 5.89       | R.PNL: 0          | U.PNL: -32529     | T.PNL: -32529     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 6.18, Triggered by 5.0% drop from peak 6.26[0m
+--- 2022-06-06 ---
+Price: 6.65       | R.PNL: 0          | U.PNL: -28984     | T.PNL: -28984     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  ACTION: TRAILING STOP BUY CANCELLED - Price 6.65 > limit price 6.26 (peak)[0m
+--- 2022-06-09 ---
+Price: 6.93       | R.PNL: 0          | U.PNL: -27679     | T.PNL: -27679     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 7.28, Triggered by 5.0% drop from peak 7.55[0m
+--- 2022-06-10 ---
+Price: 6.59       | R.PNL: 0          | U.PNL: -29264     | T.PNL: -29264     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 7.28 to 6.92 (Price: 6.59)[0m
+--- 2022-06-13 ---
+Price: 5.88       | R.PNL: 0          | U.PNL: -32576     | T.PNL: -32576     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 6.92 to 6.17 (Price: 5.88)[0m
+--- 2022-06-14 ---
+Price: 6.68       | R.PNL: 0          | U.PNL: -28845     | T.PNL: -28845     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 7.01, Triggered by 5.0% drop from peak 7.55[0m
+--- 2022-06-15 ---
+Price: 6.53       | R.PNL: 0          | U.PNL: -29544     | T.PNL: -29544     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 7.01 to 6.86 (Price: 6.53)[0m
+--- 2022-06-16 ---
+Price: 6.30       | R.PNL: 0          | U.PNL: -30617     | T.PNL: -30617     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 6.86 to 6.62 (Price: 6.30)[0m
+--- 2022-06-21 ---
+Price: 6.97       | R.PNL: 0          | U.PNL: -27492     | T.PNL: -27492     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 7.32, Triggered by 5.0% drop from peak 7.55[0m
+--- 2022-06-22 ---
+Price: 6.63       | R.PNL: 0          | U.PNL: -29078     | T.PNL: -29078     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 7.32 to 6.96 (Price: 6.63)[0m
+--- 2022-06-28 ---
+Price: 7.13       | R.PNL: 0          | U.PNL: -26746     | T.PNL: -26746     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 7.49, Triggered by 5.0% drop from peak 7.55[0m
+--- 2022-06-29 ---
+Price: 6.72       | R.PNL: 0          | U.PNL: -28658     | T.PNL: -28658     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 7.49 to 7.06 (Price: 6.72)[0m
+--- 2022-06-30 ---
+Price: 6.57       | R.PNL: 0          | U.PNL: -29358     | T.PNL: -29358     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 7.06 to 6.90 (Price: 6.57)[0m
+--- 2022-07-01 ---
+Price: 6.53       | R.PNL: 0          | U.PNL: -29544     | T.PNL: -29544     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 6.90 to 6.86 (Price: 6.53)[0m
+--- 2022-07-05 ---
+Price: 6.47       | R.PNL: 0          | U.PNL: -29824     | T.PNL: -29824     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 6.86 to 6.79 (Price: 6.47)[0m
+--- 2022-07-06 ---
+Price: 6.32       | R.PNL: 0          | U.PNL: -30524     | T.PNL: -30524     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 6.79 to 6.64 (Price: 6.32)[0m
+--- 2022-07-08 ---
+Price: 6.23       | R.PNL: 0          | U.PNL: -30943     | T.PNL: -30943     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 6.64 to 6.54 (Price: 6.23)[0m
+--- 2022-07-11 ---
+Price: 5.97       | R.PNL: 0          | U.PNL: -32156     | T.PNL: -32156     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 6.54 to 6.27 (Price: 5.97)[0m
+--- 2022-07-12 ---
+Price: 5.90       | R.PNL: 0          | U.PNL: -32482     | T.PNL: -32482     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 6.27 to 6.20 (Price: 5.90)[0m
+--- 2022-07-13 ---
+Price: 5.62       | R.PNL: 0          | U.PNL: -33788     | T.PNL: -33788     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 6.20 to 5.90 (Price: 5.62)[0m
+--- 2022-07-14 ---
+Price: 4.96       | R.PNL: 0          | U.PNL: -36867     | T.PNL: -36867     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 5.90 to 5.21 (Price: 4.96)[0m
+--- 2022-07-19 ---
+Price: 5.31       | R.PNL: 0          | U.PNL: -35234     | T.PNL: -35234     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 5.31 - violates grid spacing rule[0m
+--- 2022-07-20 ---
+Price: 5.30       | R.PNL: 0          | U.PNL: -35281     | T.PNL: -35281     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 5.30 - violates grid spacing rule[0m
+--- 2022-07-21 ---
+Price: 5.36       | R.PNL: 0          | U.PNL: -35001     | T.PNL: -35001     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 5.36 - violates grid spacing rule[0m
+--- 2022-07-29 ---
+Price: 4.91       | R.PNL: 0          | U.PNL: -37100     | T.PNL: -37100     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 5.21 to 5.16 (Price: 4.91)[0m
+--- 2022-08-01 ---
+Price: 4.76       | R.PNL: 0          | U.PNL: -37799     | T.PNL: -37799     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 5.16 to 5.00 (Price: 4.76)[0m
+--- 2022-08-02 ---
+Price: 5.10       | R.PNL: 0          | U.PNL: -36214     | T.PNL: -36214     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 5.10 - violates grid spacing rule[0m
+--- 2022-08-03 ---
+Price: 5.37       | R.PNL: 0          | U.PNL: -34954     | T.PNL: -34954     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 5.37 - violates grid spacing rule[0m
+--- 2022-08-04 ---
+Price: 5.34       | R.PNL: 0          | U.PNL: -35094     | T.PNL: -35094     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 5.34 - violates grid spacing rule[0m
+--- 2022-08-05 ---
+Price: 5.20       | R.PNL: 0          | U.PNL: -35747     | T.PNL: -35747     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 5.20 - violates grid spacing rule[0m
+--- 2022-08-08 ---
+Price: 5.07       | R.PNL: 0          | U.PNL: -36354     | T.PNL: -36354     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 5.07 - violates grid spacing rule[0m
+--- 2022-08-10 ---
+Price: 5.03       | R.PNL: 0          | U.PNL: -36540     | T.PNL: -36540     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 5.03 - violates grid spacing rule[0m
+--- 2022-08-11 ---
+Price: 5.12       | R.PNL: 0          | U.PNL: -36120     | T.PNL: -36120     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 5.12 - violates grid spacing rule[0m
+--- 2022-08-12 ---
+Price: 4.73       | R.PNL: 0          | U.PNL: -37939     | T.PNL: -37939     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 5.00 to 4.97 (Price: 4.73)[0m
+--- 2022-08-16 ---
+Price: 4.50       | R.PNL: 0          | U.PNL: -39012     | T.PNL: -39012     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 4.97 to 4.73 (Price: 4.50)[0m
+--- 2022-08-17 ---
+Price: 4.34       | R.PNL: 0          | U.PNL: -39758     | T.PNL: -39758     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 4.73 to 4.56 (Price: 4.34)[0m
+--- 2022-08-19 ---
+Price: 4.20       | R.PNL: 0          | U.PNL: -40411     | T.PNL: -40411     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 4.56 to 4.41 (Price: 4.20)[0m
+--- 2022-08-22 ---
+Price: 4.05       | R.PNL: 0          | U.PNL: -41111     | T.PNL: -41111     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 4.41 to 4.25 (Price: 4.05)[0m
+--- 2022-08-23 ---
+Price: 3.86       | R.PNL: 0          | U.PNL: -41997     | T.PNL: -41997     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 4.25 to 4.05 (Price: 3.86)[0m
+--- 2022-08-25 ---
+Price: 4.55       | R.PNL: 0          | U.PNL: -38779     | T.PNL: -38779     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 4.55 - violates grid spacing rule[0m
+--- 2022-08-26 ---
+Price: 4.44       | R.PNL: 0          | U.PNL: -39292     | T.PNL: -39292     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 4.44 - violates grid spacing rule[0m
+--- 2022-08-29 ---
+Price: 4.14       | R.PNL: 0          | U.PNL: -40691     | T.PNL: -40691     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 4.14 - violates grid spacing rule[0m
+--- 2022-08-30 ---
+Price: 4.10       | R.PNL: 0          | U.PNL: -40878     | T.PNL: -40878     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 4.10 - violates grid spacing rule[0m
+--- 2022-08-31 ---
+Price: 4.14       | R.PNL: 0          | U.PNL: -40691     | T.PNL: -40691     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 4.14 - violates grid spacing rule[0m
+--- 2022-09-01 ---
+Price: 4.20       | R.PNL: 0          | U.PNL: -40411     | T.PNL: -40411     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 4.20 - violates grid spacing rule[0m
+--- 2022-09-06 ---
+Price: 3.80       | R.PNL: 0          | U.PNL: -42277     | T.PNL: -42277     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 4.05 to 3.99 (Price: 3.80)[0m
+--- 2022-09-07 ---
+Price: 4.00       | R.PNL: 0          | U.PNL: -41344     | T.PNL: -41344     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 4.00 - violates grid spacing rule[0m
+--- 2022-09-08 ---
+Price: 4.15       | R.PNL: 0          | U.PNL: -40644     | T.PNL: -40644     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 4.15 - violates grid spacing rule[0m
+--- 2022-09-09 ---
+Price: 4.51       | R.PNL: 0          | U.PNL: -38965     | T.PNL: -38965     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 4.51 - violates grid spacing rule[0m
+--- 2022-09-12 ---
+Price: 4.65       | R.PNL: 0          | U.PNL: -38312     | T.PNL: -38312     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 4.65 - violates grid spacing rule[0m
+--- 2022-09-13 ---
+Price: 4.32       | R.PNL: 0          | U.PNL: -39852     | T.PNL: -39852     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 4.32 - violates grid spacing rule[0m
+--- 2022-09-14 ---
+Price: 4.27       | R.PNL: 0          | U.PNL: -40085     | T.PNL: -40085     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 4.27 - violates grid spacing rule[0m
+--- 2022-09-15 ---
+Price: 4.15       | R.PNL: 0          | U.PNL: -40644     | T.PNL: -40644     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 4.15 - violates grid spacing rule[0m
+--- 2022-09-16 ---
+Price: 4.01       | R.PNL: 0          | U.PNL: -41297     | T.PNL: -41297     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 4.01 - violates grid spacing rule[0m
+--- 2022-09-19 ---
+Price: 4.08       | R.PNL: 0          | U.PNL: -40971     | T.PNL: -40971     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 4.08 - violates grid spacing rule[0m
+--- 2022-09-20 ---
+Price: 4.09       | R.PNL: 0          | U.PNL: -40924     | T.PNL: -40924     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 4.09 - violates grid spacing rule[0m
+--- 2022-09-23 ---
+Price: 4.05       | R.PNL: 0          | U.PNL: -41111     | T.PNL: -41111     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 4.05 - violates grid spacing rule[0m
+--- 2022-09-27 ---
+Price: 4.01       | R.PNL: 0          | U.PNL: -41297     | T.PNL: -41297     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 4.01 - violates grid spacing rule[0m
+--- 2022-09-28 ---
+Price: 4.00       | R.PNL: 0          | U.PNL: -41344     | T.PNL: -41344     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 4.00 - violates grid spacing rule[0m
+--- 2022-09-30 ---
+Price: 3.63       | R.PNL: 0          | U.PNL: -43070     | T.PNL: -43070     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 3.99 to 3.81 (Price: 3.63)[0m
+--- 2022-10-03 ---
+Price: 3.98       | R.PNL: 0          | U.PNL: -41437     | T.PNL: -41437     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 3.98 - violates grid spacing rule[0m
+--- 2022-10-04 ---
+Price: 4.22       | R.PNL: 0          | U.PNL: -40318     | T.PNL: -40318     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 4.22 - violates grid spacing rule[0m
+--- 2022-10-05 ---
+Price: 3.90       | R.PNL: 0          | U.PNL: -41810     | T.PNL: -41810     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 3.90 - violates grid spacing rule[0m
+--- 2022-10-07 ---
+Price: 3.41       | R.PNL: 0          | U.PNL: -44096     | T.PNL: -44096     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 3.81 to 3.58 (Price: 3.41)[0m
+--- 2022-10-10 ---
+Price: 2.96       | R.PNL: 0          | U.PNL: -46195     | T.PNL: -46195     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 3.58 to 3.11 (Price: 2.96)[0m
+--- 2022-10-13 ---
+Price: 2.95       | R.PNL: 0          | U.PNL: -46241     | T.PNL: -46241     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 3.11 to 3.10 (Price: 2.95)[0m
+--- 2022-10-14 ---
+Price: 2.82       | R.PNL: 0          | U.PNL: -46848     | T.PNL: -46848     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 3.10 to 2.96 (Price: 2.82)[0m
+--- 2022-10-17 ---
+Price: 3.23       | R.PNL: 0          | U.PNL: -44935     | T.PNL: -44935     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 3.23 - violates grid spacing rule[0m
+--- 2022-10-18 ---
+Price: 3.35       | R.PNL: 0          | U.PNL: -44376     | T.PNL: -44376     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 3.35 - violates grid spacing rule[0m
+--- 2022-10-19 ---
+Price: 3.12       | R.PNL: 0          | U.PNL: -45448     | T.PNL: -45448     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 3.12 - violates grid spacing rule[0m
+--- 2022-10-20 ---
+Price: 3.14       | R.PNL: 0          | U.PNL: -45355     | T.PNL: -45355     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 3.14 - violates grid spacing rule[0m
+--- 2022-10-21 ---
+Price: 3.16       | R.PNL: 0          | U.PNL: -45262     | T.PNL: -45262     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[33m  INFO: TRAILING STOP BUY blocked at 3.16 - violates grid spacing rule[0m
+--- 2022-10-24 ---
+Price: 2.57       | R.PNL: 0          | U.PNL: -48014     | T.PNL: -48014     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 2.96 to 2.70 (Price: 2.57)[0m
+--- 2022-10-25 ---
+Price: 2.79       | R.PNL: 0          | U.PNL: -46987     | T.PNL: -46987     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82]
+[32m  ACTION: TRAILING STOP BUY EXECUTED at 2.79 (stop: 2.70). Lots: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79], New Avg Cost: 8.49, Consecutive Buy: 5, Grid: 50.0%[0m
+[36m  ACTION: Reset peak/bottom tracking - Peak: 2.79, Bottom: 2.79[0m
+--- 2022-10-28 ---
+Price: 2.70       | R.PNL: 0          | U.PNL: -47730     | T.PNL: -47730     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 2.84, Triggered by 5.0% drop from peak 2.97[0m
+--- 2022-11-01 ---
+Price: 2.94       | R.PNL: 0          | U.PNL: -45750     | T.PNL: -45750     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[33m  INFO: TRAILING STOP BUY blocked at 2.94 - violates grid spacing rule[0m
+--- 2022-11-02 ---
+Price: 2.88       | R.PNL: 0          | U.PNL: -46245     | T.PNL: -46245     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[33m  INFO: TRAILING STOP BUY blocked at 2.88 - violates grid spacing rule[0m
+--- 2022-11-03 ---
+Price: 2.97       | R.PNL: 0          | U.PNL: -45503     | T.PNL: -45503     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[33m  INFO: TRAILING STOP BUY blocked at 2.97 - violates grid spacing rule[0m
+--- 2022-11-04 ---
+Price: 3.07       | R.PNL: 0          | U.PNL: -44678     | T.PNL: -44678     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[33m  ACTION: TRAILING STOP BUY CANCELLED - Price 3.07 > limit price 2.97 (peak)[0m
+--- 2022-11-08 ---
+Price: 2.89       | R.PNL: 0          | U.PNL: -46163     | T.PNL: -46163     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 3.03, Triggered by 5.0% drop from peak 3.18[0m
+--- 2022-11-09 ---
+Price: 2.78       | R.PNL: 0          | U.PNL: -47070     | T.PNL: -47070     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 3.03 to 2.92 (Price: 2.78)[0m
+--- 2022-11-10 ---
+Price: 3.04       | R.PNL: 0          | U.PNL: -44925     | T.PNL: -44925     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[33m  INFO: TRAILING STOP BUY blocked at 3.04 - violates grid spacing rule[0m
+--- 2022-11-11 ---
+Price: 3.67       | R.PNL: 0          | U.PNL: -39729     | T.PNL: -39729     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[33m  ACTION: TRAILING STOP BUY CANCELLED - Price 3.67 > limit price 3.18 (peak)[0m
+--- 2022-11-16 ---
+Price: 3.31       | R.PNL: 0          | U.PNL: -42698     | T.PNL: -42698     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 3.48, Triggered by 5.0% drop from peak 3.77[0m
+--- 2022-11-17 ---
+Price: 3.49       | R.PNL: 0          | U.PNL: -41214     | T.PNL: -41214     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 3.66, Triggered by 5.0% drop from peak 3.77[0m
+--- 2022-11-18 ---
+Price: 3.26       | R.PNL: 0          | U.PNL: -43111     | T.PNL: -43111     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 3.66 to 3.42 (Price: 3.26)[0m
+--- 2022-11-22 ---
+Price: 2.68       | R.PNL: 0          | U.PNL: -47895     | T.PNL: -47895     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 3.42 to 2.81 (Price: 2.68)[0m
+--- 2022-11-23 ---
+Price: 2.87       | R.PNL: 0          | U.PNL: -46328     | T.PNL: -46328     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[33m  INFO: TRAILING STOP BUY blocked at 2.87 - violates grid spacing rule[0m
+--- 2022-11-25 ---
+Price: 2.62       | R.PNL: 0          | U.PNL: -48390     | T.PNL: -48390     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 2.81 to 2.75 (Price: 2.62)[0m
+--- 2022-11-28 ---
+Price: 2.50       | R.PNL: 0          | U.PNL: -49379     | T.PNL: -49379     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 2.75 to 2.63 (Price: 2.50)[0m
+--- 2022-11-29 ---
+Price: 2.65       | R.PNL: 0          | U.PNL: -48142     | T.PNL: -48142     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[33m  INFO: TRAILING STOP BUY blocked at 2.65 - violates grid spacing rule[0m
+--- 2022-11-30 ---
+Price: 3.14       | R.PNL: 0          | U.PNL: -44101     | T.PNL: -44101     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 3.30, Triggered by 5.0% drop from peak 3.77[0m
+--- 2022-12-01 ---
+Price: 2.94       | R.PNL: 0          | U.PNL: -45750     | T.PNL: -45750     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 3.30 to 3.09 (Price: 2.94)[0m
+--- 2022-12-02 ---
+Price: 3.15       | R.PNL: 0          | U.PNL: -44018     | T.PNL: -44018     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 3.31, Triggered by 5.0% drop from peak 3.77[0m
+--- 2022-12-05 ---
+Price: 3.06       | R.PNL: 0          | U.PNL: -44760     | T.PNL: -44760     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 3.31 to 3.21 (Price: 3.06)[0m
+--- 2022-12-08 ---
+Price: 3.24       | R.PNL: 0          | U.PNL: -43276     | T.PNL: -43276     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 3.40, Triggered by 5.0% drop from peak 3.77[0m
+--- 2022-12-09 ---
+Price: 3.84       | R.PNL: 0          | U.PNL: -38327     | T.PNL: -38327     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[33m  ACTION: TRAILING STOP BUY CANCELLED - Price 3.84 > limit price 3.77 (peak)[0m
+--- 2022-12-12 ---
+Price: 3.51       | R.PNL: 0          | U.PNL: -41049     | T.PNL: -41049     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 3.69, Triggered by 5.0% drop from peak 3.84[0m
+--- 2022-12-19 ---
+Price: 3.67       | R.PNL: 0          | U.PNL: -39729     | T.PNL: -39729     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 3.85, Triggered by 5.0% drop from peak 4.02[0m
+--- 2022-12-21 ---
+Price: 4.12       | R.PNL: 0          | U.PNL: -36017     | T.PNL: -36017     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[33m  ACTION: TRAILING STOP BUY CANCELLED - Price 4.12 > limit price 4.02 (peak)[0m
+--- 2022-12-27 ---
+Price: 3.90       | R.PNL: 0          | U.PNL: -37832     | T.PNL: -37832     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 4.10, Triggered by 5.0% drop from peak 4.12[0m
+--- 2023-01-04 ---
+Price: 4.50       | R.PNL: 0          | U.PNL: -32883     | T.PNL: -32883     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[33m  ACTION: TRAILING STOP BUY CANCELLED - Price 4.50 > limit price 4.12 (peak)[0m
+--- 2023-01-17 ---
+Price: 4.31       | R.PNL: 0          | U.PNL: -34450     | T.PNL: -34450     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 4.53, Triggered by 5.0% drop from peak 4.79[0m
+--- 2023-01-18 ---
+Price: 4.09       | R.PNL: 0          | U.PNL: -36265     | T.PNL: -36265     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 4.53 to 4.29 (Price: 4.09)[0m
+--- 2023-01-19 ---
+Price: 3.83       | R.PNL: 0          | U.PNL: -38409     | T.PNL: -38409     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 4.29 to 4.02 (Price: 3.83)[0m
+--- 2023-01-20 ---
+Price: 4.17       | R.PNL: 0          | U.PNL: -35605     | T.PNL: -35605     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 4.38, Triggered by 5.0% drop from peak 4.79[0m
+--- 2023-01-24 ---
+Price: 4.33       | R.PNL: 0          | U.PNL: -34285     | T.PNL: -34285     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 4.55, Triggered by 5.0% drop from peak 4.79[0m
+--- 2023-01-25 ---
+Price: 4.19       | R.PNL: 0          | U.PNL: -35440     | T.PNL: -35440     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 4.55 to 4.40 (Price: 4.19)[0m
+--- 2023-01-26 ---
+Price: 4.16       | R.PNL: 0          | U.PNL: -35687     | T.PNL: -35687     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 4.40 to 4.37 (Price: 4.16)[0m
+--- 2023-01-27 ---
+Price: 4.12       | R.PNL: 0          | U.PNL: -36017     | T.PNL: -36017     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 4.37 to 4.33 (Price: 4.12)[0m
+--- 2023-01-30 ---
+Price: 3.97       | R.PNL: 0          | U.PNL: -37255     | T.PNL: -37255     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 4.33 to 4.17 (Price: 3.97)[0m
+--- 2023-01-31 ---
+Price: 3.89       | R.PNL: 0          | U.PNL: -37914     | T.PNL: -37914     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 4.17 to 4.08 (Price: 3.89)[0m
+--- 2023-02-01 ---
+Price: 4.26       | R.PNL: 0          | U.PNL: -34863     | T.PNL: -34863     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 4.47, Triggered by 5.0% drop from peak 4.79[0m
+--- 2023-02-02 ---
+Price: 4.16       | R.PNL: 0          | U.PNL: -35687     | T.PNL: -35687     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 4.47 to 4.37 (Price: 4.16)[0m
+--- 2023-02-03 ---
+Price: 4.02       | R.PNL: 0          | U.PNL: -36842     | T.PNL: -36842     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 4.37 to 4.22 (Price: 4.02)[0m
+--- 2023-02-06 ---
+Price: 3.99       | R.PNL: 0          | U.PNL: -37090     | T.PNL: -37090     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 4.22 to 4.19 (Price: 3.99)[0m
+--- 2023-02-07 ---
+Price: 4.24       | R.PNL: 0          | U.PNL: -35028     | T.PNL: -35028     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 4.45, Triggered by 5.0% drop from peak 4.79[0m
+--- 2023-02-09 ---
+Price: 4.54       | R.PNL: 0          | U.PNL: -32553     | T.PNL: -32553     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 4.77, Triggered by 5.0% drop from peak 4.79[0m
+--- 2023-02-10 ---
+Price: 4.00       | R.PNL: 0          | U.PNL: -37007     | T.PNL: -37007     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 4.77 to 4.20 (Price: 4.00)[0m
+--- 2023-02-14 ---
+Price: 3.88       | R.PNL: 0          | U.PNL: -37997     | T.PNL: -37997     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 4.20 to 4.07 (Price: 3.88)[0m
+--- 2023-02-23 ---
+Price: 3.83       | R.PNL: 0          | U.PNL: -38409     | T.PNL: -38409     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 4.07 to 4.02 (Price: 3.83)[0m
+--- 2023-02-24 ---
+Price: 3.78       | R.PNL: 0          | U.PNL: -38822     | T.PNL: -38822     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 4.02 to 3.97 (Price: 3.78)[0m
+--- 2023-02-28 ---
+Price: 3.06       | R.PNL: 0          | U.PNL: -44760     | T.PNL: -44760     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 3.97 to 3.21 (Price: 3.06)[0m
+--- 2023-03-01 ---
+Price: 2.98       | R.PNL: 0          | U.PNL: -45420     | T.PNL: -45420     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 3.21 to 3.13 (Price: 2.98)[0m
+--- 2023-03-02 ---
+Price: 3.22       | R.PNL: 0          | U.PNL: -43441     | T.PNL: -43441     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 3.38, Triggered by 5.0% drop from peak 4.79[0m
+--- 2023-03-03 ---
+Price: 3.39       | R.PNL: 0          | U.PNL: -42039     | T.PNL: -42039     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 3.56, Triggered by 5.0% drop from peak 4.79[0m
+--- 2023-03-06 ---
+Price: 3.35       | R.PNL: 0          | U.PNL: -42368     | T.PNL: -42368     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 3.56 to 3.52 (Price: 3.35)[0m
+--- 2023-03-08 ---
+Price: 3.25       | R.PNL: 0          | U.PNL: -43193     | T.PNL: -43193     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 3.52 to 3.41 (Price: 3.25)[0m
+--- 2023-03-09 ---
+Price: 3.14       | R.PNL: 0          | U.PNL: -44101     | T.PNL: -44101     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 3.41 to 3.30 (Price: 3.14)[0m
+--- 2023-03-10 ---
+Price: 2.95       | R.PNL: 0          | U.PNL: -45668     | T.PNL: -45668     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 3.30 to 3.10 (Price: 2.95)[0m
+--- 2023-03-13 ---
+Price: 3.15       | R.PNL: 0          | U.PNL: -44018     | T.PNL: -44018     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 3.31, Triggered by 5.0% drop from peak 4.79[0m
+--- 2023-03-14 ---
+Price: 3.13       | R.PNL: 0          | U.PNL: -44183     | T.PNL: -44183     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 3.31 to 3.29 (Price: 3.13)[0m
+--- 2023-03-16 ---
+Price: 3.32       | R.PNL: 0          | U.PNL: -42616     | T.PNL: -42616     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 3.49, Triggered by 5.0% drop from peak 4.79[0m
+--- 2023-03-17 ---
+Price: 3.22       | R.PNL: 0          | U.PNL: -43441     | T.PNL: -43441     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 3.49 to 3.38 (Price: 3.22)[0m
+--- 2023-03-20 ---
+Price: 3.15       | R.PNL: 0          | U.PNL: -44018     | T.PNL: -44018     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 3.38 to 3.31 (Price: 3.15)[0m
+--- 2023-03-21 ---
+Price: 3.34       | R.PNL: 0          | U.PNL: -42451     | T.PNL: -42451     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 3.51, Triggered by 5.0% drop from peak 4.79[0m
+--- 2023-03-22 ---
+Price: 3.19       | R.PNL: 0          | U.PNL: -43688     | T.PNL: -43688     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 3.51 to 3.35 (Price: 3.19)[0m
+--- 2023-03-23 ---
+Price: 3.43       | R.PNL: 0          | U.PNL: -41709     | T.PNL: -41709     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 3.60, Triggered by 5.0% drop from peak 4.79[0m
+--- 2023-03-28 ---
+Price: 3.30       | R.PNL: 0          | U.PNL: -42781     | T.PNL: -42781     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 3.60 to 3.46 (Price: 3.30)[0m
+--- 2023-03-29 ---
+Price: 3.51       | R.PNL: 0          | U.PNL: -41049     | T.PNL: -41049     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 3.69, Triggered by 5.0% drop from peak 4.79[0m
+--- 2023-04-03 ---
+Price: 3.69       | R.PNL: 0          | U.PNL: -39564     | T.PNL: -39564     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 3.87, Triggered by 5.0% drop from peak 4.79[0m
+--- 2023-04-04 ---
+Price: 4.02       | R.PNL: 0          | U.PNL: -36842     | T.PNL: -36842     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 4.22, Triggered by 5.0% drop from peak 4.79[0m
+--- 2023-04-05 ---
+Price: 3.83       | R.PNL: 0          | U.PNL: -38409     | T.PNL: -38409     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 4.22 to 4.02 (Price: 3.83)[0m
+--- 2023-04-06 ---
+Price: 3.64       | R.PNL: 0          | U.PNL: -39976     | T.PNL: -39976     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 4.02 to 3.82 (Price: 3.64)[0m
+--- 2023-04-10 ---
+Price: 3.50       | R.PNL: 0          | U.PNL: -41131     | T.PNL: -41131     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 3.82 to 3.68 (Price: 3.50)[0m
+--- 2023-04-12 ---
+Price: 3.45       | R.PNL: 0          | U.PNL: -41544     | T.PNL: -41544     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 3.68 to 3.62 (Price: 3.45)[0m
+--- 2023-04-17 ---
+Price: 3.66       | R.PNL: 0          | U.PNL: -39811     | T.PNL: -39811     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 3.84, Triggered by 5.0% drop from peak 4.79[0m
+--- 2023-04-18 ---
+Price: 3.54       | R.PNL: 0          | U.PNL: -40801     | T.PNL: -40801     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 3.84 to 3.72 (Price: 3.54)[0m
+--- 2023-04-19 ---
+Price: 3.52       | R.PNL: 0          | U.PNL: -40966     | T.PNL: -40966     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 3.72 to 3.70 (Price: 3.52)[0m
+--- 2023-04-20 ---
+Price: 3.46       | R.PNL: 0          | U.PNL: -41461     | T.PNL: -41461     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 3.70 to 3.63 (Price: 3.46)[0m
+--- 2023-04-21 ---
+Price: 3.39       | R.PNL: 0          | U.PNL: -42039     | T.PNL: -42039     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 3.63 to 3.56 (Price: 3.39)[0m
+--- 2023-04-24 ---
+Price: 3.33       | R.PNL: 0          | U.PNL: -42533     | T.PNL: -42533     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 3.56 to 3.50 (Price: 3.33)[0m
+--- 2023-04-25 ---
+Price: 3.16       | R.PNL: 0          | U.PNL: -43936     | T.PNL: -43936     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 3.50 to 3.32 (Price: 3.16)[0m
+--- 2023-04-27 ---
+Price: 3.34       | R.PNL: 0          | U.PNL: -42451     | T.PNL: -42451     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY ACTIVATED - Stop: 3.51, Triggered by 5.0% drop from peak 4.79[0m
+--- 2023-05-02 ---
+Price: 3.21       | R.PNL: 0          | U.PNL: -43523     | T.PNL: -43523     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 3.51 to 3.37 (Price: 3.21)[0m
+--- 2023-05-03 ---
+Price: 3.10       | R.PNL: 0          | U.PNL: -44430     | T.PNL: -44430     | Holdings: [28.63, 23.78, 18.99, 14.80, 10.27, 5.82, 2.79]
+[34m  ACTION: TRAILING STOP BUY UPDATED from 3.37 to 3.25 (Price: 3.10)[0m
 
 Develop a new spec for ticker specific default parameters.
 1. Current Implementation:

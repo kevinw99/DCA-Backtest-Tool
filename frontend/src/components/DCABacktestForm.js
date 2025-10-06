@@ -75,7 +75,8 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
       enableDynamicGrid: true,
       normalizeToReference: true,
       dynamicGridMultiplier: [1.0],
-      enableConsecutiveIncremental: true,
+      enableConsecutiveIncrementalBuyGrid: false,
+      gridConsecutiveIncrement: [5],
       enableConsecutiveIncrementalSellProfit: true,
       enableScenarioDetection: true
     };
@@ -583,14 +584,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
         }
       } else {
         // Long DCA validation
-        if (parameters.trailingBuyActivationPercent < parameters.trailingBuyReboundPercent ||
-            (parameters.trailingBuyActivationPercent === parameters.trailingBuyReboundPercent && parameters.trailingBuyActivationPercent !== 0)) {
-          errors.trailingBuy = 'Trailing buy activation percentage must be greater than trailing buy rebound percentage (or both can be 0)';
-        }
-        if (parameters.trailingSellActivationPercent < parameters.trailingSellPullbackPercent ||
-            (parameters.trailingSellActivationPercent === parameters.trailingSellPullbackPercent && parameters.trailingSellActivationPercent !== 0)) {
-          errors.trailingSell = 'Trailing sell activation percentage must be greater than trailing sell pullback percentage (or both can be 0)';
-        }
+        // Removed trailing buy/sell activation vs rebound/pullback validation checks
       }
 
       // Beta-adjusted parameter validation (only for long strategy)
@@ -609,20 +603,8 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
         }
       }
     } else {
-      // Batch mode validation - check if any selected combinations would be invalid
-      const maxBuyActivation = Math.max(...batchParameters.trailingBuyActivationPercent);
-      const minBuyRebound = Math.min(...batchParameters.trailingBuyReboundPercent);
-      const maxSellActivation = Math.max(...batchParameters.trailingSellActivationPercent);
-      const minSellPullback = Math.min(...batchParameters.trailingSellPullbackPercent);
-
-      if (maxBuyActivation < minBuyRebound ||
-          (maxBuyActivation === minBuyRebound && maxBuyActivation !== 0)) {
-        errors.trailingBuyBatch = 'Selected trailing buy activation values must be greater than trailing buy rebound values (or both can be 0)';
-      }
-      if (maxSellActivation < minSellPullback ||
-          (maxSellActivation === minSellPullback && maxSellActivation !== 0)) {
-        errors.trailingSellBatch = 'Selected trailing sell activation values must be greater than trailing sell pullback values (or both can be 0)';
-      }
+      // Batch mode validation
+      // No validation needed for trailing stop activation vs rebound/pullback values
     }
 
     setValidationErrors(errors);
@@ -712,6 +694,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
           trailingSellActivationPercent: batchParameters.trailingSellActivationPercent,
           trailingSellPullbackPercent: batchParameters.trailingSellPullbackPercent,
           dynamicGridMultiplier: batchParameters.dynamicGridMultiplier,
+          gridConsecutiveIncrement: batchParameters.gridConsecutiveIncrement,
           // Fixed parameters from single mode
           startDate: parameters.startDate,
           endDate: parameters.endDate,
@@ -722,7 +705,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
         enableBetaScaling: batchParameters.enableBetaScaling,
         enableDynamicGrid: batchParameters.enableDynamicGrid,
         normalizeToReference: batchParameters.normalizeToReference,
-        enableConsecutiveIncremental: batchParameters.enableConsecutiveIncremental,
+        enableConsecutiveIncrementalBuyGrid: batchParameters.enableConsecutiveIncrementalBuyGrid,
         enableConsecutiveIncrementalSellProfit: batchParameters.enableConsecutiveIncrementalSellProfit,
         enableScenarioDetection: batchParameters.enableScenarioDetection,
         sortBy: 'totalReturn'
@@ -1873,6 +1856,20 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                   <label>
                     <input
                       type="checkbox"
+                      checked={parameters.enableConsecutiveIncrementalBuyGrid ?? false}
+                      onChange={(e) => handleChange('enableConsecutiveIncrementalBuyGrid', e.target.checked)}
+                    />
+                    Enable Consecutive Incremental Buy Grid
+                  </label>
+                  <span className="form-help">
+                    Increase grid spacing for consecutive buys during downtrends (base grid + count × increment)
+                  </span>
+                </div>
+
+                <div className="form-group checkbox-group">
+                  <label>
+                    <input
+                      type="checkbox"
                       checked={parameters.enableConsecutiveIncrementalSellProfit ?? true}
                       onChange={(e) => handleChange('enableConsecutiveIncrementalSellProfit', e.target.checked)}
                     />
@@ -1882,6 +1879,27 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                     Increase profit requirement for consecutive sells during uptrends (profit req + grid size)
                   </span>
                 </div>
+
+                {parameters.enableConsecutiveIncrementalBuyGrid && (
+                  <div className="form-group">
+                    <label htmlFor="gridConsecutiveIncrement">
+                      Grid Consecutive Increment (%)
+                    </label>
+                    <input
+                      id="gridConsecutiveIncrement"
+                      type="number"
+                      value={parameters.gridConsecutiveIncrement ?? 5}
+                      onChange={(e) => handleChange('gridConsecutiveIncrement', parseFloat(e.target.value))}
+                      min="0"
+                      max="20"
+                      step="1"
+                      required
+                    />
+                    <span className="form-help">
+                      Amount to add to base grid for each consecutive buy (e.g., 5% means 1st buy: 10%, 2nd: 15%, 3rd: 20%)
+                    </span>
+                  </div>
+                )}
 
                 <div className="form-group checkbox-group">
                   <label>
@@ -2706,10 +2724,10 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                     <label>
                       <input
                         type="checkbox"
-                        checked={batchParameters.enableConsecutiveIncremental !== false}
-                        onChange={(e) => handleBatchParameterChange('enableConsecutiveIncremental', e.target.checked)}
+                        checked={batchParameters.enableConsecutiveIncrementalBuyGrid === true}
+                        onChange={(e) => handleBatchParameterChange('enableConsecutiveIncrementalBuyGrid', e.target.checked)}
                       />
-                      Enable Consecutive Incremental Buy
+                      Enable Consecutive Incremental Buy Grid
                     </label>
                   </div>
                   <div className="form-group checkbox-group">
@@ -2733,6 +2751,47 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                     </label>
                   </div>
                 </div>
+
+                {/* Grid Consecutive Increment Batch Parameter */}
+                {batchParameters.enableConsecutiveIncrementalBuyGrid && (
+                  <div className="parameter-section">
+                    <h3>Grid Consecutive Increment (%)</h3>
+                    <div className="batch-actions">
+                      <button
+                        type="button"
+                        className="select-all-btn"
+                        onClick={() => handleBatchParameterChange('gridConsecutiveIncrement', [0, 5, 10, 15])}
+                      >
+                        Select All
+                      </button>
+                      <button
+                        type="button"
+                        className="deselect-all-btn"
+                        onClick={() => handleBatchParameterChange('gridConsecutiveIncrement', [5])}
+                      >
+                        Reset to Default
+                      </button>
+                    </div>
+                    <div className="checkbox-grid">
+                      {[0, 5, 10, 15, 20].map(val => (
+                        <label key={val} className="checkbox-item">
+                          <input
+                            type="checkbox"
+                            checked={(batchParameters.gridConsecutiveIncrement || [5]).includes(val)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                handleBatchParameterChange('gridConsecutiveIncrement', [...(batchParameters.gridConsecutiveIncrement || []), val]);
+                              } else {
+                                handleBatchParameterChange('gridConsecutiveIncrement', (batchParameters.gridConsecutiveIncrement || []).filter(m => m !== val));
+                              }
+                            }}
+                          />
+                          <span>{val}%</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>

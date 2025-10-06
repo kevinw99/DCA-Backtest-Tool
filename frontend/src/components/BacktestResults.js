@@ -56,9 +56,8 @@ const BacktestResults = ({ data, chartData: priceData }) => {
     // Check if this is short selling strategy
     const isShortSelling = summary?.strategy === 'SHORT_DCA';
 
-    // Initialize cumulative capital tracking for average capital deployed calculation
-    let cumulativeCapitalDeployed = 0;
-    let capitalDeployedDays = 0;
+    // Track maximum capital ever deployed (for Option 2: peak deployment)
+    let maxCapitalEverDeployed = 0;
 
     return priceData.dailyPrices.map(day => {
       const transaction = transactionMap[day.date];
@@ -78,15 +77,13 @@ const BacktestResults = ({ data, chartData: priceData }) => {
         // Use totalPNL directly from transaction (matches Enhanced Transaction History table)
         totalPNL = transaction.totalPNL || 0;
 
-        // Update cumulative capital deployed
-        cumulativeCapitalDeployed += totalCapitalDeployed;
-        capitalDeployedDays += 1;
+        // Update maximum capital ever deployed
+        maxCapitalEverDeployed = Math.max(maxCapitalEverDeployed, totalCapitalDeployed);
 
-        // Calculate average capital deployed up to this point
-        const avgCapitalDeployed = capitalDeployedDays > 0 ? cumulativeCapitalDeployed / capitalDeployedDays : 0;
-
-        if (avgCapitalDeployed > 0) {
-          totalPNLPercent = (totalPNL / avgCapitalDeployed) * 100;
+        // Calculate Total P&L % based on MAXIMUM capital ever deployed
+        // This provides a continuous percentage that cannot exceed -100%
+        if (maxCapitalEverDeployed > 0) {
+          totalPNLPercent = (totalPNL / maxCapitalEverDeployed) * 100;
         }
       } else {
         // Find most recent transaction for capital deployed calculation
@@ -123,15 +120,13 @@ const BacktestResults = ({ data, chartData: priceData }) => {
 
           totalPNL = unrealizedPNL + (mostRecentTransaction.realizedPNL || 0);
 
-          // Update cumulative capital deployed for non-transaction days too
-          cumulativeCapitalDeployed += totalCapitalDeployed;
-          capitalDeployedDays += 1;
+          // Update maximum capital ever deployed
+          maxCapitalEverDeployed = Math.max(maxCapitalEverDeployed, totalCapitalDeployed);
 
-          // Calculate average capital deployed up to this point
-          const avgCapitalDeployed = capitalDeployedDays > 0 ? cumulativeCapitalDeployed / capitalDeployedDays : 0;
-
-          if (avgCapitalDeployed > 0) {
-            totalPNLPercent = (totalPNL / avgCapitalDeployed) * 100;
+          // Calculate Total P&L % based on MAXIMUM capital ever deployed
+          // This provides a continuous percentage that cannot exceed -100%
+          if (maxCapitalEverDeployed > 0) {
+            totalPNLPercent = (totalPNL / maxCapitalEverDeployed) * 100;
           }
         }
       }
@@ -427,14 +422,10 @@ const BacktestResults = ({ data, chartData: priceData }) => {
         // Calculate Buy & Hold percentage from start price
         const buyAndHoldPercent = startPrice > 0 ? ((currentPrice - startPrice) / startPrice) * 100 : 0;
 
-        // Track cumulative capital deployed for average calculation
-        const capitalDeployed = currentLots * lotSizeUsd;
-        cumulativeCapitalDeployed += capitalDeployed;
-        totalDays += 1;
-
-        // Calculate Total P&L % based on AVERAGE capital deployed (not end capital!)
-        const avgCapitalDeployed = totalDays > 0 ? cumulativeCapitalDeployed / totalDays : 0;
-        const totalPNLPercent = avgCapitalDeployed > 0 ? (totalPNL / avgCapitalDeployed) * 100 : null;
+        // Calculate Total P&L % based on CURRENT capital deployed (same as Enhanced Transaction History)
+        // This ensures the percentage cannot exceed -100% in a long-only strategy
+        const currentCapitalDeployed = currentLots * lotSizeUsd;
+        const totalPNLPercent = currentCapitalDeployed > 0 ? (totalPNL / currentCapitalDeployed) * 100 : null;
 
         // Calculate lots deployed as percentage (0-100%)
         const lotsDeployedPercent = maxLots > 0 ? (currentLots / maxLots) * 100 : 0;
@@ -443,7 +434,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
           date: new Date(date).toLocaleDateString(),
           totalPNL: totalPNL,
           totalPNLPercent: totalPNLPercent,
-          avgCapitalDeployed: avgCapitalDeployed,
+          currentCapitalDeployed: currentCapitalDeployed,
           holdingsValue: holdingsMarketValue,
           realizedPNL: cumulativeRealizedPNL,
           breakEvenValue: breakEvenValue,
@@ -503,14 +494,10 @@ const BacktestResults = ({ data, chartData: priceData }) => {
         // Calculate Buy & Hold percentage from start price
         const buyAndHoldPercent = startPrice > 0 ? ((currentPrice - startPrice) / startPrice) * 100 : 0;
 
-        // Track cumulative capital deployed for average calculation
-        const capitalDeployed = currentLots * lotSizeUsd;
-        cumulativeCapitalDeployed += capitalDeployed;
-        totalDays += 1;
-
-        // Calculate Total P&L % based on AVERAGE capital deployed (not end capital!)
-        const avgCapitalDeployed = totalDays > 0 ? cumulativeCapitalDeployed / totalDays : 0;
-        const totalPNLPercent = avgCapitalDeployed > 0 ? (totalPNL / avgCapitalDeployed) * 100 : null;
+        // Calculate Total P&L % based on CURRENT capital deployed (same as Enhanced Transaction History)
+        // This ensures the percentage cannot exceed -100% in a long-only strategy
+        const currentCapitalDeployed = currentLots * lotSizeUsd;
+        const totalPNLPercent = currentCapitalDeployed > 0 ? (totalPNL / currentCapitalDeployed) * 100 : null;
 
         // Calculate lots deployed as percentage (0-100%)
         const lotsDeployedPercent = maxLots > 0 ? (currentLots / maxLots) * 100 : 0;
@@ -519,7 +506,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
           date: new Date(date).toLocaleDateString(),
           totalPNL: totalPNL,
           totalPNLPercent: totalPNLPercent,
-          avgCapitalDeployed: avgCapitalDeployed,
+          currentCapitalDeployed: currentCapitalDeployed,
           holdingsValue: holdingsMarketValue,
           realizedPNL: cumulativeRealizedPNL,
           breakEvenValue: breakEvenValue,
@@ -763,9 +750,15 @@ const BacktestResults = ({ data, chartData: priceData }) => {
 
             {/* Consecutive Incremental Parameters */}
             <div className="parameter-card">
-              <span className="parameter-label">Consecutive Incremental Buy</span>
-              <span className="parameter-value">{priceData.backtestParameters.enableConsecutiveIncremental !== false ? 'Enabled' : 'Disabled'}</span>
+              <span className="parameter-label">Consecutive Incremental Buy Grid</span>
+              <span className="parameter-value">{priceData.backtestParameters.enableConsecutiveIncrementalBuyGrid ? 'Enabled' : 'Disabled'}</span>
             </div>
+            {priceData.backtestParameters.enableConsecutiveIncrementalBuyGrid && (
+              <div className="parameter-card">
+                <span className="parameter-label">Grid Consecutive Increment</span>
+                <span className="parameter-value">{priceData.backtestParameters.gridConsecutiveIncrement}%</span>
+              </div>
+            )}
             <div className="parameter-card">
               <span className="parameter-label">Consecutive Incremental Sell Profit</span>
               <span className="parameter-value">{priceData.backtestParameters.enableConsecutiveIncrementalSellProfit !== false ? 'Enabled' : 'Disabled'}</span>
@@ -980,8 +973,8 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                   }
                 }
 
-                // Calculate average capital deployed for display
-                const avgCapital = returnPercent !== 0 ? (summary.totalReturn / returnPercent) * 100 : 0;
+                // Get average capital deployed from backend performance metrics
+                const avgCapital = summary.performanceMetrics?.avgDeployedCapital || 0;
 
                 return (
                   <>
@@ -1040,8 +1033,8 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                     }
                   }
 
-                  // For Buy & Hold, average capital = initial capital (fixed investment)
-                  const avgCapital = buyHoldPercent !== 0 ? (holdResults.totalReturn / buyHoldPercent) * 100 : 0;
+                  // For Buy & Hold, use the same average capital as DCA strategy for comparison
+                  const avgCapital = summary.performanceMetrics?.avgDeployedCapital || 0;
 
                   return (
                     <>
@@ -1083,6 +1076,12 @@ const BacktestResults = ({ data, chartData: priceData }) => {
         <span><strong>{summary.strategy === 'SHORT_DCA' ? 'Shorts' : 'Lots'} Held:</strong> {summary.lotsHeld}</span>
         <span><strong>Total Trades:</strong> {summary.totalTrades}</span>
         <span><strong>Win Rate:</strong> {summary.winRate ? formatPercent(summary.winRate) : 'N/A'}</span>
+        {summary.consecutiveIncrementalBuyGridStats?.enabled && (
+          <>
+            <span><strong>Max Consecutive Buys:</strong> {summary.consecutiveIncrementalBuyGridStats.maxConsecutiveBuyCount}</span>
+            <span><strong>Avg Grid Size Used:</strong> {(summary.consecutiveIncrementalBuyGridStats.avgGridSizeUsed * 100).toFixed(1)}%</span>
+          </>
+        )}
       </div>
 
       {/* Questionable Events Section */}
@@ -1129,6 +1128,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
               <div>Trailing Stop Buy</div>
               <div>Trailing Stop Sell</div>
               <div>Shares</div>
+              <div>Grid Size</div>
               <div>Value</div>
               <div>Lots</div>
               <div>Avg Cost</div>
@@ -1170,6 +1170,11 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                     {transaction.type === 'SELL' ? formatTrailingStopSellDetails(transaction.trailingStopDetail) : ''}
                   </div>
                   <div>{transaction.shares !== undefined ? transaction.shares.toFixed(4) : 'N/A'}</div>
+                  <div>
+                    {transaction.type === 'TRAILING_STOP_LIMIT_BUY' && transaction.buyGridSize !== undefined
+                      ? `${(transaction.buyGridSize * 100).toFixed(1)}%`
+                      : '-'}
+                  </div>
                   <div>{formatCurrency(transaction.value)}</div>
                   <div className="lots-column">
                     {(() => {
