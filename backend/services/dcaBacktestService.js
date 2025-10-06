@@ -1424,9 +1424,9 @@ async function runDCABacktest(params) {
     transactionLog.push(`        = ${(finalValue/initialValue).toFixed(4)}^${(1/totalYears).toFixed(4)} - 1`);
     transactionLog.push(`        = ${performanceMetrics.cagr.toFixed(4)} = ${performanceMetrics.cagrPercent.toFixed(2)}%`);
     transactionLog.push('');
-    transactionLog.push(`   Return on Max Deployed = (Final - Max Capital) / Max Capital`);
-    transactionLog.push(`                         = ($${finalValue.toFixed(2)} - $${maxDeployedCapital.toFixed(2)}) / $${maxDeployedCapital.toFixed(2)}`);
-    transactionLog.push(`                         = $${(finalValue - maxDeployedCapital).toFixed(2)} / $${maxDeployedCapital.toFixed(2)}`);
+    transactionLog.push(`   Return on Max Deployed = Total PNL / Max Capital`);
+    transactionLog.push(`                         = ($${finalValue.toFixed(2)} - $${initialValue.toFixed(2)}) / $${maxDeployedCapital.toFixed(2)}`);
+    transactionLog.push(`                         = $${(finalValue - initialValue).toFixed(2)} / $${maxDeployedCapital.toFixed(2)}`);
     transactionLog.push(`                         = ${performanceMetrics.returnOnMaxDeployed.toFixed(4)} = ${performanceMetrics.returnOnMaxDeployedPercent.toFixed(2)}%`);
     transactionLog.push('');
     transactionLog.push(`   CAGR on Max Deployed = (Final / Max Capital)^(1/Years) - 1`);
@@ -1434,9 +1434,9 @@ async function runDCABacktest(params) {
     transactionLog.push(`                       = ${(finalValue/maxDeployedCapital).toFixed(4)}^${(1/totalYears).toFixed(4)} - 1`);
     transactionLog.push(`                       = ${performanceMetrics.cagrOnMaxDeployed.toFixed(4)} = ${performanceMetrics.cagrOnMaxDeployedPercent.toFixed(2)}%`);
     transactionLog.push('');
-    transactionLog.push(`   Return on Avg Deployed = (Final - Avg Capital) / Avg Capital`);
-    transactionLog.push(`                         = ($${finalValue.toFixed(2)} - $${avgDeployedCapital.toFixed(2)}) / $${avgDeployedCapital.toFixed(2)}`);
-    transactionLog.push(`                         = $${(finalValue - avgDeployedCapital).toFixed(2)} / $${avgDeployedCapital.toFixed(2)}`);
+    transactionLog.push(`   Return on Avg Deployed = Total PNL / Avg Capital`);
+    transactionLog.push(`                         = ($${finalValue.toFixed(2)} - $${initialValue.toFixed(2)}) / $${avgDeployedCapital.toFixed(2)}`);
+    transactionLog.push(`                         = $${(finalValue - initialValue).toFixed(2)} / $${avgDeployedCapital.toFixed(2)}`);
     transactionLog.push(`                         = ${performanceMetrics.returnOnAvgDeployed.toFixed(4)} = ${performanceMetrics.returnOnAvgDeployedPercent.toFixed(2)}%`);
     transactionLog.push('');
     transactionLog.push(`   CAGR on Avg Deployed = (Final / Avg Capital)^(1/Years) - 1`);

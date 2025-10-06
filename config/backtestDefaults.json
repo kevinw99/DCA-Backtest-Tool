@@ -247,7 +247,7 @@
   "enableDynamicGrid": false,
   "dynamicGridMultiplier": 1,
   "enableConsecutiveIncremental": true,
-  "enableConsecutiveIncrementalSellProfit": false,
+  "enableConsecutiveIncrementalSellProfit": true,
   "enableScenarioDetection": false,
   "normalizeToReference": true,
   "enableAdaptiveStrategy": false,

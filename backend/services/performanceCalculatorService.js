@@ -37,16 +37,17 @@ class PerformanceCalculatorService {
 
     // Core performance metrics
     const totalReturn = initialValue > 0 ? (finalValue - initialValue) / initialValue : 0;
+    const totalPNL = finalValue - initialValue;
     const cagr = this._calculateCAGR(initialValue, finalValue, totalYears);
 
     // Capital deployment analysis
     const maxDeployedCapital = Math.max(...dailyCapitalDeployed, 0);
     const avgDeployedCapital = this._calculateAverage(dailyCapitalDeployed);
     const returnOnMaxDeployed = maxDeployedCapital > 0
-      ? (finalValue - maxDeployedCapital) / maxDeployedCapital
+      ? totalPNL / maxDeployedCapital
       : 0;
     const returnOnAvgDeployed = avgDeployedCapital > 0
-      ? (finalValue - avgDeployedCapital) / avgDeployedCapital
+      ? totalPNL / avgDeployedCapital
       : 0;
 
     // CAGR for capital-based returns
@@ -109,17 +110,17 @@ class PerformanceCalculatorService {
     console.log(`        = ${(cagr + 1).toFixed(4)} - 1`);
     console.log(`        = ${cagr.toFixed(4)} = ${(cagr * 100).toFixed(2)}%`);
 
-    console.log(`\n   Return on Max Deployed = (Final - Max Capital) / Max Capital`);
-    console.log(`                         = ($${finalValue.toFixed(2)} - $${maxDeployedCapital.toFixed(2)}) / $${maxDeployedCapital.toFixed(2)}`);
-    console.log(`                         = $${(finalValue - maxDeployedCapital).toFixed(2)} / $${maxDeployedCapital.toFixed(2)}`);
+    console.log(`\n   Return on Max Deployed = Total PNL / Max Capital`);
+    console.log(`                         = ($${finalValue.toFixed(2)} - $${initialValue.toFixed(2)}) / $${maxDeployedCapital.toFixed(2)}`);
+    console.log(`                         = $${(finalValue - initialValue).toFixed(2)} / $${maxDeployedCapital.toFixed(2)}`);
     console.log(`                         = ${returnOnMaxDeployed.toFixed(4)} = ${(returnOnMaxDeployed * 100).toFixed(2)}%`);
     console.log(`      CAGR on Max Deployed = (Final / Max Capital)^(1/Years) - 1`);
     console.log(`                          = ($${finalValue.toFixed(2)} / $${maxDeployedCapital.toFixed(2)})^(1/${totalYears.toFixed(2)}) - 1`);
     console.log(`                          = ${cagrOnMaxDeployed.toFixed(4)} = ${(cagrOnMaxDeployed * 100).toFixed(2)}%`);
 
-    console.log(`\n   Return on Avg Deployed = (Final - Avg Capital) / Avg Capital`);
-    console.log(`                         = ($${finalValue.toFixed(2)} - $${avgDeployedCapital.toFixed(2)}) / $${avgDeployedCapital.toFixed(2)}`);
-    console.log(`                         = $${(finalValue - avgDeployedCapital).toFixed(2)} / $${avgDeployedCapital.toFixed(2)}`);
+    console.log(`\n   Return on Avg Deployed = Total PNL / Avg Capital`);
+    console.log(`                         = ($${finalValue.toFixed(2)} - $${initialValue.toFixed(2)}) / $${avgDeployedCapital.toFixed(2)}`);
+    console.log(`                         = $${(finalValue - initialValue).toFixed(2)} / $${avgDeployedCapital.toFixed(2)}`);
     console.log(`                         = ${returnOnAvgDeployed.toFixed(4)} = ${(returnOnAvgDeployed * 100).toFixed(2)}%`);
     console.log(`      CAGR on Avg Deployed = (Final / Avg Capital)^(1/Years) - 1`);
     console.log(`                          = ($${finalValue.toFixed(2)} / $${avgDeployedCapital.toFixed(2)})^(1/${totalYears.toFixed(2)}) - 1`);
