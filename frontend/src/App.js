@@ -134,6 +134,7 @@ function AppContent() {
         console.log('=== DEBUG: Auto Batch API Call Info ===');
         console.log('Strategy Mode:', strategyMode);
         console.log('Batch Endpoint:', batchEndpoint);
+        console.log('Raw parameters received:', JSON.stringify(parameters, null, 2));
         console.log('=========================================');
 
         const batchResponse = await fetch(batchEndpoint, {
@@ -149,8 +150,25 @@ function AppContent() {
         }
 
         const batchResult = await batchResponse.json();
-        setBatchData({ ...batchResult.data, executionTimeMs: batchResult.executionTimeMs });
-        setActiveTab('results');
+        console.log('🐛 batchResult full structure:', JSON.stringify(batchResult, null, 2));
+
+        // Check if this is async mode (returns sessionId) or sync mode (returns data)
+        if (batchResult.sessionId) {
+          // Async mode: Store sessionId and let SSE completion handler set batch data
+          console.log('🔄 Async mode detected, sessionId:', batchResult.sessionId);
+          setBatchSessionId(batchResult.sessionId);
+          // Don't set activeTab yet - SSE completion handler will do it
+        } else if (batchResult.data) {
+          // Sync mode: Set batch data directly from response
+          console.log('⚡ Sync mode detected, setting batch data directly');
+          const dataToSet = { ...batchResult.data, executionTimeMs: batchResult.executionTimeMs };
+          console.log('🐛 dataToSet:', JSON.stringify(dataToSet, null, 2));
+          setBatchData(dataToSet);
+          setActiveTab('results');
+          setLoading(false);
+        } else {
+          throw new Error('Invalid batch response: no sessionId or data');
+        }
       } else {
         // Determine the endpoint based on strategy mode
         const endpoint = parameters.strategyMode === 'short'

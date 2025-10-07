@@ -3,9 +3,10 @@
  * Eliminates code duplication of formatter functions
  *
  * IMPORTANT: Percentage Conventions
- * - API requests/responses use WHOLE NUMBERS (10 = 10%, 100 = 100%, 224 = 224%)
- * - Display functions format whole numbers with % symbol - no conversion needed
- * - This prevents double conversion bugs
+ * - Backend API uses DECIMALS for parameters (0.05 = 5%, 0.10 = 10%)
+ * - Performance metrics are also decimals (0.9123 = 91.23%, 2.24 = 224%)
+ * - formatParameterPercent() converts decimals to percentages: 0.05 -> "+5.00%"
+ * - formatPerformancePercent() converts decimals to percentages: 0.9123 -> "91.23%"
  */
 
 import { toPercent } from './percentageUtils';
@@ -39,14 +40,16 @@ export const formatPercent = (value, showSign = true) => {
 };
 
 /**
- * Format parameter percentages (whole numbers to percentage display)
- * Values are already whole numbers (10 = 10%) - just format with % symbol
- * @param {number} value - The percentage value (e.g., 10 for 10%)
- * @returns {string} Formatted percentage string
+ * Format parameter percentages (decimals to percentage display)
+ * Backend returns decimals (0.05, 0.10), convert to whole numbers for display
+ * @param {number} value - The decimal percentage value (e.g., 0.05 for 5%)
+ * @returns {string} Formatted percentage string (e.g., "+5.00%")
  */
 export const formatParameterPercent = (value) => {
   if (value === undefined || value === null) return 'N/A';
-  return formatPercent(value);
+  // Backend returns decimals - multiply by 100 for percentage display
+  // 0.05 -> 5%, 0.10 -> 10%, 0.065 -> 6.5%
+  return formatPercent(value * 100);
 };
 
 /**

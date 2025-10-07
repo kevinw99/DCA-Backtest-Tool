@@ -459,6 +459,32 @@ async function runBatchBacktest(options, progressCallback = null, sessionId = nu
         '';
       console.log(`🔄 Running backtest ${current}/${combinations.length}: ${params.symbol}${betaInfo} - Profit: ${(params.profitRequirement).toFixed(1)}%, Grid: ${(params.gridIntervalPercent).toFixed(1)}%`);
 
+      // Log exact parameters for debugging
+      console.log(`📊 EXACT PARAMETERS FOR ${params.symbol} (run ${current}/${combinations.length}):`);
+      console.log(`   symbol: ${params.symbol}`);
+      console.log(`   startDate: ${params.startDate}`);
+      console.log(`   endDate: ${params.endDate}`);
+      console.log(`   lotSizeUsd: ${params.lotSizeUsd}`);
+      console.log(`   maxLots: ${params.maxLots}`);
+      console.log(`   maxLotsToSell: ${params.maxLotsToSell}`);
+      console.log(`   profitRequirement: ${params.profitRequirement} (${(params.profitRequirement * 100).toFixed(2)}%)`);
+      console.log(`   gridIntervalPercent: ${params.gridIntervalPercent} (${(params.gridIntervalPercent * 100).toFixed(2)}%)`);
+      console.log(`   trailingBuyActivationPercent: ${params.trailingBuyActivationPercent} (${(params.trailingBuyActivationPercent * 100).toFixed(2)}%)`);
+      console.log(`   trailingBuyReboundPercent: ${params.trailingBuyReboundPercent} (${(params.trailingBuyReboundPercent * 100).toFixed(2)}%)`);
+      console.log(`   trailingSellActivationPercent: ${params.trailingSellActivationPercent} (${(params.trailingSellActivationPercent * 100).toFixed(2)}%)`);
+      console.log(`   trailingSellPullbackPercent: ${params.trailingSellPullbackPercent} (${(params.trailingSellPullbackPercent * 100).toFixed(2)}%)`);
+      console.log(`   enableBetaScaling: ${params.enableBetaScaling}`);
+      console.log(`   enableDynamicGrid: ${params.enableDynamicGrid}`);
+      console.log(`   normalizeToReference: ${params.normalizeToReference}`);
+      console.log(`   enableConsecutiveIncrementalBuyGrid: ${params.enableConsecutiveIncrementalBuyGrid}`);
+      console.log(`   enableConsecutiveIncrementalSellProfit: ${params.enableConsecutiveIncrementalSellProfit}`);
+      if (params.enableBetaScaling) {
+        console.log(`   beta: ${params.beta}`);
+        console.log(`   coefficient: ${params.coefficient}`);
+        console.log(`   betaFactor: ${params.betaFactor}`);
+      }
+      console.log(`─────────────────────────────────────────────────────────`);
+
       const result = await runDCABacktest({
         ...params,
         verbose: false // Don't log individual backtest details

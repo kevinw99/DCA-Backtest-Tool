@@ -137,7 +137,16 @@ const BatchResults = ({ data }) => {
     console.log('🐛 window.open returned:', newWindow ? 'success' : 'blocked/failed');
   };
 
+  console.log('🐛 Checking data validity:');
+  console.log('🐛   data exists?', !!data);
+  console.log('🐛   data.results exists?', !!data?.results);
+  console.log('🐛   typeof data:', typeof data);
+  console.log('🐛   data keys:', data ? Object.keys(data) : 'N/A');
+
   if (!data || !data.results) {
+    console.error('❌ BatchResults EARLY RETURN: No data or no results!');
+    console.error('❌   data:', data);
+    console.error('❌   data.results:', data?.results);
     return <div>No batch results available</div>;
   }
 

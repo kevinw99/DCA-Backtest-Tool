@@ -277,19 +277,34 @@ class URLParameterManager {
           // Try to parse JSON values (for objects/arrays)
           try {
             if (value.startsWith('{') || value.startsWith('[')) {
-              parameters[key] = JSON.parse(value);
+              const parsed = JSON.parse(value);
+
+              // Special handling for parameterRanges - convert percentage arrays to decimals
+              if (key === 'parameterRanges' && typeof parsed === 'object') {
+                const percentageRangeParams = [
+                  'gridIntervalPercent', 'profitRequirement',
+                  'trailingBuyActivationPercent', 'trailingBuyReboundPercent',
+                  'trailingSellActivationPercent', 'trailingSellPullbackPercent',
+                  'trailingShortActivationPercent', 'trailingShortPullbackPercent',
+                  'trailingCoverActivationPercent', 'trailingCoverReboundPercent',
+                  'hardStopLossPercent', 'portfolioStopLossPercent', 'cascadeStopLossPercent'
+                ];
+
+                for (const param of percentageRangeParams) {
+                  if (Array.isArray(parsed[param])) {
+                    // Convert whole number percentages to decimals: [5, 10] -> [0.05, 0.10]
+                    parsed[param] = parsed[param].map(v => v / 100);
+                  }
+                }
+              }
+
+              parameters[key] = parsed;
             } else {
               // Parse as appropriate type
               if (value === 'true') parameters[key] = true;
               else if (value === 'false') parameters[key] = false;
               else if (!isNaN(value) && value !== '') {
-                const numValue = parseFloat(value);
-                // Convert decimal percentages to whole numbers (0.1 -> 10)
-                if (percentageParams.includes(key) && numValue < 1 && numValue > 0) {
-                  parameters[key] = numValue * 100;
-                } else {
-                  parameters[key] = numValue;
-                }
+                parameters[key] = parseFloat(value);
               }
               else parameters[key] = value;
             }
@@ -336,15 +351,27 @@ class URLParameterManager {
 
         console.log('📥 Parsed semantic URL (batch):', { symbols, hasResults });
 
-        // Build raw params object from URL params (not processed) for _decodeBatchParameters
-        const rawParams = {};
-        for (const [key, value] of urlParams.entries()) {
-          rawParams[key] = value; // Keep as string
+        // Use already-converted parameters if parameterRanges was JSON-encoded
+        // (conversion happens at line 280-299 above)
+        let batchParams;
+        if (parameters.parameterRanges) {
+          // parameterRanges was already parsed and converted from JSON
+          console.log('✅ Using pre-converted parameterRanges from JSON');
+          batchParams = {
+            mode: 'batch',
+            symbols,
+            ...parameters
+          };
+        } else {
+          // Fall back to legacy comma-separated format
+          console.log('📋 Decoding batch parameters from comma-separated format');
+          const rawParams = {};
+          for (const [key, value] of urlParams.entries()) {
+            rawParams[key] = value; // Keep as string
+          }
+          rawParams.symbols = symbols.join(',');
+          batchParams = this._decodeBatchParameters(rawParams);
         }
-        rawParams.symbols = symbols.join(',');
-
-        // Decode batch parameters properly with parameterRanges as arrays
-        const batchParams = this._decodeBatchParameters(rawParams);
 
         return {
           mode: 'batch',
@@ -604,19 +631,27 @@ class URLParameterManager {
   }
 
   /**
-   * Parse percentage value from URL (now whole numbers everywhere)
-   * Both URL and backend use whole numbers (e.g., 10 = 10%)
+   * Parse percentage value from URL (whole numbers to decimals)
+   * URL has whole numbers (10, 12.975), backend expects decimals (0.10, 0.12975)
+   * @param {string} str - URL parameter value (e.g., "12.975")
+   * @param {number} defaultPercentage - Default whole number (e.g., 10 for 10%)
+   * @returns {number} Decimal value for backend (e.g., 0.12975)
    */
   _parsePercentageAsDecimal(str, defaultPercentage) {
-    return this._parseNumber(str, defaultPercentage);
+    const wholeNumber = this._parseNumber(str, defaultPercentage);
+    // Convert whole number percentage to decimal: 12.975 -> 0.12975
+    return wholeNumber / 100;
   }
 
   /**
-   * Format percentage value for URL (now whole numbers everywhere)
-   * Both URL and backend use whole numbers (e.g., 10 = 10%)
+   * Format percentage value for URL (decimals to whole numbers)
+   * Backend uses decimals (0.10), URL uses whole numbers (10)
+   * @param {number} decimalValue - Decimal value (e.g., 0.10 for 10%)
+   * @returns {number} Whole number percentage (e.g., 10)
    */
   _formatDecimalAsPercentage(decimalValue) {
-    return decimalValue; // No conversion needed
+    // Convert decimal to whole number percentage: 0.10 -> 10, 0.12975 -> 12.975
+    return decimalValue * 100;
   }
 
   /**
