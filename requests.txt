@@ -1,4 +1,5 @@
-At the end of single backtest, please create a new section in the result "Future Trade" after "Current Holdings" to
+At the end of single backtest, please create a new section in the result "Future Trade" after "Current
+ Holdings" to
  print the activated trailing a
  buy
 and
@@ -8,6 +9,13 @@ trailing
 sell order,
 and then what trailing order would be activated.
 you need to list both direction so the user can see the next possible trade in both direction.
+
+Before you implement it, lets
+test it out, can you take PLTR as an example, take the default parameters, and tell me when it started on
+09/01/2021, what price it is, what is the next trailing buy and sell order, and when it is activated, what will be
+the next trailing buy and sell order?
+
+
 
 till the same! single
 http://localhost:3000/backtest?mode=single&symbol=PLTR&startDate=2021-09-01&endDate=2025-10-08&strategyMode=long
