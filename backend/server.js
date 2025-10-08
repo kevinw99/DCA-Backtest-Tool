@@ -194,10 +194,7 @@ app.get('/api/stocks/:symbol', validation.validateSymbolParam, validation.valida
       });
     }
 
-    // Validate sufficient data for backtesting
-    if (startDate && endDate && dailyPrices.length < 30) {
-      dataValidationErrors.push(`Limited data available: Only ${dailyPrices.length} trading days found for the requested period. Minimum 30 days recommended for reliable backtesting.`);
-    }
+    // Allow backtesting with any amount of data - user decides what's sufficient
 
     // Calculate derived metrics
     const metrics = stockDataService.calculateMetrics(dailyPrices, quarterlyFundamentals, corporateActions, symbol);
@@ -892,16 +889,7 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
       }
     }
 
-    // Validate sufficient data for backtesting
-
-    if (dailyPrices.length < 30) {
-      return res.status(400).json({
-        error: 'Insufficient data for backtesting',
-        message: `Only ${dailyPrices.length} trading days found for the requested period. Minimum 30 days required for reliable backtesting.`,
-        availableDays: dailyPrices.length,
-        minimumRequired: 30
-      });
-    }
+    // Allow backtesting with any amount of data - user decides what's sufficient
 
     // Use the shared core algorithm
     const { runDCABacktest } = require('./services/dcaBacktestService');
