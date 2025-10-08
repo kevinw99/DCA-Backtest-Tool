@@ -300,6 +300,53 @@ const BacktestResults = ({ data, chartData: priceData }) => {
     }).join(', ');
   };
 
+  // Calculate next potential trades based on current holdings and price
+  const calculateFutureTrades = () => {
+    const currentPrice = priceData?.dailyPrices?.[priceData.dailyPrices.length - 1]?.close || 0;
+    const params = priceData?.backtestParameters;
+
+    if (!params || currentPrice === 0) return null;
+
+    const isShortStrategy = summary?.strategy === 'SHORT_DCA';
+    const hasHoldings = isShortStrategy ? shorts.length > 0 : lots.length > 0;
+
+    // Calculate average cost for sell activation
+    let avgCost = 0;
+    if (hasHoldings) {
+      if (isShortStrategy) {
+        const totalValue = shorts.reduce((sum, short) => sum + (short.price * short.shares), 0);
+        const totalShares = shorts.reduce((sum, short) => sum + short.shares, 0);
+        avgCost = totalShares > 0 ? totalValue / totalShares : 0;
+      } else {
+        const totalValue = lots.reduce((sum, lot) => sum + (lot.price * lot.shares), 0);
+        const totalShares = lots.reduce((sum, lot) => sum + lot.shares, 0);
+        avgCost = totalShares > 0 ? totalValue / totalShares : 0;
+      }
+    }
+
+    return {
+      currentPrice,
+      avgCost,
+      hasHoldings,
+      isShortStrategy,
+      // BUY direction (for LONG) or SHORT direction (for SHORT strategy)
+      buyActivation: {
+        activationPercent: isShortStrategy ? params.trailingShortActivationPercent : params.trailingBuyActivationPercent,
+        reboundPercent: isShortStrategy ? params.trailingShortPullbackPercent : params.trailingBuyReboundPercent,
+        activationPrice: currentPrice * (1 - (isShortStrategy ? params.trailingShortActivationPercent : params.trailingBuyActivationPercent)),
+        description: isShortStrategy ? 'Next SHORT' : 'Next BUY'
+      },
+      // SELL direction (for LONG) or COVER direction (for SHORT strategy)
+      sellActivation: hasHoldings ? {
+        activationPercent: isShortStrategy ? params.trailingCoverActivationPercent : params.trailingSellActivationPercent,
+        pullbackPercent: isShortStrategy ? params.trailingCoverReboundPercent : params.trailingSellPullbackPercent,
+        activationPrice: avgCost * (1 + (isShortStrategy ? params.trailingCoverActivationPercent : params.trailingSellActivationPercent)),
+        profitRequirement: avgCost * (1 + params.profitRequirement),
+        description: isShortStrategy ? 'Next COVER' : 'Next SELL'
+      } : null
+    };
+  };
+
   const formatTrailingStopBuyDetails = (trailingDetail) => {
     if (!trailingDetail) return '';
 
@@ -1416,6 +1463,102 @@ const BacktestResults = ({ data, chartData: priceData }) => {
           </div>
         </div>
       )}
+
+      {/* Future Trade Section */}
+      {(() => {
+        const futureTrades = calculateFutureTrades();
+        if (!futureTrades) return null;
+
+        const { currentPrice, avgCost, hasHoldings, isShortStrategy, buyActivation, sellActivation } = futureTrades;
+
+        return (
+          <div className="holdings-section future-trades-section">
+            <h3>
+              <Target size={20} />
+              Future Trade
+            </h3>
+
+            <div className="future-trades-content">
+              <div className="current-state">
+                <div className="current-price">
+                  <strong>Current Price:</strong> {formatCurrency(currentPrice)}
+                </div>
+                {hasHoldings && (
+                  <div className="avg-cost">
+                    <strong>Average Cost:</strong> {formatCurrency(avgCost)}
+                  </div>
+                )}
+              </div>
+
+              <div className="trade-directions">
+                {/* Downward Direction (Buy/Short) */}
+                <div className="trade-direction buy-direction">
+                  <div className="direction-header">
+                    <TrendingDown size={18} />
+                    <span className="direction-title">{buyActivation.description}</span>
+                  </div>
+                  <div className="direction-details">
+                    <div className="activation-info">
+                      <span className="label">Activates at:</span>
+                      <span className="value">{formatCurrency(buyActivation.activationPrice)}</span>
+                      <span className="percent">
+                        ({formatParameterPercent(buyActivation.activationPercent)} drop)
+                      </span>
+                    </div>
+                    <div className="execution-info">
+                      <span className="label">Executes on:</span>
+                      <span className="value">
+                        {formatParameterPercent(buyActivation.reboundPercent)} rebound after activation
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Upward Direction (Sell/Cover) */}
+                {sellActivation ? (
+                  <div className="trade-direction sell-direction">
+                    <div className="direction-header">
+                      <TrendingUp size={18} />
+                      <span className="direction-title">{sellActivation.description}</span>
+                    </div>
+                    <div className="direction-details">
+                      <div className="activation-info">
+                        <span className="label">Activates at:</span>
+                        <span className="value">{formatCurrency(sellActivation.activationPrice)}</span>
+                        <span className="percent">
+                          ({formatParameterPercent(sellActivation.activationPercent)} rise from avg cost)
+                        </span>
+                      </div>
+                      <div className="execution-info">
+                        <span className="label">Executes on:</span>
+                        <span className="value">
+                          {formatParameterPercent(sellActivation.pullbackPercent)} pullback after activation
+                        </span>
+                      </div>
+                      <div className="profit-requirement">
+                        <span className="label">Profit target:</span>
+                        <span className="value">{formatCurrency(sellActivation.profitRequirement)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="trade-direction sell-direction disabled">
+                    <div className="direction-header">
+                      <TrendingUp size={18} />
+                      <span className="direction-title">Next {isShortStrategy ? 'COVER' : 'SELL'}</span>
+                    </div>
+                    <div className="direction-details">
+                      <div className="no-holdings-message">
+                        Cannot activate (no holdings to sell)
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Daily Transaction Log */}
       {transactionLog && transactionLog.length > 0 && (

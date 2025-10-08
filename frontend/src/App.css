@@ -2073,3 +2073,128 @@
     gap: 0.75rem;
   }
 }
+
+/* Future Trade Section */
+.future-trades-section .future-trades-content {
+  padding: 1rem;
+}
+
+.future-trades-section .current-state {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: #f9fafb;
+  border-radius: 8px;
+  font-size: 1.1rem;
+}
+
+.future-trades-section .trade-directions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.future-trades-section .trade-direction {
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.5rem;
+  background: white;
+}
+
+.future-trades-section .trade-direction.buy-direction {
+  border-color: #ef4444;
+}
+
+.future-trades-section .trade-direction.sell-direction {
+  border-color: #10b981;
+}
+
+.future-trades-section .trade-direction.disabled {
+  border-color: #9ca3af;
+  opacity: 0.6;
+}
+
+.future-trades-section .direction-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.future-trades-section .buy-direction .direction-header {
+  color: #ef4444;
+  border-bottom-color: #fecaca;
+}
+
+.future-trades-section .sell-direction .direction-header {
+  color: #10b981;
+  border-bottom-color: #a7f3d0;
+}
+
+.future-trades-section .direction-title {
+  font-weight: 700;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.future-trades-section .direction-details {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.future-trades-section .activation-info,
+.future-trades-section .execution-info,
+.future-trades-section .profit-requirement {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.future-trades-section .label {
+  font-size: 0.85rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.future-trades-section .value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.future-trades-section .buy-direction .value {
+  color: #ef4444;
+}
+
+.future-trades-section .sell-direction .value {
+  color: #10b981;
+}
+
+.future-trades-section .percent {
+  font-size: 0.9rem;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.future-trades-section .no-holdings-message {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+@media (max-width: 768px) {
+  .future-trades-section .trade-directions {
+    grid-template-columns: 1fr;
+  }
+
+  .future-trades-section .current-state {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
