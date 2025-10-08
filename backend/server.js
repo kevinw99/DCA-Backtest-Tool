@@ -705,24 +705,27 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
 
         // Use coefficient from request, default to 1.0 if not provided
         const coefficientValue = coefficient !== undefined ? coefficient : 1.0;
+        // ✅ CP-2 FIX (VIOLATION-5): Frontend now sends decimals (0.10 for 10%)
+        // No need to divide by 100 - parameters are already decimals from frontend
         const betaResult = parameterCorrelationService.calculateBetaAdjustedParameters(beta, coefficient, {
-          profitRequirement: profitRequirement / 100, // Convert from percentage
-          gridIntervalPercent: gridIntervalPercent / 100,
-          trailingBuyActivationPercent: trailingBuyActivationPercent / 100,
-          trailingBuyReboundPercent: trailingBuyReboundPercent / 100,
-          trailingSellActivationPercent: trailingSellActivationPercent / 100,
-          trailingSellPullbackPercent: trailingSellPullbackPercent / 100
+          profitRequirement: profitRequirement,
+          gridIntervalPercent: gridIntervalPercent,
+          trailingBuyActivationPercent: trailingBuyActivationPercent,
+          trailingBuyReboundPercent: trailingBuyReboundPercent,
+          trailingSellActivationPercent: trailingSellActivationPercent,
+          trailingSellPullbackPercent: trailingSellPullbackPercent
         });
 
-        // Update parameters with Beta-adjusted values (convert back to percentages)
+        // ✅ VIOLATION-5 FIX: Beta service returns decimals, dcaBacktestService expects decimals
+        // No need to multiply by 100 - keep as decimals throughout
         finalParams = {
           ...finalParams,
-          profitRequirement: betaResult.adjustedParameters.profitRequirement * 100,
-          gridIntervalPercent: betaResult.adjustedParameters.gridIntervalPercent * 100,
-          trailingBuyActivationPercent: betaResult.adjustedParameters.trailingBuyActivationPercent * 100,
-          trailingBuyReboundPercent: betaResult.adjustedParameters.trailingBuyReboundPercent * 100,
-          trailingSellActivationPercent: betaResult.adjustedParameters.trailingSellActivationPercent * 100,
-          trailingSellPullbackPercent: betaResult.adjustedParameters.trailingSellPullbackPercent * 100
+          profitRequirement: betaResult.adjustedParameters.profitRequirement,
+          gridIntervalPercent: betaResult.adjustedParameters.gridIntervalPercent,
+          trailingBuyActivationPercent: betaResult.adjustedParameters.trailingBuyActivationPercent,
+          trailingBuyReboundPercent: betaResult.adjustedParameters.trailingBuyReboundPercent,
+          trailingSellActivationPercent: betaResult.adjustedParameters.trailingSellActivationPercent,
+          trailingSellPullbackPercent: betaResult.adjustedParameters.trailingSellPullbackPercent
         };
 
         betaInfo = {
@@ -903,7 +906,8 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
     // Use the shared core algorithm
     const { runDCABacktest } = require('./services/dcaBacktestService');
 
-    // Convert percentage parameters from whole numbers (10 = 10%) to decimals (0.1 = 10%) for the algorithm
+    // ✅ VIOLATION-5 FIX (ISSUE-7): Frontend now sends decimals (0.10 for 10%)
+    // No need to divide by 100 - parameters are already decimals from frontend
     const results = await runDCABacktest({
       symbol: finalParams.symbol,
       startDate: finalParams.startDate,
@@ -911,13 +915,13 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
       lotSizeUsd: finalParams.lotSizeUsd,
       maxLots: finalParams.maxLots,
       maxLotsToSell: finalParams.maxLotsToSell,
-      gridIntervalPercent: finalParams.gridIntervalPercent / 100,
-      remainingLotsLossTolerance: finalParams.remainingLotsLossTolerance / 100,
-      profitRequirement: finalParams.profitRequirement / 100,
-      trailingBuyActivationPercent: finalParams.trailingBuyActivationPercent / 100,
-      trailingBuyReboundPercent: finalParams.trailingBuyReboundPercent / 100,
-      trailingSellActivationPercent: finalParams.trailingSellActivationPercent / 100,
-      trailingSellPullbackPercent: finalParams.trailingSellPullbackPercent / 100,
+      gridIntervalPercent: finalParams.gridIntervalPercent,
+      remainingLotsLossTolerance: finalParams.remainingLotsLossTolerance,
+      profitRequirement: finalParams.profitRequirement,
+      trailingBuyActivationPercent: finalParams.trailingBuyActivationPercent,
+      trailingBuyReboundPercent: finalParams.trailingBuyReboundPercent,
+      trailingSellActivationPercent: finalParams.trailingSellActivationPercent,
+      trailingSellPullbackPercent: finalParams.trailingSellPullbackPercent,
       enableDynamicGrid: finalParams.enableDynamicGrid,
       normalizeToReference: finalParams.normalizeToReference,
       dynamicGridMultiplier: finalParams.dynamicGridMultiplier,
@@ -1044,18 +1048,10 @@ app.post('/api/backtest/short-dca', validation.validateShortDCABacktestParams, a
     // Note: No longer saving to backtestDefaults.json on every request to avoid polluting config file
     // Use POST /api/backtest/defaults/:symbol endpoint to explicitly save ticker-specific defaults
 
-    // Convert percentage parameters from whole numbers (10 = 10%) to decimals (0.1 = 10%) for the algorithm
+    // ✅ VIOLATION-5 FIX: Frontend now sends decimals (0.10 for 10%)
+    // No need to divide by 100 - parameters are already decimals from frontend
     const algoParams = {
-      ...normalizedParams,
-      gridIntervalPercent: normalizedParams.gridIntervalPercent / 100,
-      profitRequirement: normalizedParams.profitRequirement / 100,
-      trailingShortActivationPercent: normalizedParams.trailingShortActivationPercent / 100,
-      trailingShortPullbackPercent: normalizedParams.trailingShortPullbackPercent / 100,
-      trailingCoverActivationPercent: normalizedParams.trailingCoverActivationPercent / 100,
-      trailingCoverReboundPercent: normalizedParams.trailingCoverReboundPercent / 100,
-      hardStopLossPercent: normalizedParams.hardStopLossPercent / 100,
-      portfolioStopLossPercent: normalizedParams.portfolioStopLossPercent / 100,
-      cascadeStopLossPercent: normalizedParams.cascadeStopLossPercent / 100
+      ...normalizedParams
     };
 
     const results = await runShortDCABacktest(algoParams);

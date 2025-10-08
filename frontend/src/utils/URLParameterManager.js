@@ -223,15 +223,11 @@ class URLParameterManager {
         // Use uncompressed query parameters for readability
         const queryParams = new URLSearchParams();
 
-        // Add all parameters as individual query params
-        for (const [key, value] of Object.entries(paramsToEncode)) {
-          if (value !== undefined && value !== null && value !== '') {
-            if (typeof value === 'object') {
-              queryParams.set(key, JSON.stringify(value));
-            } else {
-              queryParams.set(key, value.toString());
-            }
-          }
+        // Use dedicated encoding methods for each mode to create flat, readable URLs
+        if (mode === 'batch') {
+          this._encodeBatchParameters(queryParams, paramsToEncode);
+        } else {
+          this._encodeSingleParameters(queryParams, paramsToEncode);
         }
 
         url = `${this.baseURL}${path}?${queryParams.toString()}`;
@@ -446,6 +442,17 @@ class URLParameterManager {
     if (parameters.enableBetaScaling !== undefined) params.set('enableBetaScaling', parameters.enableBetaScaling.toString());
     if (parameters.isManualBetaOverride !== undefined) params.set('isManualBetaOverride', parameters.isManualBetaOverride.toString());
 
+    // Grid & Incremental Options boolean flags
+    if (parameters.enableDynamicGrid !== undefined) params.set('enableDynamicGrid', parameters.enableDynamicGrid.toString());
+    if (parameters.normalizeToReference !== undefined) params.set('normalizeToReference', parameters.normalizeToReference.toString());
+    if (parameters.enableConsecutiveIncrementalBuyGrid !== undefined) params.set('enableConsecutiveIncrementalBuyGrid', parameters.enableConsecutiveIncrementalBuyGrid.toString());
+    if (parameters.enableConsecutiveIncrementalSellProfit !== undefined) params.set('enableConsecutiveIncrementalSellProfit', parameters.enableConsecutiveIncrementalSellProfit.toString());
+    if (parameters.enableScenarioDetection !== undefined) params.set('enableScenarioDetection', parameters.enableScenarioDetection.toString());
+
+    // Grid option numeric parameters
+    if (parameters.dynamicGridMultiplier !== undefined) params.set('dynamicGridMultiplier', parameters.dynamicGridMultiplier.toString());
+    if (parameters.gridConsecutiveIncrement !== undefined) params.set('gridConsecutiveIncrement', parameters.gridConsecutiveIncrement.toString());
+
     // Source information for debugging
     if (parameters.source) params.set('source', parameters.source);
   }
@@ -496,6 +503,30 @@ class URLParameterManager {
     // Beta parameters (check both top-level and nested in parameterRanges)
     const enableBetaScaling = parameters.enableBetaScaling ?? parameters.parameterRanges?.enableBetaScaling;
     if (enableBetaScaling !== undefined) params.set('enableBetaScaling', enableBetaScaling.toString());
+
+    // Boolean flags for grid and incremental options
+    const booleanFlags = [
+      'enableDynamicGrid',
+      'normalizeToReference',
+      'enableConsecutiveIncrementalBuyGrid',
+      'enableConsecutiveIncrementalSellProfit',
+      'enableScenarioDetection'
+    ];
+
+    booleanFlags.forEach(flag => {
+      const value = parameters[flag] ?? parameters.parameterRanges?.[flag];
+      if (value !== undefined) {
+        params.set(flag, value.toString());
+      }
+    });
+
+    // Numeric parameters for grid options
+    if (parameters.dynamicGridMultiplier !== undefined) {
+      params.set('dynamicGridMultiplier', parameters.dynamicGridMultiplier.toString());
+    }
+    if (parameters.gridConsecutiveIncrement !== undefined) {
+      params.set('gridConsecutiveIncrement', parameters.gridConsecutiveIncrement.toString());
+    }
   }
 
   /**
@@ -551,6 +582,31 @@ class URLParameterManager {
       decoded.trailingCoverReboundPercent = this._parsePercentageAsDecimal(params.trailingCoverReboundPercent, 10);
       decoded.hardStopLossPercent = this._parsePercentageAsDecimal(params.hardStopLossPercent, 50);
       decoded.portfolioStopLossPercent = this._parsePercentageAsDecimal(params.portfolioStopLossPercent, 30);
+    }
+
+    // Grid & Incremental Options boolean flags
+    if (params.enableDynamicGrid !== undefined) {
+      decoded.enableDynamicGrid = this._parseBoolean(params.enableDynamicGrid, true);
+    }
+    if (params.normalizeToReference !== undefined) {
+      decoded.normalizeToReference = this._parseBoolean(params.normalizeToReference, true);
+    }
+    if (params.enableConsecutiveIncrementalBuyGrid !== undefined) {
+      decoded.enableConsecutiveIncrementalBuyGrid = this._parseBoolean(params.enableConsecutiveIncrementalBuyGrid, false);
+    }
+    if (params.enableConsecutiveIncrementalSellProfit !== undefined) {
+      decoded.enableConsecutiveIncrementalSellProfit = this._parseBoolean(params.enableConsecutiveIncrementalSellProfit, true);
+    }
+    if (params.enableScenarioDetection !== undefined) {
+      decoded.enableScenarioDetection = this._parseBoolean(params.enableScenarioDetection, true);
+    }
+
+    // Grid option numeric parameters
+    if (params.dynamicGridMultiplier !== undefined) {
+      decoded.dynamicGridMultiplier = this._parseNumber(params.dynamicGridMultiplier, 1.0);
+    }
+    if (params.gridConsecutiveIncrement !== undefined) {
+      decoded.gridConsecutiveIncrement = this._parseNumber(params.gridConsecutiveIncrement, 5);
     }
 
     return decoded;

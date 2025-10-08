@@ -95,6 +95,8 @@ async function generateParameterCombinations(paramRanges) {
                       for (const gridMult of dynamicGridMultiplier) {
                         try {
                           // Calculate Beta-adjusted parameters using parameterCorrelationService
+                          // Frontend now sends decimals per spec (CP-2 fix), use directly
+                          // Reference: VIOLATION-2, ISSUE-3 fix
                           const baseParams = {
                             profitRequirement: profit,
                             gridIntervalPercent: grid,
@@ -457,47 +459,36 @@ async function runBatchBacktest(options, progressCallback = null, sessionId = nu
       const betaInfo = params.enableBetaScaling ?
         ` Beta: ${params.beta}, Coeff: ${params.coefficient}, β-factor: ${params.betaFactor?.toFixed(2) || 'N/A'}` :
         '';
-      console.log(`🔄 Running backtest ${current}/${combinations.length}: ${params.symbol}${betaInfo} - Profit: ${(params.profitRequirement).toFixed(1)}%, Grid: ${(params.gridIntervalPercent).toFixed(1)}%`);
 
-      // Log exact parameters for debugging
-      console.log(`📊 EXACT PARAMETERS FOR ${params.symbol} (run ${current}/${combinations.length}):`);
-      console.log(`   symbol: ${params.symbol}`);
-      console.log(`   startDate: ${params.startDate}`);
-      console.log(`   endDate: ${params.endDate}`);
-      console.log(`   lotSizeUsd: ${params.lotSizeUsd}`);
-      console.log(`   maxLots: ${params.maxLots}`);
-      console.log(`   maxLotsToSell: ${params.maxLotsToSell}`);
-      console.log(`   profitRequirement: ${params.profitRequirement} (${(params.profitRequirement * 100).toFixed(2)}%)`);
-      console.log(`   gridIntervalPercent: ${params.gridIntervalPercent} (${(params.gridIntervalPercent * 100).toFixed(2)}%)`);
-      console.log(`   trailingBuyActivationPercent: ${params.trailingBuyActivationPercent} (${(params.trailingBuyActivationPercent * 100).toFixed(2)}%)`);
-      console.log(`   trailingBuyReboundPercent: ${params.trailingBuyReboundPercent} (${(params.trailingBuyReboundPercent * 100).toFixed(2)}%)`);
-      console.log(`   trailingSellActivationPercent: ${params.trailingSellActivationPercent} (${(params.trailingSellActivationPercent * 100).toFixed(2)}%)`);
-      console.log(`   trailingSellPullbackPercent: ${params.trailingSellPullbackPercent} (${(params.trailingSellPullbackPercent * 100).toFixed(2)}%)`);
-      console.log(`   enableBetaScaling: ${params.enableBetaScaling}`);
-      console.log(`   enableDynamicGrid: ${params.enableDynamicGrid}`);
-      console.log(`   normalizeToReference: ${params.normalizeToReference}`);
-      console.log(`   enableConsecutiveIncrementalBuyGrid: ${params.enableConsecutiveIncrementalBuyGrid}`);
-      console.log(`   enableConsecutiveIncrementalSellProfit: ${params.enableConsecutiveIncrementalSellProfit}`);
-      if (params.enableBetaScaling) {
-        console.log(`   beta: ${params.beta}`);
-        console.log(`   coefficient: ${params.coefficient}`);
-        console.log(`   betaFactor: ${params.betaFactor}`);
-      }
-      console.log(`─────────────────────────────────────────────────────────`);
+      console.log(`\n🚀 SPAWNING TEST ${current}/${combinations.length}: ${params.symbol}${betaInfo}`);
+
+      // Construct equivalent frontend URL (convert decimals to percentages for URL)
+      const toPercent = (decimal) => (decimal * 100).toFixed(3);
+      const frontendUrl = `http://localhost:3000/backtest?mode=single&symbol=${params.symbol}` +
+        `&startDate=${params.startDate}&endDate=${params.endDate}&strategyMode=long` +
+        `&lotSizeUsd=${params.lotSizeUsd}&maxLots=${params.maxLots}&maxLotsToSell=${params.maxLotsToSell}` +
+        `&gridIntervalPercent=${toPercent(params.gridIntervalPercent)}` +
+        `&profitRequirement=${toPercent(params.profitRequirement)}` +
+        `&trailingBuyActivationPercent=${toPercent(params.trailingBuyActivationPercent)}` +
+        `&trailingBuyReboundPercent=${toPercent(params.trailingBuyReboundPercent)}` +
+        `&trailingSellActivationPercent=${toPercent(params.trailingSellActivationPercent)}` +
+        `&trailingSellPullbackPercent=${toPercent(params.trailingSellPullbackPercent)}` +
+        `&enableDynamicGrid=${params.enableDynamicGrid}` +
+        `&normalizeToReference=${params.normalizeToReference}` +
+        `&enableConsecutiveIncrementalBuyGrid=${params.enableConsecutiveIncrementalBuyGrid}` +
+        `&enableConsecutiveIncrementalSellProfit=${params.enableConsecutiveIncrementalSellProfit}` +
+        `&dynamicGridMultiplier=${params.dynamicGridMultiplier || 1}`;
+
+      console.log(`🌐 URL: ${frontendUrl}`);
 
       const result = await runDCABacktest({
         ...params,
         verbose: false // Don't log individual backtest details
       });
 
-      // DEBUG: Log the raw result to see what we're getting
-      console.log(`🐛 Raw result for ${params.symbol}:`, {
-        totalReturnPercent: result.totalReturnPercent,
-        annualizedReturnPercent: result.annualizedReturnPercent,
-        totalTrades: result.totalTrades,
-        winRate: result.winRate,
-        maxDrawdownPercent: result.maxDrawdownPercent
-      });
+      // Log the result so user can identify which URL produced which performance
+      console.log(`✅ RESULT: Total Return ${(result.totalReturnPercent * 100).toFixed(2)}% | ${result.totalTrades} trades | ${(result.winRate * 100).toFixed(0)}% win rate`);
+      console.log(`════════════════════════════════════════════════════════════════════════════════════════\n`);
 
       // Add parameter info to result
       result.parameters = params;

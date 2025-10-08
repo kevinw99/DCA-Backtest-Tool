@@ -391,9 +391,180 @@ For questions or issues with percentage conversions:
 
 ---
 
-**Last Updated**: 2025-09-30
+---
+
+## URL Parameters and Form State (Added 2025-10-08)
+
+### URL Parameter Convention
+
+**URLs MUST use WHOLE NUMBER PERCENTAGES for human readability:**
+
+| Internal (Decimal) | URL Parameter | Display |
+| ------------------ | ------------- | ------- |
+| `0.10` | `gridIntervalPercent=10` | `"10%"` |
+| `0.2595` | `profitRequirement=25.95` | `"25.95%"` |
+| `0.05` | `trailingBuyReboundPercent=5` | `"5%"` |
+
+**Rationale:**
+- URLs are user-facing and shareable
+- `gridIntervalPercent=25.95` is more readable than `gridIntervalPercent=0.2595`
+- Matches user mental model (people think in "25.95%" not "0.2595")
+
+**Examples:**
+```
+✅ CORRECT: /backtest/long/PLTR?gridIntervalPercent=10&profitRequirement=5
+❌ WRONG:   /backtest/long/PLTR?gridIntervalPercent=0.10&profitRequirement=0.05
+```
+
+### Form State Convention
+
+**Forms SHOULD store WHOLE NUMBERS for better UX:**
+
+```javascript
+// Form state stores whole numbers
+const [gridInterval, setGridInterval] = useState(10); // 10% stored as 10
+
+// Convert to decimals when sending to API
+const apiParams = {
+  gridIntervalPercent: gridInterval / 100 // 10 → 0.10
+};
+```
+
+**Rationale:**
+- Input shows "10", state stores 10 - no mental mapping needed
+- Easier to validate ranges (0-100 vs 0-1)
+- No conversion needed to display in input field
+
+---
+
+## Complete Data Flow
+
+### All Conversion Points
+
+```
+┌─────────────┐  CP-1   ┌─────────────┐  CP-2   ┌─────────────┐
+│ User Input  │────────▶│  Form State │────────▶│ API Request │
+│   "10%"     │ parse   │     10      │ /100    │    0.10     │
+│  (String)   │         │  (Whole)    │         │  (Decimal)  │
+└─────────────┘         └─────────────┘         └─────────────┘
+                                                        │
+                                                        ▼
+      ┌─────────────┐         ┌─────────────┐  ┌─────────────┐
+      │   Display   │◀────────│ URL Params  │◀─│   Backend   │
+      │  "25.95%"   │  CP-3   │    25.95    │  │   0.2595    │
+      │  (String)   │  *100   │  (Whole)    │  │  (Decimal)  │
+      └─────────────┘         └─────────────┘  └─────────────┘
+           ▲                         ▲               │
+           │                         │ CP-6          │
+           └─────────────────────────┴───────────────┘
+                              CP-4, CP-5
+                              Backend URL logging
+```
+
+**CP-1: User Input → Form State**
+- Input: String `"10%"` or `"10"`
+- Process: Parse and keep as whole number
+- Output: Number `10`
+- Location: Form input handlers
+
+**CP-2: Form State → API Request**
+- Input: Number `10` (whole)
+- Process: Divide by 100
+- Output: Number `0.10` (decimal)
+- Location: Form onSubmit handlers
+- **Fixed in**: `DCABacktestForm.js`
+
+**CP-3: API Response → Display**
+- Input: Number `0.2595` (decimal)
+- Process: Multiply by 100 and format
+- Output: String `"25.95%"`
+- Location: Result components
+- Uses: `formatParameterPercent()` or `formatPerformancePercent()`
+
+**CP-4: Form State → URL Encoding**
+- Input: Number `0.2595` (decimal from API or beta-scaled)
+- Process: Multiply by 100
+- Output: URL param `gridIntervalPercent=25.95`
+- Location: `URLParameterManager.encodeParametersToURL()`
+
+**CP-5: URL Decoding → Internal State**
+- Input: URL param `gridIntervalPercent=25.95`
+- Process: Divide by 100
+- Output: Number `0.2595` (decimal)
+- Location: `URLParameterManager.parseSemanticURL()`
+
+**CP-6: Backend → URL Logging**
+- Input: Number `0.2595` (decimal from beta scaling)
+- Process: Multiply by 100
+- Output: URL param `gridIntervalPercent=25.95`
+- Location: Backend URL logging (batch/single endpoints)
+- **Fixed in**: `batchBacktestService.js`
+
+---
+
+## Fixed Violations (2025-10-08)
+
+### Summary of Issues Found and Fixed
+
+| Violation | Location | Issue | Fix |
+|-----------|----------|-------|-----|
+| **VIOLATION-1** | `DCABacktestForm.js:686-702` | Sent whole numbers to API | ✅ Added `/100` conversion |
+| **VIOLATION-2** | `batchBacktestService.js:100-105` | Backend compensated with `/100` | ✅ Removed workaround |
+| **VIOLATION-3** | `batchBacktestService.js:464-478` | URL logging showed decimals | ✅ Fixed `toPercent()` |
+| **VIOLATION-4** | `URLParameterManager.js:282-299` | ✅ Already correct | No fix needed |
+| **VIOLATION-5** | `server.js:709-729, 1050-1062` | Beta scaling double conversion | ✅ Removed `/100` and `*100` |
+| **VIOLATION-6** | `server.js:917-923` | runDCABacktest call divided by 100 | ✅ Removed `/100` |
+
+### Complete Fix Log
+
+**Issue Chain:**
+1. Frontend sent whole numbers (10) instead of decimals (0.10) to API
+2. Backend compensated with `/100` division
+3. Beta scaling had additional `/100` and `*100` conversions
+4. runDCABacktest call had another `/100` division
+5. Result: Values were 100x too small in transactions
+
+**Root Cause:**
+Missing specification for:
+- URL parameter format (whole vs decimal)
+- Form state format (whole vs decimal)
+- Boundary conversions between components
+
+**Solution:**
+- Defined URL format: whole numbers for readability
+- Defined form format: whole numbers for UX
+- Added explicit conversions at all 6 boundaries
+- Removed all compensating workarounds
+
+---
+
+## Batch URL Readability (Added 2025-10-08)
+
+### Readable Batch URLs
+
+Batch URLs now use flat query strings instead of JSON encoding:
+
+**Before (unreadable):**
+```
+/batch/PLTR/results?parameterRanges=%7B%22symbols%22%3A%5B%22PLTR%22%5D...
+```
+
+**After (readable):**
+```
+/batch/PLTR/results?symbols=PLTR&coefficients=1,0.5&profitRequirement=10&gridIntervalPercent=10&trailingBuyActivationPercent=10,5...
+```
+
+**Implementation:**
+- Arrays encoded as comma-separated values: `coefficients=1,0.5`
+- Percentages as whole numbers: `profitRequirement=10` (for 10%)
+- Location: `URLParameterManager.generateSemanticURL()`
+
+---
+
+**Last Updated**: 2025-10-08
 **Maintained By**: Development Team
 **Related Specs**:
 
 - Phase 1-3 Refactoring Completion
 - Batch Results Display Fix
+- `.kiro/specs/21_percentage-conversion-comprehensive-fix/` - Complete fix documentation

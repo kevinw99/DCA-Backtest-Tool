@@ -1,0 +1,11 @@
+{
+  "symbols": ["AAPL"],
+  "parameterRanges": {
+    "profitRequirement": [0.03, 0.05],
+    "gridIntervalPercent": [0.05, 0.08],
+    "maxLotsToSell": [1],
+    "startDate": "2024-01-01",
+    "endDate": "2024-12-31"
+  },
+  "enableBetaScaling": false
+}

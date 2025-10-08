@@ -1,0 +1,16 @@
+{
+  "symbols": ["AAPL"],
+  "parameterRanges": {
+    "profitRequirement": [0.02, 0.03, 0.05],
+    "gridIntervalPercent": [0.03, 0.05],
+    "trailingBuyActivationPercent": [0.05],
+    "trailingBuyReboundPercent": [0.03],
+    "trailingSellActivationPercent": [0.08],
+    "trailingSellPullbackPercent": [0.03],
+    "maxLotsToSell": [1],
+    "startDate": "2024-06-01",
+    "endDate": "2024-12-31"
+  },
+  "enableBetaScaling": false,
+  "sortBy": "totalReturn"
+}

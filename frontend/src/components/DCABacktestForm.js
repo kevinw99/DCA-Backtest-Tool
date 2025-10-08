@@ -18,8 +18,19 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
     const saved = localStorage.getItem('dca-single-parameters');
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Always override endDate to today
-      parsed.endDate = new Date().toISOString().split('T')[0];
+      console.log('📦 Loading parameters from localStorage:', {
+        startDate: parsed.startDate,
+        endDate: parsed.endDate,
+        endDateBefore: parsed.endDate
+      });
+      // DON'T force endDate to today - respect user's saved date
+      // Only set to today if the saved date is missing
+      if (!parsed.endDate) {
+        parsed.endDate = new Date().toISOString().split('T')[0];
+        console.log('⚠️ No endDate in localStorage, setting to today:', parsed.endDate);
+      } else {
+        console.log('✅ Using saved endDate from localStorage:', parsed.endDate);
+      }
       return parsed;
     }
 
@@ -38,8 +49,11 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
     const saved = localStorage.getItem('dca-short-single-parameters');
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Always override endDate to today
-      parsed.endDate = new Date().toISOString().split('T')[0];
+      // DON'T force endDate to today - respect user's saved date
+      // Only set to today if the saved date is missing
+      if (!parsed.endDate) {
+        parsed.endDate = new Date().toISOString().split('T')[0];
+      }
       return parsed;
     }
 
@@ -235,10 +249,9 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
             const savedParams = localStorage.getItem('dca-single-parameters');
             const savedShortParams = localStorage.getItem('dca-short-single-parameters');
 
-            // ALWAYS update endDate from backend to keep it current (today's date)
-            // This ensures users always get the latest available data by default
-            setParameters(prev => ({ ...prev, endDate: uiParams.endDate }));
-            setShortParameters(prev => ({ ...prev, endDate: uiParams.endDate }));
+            // DON'T force-update endDate - let users control their own date
+            // The initial default is already set to today in useState initialization
+            // Forcing it here would override user's changes every time defaults load
 
             // Only apply full backend defaults if no localStorage data exists (fresh user)
             if (!savedParams) {
@@ -368,6 +381,23 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
         trailingCoverReboundPercent: (value) => {
           const parsed = parseFloat(value);
           return !isNaN(parsed) ? parsed : 10;
+        },
+
+        // Boolean flags for Grid & Incremental Options
+        enableDynamicGrid: (value) => value === 'true' || value === true,
+        normalizeToReference: (value) => value === 'true' || value === true,
+        enableConsecutiveIncrementalBuyGrid: (value) => value === 'true' || value === true,
+        enableConsecutiveIncrementalSellProfit: (value) => value === 'true' || value === true,
+        enableScenarioDetection: (value) => value === 'true' || value === true,
+
+        // Numeric parameters for grid options
+        dynamicGridMultiplier: (value) => {
+          const parsed = parseFloat(value);
+          return !isNaN(parsed) ? parsed : 1.0;
+        },
+        gridConsecutiveIncrement: (value) => {
+          const parsed = parseFloat(value);
+          return !isNaN(parsed) ? parsed : 5;
         }
       };
 
@@ -386,7 +416,14 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
           const value = urlParamMapping[key](urlParams[key]);
 
           // Common parameters apply to both strategies
-          const commonParams = ['symbol', 'startDate', 'endDate', 'lotSizeUsd', 'gridIntervalPercent', 'profitRequirement'];
+          const commonParams = [
+            'symbol', 'startDate', 'endDate', 'lotSizeUsd', 'gridIntervalPercent', 'profitRequirement',
+            // Grid & Incremental Options boolean flags
+            'enableDynamicGrid', 'normalizeToReference', 'enableConsecutiveIncrementalBuyGrid',
+            'enableConsecutiveIncrementalSellProfit', 'enableScenarioDetection',
+            // Grid option numeric parameters
+            'dynamicGridMultiplier', 'gridConsecutiveIncrement'
+          ];
 
           // Long strategy specific parameters
           const longParams = ['maxLots', 'maxLotsToSell', 'trailingBuyActivationPercent', 'trailingBuyReboundPercent', 'trailingSellActivationPercent', 'trailingSellPullbackPercent'];
@@ -507,8 +544,8 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
     if (!batchMode && parameters.symbol) {
       const loadDefaults = async () => {
         const defaults = await getTickerDefaults(parameters.symbol);
-        // Always use today as endDate (don't load from saved defaults)
-        defaults.endDate = new Date().toISOString().split('T')[0];
+        // DON'T force endDate to today - respect user's chosen date
+        // Ticker defaults shouldn't override the date the user has set
         setTickerDefaults(defaults);
       };
       loadDefaults();
@@ -632,19 +669,23 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
     if (strategyMode === 'short') {
       // Short selling strategy
       if (batchMode) {
-        // Short batch mode - use shortBatchParameters like long batch mode uses batchParameters
+        // Short batch mode - convert percentage arrays from whole numbers to decimals for API (CP-2)
+        // Reference: VIOLATION-1, ISSUE-2 fix
+        const convertPercentageArray = (arr) => arr.map(val => val / 100);
+
         const shortBatchOptions = {
           parameterRanges: {
             symbols: shortBatchParameters.symbols,
-            profitRequirement: shortBatchParameters.profitRequirement,
-            gridIntervalPercent: shortBatchParameters.gridIntervalPercent,
-            trailingShortActivationPercent: shortBatchParameters.trailingShortActivationPercent,
-            trailingShortPullbackPercent: shortBatchParameters.trailingShortPullbackPercent,
-            trailingCoverActivationPercent: shortBatchParameters.trailingCoverActivationPercent,
-            trailingCoverReboundPercent: shortBatchParameters.trailingCoverReboundPercent,
-            hardStopLossPercent: shortBatchParameters.hardStopLossPercent,
-            portfolioStopLossPercent: shortBatchParameters.portfolioStopLossPercent,
-            cascadeStopLossPercent: shortBatchParameters.cascadeStopLossPercent,
+            // Convert percentage parameters: 10 → 0.10
+            profitRequirement: convertPercentageArray(shortBatchParameters.profitRequirement),
+            gridIntervalPercent: convertPercentageArray(shortBatchParameters.gridIntervalPercent),
+            trailingShortActivationPercent: convertPercentageArray(shortBatchParameters.trailingShortActivationPercent),
+            trailingShortPullbackPercent: convertPercentageArray(shortBatchParameters.trailingShortPullbackPercent),
+            trailingCoverActivationPercent: convertPercentageArray(shortBatchParameters.trailingCoverActivationPercent),
+            trailingCoverReboundPercent: convertPercentageArray(shortBatchParameters.trailingCoverReboundPercent),
+            hardStopLossPercent: convertPercentageArray(shortBatchParameters.hardStopLossPercent),
+            portfolioStopLossPercent: convertPercentageArray(shortBatchParameters.portfolioStopLossPercent),
+            cascadeStopLossPercent: convertPercentageArray(shortBatchParameters.cascadeStopLossPercent),
             // Fixed parameters from single mode
             startDate: shortParameters.startDate,
             endDate: shortParameters.endDate,
@@ -659,18 +700,20 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
         onSubmit(shortBatchOptions, true);
         return;
       } else {
-        // Short single mode
+        // Short single mode - convert percentage parameters from whole numbers to decimals for API (CP-2)
+        // Reference: VIOLATION-1, ISSUE-2 fix
         const shortBackendParams = {
           ...shortParameters,
-          gridIntervalPercent: shortParameters.gridIntervalPercent,
-          profitRequirement: shortParameters.profitRequirement,
-          trailingShortActivationPercent: shortParameters.trailingShortActivationPercent,
-          trailingShortPullbackPercent: shortParameters.trailingShortPullbackPercent,
-          trailingCoverActivationPercent: shortParameters.trailingCoverActivationPercent,
-          trailingCoverReboundPercent: shortParameters.trailingCoverReboundPercent,
-          hardStopLossPercent: shortParameters.hardStopLossPercent,
-          portfolioStopLossPercent: shortParameters.portfolioStopLossPercent,
-          cascadeStopLossPercent: shortParameters.cascadeStopLossPercent,
+          // Convert percentage parameters: 10 → 0.10
+          gridIntervalPercent: shortParameters.gridIntervalPercent / 100,
+          profitRequirement: shortParameters.profitRequirement / 100,
+          trailingShortActivationPercent: shortParameters.trailingShortActivationPercent / 100,
+          trailingShortPullbackPercent: shortParameters.trailingShortPullbackPercent / 100,
+          trailingCoverActivationPercent: shortParameters.trailingCoverActivationPercent / 100,
+          trailingCoverReboundPercent: shortParameters.trailingCoverReboundPercent / 100,
+          hardStopLossPercent: shortParameters.hardStopLossPercent / 100,
+          portfolioStopLossPercent: shortParameters.portfolioStopLossPercent / 100,
+          cascadeStopLossPercent: shortParameters.cascadeStopLossPercent / 100,
           // Add strategy mode to parameters
           strategyMode: 'short'
         };
@@ -681,47 +724,60 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
 
     // Long DCA strategy (existing logic)
     if (batchMode) {
-      // Use whole numbers directly (10 = 10%) - no conversion needed
+      console.log('🚀 ===== BATCH MODE SUBMISSION =====');
+      console.log('🚀 Date range from parameters state:', {
+        startDate: parameters.startDate,
+        endDate: parameters.endDate
+      });
+      console.log('🚀 Full parameters state:', parameters);
+
+      // Convert percentage arrays from whole numbers to decimals for API (CP-2)
+      // Reference: VIOLATION-1, ISSUE-2 fix
+      const convertPercentageArray = (arr) => arr.map(val => val / 100);
+
       const batchOptions = {
         parameterRanges: {
           symbols: batchParameters.symbols,
-          coefficients: batchParameters.coefficients,
-          maxLotsToSell: batchParameters.maxLotsToSell,
-          profitRequirement: batchParameters.profitRequirement,
-          gridIntervalPercent: batchParameters.gridIntervalPercent,
-          trailingBuyActivationPercent: batchParameters.trailingBuyActivationPercent,
-          trailingBuyReboundPercent: batchParameters.trailingBuyReboundPercent,
-          trailingSellActivationPercent: batchParameters.trailingSellActivationPercent,
-          trailingSellPullbackPercent: batchParameters.trailingSellPullbackPercent,
-          dynamicGridMultiplier: batchParameters.dynamicGridMultiplier,
-          gridConsecutiveIncrement: batchParameters.gridConsecutiveIncrement,
+          coefficients: batchParameters.coefficients,  // Not percentages, leave as-is
+          maxLotsToSell: batchParameters.maxLotsToSell,  // Not percentages, leave as-is
+          // Convert percentage parameters: 10 → 0.10
+          profitRequirement: convertPercentageArray(batchParameters.profitRequirement),
+          gridIntervalPercent: convertPercentageArray(batchParameters.gridIntervalPercent),
+          trailingBuyActivationPercent: convertPercentageArray(batchParameters.trailingBuyActivationPercent),
+          trailingBuyReboundPercent: convertPercentageArray(batchParameters.trailingBuyReboundPercent),
+          trailingSellActivationPercent: convertPercentageArray(batchParameters.trailingSellActivationPercent),
+          trailingSellPullbackPercent: convertPercentageArray(batchParameters.trailingSellPullbackPercent),
+          dynamicGridMultiplier: batchParameters.dynamicGridMultiplier,  // Not percentage, leave as-is
+          gridConsecutiveIncrement: batchParameters.gridConsecutiveIncrement,  // Not percentage, leave as-is
           // Fixed parameters from single mode
           startDate: parameters.startDate,
           endDate: parameters.endDate,
           lotSizeUsd: parameters.lotSizeUsd,
-          maxLots: parameters.maxLots
+          maxLots: parameters.maxLots,
+          // Boolean flags for Grid & Incremental Options (must be inside parameterRanges for backend)
+          enableBetaScaling: batchParameters.enableBetaScaling,
+          enableDynamicGrid: batchParameters.enableDynamicGrid,
+          normalizeToReference: batchParameters.normalizeToReference,
+          enableConsecutiveIncrementalBuyGrid: batchParameters.enableConsecutiveIncrementalBuyGrid,
+          enableConsecutiveIncrementalSellProfit: batchParameters.enableConsecutiveIncrementalSellProfit,
+          enableScenarioDetection: batchParameters.enableScenarioDetection
         },
-        // Move enableBetaScaling to top level to match URL structure
-        enableBetaScaling: batchParameters.enableBetaScaling,
-        enableDynamicGrid: batchParameters.enableDynamicGrid,
-        normalizeToReference: batchParameters.normalizeToReference,
-        enableConsecutiveIncrementalBuyGrid: batchParameters.enableConsecutiveIncrementalBuyGrid,
-        enableConsecutiveIncrementalSellProfit: batchParameters.enableConsecutiveIncrementalSellProfit,
-        enableScenarioDetection: batchParameters.enableScenarioDetection,
         sortBy: 'totalReturn'
       };
       onSubmit(batchOptions, true); // true indicates batch mode
     } else {
-      // Use whole numbers directly (10 = 10%) - no conversion needed
+      // Convert percentage parameters from whole numbers to decimals for API (CP-2)
+      // Reference: VIOLATION-1, ISSUE-2 fix
       const backendParams = {
         ...parameters,
-        gridIntervalPercent: parameters.gridIntervalPercent,
-        profitRequirement: parameters.profitRequirement,
-        trailingBuyActivationPercent: parameters.trailingBuyActivationPercent,
-        trailingBuyReboundPercent: parameters.trailingBuyReboundPercent,
-        trailingSellActivationPercent: parameters.trailingSellActivationPercent,
-        trailingSellPullbackPercent: parameters.trailingSellPullbackPercent,
-        // Add Beta information
+        // Convert percentage parameters: 10 → 0.10
+        gridIntervalPercent: parameters.gridIntervalPercent / 100,
+        profitRequirement: parameters.profitRequirement / 100,
+        trailingBuyActivationPercent: parameters.trailingBuyActivationPercent / 100,
+        trailingBuyReboundPercent: parameters.trailingBuyReboundPercent / 100,
+        trailingSellActivationPercent: parameters.trailingSellActivationPercent / 100,
+        trailingSellPullbackPercent: parameters.trailingSellPullbackPercent / 100,
+        // Add Beta information (not percentages, leave as-is)
         beta: beta,
         coefficient: coefficient,
         betaFactor: betaFactor,

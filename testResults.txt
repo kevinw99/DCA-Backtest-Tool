@@ -8,20 +8,32 @@ enable consecutive incremental buy -> should reduce period of buysing with small
 
 http://localhost:3000/backtest/long/PLTR/results?lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=10&profitRequirement=10&trailingBuyActivationPercent=5.1&trailingBuyReboundPercent=5&trailingSellActivationPercent=20&trailingSellPullbackPercent=10&maxShorts=6&maxShortsToCovers=3&trailingShortActivationPercent=25&trailingShortPullbackPercent=15&trailingCoverActivationPercent=20&trailingCoverReboundPercent=10&hardStopLossPercent=30&portfolioStopLossPercent=25&cascadeStopLossPercent=35&enableBetaScaling=false&beta=2.592&betaFactor=2.592&coefficient=1&isManualBetaOverride=false&enableDynamicGrid=false&dynamicGridMultiplier=1&enableConsecutiveIncremental=true&enableConsecutiveIncrementalSellProfit=false&enableScenarioDetection=false&normalizeToReference=true&enableAdaptiveStrategy=false&adaptationCheckIntervalDays=30&adaptationRollingWindowDays=90&minDataDaysBeforeAdaptation=90&confidenceThreshold=0.7&startDate=2021-09-01&endDate=2025-10-06&enableConsecutiveIncrementalBuyGrid=true&gridConsecutiveIncrement=3
 
+PLTR tunning 2
 
 
+http://localhost:3000/batch/PLTR/results?parameterRanges=%7B%22symbols%22%3A%5B%22AAPL%22%2C%22AMZN%22%2C%22API
+%22%2C%22BABA%22%2C%22JD%22%2C%22KNDI%22%2C%22LMND%22%2C%22META%22%2C%22MSFT%22%2C%22NIO%22%2C%22NVDA%22%2C%22PLTR%22%2C%22SHOP%22%2C%22TDOC%22%2C%22TSLA%22%2C%22U%22%5D%2C%22coefficients%22%3A%5B1%2C0.25%2C0.5%5D%2C%22maxLotsToSell%22%3A%5B1%5D%2C%22profitRequirement%22%3A%5B10%2C5%5D%2C%22gridIntervalPercent%22%3A%5B10%2C5%5D%2C%22trailingBuyActivationPercent%22%3A%5B5%2C10%2C0%5D%2C%22trailingBuyReboundPercent%22%3A%5B5%2C0%5D%2C%22trailingSellActivationPercent%22%3A%5B10%2C0%5D%2C%22trailingSellPullbackPercent%22%3A%5B0%2C5%5D%2C%22dynamicGridMultiplier%22%3A%5B1%5D%2C%22gridConsecutiveIncrement%22%3A%5B10%5D%2C%22startDate%22%3A%222021-09-01%22%2C%22endDate%22%3A%222025-10-06%22%2C%22lotSizeUsd%22%3A10000%2C%22maxLots%22%3A10%7D&enableBetaScaling=true&enableDynamicGrid=false&normalizeToReference=true&enableConsecutiveIncrementalBuyGrid=false&enableConsecutiveIncrementalSellProfit=false&enableScenarioDetection=false&sortBy=totalReturn
+
+single:
+http://localhost:3000/backtest?mode=single&symbol=PLTR&startDate=2021-09-01&endDate=2025-10-06&strategyMode=long
+&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=12.975&profitRequirement=12
+.975&trailingBuyActivationPercent=0&trailingBuyReboundPercent=12.975&trailingSellActivationPercent=
+25.95&trailingSellPullbackPercent=12.975&source=batch
+
+
+2.all stocks
+
+http://localhost:3000/batch/AAPL+AMZN+API+BABA+JD+KNDI+LMND+META+MSFT+NIO+NVDA+PLTR+SHOP+TDOC+TSLA+U/results?parameterRanges=%7B%22symbols%22%3A%5B%22AAPL%22%2C%22AMZN%22%2C%22API%22%2C%22BABA%22%2C%22JD%22%2C%22KNDI%22%2C%22LMND%22%2C%22META%22%2C%22MSFT%22%2C%22NIO%22%2C%22NVDA%22%2C%22PLTR%22%2C%22SHOP%22%2C%22TDOC%22%2C%22TSLA%22%2C%22U%22%5D%2C%22coefficients%22%3A%5B1%2C0.25%2C0.5%5D%2C%22maxLotsToSell%22%3A%5B1%5D%2C%22profitRequirement%22%3A%5B10%2C5%5D%2C%22gridIntervalPercent%22%3A%5B10%2C5%5D%2C%22trailingBuyActivationPercent%22%3A%5B5%2C10%2C0%5D%2C%22trailingBuyReboundPercent%22%3A%5B5%2C0%5D%2C%22trailingSellActivationPercent%22%3A%5B10%2C0%5D%2C%22trailingSellPullbackPercent%22%3A%5B0%2C5%5D%2C%22dynamicGridMultiplier%22%3A%5B1%5D%2C%22gridConsecutiveIncrement%22%3A%5B10%5D%2C%22startDate%22%3A%222021-09-01%22%2C%22endDate%22%3A%222025-10-06%22%2C%22lotSizeUsd%22%3A10000%2C%22maxLots%22%3A10%7D&enableBetaScaling=true&enableDynamicGrid=false&normalizeToReference=true&enableConsecutiveIncrementalBuyGrid=false&enableConsecutiveIncrementalSellProfit=false&enableScenarioDetection=false&sortBy=totalReturn
+
+When P/L < 0, conservative profile, when p/L >0, aggressive profile?
+or depends on the MV , rather than P/L?
 
 
 Use TA again?
 Actually once you control the buy and sell, then the whole algo is adjusted.
 
+http://localhost:3000/backtest?mode=single&symbol=PLTR&startDate=2021-09-01&endDate=2025-10-06&strategyMode=long&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=12.975&profitRequirement=12.975&trailingBuyActivationPercent=0&trailingBuyReboundPercent=12.975&trailingSellActivationPercent=25.95&trailingSellPullbackPercent=12.975&source=batch
 
-
-one thing with DCA is with grid size of fixed percentage like 10%, it is bigger when the price is higher and much
-smaller if the price already dropped a lot. On the other hande, fixed dollar amount not sensitive to the price
-level., what would be a better way to do it? we need a system that space out more in term of percentage when the
-price goes lower, but less in term of abosulte price delta,  and space out less in terms of percentage when the
-price goes higher, but more in terms of absolute price delta.
 
 Similar to claude code use command line interface, can we skip the traditional UI, and use command line interface to
 run the DCA algorithm. e.g, if I want to run the DCA algorithm batch, I can use the following command:
@@ -79,7 +91,7 @@ describe the rquest, so help me articulate it
 
 
 
-claude --allowedTools "Bash(git:*) Bash(curl:*) Edit"  --dangerously-skip-permissions   --permission-mode
+claude --allowedTools "Bash(git:*) Bash(curl:*) Edit"  --dangerously-skip-permissions --permission-mode
 bypassPermissions
 
 --allowedTools, --allowed-tools <tools...>        Comma or space-separated list of tool names to allow (e.g.

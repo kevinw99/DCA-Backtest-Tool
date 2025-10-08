@@ -39,6 +39,8 @@ const BatchResults = ({ data }) => {
     console.log('🚀 =================================');
     console.log(`🔄 Current page mode: ${currentMode} (will be preserved in new tab)`);
     console.log('📊 Raw parameters received from batch result:', JSON.stringify(parameters, null, 2));
+    console.log('🔍 CRITICAL: endDate from batch result:', parameters.endDate);
+    console.log('🔍 CRITICAL: startDate from batch result:', parameters.startDate);
 
     // Detect strategy type from batch data - use multiple indicators for robust detection
     const hasShortParams = parameters.hasOwnProperty('maxShorts') || parameters.hasOwnProperty('trailingShortActivationPercent');
@@ -113,6 +115,27 @@ const BatchResults = ({ data }) => {
         trailingSellPullbackPercent: parameters.trailingSellPullbackPercent
       });
     }
+
+    // Add advanced parameters that affect the backtest algorithm
+    console.log('🔍 Checking for boolean flags in parameters:', {
+      enableDynamicGrid: parameters.enableDynamicGrid,
+      normalizeToReference: parameters.normalizeToReference,
+      enableConsecutiveIncrementalBuyGrid: parameters.enableConsecutiveIncrementalBuyGrid,
+      enableConsecutiveIncrementalSellProfit: parameters.enableConsecutiveIncrementalSellProfit,
+      enableScenarioDetection: parameters.enableScenarioDetection,
+      dynamicGridMultiplier: parameters.dynamicGridMultiplier,
+      gridConsecutiveIncrement: parameters.gridConsecutiveIncrement
+    });
+
+    if (parameters.enableDynamicGrid !== undefined) urlParams.enableDynamicGrid = parameters.enableDynamicGrid;
+    if (parameters.normalizeToReference !== undefined) urlParams.normalizeToReference = parameters.normalizeToReference;
+    if (parameters.enableConsecutiveIncrementalBuyGrid !== undefined) urlParams.enableConsecutiveIncrementalBuyGrid = parameters.enableConsecutiveIncrementalBuyGrid;
+    if (parameters.enableConsecutiveIncrementalSellProfit !== undefined) urlParams.enableConsecutiveIncrementalSellProfit = parameters.enableConsecutiveIncrementalSellProfit;
+    if (parameters.enableScenarioDetection !== undefined) urlParams.enableScenarioDetection = parameters.enableScenarioDetection;
+    if (parameters.dynamicGridMultiplier !== undefined) urlParams.dynamicGridMultiplier = parameters.dynamicGridMultiplier;
+    if (parameters.gridConsecutiveIncrement !== undefined) urlParams.gridConsecutiveIncrement = parameters.gridConsecutiveIncrement;
+
+    console.log('🔍 Final urlParams being passed to generateShareableURL:', urlParams);
 
     // DO NOT add beta parameters when opening from batch results
     // The parameters are already Beta-scaled, so we pass them as-is without Beta scaling metadata

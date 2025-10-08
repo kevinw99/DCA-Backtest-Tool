@@ -1,0 +1,14 @@
+{
+  "symbol": "TSLA",
+  "startDate": "2023-01-01",
+  "endDate": "2024-12-31",
+  "lotSizeUsd": 10000,
+  "maxLots": 10,
+  "maxLotsToSell": 1,
+  "profitRequirement": 0.05,
+  "gridIntervalPercent": 0.10,
+  "trailingBuyActivationPercent": 0.10,
+  "trailingBuyReboundPercent": 0.05,
+  "trailingSellActivationPercent": 0.20,
+  "trailingSellPullbackPercent": 0.10
+}

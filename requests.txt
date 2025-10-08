@@ -1,8 +1,44 @@
+At the end of single backtest, please create a new section in the result "Future Trade" after "Current Holdings" to
+ print the activated trailing a
+ buy
+and
+sell order,
+if there is no pending orders, then anticipate how much price need to move to activate the next trailing buy and
+trailing
+sell order,
+and then what trailing order would be activated.
+you need to list both direction so the user can see the next possible trade in both direction.
 
-For batch mode, if single stock, then show 10 best result, best in terms of Total Return %
+till the same! single
+http://localhost:3000/backtest?mode=single&symbol=PLTR&startDate=2021-09-01&endDate=2025-10-08&strategyMode=long
+&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=25.95&profitRequirement=25
+.95&trailingBuyActivationPercent=12.975&trailingBuyReboundPercent=12.975&trailingSellActivationPercent=25
+.95&trailingSellPullbackPercent=12.975&enableDynamicGrid=false&normalizeToReference=false&enableBetaScaling=false
+&enableConsecutiveIncrementalBuyGrid=true&enableConsecutiveIncrementalSellProfit=false&dynamicGridMultiplier=1&source=batch
 
-if multipel stocks, then show 5 best result for each stock, best in terms of Total Return %
+http://localhost:3000/backtest/long/PLTR/results?startDate=2021-09-01&endDate=2025-10-08&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=10&profitRequirement=10&trailingBuyActivationPercent=5&trailingBuyReboundPercent=5&trailingSellActivationPercent=10&trailingSellPullbackPercent=5&maxShorts=6&maxShortsToCovers=3&trailingShortActivationPercent=2500&trailingShortPullbackPercent=1500&trailingCoverActivationPercent=2000&trailingCoverReboundPercent=1000&hardStopLossPercent=3000&portfolioStopLossPercent=2500&beta=2.595&coefficient=1&enableBetaScaling=true&isManualBetaOverride=false&enableDynamicGrid=false&normalizeToReference=false&enableConsecutiveIncrementalBuyGrid=true&enableConsecutiveIncrementalSellProfit=false&enableScenarioDetection=false&dynamicGridMultiplier=1&gridConsecutiveIncrement=10
 
+
+http://localhost:3000/backtest/long/PLTR/results?startDate=2021-09-01&endDate=2025-10-08&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=10&profitRequirement=10&trailingBuyActivationPercent=5&trailingBuyReboundPercent=5&trailingSellActivationPercent=10&trailingSellPullbackPercent=5&maxShorts=6&maxShortsToCovers=3&trailingShortActivationPercent=2500&trailingShortPullbackPercent=1500&trailingCoverActivationPercent=2000&trailingCoverReboundPercent=1000&hardStopLossPercent=3000&portfolioStopLossPercent=2500&beta=2.595&coefficient=1&enableBetaScaling=false&isManualBetaOverride=false&enableDynamicGrid=false&normalizeToReference=false&enableConsecutiveIncrementalBuyGrid=true&enableConsecutiveIncrementalSellProfit=false&enableScenarioDetection=false&dynamicGridMultiplier=1&gridConsecutiveIncrement=10
+
+
+For long running batch test, is there a way to stop in the middle of the batch test? Please evaluate what it takes
+before making any change.
+
+
+Best Result So Far:
+PLTR
+•
+1232.81% total return
+
+I see this value actaully dropp, it was 1300+% earlier within the same batch, you only update when it is higher, right?
+
+I notice now it takes longer time to run a batch test compare to before. is it that the batch mode didn't really do
+ the real job or there is some problem slowing it down now?
+
+http://localhost:3000/backtest?mode=single&symbol=PLTR&startDate=2021-09-01&endDate=2025-10-07&strategyMode=long&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=0.2595&profitRequirement=0.2595&trailingBuyActivationPercent=0&trailingBuyReboundPercent=0.12975&trailingSellActivationPercent=0.2595&trailingSellPullbackPercent=0.12975&source=batch
+
+http://localhost:3000/batch/PLTR/results?symbols=PLTR&profitRequirement=10&gridIntervalPercent=10&trailingBuyActivationPercent=10%2C5&trailingBuyReboundPercent=5&trailingSellActivationPercent=10&trailingSellPullbackPercent=5&coefficients=1%2C0.5&enableBetaScaling=true&enableDynamicGrid=false&normalizeToReference=true&enableConsecutiveIncrementalBuyGrid=true&enableConsecutiveIncrementalSellProfit=false&enableScenarioDetection=false
 
   Next Phase: Real-Time Adaptive Strategy
 
@@ -14,7 +50,7 @@ can you compare the performance of the adaptive strategy disabled vs enabled, an
  test  http://localhost:3000/backtest?mode=single&symbol=PLTR&startDate=2021-09-01&endDate=2025-10-04&strategyMode=long&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=6.480000000000001&profitRequirement=6.480000000000001&trailingBuyActivationPercent=6.480000000000001&trailingBuyReboundPercent=0&trailingSellActivationPercent=6.480000000000001&trailingSellPullbackPercent=0&source=batch
 
 
-
+http://localhost:3000/batch/TSLA/results?parameterRanges=%7B%22symbols%22%3A%5B%22TSLA%22%5D%2C%22coefficients%22%3A%5B1%5D%2C%22maxLotsToSell%22%3A%5B1%2C2%5D%2C%22profitRequirement%22%3A%5B5%2C10%2C0%5D%2C%22gridIntervalPercent%22%3A%5B10%2C5%5D%2C%22trailingBuyActivationPercent%22%3A%5B10%2C5%5D%2C%22trailingBuyReboundPercent%22%3A%5B5%2C10%5D%2C%22trailingSellActivationPercent%22%3A%5B20%2C10%5D%2C%22trailingSellPullbackPercent%22%3A%5B10%2C5%2C0%5D%2C%22dynamicGridMultiplier%22%3A%5B1%5D%2C%22gridConsecutiveIncrement%22%3A%5B5%5D%2C%22startDate%22%3A%222021-09-01%22%2C%22endDate%22%3A%222025-10-06%22%2C%22lotSizeUsd%22%3A10000%2C%22maxLots%22%3A10%7D&enableBetaScaling=false&enableDynamicGrid=false&normalizeToReference=true&enableConsecutiveIncrementalBuyGrid=false&enableConsecutiveIncrementalSellProfit=false&enableScenarioDetection=false&sortBy=totalReturn
 
 
 The key things is the Algo is a multi leg DCA, so each stage the captial deployed is differnt. I only have a max
