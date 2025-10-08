@@ -304,6 +304,9 @@ const BacktestResults = ({ data, chartData: priceData }) => {
   const calculateFutureTrades = () => {
     const currentPrice = priceData?.dailyPrices?.[priceData.dailyPrices.length - 1]?.close || 0;
     const params = priceData?.backtestParameters;
+    const recentPeak = priceData?.recentPeak;
+    const recentBottom = priceData?.recentBottom;
+    const lastTransactionDate = priceData?.lastTransactionDate;
 
     if (!params || currentPrice === 0) return null;
 
@@ -324,23 +327,38 @@ const BacktestResults = ({ data, chartData: priceData }) => {
       }
     }
 
+    // For BUY/SHORT: activation is based on drop from recentPeak
+    // For SELL/COVER: activation is based on rise from recentBottom
+    const buyActivationPrice = recentPeak ?
+      recentPeak * (1 - (isShortStrategy ? params.trailingShortActivationPercent : params.trailingBuyActivationPercent)) :
+      currentPrice * (1 - (isShortStrategy ? params.trailingShortActivationPercent : params.trailingBuyActivationPercent));
+
+    const sellActivationPrice = recentBottom ?
+      recentBottom * (1 + (isShortStrategy ? params.trailingCoverActivationPercent : params.trailingSellActivationPercent)) :
+      currentPrice * (1 + (isShortStrategy ? params.trailingCoverActivationPercent : params.trailingSellActivationPercent));
+
     return {
       currentPrice,
       avgCost,
       hasHoldings,
       isShortStrategy,
+      recentPeak,
+      recentBottom,
+      lastTransactionDate,
       // BUY direction (for LONG) or SHORT direction (for SHORT strategy)
       buyActivation: {
         activationPercent: isShortStrategy ? params.trailingShortActivationPercent : params.trailingBuyActivationPercent,
         reboundPercent: isShortStrategy ? params.trailingShortPullbackPercent : params.trailingBuyReboundPercent,
-        activationPrice: currentPrice * (1 - (isShortStrategy ? params.trailingShortActivationPercent : params.trailingBuyActivationPercent)),
+        activationPrice: buyActivationPrice,
+        referencePrice: recentPeak || currentPrice,
         description: isShortStrategy ? 'Next SHORT' : 'Next BUY'
       },
       // SELL direction (for LONG) or COVER direction (for SHORT strategy)
       sellActivation: hasHoldings ? {
         activationPercent: isShortStrategy ? params.trailingCoverActivationPercent : params.trailingSellActivationPercent,
         pullbackPercent: isShortStrategy ? params.trailingCoverReboundPercent : params.trailingSellPullbackPercent,
-        activationPrice: avgCost * (1 + (isShortStrategy ? params.trailingCoverActivationPercent : params.trailingSellActivationPercent)),
+        activationPrice: sellActivationPrice,
+        referencePrice: recentBottom || currentPrice,
         profitRequirement: avgCost * (1 + params.profitRequirement),
         description: isShortStrategy ? 'Next COVER' : 'Next SELL'
       } : null
@@ -1469,7 +1487,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
         const futureTrades = calculateFutureTrades();
         if (!futureTrades) return null;
 
-        const { currentPrice, avgCost, hasHoldings, isShortStrategy, buyActivation, sellActivation } = futureTrades;
+        const { currentPrice, avgCost, hasHoldings, isShortStrategy, buyActivation, sellActivation, recentPeak, recentBottom, lastTransactionDate } = futureTrades;
 
         return (
           <div className="holdings-section future-trades-section">
@@ -1502,7 +1520,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                       <span className="label">Activates at:</span>
                       <span className="value">{formatCurrency(buyActivation.activationPrice)}</span>
                       <span className="percent">
-                        ({formatParameterPercent(buyActivation.activationPercent)} drop)
+                        ({formatParameterPercent(buyActivation.activationPercent)} drop from {formatCurrency(buyActivation.referencePrice)} recent peak)
                       </span>
                     </div>
                     <div className="execution-info">
@@ -1526,7 +1544,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                         <span className="label">Activates at:</span>
                         <span className="value">{formatCurrency(sellActivation.activationPrice)}</span>
                         <span className="percent">
-                          ({formatParameterPercent(sellActivation.activationPercent)} rise from avg cost)
+                          ({formatParameterPercent(sellActivation.activationPercent)} rise from {formatCurrency(sellActivation.referencePrice)} recent bottom)
                         </span>
                       </div>
                       <div className="execution-info">

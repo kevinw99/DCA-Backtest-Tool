@@ -1628,6 +1628,11 @@ async function runDCABacktest(params) {
       enhancedTransactions: enhancedTransactions,
       questionableEvents: questionableEvents,
 
+      // Peak/Bottom tracking for Future Trade display
+      recentPeak: recentPeak,
+      recentBottom: recentBottom,
+      lastTransactionDate: lastTransactionDate,
+
       // Consecutive incremental buy grid statistics
       consecutiveIncrementalBuyGridStats: {
         enabled: enableConsecutiveIncrementalBuyGrid,

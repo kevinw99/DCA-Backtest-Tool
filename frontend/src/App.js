@@ -209,7 +209,10 @@ function AppContent() {
           backtestParameters: parameters,
           transactions: backtestResult.data.transactions,
           betaInfo: backtestResult.data.betaInfo,
-          scenarioAnalysis: backtestResult.data.summary?.scenarioAnalysis
+          scenarioAnalysis: backtestResult.data.summary?.scenarioAnalysis,
+          recentPeak: backtestResult.data.recentPeak,
+          recentBottom: backtestResult.data.recentBottom,
+          lastTransactionDate: backtestResult.data.lastTransactionDate
         };
 
         setChartData(finalChartData);
@@ -332,7 +335,10 @@ function AppContent() {
           backtestParameters: parameters,
           transactions: backtestResult.data.transactions,
           betaInfo: backtestResult.data.betaInfo,
-          scenarioAnalysis: backtestResult.data.summary?.scenarioAnalysis
+          scenarioAnalysis: backtestResult.data.summary?.scenarioAnalysis,
+          recentPeak: backtestResult.data.recentPeak,
+          recentBottom: backtestResult.data.recentBottom,
+          lastTransactionDate: backtestResult.data.lastTransactionDate
         };
 
         setChartData(finalChartData);

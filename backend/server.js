@@ -873,13 +873,8 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
         // Retry getting daily prices after fetch
         dailyPrices = await database.getDailyPrices(stock.id, startDate, endDate);
 
-        if (!dailyPrices || dailyPrices.length === 0) {
-          return res.status(404).json({
-            error: 'No data available for backtest period',
-            message: `No price data found for ${symbol} between ${startDate} and ${endDate} even after fetching.`,
-            suggestion: 'The symbol may not have been listed during this period, or the data provider may not have this data.'
-          });
-        }
+        // Don't need data for entire requested period - backtest will use whatever data is available
+        // If symbol wasn't trading during requested dates, it will use the data that exists
       } catch (fetchError) {
         return res.status(503).json({
           error: 'Unable to fetch stock data',
@@ -1002,6 +997,10 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
         buyAndHoldResults: results.buyAndHoldResults,
         outperformance: results.outperformance,
         outperformancePercent: results.outperformancePercent,
+        // Peak/Bottom tracking for Future Trade display
+        recentPeak: results.recentPeak,
+        recentBottom: results.recentBottom,
+        lastTransactionDate: results.lastTransactionDate,
         // Include Beta information if Beta scaling was used
         ...(betaInfo && { betaInfo: betaInfo })
       }
