@@ -426,15 +426,17 @@ class URLParameterManager {
     if (parameters.trailingSellActivationPercent !== undefined) params.set('trailingSellActivationPercent', this._formatDecimalAsPercentage(parameters.trailingSellActivationPercent).toString());
     if (parameters.trailingSellPullbackPercent !== undefined) params.set('trailingSellPullbackPercent', this._formatDecimalAsPercentage(parameters.trailingSellPullbackPercent).toString());
 
-    // Short selling parameters
-    if (parameters.maxShorts) params.set('maxShorts', parameters.maxShorts.toString());
-    if (parameters.maxShortsToCovers) params.set('maxShortsToCovers', parameters.maxShortsToCovers.toString());
-    if (parameters.trailingShortActivationPercent !== undefined) params.set('trailingShortActivationPercent', this._formatDecimalAsPercentage(parameters.trailingShortActivationPercent).toString());
-    if (parameters.trailingShortPullbackPercent !== undefined) params.set('trailingShortPullbackPercent', this._formatDecimalAsPercentage(parameters.trailingShortPullbackPercent).toString());
-    if (parameters.trailingCoverActivationPercent !== undefined) params.set('trailingCoverActivationPercent', this._formatDecimalAsPercentage(parameters.trailingCoverActivationPercent).toString());
-    if (parameters.trailingCoverReboundPercent !== undefined) params.set('trailingCoverReboundPercent', this._formatDecimalAsPercentage(parameters.trailingCoverReboundPercent).toString());
-    if (parameters.hardStopLossPercent !== undefined) params.set('hardStopLossPercent', this._formatDecimalAsPercentage(parameters.hardStopLossPercent).toString());
-    if (parameters.portfolioStopLossPercent !== undefined) params.set('portfolioStopLossPercent', this._formatDecimalAsPercentage(parameters.portfolioStopLossPercent).toString());
+    // Short selling parameters - only include for short strategy
+    if (parameters.strategyMode === 'short' || parameters.strategyMode === 'SHORT_DCA') {
+      if (parameters.maxShorts) params.set('maxShorts', parameters.maxShorts.toString());
+      if (parameters.maxShortsToCovers) params.set('maxShortsToCovers', parameters.maxShortsToCovers.toString());
+      if (parameters.trailingShortActivationPercent !== undefined) params.set('trailingShortActivationPercent', this._formatDecimalAsPercentage(parameters.trailingShortActivationPercent).toString());
+      if (parameters.trailingShortPullbackPercent !== undefined) params.set('trailingShortPullbackPercent', this._formatDecimalAsPercentage(parameters.trailingShortPullbackPercent).toString());
+      if (parameters.trailingCoverActivationPercent !== undefined) params.set('trailingCoverActivationPercent', this._formatDecimalAsPercentage(parameters.trailingCoverActivationPercent).toString());
+      if (parameters.trailingCoverReboundPercent !== undefined) params.set('trailingCoverReboundPercent', this._formatDecimalAsPercentage(parameters.trailingCoverReboundPercent).toString());
+      if (parameters.hardStopLossPercent !== undefined) params.set('hardStopLossPercent', this._formatDecimalAsPercentage(parameters.hardStopLossPercent).toString());
+      if (parameters.portfolioStopLossPercent !== undefined) params.set('portfolioStopLossPercent', this._formatDecimalAsPercentage(parameters.portfolioStopLossPercent).toString());
+    }
 
     // Beta parameters
     if (parameters.beta !== undefined) params.set('beta', parameters.beta.toString());
