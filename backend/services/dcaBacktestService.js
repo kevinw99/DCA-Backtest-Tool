@@ -366,9 +366,11 @@ async function runDCABacktest(params) {
     throw new Error(`Invalid trailingStopOrderType: '${trailingStopOrderType}'. Must be 'limit' or 'market'.`);
   }
 
+  // Always log order type for debugging
+  console.log(`🔧 Trailing Stop Order Type: ${trailingStopOrderType.toUpperCase()}`);
+
   if (verbose) {
     console.log(`🎯 Starting DCA backtest for ${symbol}...`);
-    console.log(`🔧 Trailing Stop Order Type: ${trailingStopOrderType.toUpperCase()}`);  // DEBUG: Show order type
     if (enableDynamicGrid) {
       console.log(`📊 Parameters: ${lotSizeUsd} USD/lot, ${maxLots} max lots, ${maxLotsToSell} max lots per sell`);
       console.log(`📐 Dynamic Grid: ${normalizeToReference ? 'Normalized' : 'Absolute'} (multiplier: ${dynamicGridMultiplier})`);
@@ -662,10 +664,21 @@ async function runDCABacktest(params) {
       }
 
       if (trailingStopBuy && currentPrice >= trailingStopBuy.stopPrice) {
-        // Check if price is still within limit (below peak)
-        if (currentPrice <= trailingStopBuy.recentPeakReference) {
+        // Check if price is still within limit (below peak) - SKIP for market orders
+        const withinLimit = trailingStopOrderType === 'market' || currentPrice <= trailingStopBuy.recentPeakReference;
+        if (withinLimit) {
+          // DEBUG: Log withinLimit pass
+          if (verbose) {
+            transactionLog.push(colorize(`  🔍 DEBUG: withinLimit check passed! lots.length: ${lots.length}, maxLots: ${maxLots}`, 'cyan'));
+          }
+
           // Trailing stop buy triggered - check if we can execute
           if (lots.length < maxLots) {
+            // DEBUG: Log max lots check
+            if (verbose) {
+              transactionLog.push(colorize(`  🔍 DEBUG: Max lots check passed! Checking grid spacing...`, 'cyan'));
+            }
+
             // Calculate grid size for this buy FIRST (before validation)
             const buyGridSize = calculateBuyGridSize(
               gridIntervalPercent,
@@ -709,18 +722,17 @@ async function runDCABacktest(params) {
             });
             if (respectsGridSpacing) {
 
-            // PRICE RESTRICTION CHECK:
-            // If lastBuyPrice exists, only allow buys at prices LOWER than last buy
-            // This applies regardless of consecutiveBuyCount value (even when count = 0)
-            // This prevents buying on uptrends during consecutive buy sequences
-            if (lastBuyPrice !== null && currentPrice >= lastBuyPrice) {
-              if (verbose) {
-                const countMsg = consecutiveBuyCount > 0 ? `count: ${consecutiveBuyCount}` : `count: 0`;
-                transactionLog.push(colorize(`  BLOCKED: Buy prevented - Price ${currentPrice.toFixed(2)} >= last buy ${lastBuyPrice.toFixed(2)} (${countMsg})`, 'yellow'));
-              }
+            // PRICE RESTRICTION CHECK (CONSECUTIVE BUY GRID FEATURE):
+            // If consecutive buy grid is enabled AND lastBuyPrice exists,
+            // only allow buys at prices LOWER than last buy.
+            // This prevents buying on uptrends during consecutive buy sequences.
+            // FIX: Only apply this restriction when the feature is enabled!
+            if (enableConsecutiveIncrementalBuyGrid && lastBuyPrice !== null && currentPrice >= lastBuyPrice) {
+              const countMsg = consecutiveBuyCount > 0 ? `count: ${consecutiveBuyCount}` : `count: 0`;
+              transactionLog.push(colorize(`  BLOCKED: Consecutive buy prevented - Price ${currentPrice.toFixed(2)} >= last buy ${lastBuyPrice.toFixed(2)} (${countMsg})`, 'yellow'));
 
-              // Track aborted buy event if consecutive buy grid is enabled
-              if (enableConsecutiveIncrementalBuyGrid && consecutiveBuyCount > 0) {
+              // Track aborted buy event
+              if (consecutiveBuyCount > 0) {
                 enhancedTransactions.push({
                   date: currentDate,
                   type: 'ABORTED_BUY',
@@ -746,6 +758,7 @@ async function runDCABacktest(params) {
               }
 
               // Cancel the trailing stop buy since we can't execute it
+              transactionLog.push(colorize(`  INFO: Trailing stop buy cleared - consecutive buy price restriction not met`, 'cyan'));
               trailingStopBuy = null;
               return false;
             }
@@ -862,9 +875,11 @@ async function runDCABacktest(params) {
             transactionLog.push(colorize(`  INFO: TRAILING STOP BUY blocked at ${currentPrice.toFixed(2)} - max lots reached`, 'yellow'));
           }
         } else {
-          // Price exceeded limit price - order should have been cancelled already
-          transactionLog.push(colorize(`  ACTION: TRAILING STOP BUY CANCELLED - Price ${currentPrice.toFixed(2)} > limit price ${trailingStopBuy.recentPeakReference.toFixed(2)} (peak)`, 'yellow'));
-          trailingStopBuy = null;
+          // Price exceeded limit price - only cancel for limit orders (market orders never reach this)
+          if (trailingStopOrderType === 'limit') {
+            transactionLog.push(colorize(`  ACTION: TRAILING STOP BUY CANCELLED - Price ${currentPrice.toFixed(2)} > limit price ${trailingStopBuy.recentPeakReference.toFixed(2)} (peak)`, 'yellow'));
+            trailingStopBuy = null;
+          }
         }
       }
       return false; // No transaction
@@ -958,7 +973,11 @@ async function runDCABacktest(params) {
               lastUpdatePrice: currentPrice,  // Track the actual peak price when order was last updated
               lotProfitRequirement: lotProfitRequirement  // Store for transaction history
             };
-            transactionLog.push(colorize(`  ACTION: TRAILING STOP SELL ACTIVATED - Stop: ${stopPrice.toFixed(2)}, Limit: ${limitPrice.toFixed(2)}, Triggered by ${(trailingSellActivationPercent * 100).toFixed(1)}% rise from bottom ${recentBottom.toFixed(2)} (Unrealized P&L: ${unrealizedPNL.toFixed(2)})`, 'yellow'));
+            // Display limit price only for limit orders
+            const orderTypeInfo = trailingStopOrderType === 'market'
+              ? `Stop: ${stopPrice.toFixed(2)} (MARKET)`
+              : `Stop: ${stopPrice.toFixed(2)}, Limit: ${limitPrice.toFixed(2)}`;
+            transactionLog.push(colorize(`  ACTION: TRAILING STOP SELL ACTIVATED - ${orderTypeInfo}, Triggered by ${(trailingSellActivationPercent * 100).toFixed(1)}% rise from bottom ${recentBottom.toFixed(2)} (Unrealized P&L: ${unrealizedPNL.toFixed(2)})`, 'yellow'));
             if (enableConsecutiveIncrementalSellProfit && lotProfitRequirement !== profitRequirement) {
               transactionLog.push(colorize(`  📈 CONSECUTIVE SELL: Lot profit requirement ${(lotProfitRequirement * 100).toFixed(2)}% (base ${(profitRequirement * 100).toFixed(2)}%)`, 'cyan'));
             }
@@ -1046,7 +1065,11 @@ async function runDCABacktest(params) {
             activeStop.lastUpdatePrice = currentPrice;
             activeStop.lotProfitRequirement = lotProfitRequirement; // Update for transaction history
 
-            transactionLog.push(colorize(`  ACTION: TRAILING STOP SELL UPDATED from stop ${oldStopPrice.toFixed(2)} to ${newStopPrice.toFixed(2)}, limit ${oldLimitPrice.toFixed(2)} to ${newLimitPrice.toFixed(2)}, lots: ${newLotsToSell.map(lot => `$${lot.price.toFixed(2)}`).join(', ')} (High: ${currentPrice.toFixed(2)})`, 'cyan'));
+            // Display limit price only for limit orders
+            const updateOrderInfo = trailingStopOrderType === 'market'
+              ? `stop ${oldStopPrice.toFixed(2)} to ${newStopPrice.toFixed(2)} (MARKET)`
+              : `stop ${oldStopPrice.toFixed(2)} to ${newStopPrice.toFixed(2)}, limit ${oldLimitPrice.toFixed(2)} to ${newLimitPrice.toFixed(2)}`;
+            transactionLog.push(colorize(`  ACTION: TRAILING STOP SELL UPDATED from ${updateOrderInfo}, lots: ${newLotsToSell.map(lot => `$${lot.price.toFixed(2)}`).join(', ')} (High: ${currentPrice.toFixed(2)})`, 'cyan'));
             transactionLog.push(colorize(`  DEBUG: Updated eligible lots: ${eligibleLots.map(lot => `$${lot.price.toFixed(2)}`).join(', ')}, selected: ${newLotsToSell.map(lot => `$${lot.price.toFixed(2)}`).join(', ')}`, 'cyan'));
             if (enableConsecutiveIncrementalSellProfit && lotProfitRequirement !== profitRequirement) {
               transactionLog.push(colorize(`  📈 CONSECUTIVE SELL: Lot profit requirement ${(lotProfitRequirement * 100).toFixed(2)}% (base ${(profitRequirement * 100).toFixed(2)}%)`, 'cyan'));
@@ -1133,7 +1156,6 @@ async function runDCABacktest(params) {
       const pad = (str, len) => String(str).padEnd(len);
       let actionsOccurred = false;
       const dayStartLogLength = transactionLog.length;
-
       // Initialize peak/bottom tracking on first day if not started
       if (recentPeak === null || recentBottom === null) {
         recentPeak = currentPrice;
@@ -1141,11 +1163,22 @@ async function runDCABacktest(params) {
         lastTransactionDate = dayData.date;
       }
 
-      // Update recent peak and bottom tracking
-      updatePeakBottomTracking(currentPrice);
+      // NOTE: Peak/bottom tracking is updated AFTER executions to prevent using
+      // the current day's price to update stops that should execute at that price
+      // Peak/bottom update is now at the end of the daily loop
 
       // NOTE: Consecutive buy count is ONLY reset on actual buy/sell execution
       // Price movements alone do NOT trigger resets (per Spec #17 update)
+
+      // DEBUG: Force action logging for debugging
+      if (verbose && dayData.date >= '2024-08-05' && dayData.date <= '2024-08-10') {
+        if (trailingStopBuy) {
+          transactionLog.push(colorize(`  🔍 [${dayData.date}] BUY STOP EXISTS: stop=${trailingStopBuy.stopPrice.toFixed(2)}, peakRef=${trailingStopBuy.recentPeakReference.toFixed(2)}`, 'cyan'));
+        } else {
+          transactionLog.push(colorize(`  🔍 [${dayData.date}] BUY STOP IS NULL!`, 'cyan'));
+        }
+        actionsOccurred = true; // Force logging for these dates
+      }
 
       // Check if trailing stop sell should be activated (price rises 10% from recent bottom)
       checkTrailingStopSellActivation(currentPrice, dayData.date);
@@ -1172,8 +1205,10 @@ async function runDCABacktest(params) {
           const executionPrice = currentPrice;
 
           // Execute only if execution price > limit price AND execution price > average cost * (1 + profitRequirement)
+          // For market orders, skip the limit price check
           const minProfitablePrice = averageCost * (1 + profitRequirement);
-          if (executionPrice > limitPrice && executionPrice > minProfitablePrice) {
+          const aboveLimitPrice = trailingStopOrderType === 'market' || executionPrice > limitPrice;
+          if (aboveLimitPrice && executionPrice > minProfitablePrice) {
           let totalSaleValue = 0;
           let costOfSoldLots = 0;
 
@@ -1411,6 +1446,10 @@ async function runDCABacktest(params) {
         const singleLine = `--- ${dayData.date} --- ${pad('Price: ' + currentPrice.toFixed(2), 18)}| ${pad('R.PNL: ' + realizedPNL.toFixed(0), 18)}| ${pad('U.PNL: ' + unrealizedPNL.toFixed(0), 18)}| ${pad('T.PNL: ' + totalPNL.toFixed(0), 18)}| Holdings: ${getLotsPrices(holdingsAtStartOfDay)}`;
         transactionLog.push(singleLine);
       }
+
+      // Update peak/bottom tracking AFTER all executions for the day
+      // This ensures trailing stops are checked against yesterday's peaks, not today's
+      updatePeakBottomTracking(currentPrice);
     }
 
     // Calculate final results

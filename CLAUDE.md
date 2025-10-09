@@ -153,6 +153,162 @@ Task agent 4: "Search for tests and documentation of feature X"
 - Parallel information gathering
 - Reduced latency in answering complex questions
 
+## Debugging Frontend URL Issues - Step-by-Step Guide
+
+When a user reports a bug using a frontend URL (e.g., `http://localhost:3000/backtest/long/PLTR/results?...`), follow this systematic approach to investigate and fix the issue:
+
+### Step 1: Capture the Real Backend API Call
+
+**Goal**: Trace the actual parameters the backend receives after frontend conversion.
+
+1. **Clear the server log** to start fresh:
+   ```bash
+   > /tmp/server_debug.log
+   ```
+
+2. **Ask user to access the frontend URL** (or do it yourself if server is running)
+   - Frontend converts URL parameters (e.g., whole numbers → decimals)
+   - Backend logs the actual API call with converted parameters
+
+3. **Extract the backend API parameters** from server log:
+   ```bash
+   grep "Body Parameters:" /tmp/server_debug.log
+   ```
+
+### Step 2: Create Reproducible Test Script
+
+**Goal**: Create a curl command that uses the EXACT parameters the backend received.
+
+1. **Create/update `curl_test_command.sh`** with the backend API call:
+   ```bash
+   #!/bin/bash
+
+   # Use REDUCED date range if full range produces too much data
+   # Example: Use 2024-01-01 to 2025-01-01 instead of full range
+
+   curl -X POST http://localhost:3001/api/backtest/dca \
+     -H "Content-Type: application/json" \
+     -d '{
+       "symbol": "PLTR",
+       "startDate": "2024-01-01",
+       "endDate": "2025-01-01",
+       # ... (copy EXACT parameters from server log)
+     }' > /tmp/backtest_response.json
+
+   # Extract daily transaction logs
+   node -e "
+   const fs = require('fs');
+   const data = JSON.parse(fs.readFileSync('/tmp/backtest_response.json', 'utf8'));
+   if (data.success && data.data.transactionLog) {
+     data.data.transactionLog.forEach(line => console.log(line));
+   }
+   "
+   ```
+
+2. **Save to backend directory** for easy access:
+   ```bash
+   # Path: /Users/kweng/AI/DCA-Claude-Kiro-b4IncrementalGrid/backend/curl_test_command.sh
+   chmod +x curl_test_command.sh
+   ```
+
+### Step 3: Run Test and Capture Transaction Logs
+
+**Goal**: Get the detailed daily transaction logs that show the exact execution flow.
+
+1. **Execute the test script**:
+   ```bash
+   ./curl_test_command.sh
+   ```
+
+2. **Search for the specific issue** the user reported:
+   ```bash
+   # Example: User reported issue at date 2024-08-08
+   ./curl_test_command.sh 2>/dev/null | grep -A 5 -B 5 "2024-08-08"
+   ```
+
+3. **Look for patterns**:
+   - Missing executions (order should execute but doesn't)
+   - Wrong execution order (peaks updated before orders execute)
+   - Unexpected cancellations
+   - Silent disappearance of active orders
+
+### Step 4: Verify the Bug with Evidence
+
+**Goal**: Document the exact wrong behavior with concrete evidence.
+
+1. **Extract relevant log entries** showing the bug:
+   ```
+   --- 2024-08-05 ---
+   Price: 24.09   | Holdings: [21.87]
+   ACTION: TRAILING STOP BUY UPDATED to 28.91
+
+   --- 2024-08-08 ---
+   Price: 29.28   | Holdings: [21.87]
+   ACTION: TRAILING STOP SELL UPDATED  <-- BUY should have executed first!
+   ```
+
+2. **Identify what SHOULD have happened**:
+   - Price 29.28 > BUY stop 28.91 → BUY should execute
+   - But instead: SELL stop updated, BUY order disappeared
+
+3. **Document in bug report**:
+   - Show before/after state
+   - Explain expected vs actual behavior
+   - Include evidence from transaction logs
+
+### Step 5: Trace Code Execution Flow
+
+**Goal**: Find the root cause in the code.
+
+1. **Locate the daily execution loop** in the service file
+2. **Identify the execution order**:
+   - What happens first? (e.g., SELL activation/update)
+   - What happens second? (e.g., BUY execution check)
+   - What happens last? (e.g., peak/bottom tracking update)
+
+3. **Check for silent state changes**:
+   - Orders being cancelled without logging
+   - State variables being modified before execution checks
+   - Peak/bottom updates affecting execution logic
+
+4. **Use grep to trace specific functions**:
+   ```bash
+   grep -n "updatePeakBottomTracking\|checkTrailingStopBuyExecution\|updateTrailingStop" service.js
+   ```
+
+### Step 6: Create Bug Report
+
+**Goal**: Provide clear evidence and analysis for the fix.
+
+Include in the report:
+1. **Evidence**: Exact log entries showing the bug
+2. **Expected behavior**: What should happen
+3. **Actual behavior**: What actually happens
+4. **Root cause**: Code lines and execution order causing the issue
+5. **Test script**: Path to `curl_test_command.sh` for reproduction
+
+### Important Notes
+
+- **Use REAL converted parameters** from server log, not frontend URL params
+- **Reduce date ranges** if output is too large (test with 1 year instead of 4 years)
+- **Always include transaction logs** - they show the exact execution flow
+- **Don't guess** - trace actual parameters and execution flow
+- **Save test scripts** for future regression testing
+
+### Example Bug Investigation
+
+**User Report**: "At price 29.28, BUY stop at 28.91 should execute but peaks update first"
+
+**Investigation Steps**:
+1. ✅ Captured backend API call from server log
+2. ✅ Created `curl_test_command.sh` with exact parameters
+3. ✅ Ran test, extracted transaction logs
+4. ✅ Found evidence: Price 29.28 triggered SELL update, not BUY execution
+5. ✅ Traced code: BUY check happens AFTER SELL update (wrong order)
+6. ✅ Created bug report with evidence and root cause
+
+**Result**: Clear understanding of the bug, ready for fix implementation.
+
 ## Testing Commands
 
 ### Backend Testing
