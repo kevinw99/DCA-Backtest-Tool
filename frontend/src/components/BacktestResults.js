@@ -307,6 +307,16 @@ const BacktestResults = ({ data, chartData: priceData }) => {
     const recentPeak = priceData?.recentPeak;
     const recentBottom = priceData?.recentBottom;
     const lastTransactionDate = priceData?.lastTransactionDate;
+    const activeTrailingStopSell = priceData?.activeTrailingStopSell;
+    const activeTrailingStopBuy = priceData?.activeTrailingStopBuy;
+
+    // DEBUG: Log active stop data
+    console.log('🔍 calculateFutureTrades - Active Stop Data:', {
+      activeTrailingStopSell,
+      activeTrailingStopBuy,
+      priceDataKeys: priceData ? Object.keys(priceData) : 'no priceData',
+      fullPriceData: priceData
+    });
 
     if (!params || currentPrice === 0) return null;
 
@@ -327,15 +337,71 @@ const BacktestResults = ({ data, chartData: priceData }) => {
       }
     }
 
-    // For BUY/SHORT: activation is based on drop from recentPeak
-    // For SELL/COVER: activation is based on rise from recentBottom
-    const buyActivationPrice = recentPeak ?
-      recentPeak * (1 - (isShortStrategy ? params.trailingShortActivationPercent : params.trailingBuyActivationPercent)) :
-      currentPrice * (1 - (isShortStrategy ? params.trailingShortActivationPercent : params.trailingBuyActivationPercent));
+    // Check if there's an active trailing buy stop
+    let buyActivation = null;
+    if (activeTrailingStopBuy && activeTrailingStopBuy.isActive) {
+      // Active trailing stop buy exists - show its current state
+      buyActivation = {
+        isActive: true,
+        stopPrice: activeTrailingStopBuy.stopPrice,
+        lowestPrice: activeTrailingStopBuy.lowestPrice,
+        recentPeakReference: activeTrailingStopBuy.recentPeakReference,
+        reboundPercent: isShortStrategy ? params.trailingShortPullbackPercent : params.trailingBuyReboundPercent,
+        description: isShortStrategy ? 'Active SHORT Stop' : 'Active BUY Stop'
+      };
+    } else {
+      // No active stop - show theoretical activation
+      const buyActivationPrice = recentPeak ?
+        recentPeak * (1 - (isShortStrategy ? params.trailingShortActivationPercent : params.trailingBuyActivationPercent)) :
+        currentPrice * (1 - (isShortStrategy ? params.trailingShortActivationPercent : params.trailingBuyActivationPercent));
 
-    const sellActivationPrice = recentBottom ?
-      recentBottom * (1 + (isShortStrategy ? params.trailingCoverActivationPercent : params.trailingSellActivationPercent)) :
-      currentPrice * (1 + (isShortStrategy ? params.trailingCoverActivationPercent : params.trailingSellActivationPercent));
+      buyActivation = {
+        isActive: false,
+        activationPercent: isShortStrategy ? params.trailingShortActivationPercent : params.trailingBuyActivationPercent,
+        reboundPercent: isShortStrategy ? params.trailingShortPullbackPercent : params.trailingBuyReboundPercent,
+        activationPrice: buyActivationPrice,
+        referencePrice: recentPeak || currentPrice,
+        description: isShortStrategy ? 'Next SHORT' : 'Next BUY'
+      };
+    }
+
+    // Check if there's an active trailing sell stop
+    let sellActivation = null;
+    if (hasHoldings) {
+      console.log('🔍 Checking SELL activation - hasHoldings:', hasHoldings, 'activeTrailingStopSell:', activeTrailingStopSell);
+      if (activeTrailingStopSell && activeTrailingStopSell.isActive) {
+        console.log('✅ ACTIVE SELL STOP DETECTED!', activeTrailingStopSell);
+        // Active trailing stop exists - show its current state
+        sellActivation = {
+          isActive: true,
+          stopPrice: activeTrailingStopSell.stopPrice,
+          limitPrice: activeTrailingStopSell.limitPrice,
+          highestPrice: activeTrailingStopSell.highestPrice,
+          lastUpdatePrice: activeTrailingStopSell.lastUpdatePrice,
+          recentBottomReference: activeTrailingStopSell.recentBottomReference,
+          pullbackPercent: isShortStrategy ? params.trailingCoverReboundPercent : params.trailingSellPullbackPercent,
+          profitRequirement: avgCost * (1 + params.profitRequirement),
+          description: isShortStrategy ? 'Active COVER Stop' : 'Active SELL Stop'
+        };
+        console.log('✅ sellActivation object created:', sellActivation);
+      } else {
+        console.log('❌ NO ACTIVE SELL STOP - showing theoretical');
+        // No active stop - show theoretical activation price
+        const sellActivationPrice = recentBottom ?
+          recentBottom * (1 + (isShortStrategy ? params.trailingCoverActivationPercent : params.trailingSellActivationPercent)) :
+          currentPrice * (1 + (isShortStrategy ? params.trailingCoverActivationPercent : params.trailingSellActivationPercent));
+
+        sellActivation = {
+          isActive: false,
+          activationPercent: isShortStrategy ? params.trailingCoverActivationPercent : params.trailingSellActivationPercent,
+          pullbackPercent: isShortStrategy ? params.trailingCoverReboundPercent : params.trailingSellPullbackPercent,
+          activationPrice: sellActivationPrice,
+          referencePrice: recentBottom || currentPrice,
+          profitRequirement: avgCost * (1 + params.profitRequirement),
+          description: isShortStrategy ? 'Next COVER' : 'Next SELL'
+        };
+      }
+    }
 
     return {
       currentPrice,
@@ -346,22 +412,9 @@ const BacktestResults = ({ data, chartData: priceData }) => {
       recentBottom,
       lastTransactionDate,
       // BUY direction (for LONG) or SHORT direction (for SHORT strategy)
-      buyActivation: {
-        activationPercent: isShortStrategy ? params.trailingShortActivationPercent : params.trailingBuyActivationPercent,
-        reboundPercent: isShortStrategy ? params.trailingShortPullbackPercent : params.trailingBuyReboundPercent,
-        activationPrice: buyActivationPrice,
-        referencePrice: recentPeak || currentPrice,
-        description: isShortStrategy ? 'Next SHORT' : 'Next BUY'
-      },
+      buyActivation: buyActivation,
       // SELL direction (for LONG) or COVER direction (for SHORT strategy)
-      sellActivation: hasHoldings ? {
-        activationPercent: isShortStrategy ? params.trailingCoverActivationPercent : params.trailingSellActivationPercent,
-        pullbackPercent: isShortStrategy ? params.trailingCoverReboundPercent : params.trailingSellPullbackPercent,
-        activationPrice: sellActivationPrice,
-        referencePrice: recentBottom || currentPrice,
-        profitRequirement: avgCost * (1 + params.profitRequirement),
-        description: isShortStrategy ? 'Next COVER' : 'Next SELL'
-      } : null
+      sellActivation: sellActivation
     };
   };
 
@@ -1516,19 +1569,35 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                     <span className="direction-title">{buyActivation.description}</span>
                   </div>
                   <div className="direction-details">
-                    <div className="activation-info">
-                      <span className="label">Activates at:</span>
-                      <span className="value">{formatCurrency(buyActivation.activationPrice)}</span>
-                      <span className="percent">
-                        ({formatParameterPercent(buyActivation.activationPercent)} drop from {formatCurrency(buyActivation.referencePrice)} recent peak)
-                      </span>
-                    </div>
-                    <div className="execution-info">
-                      <span className="label">Executes on:</span>
-                      <span className="value">
-                        {formatParameterPercent(buyActivation.reboundPercent)} rebound after activation
-                      </span>
-                    </div>
+                    {buyActivation.isActive ? (
+                      // Active trailing stop buy - show current stop details
+                      <>
+                        <div className="activation-info">
+                          <span className="label">Stop Price:</span>
+                          <span className="value">{formatCurrency(buyActivation.stopPrice)}</span>
+                          <span className="percent">
+                            ({formatParameterPercent(buyActivation.reboundPercent)} rebound from ${formatCurrency(buyActivation.lowestPrice)} bottom)
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      // No active stop - show theoretical activation
+                      <>
+                        <div className="activation-info">
+                          <span className="label">Activates at:</span>
+                          <span className="value">{formatCurrency(buyActivation.activationPrice)}</span>
+                          <span className="percent">
+                            ({formatParameterPercent(buyActivation.activationPercent)} drop from {formatCurrency(buyActivation.referencePrice)} recent peak)
+                          </span>
+                        </div>
+                        <div className="execution-info">
+                          <span className="label">Executes on:</span>
+                          <span className="value">
+                            {formatParameterPercent(buyActivation.reboundPercent)} rebound after activation
+                          </span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -1540,23 +1609,48 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                       <span className="direction-title">{sellActivation.description}</span>
                     </div>
                     <div className="direction-details">
-                      <div className="activation-info">
-                        <span className="label">Activates at:</span>
-                        <span className="value">{formatCurrency(sellActivation.activationPrice)}</span>
-                        <span className="percent">
-                          ({formatParameterPercent(sellActivation.activationPercent)} rise from {formatCurrency(sellActivation.referencePrice)} recent bottom)
-                        </span>
-                      </div>
-                      <div className="execution-info">
-                        <span className="label">Executes on:</span>
-                        <span className="value">
-                          {formatParameterPercent(sellActivation.pullbackPercent)} pullback after activation
-                        </span>
-                      </div>
-                      <div className="profit-requirement">
-                        <span className="label">Profit target:</span>
-                        <span className="value">{formatCurrency(sellActivation.profitRequirement)}</span>
-                      </div>
+                      {sellActivation.isActive ? (
+                        // Active trailing stop - show current stop details
+                        <>
+                          <div className="activation-info">
+                            <span className="label">Stop Price:</span>
+                            <span className="value">{formatCurrency(sellActivation.stopPrice)}</span>
+                            <span className="percent">
+                              ({formatParameterPercent(sellActivation.pullbackPercent)} pullback from ${formatCurrency(sellActivation.lastUpdatePrice)} peak)
+                            </span>
+                          </div>
+                          {sellActivation.limitPrice && (
+                            <div className="execution-info">
+                              <span className="label">Limit Price:</span>
+                              <span className="value">{formatCurrency(sellActivation.limitPrice)}</span>
+                            </div>
+                          )}
+                          <div className="profit-requirement">
+                            <span className="label">Profit target:</span>
+                            <span className="value">{formatCurrency(sellActivation.profitRequirement)}</span>
+                          </div>
+                        </>
+                      ) : (
+                        // No active stop - show theoretical activation and initial stop price
+                        <>
+                          <div className="activation-info">
+                            <span className="label">Activates on:</span>
+                            <span className="value">
+                              {formatParameterPercent(sellActivation.activationPercent)} rise from {formatCurrency(sellActivation.referencePrice)} recent bottom
+                            </span>
+                          </div>
+                          <div className="execution-info">
+                            <span className="label">Then trails price:</span>
+                            <span className="value">
+                              {formatParameterPercent(sellActivation.pullbackPercent)} pullback from peak
+                            </span>
+                          </div>
+                          <div className="profit-requirement">
+                            <span className="label">Profit target:</span>
+                            <span className="value">{formatCurrency(sellActivation.profitRequirement)}</span>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 ) : (

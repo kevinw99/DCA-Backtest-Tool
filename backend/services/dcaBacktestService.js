@@ -1106,26 +1106,32 @@ async function runDCABacktest(params) {
 
             // New pricing logic based on requirements:
             // Stop Price: current price * (1 - trailingSellPullbackPercent) below current price
-            // Limit Price: max(highest-priced eligible lot, stopPrice * 0.95)
+            // Limit Price: max(highest-priced eligible lot, stopPrice * 0.95) - only for LIMIT orders
             const stopPrice = currentPrice * (1 - trailingSellPullbackPercent);
             const highestLotPrice = lotsToSell[0].price; // Highest price among selected lots
-            const limitPrice = Math.max(highestLotPrice, stopPrice * 0.95);
 
+            // Build activeStop object - only include limitPrice for LIMIT orders
             activeStop = {
               stopPrice: stopPrice,
-              limitPrice: limitPrice,
               lotsToSell: lotsToSell, // Now supports multiple lots
               highestPrice: currentPrice,  // Track highest price for trailing
               recentBottomReference: recentBottom,
               triggerCondition: 'recent_bottom_10pct_rise',
               priceWhenOrderSet: currentPrice,  // Track the price when the trailing stop was first set
               lastUpdatePrice: currentPrice,  // Track the actual peak price when order was last updated
-              lotProfitRequirement: lotProfitRequirement  // Store for transaction history
+              lotProfitRequirement: lotProfitRequirement,  // Store for transaction history
+              orderType: trailingStopOrderType  // Track order type
             };
-            // Display limit price only for limit orders
-            const orderTypeInfo = trailingStopOrderType === 'market'
-              ? `Stop: ${stopPrice.toFixed(2)} (MARKET)`
-              : `Stop: ${stopPrice.toFixed(2)}, Limit: ${limitPrice.toFixed(2)}`;
+
+            // Add limitPrice only for LIMIT orders
+            let orderTypeInfo;
+            if (trailingStopOrderType === 'limit') {
+              const limitPrice = Math.max(highestLotPrice, stopPrice * 0.95);
+              activeStop.limitPrice = limitPrice;
+              orderTypeInfo = `Stop: ${stopPrice.toFixed(2)}, Limit: ${limitPrice.toFixed(2)}`;
+            } else {
+              orderTypeInfo = `Stop: ${stopPrice.toFixed(2)} (MARKET)`;
+            }
             transactionLog.push(colorize(`  ACTION: TRAILING STOP SELL ACTIVATED - ${orderTypeInfo}, Triggered by ${(trailingSellActivationPercent * 100).toFixed(1)}% rise from bottom ${recentBottom.toFixed(2)} (Unrealized P&L: ${unrealizedPNL.toFixed(2)})`, 'yellow'));
             if (enableConsecutiveIncrementalSellProfit && lotProfitRequirement !== profitRequirement) {
               transactionLog.push(colorize(`  📈 CONSECUTIVE SELL: Lot profit requirement ${(lotProfitRequirement * 100).toFixed(2)}% (base ${(profitRequirement * 100).toFixed(2)}%)`, 'cyan'));
@@ -1205,19 +1211,23 @@ async function runDCABacktest(params) {
             const newLotsToSell = sortedEligibleLots.slice(0, Math.min(maxLotsToSell, sortedEligibleLots.length));
 
             const newHighestLotPrice = newLotsToSell[0].price;
-            const newLimitPrice = Math.max(newHighestLotPrice, newStopPrice * 0.95);
 
+            // Update stop
             activeStop.stopPrice = newStopPrice;
-            activeStop.limitPrice = newLimitPrice;
             activeStop.lotsToSell = newLotsToSell; // Now supports multiple lots
             activeStop.highestPrice = currentPrice;
             activeStop.lastUpdatePrice = currentPrice;
             activeStop.lotProfitRequirement = lotProfitRequirement; // Update for transaction history
 
-            // Display limit price only for limit orders
-            const updateOrderInfo = trailingStopOrderType === 'market'
-              ? `stop ${oldStopPrice.toFixed(2)} to ${newStopPrice.toFixed(2)} (MARKET)`
-              : `stop ${oldStopPrice.toFixed(2)} to ${newStopPrice.toFixed(2)}, limit ${oldLimitPrice.toFixed(2)} to ${newLimitPrice.toFixed(2)}`;
+            // Update limitPrice only for LIMIT orders
+            let updateOrderInfo;
+            if (trailingStopOrderType === 'limit') {
+              const newLimitPrice = Math.max(newHighestLotPrice, newStopPrice * 0.95);
+              activeStop.limitPrice = newLimitPrice;
+              updateOrderInfo = `stop ${oldStopPrice.toFixed(2)} to ${newStopPrice.toFixed(2)}, limit ${(oldLimitPrice || 0).toFixed(2)} to ${newLimitPrice.toFixed(2)}`;
+            } else {
+              updateOrderInfo = `stop ${oldStopPrice.toFixed(2)} to ${newStopPrice.toFixed(2)} (MARKET)`;
+            }
             transactionLog.push(colorize(`  ACTION: TRAILING STOP SELL UPDATED from ${updateOrderInfo}, lots: ${newLotsToSell.map(lot => `$${lot.price.toFixed(2)}`).join(', ')} (High: ${currentPrice.toFixed(2)})`, 'cyan'));
             transactionLog.push(colorize(`  DEBUG: Updated eligible lots: ${eligibleLots.map(lot => `$${lot.price.toFixed(2)}`).join(', ')}, selected: ${newLotsToSell.map(lot => `$${lot.price.toFixed(2)}`).join(', ')}`, 'cyan'));
             if (enableConsecutiveIncrementalSellProfit && lotProfitRequirement !== profitRequirement) {
@@ -1897,6 +1907,59 @@ async function runDCABacktest(params) {
     // Add scenario analysis to result
     if (scenarioAnalysis) {
       backtestResult.scenarioAnalysis = scenarioAnalysis;
+    }
+
+    // Add active trailing stop sell information (if any) to result
+    if (activeStop) {
+      backtestResult.activeTrailingStopSell = {
+        isActive: true,
+        stopPrice: activeStop.stopPrice,
+        highestPrice: activeStop.highestPrice,
+        lastUpdatePrice: activeStop.lastUpdatePrice,
+        recentBottomReference: activeStop.recentBottomReference,
+        priceWhenOrderSet: activeStop.priceWhenOrderSet,
+        lotsToSell: activeStop.lotsToSell.map(lot => ({ price: lot.price, shares: lot.shares, date: lot.date })),
+        lotProfitRequirement: activeStop.lotProfitRequirement,
+        orderType: activeStop.orderType
+      };
+      // Only include limitPrice for LIMIT orders
+      if (activeStop.limitPrice !== undefined) {
+        backtestResult.activeTrailingStopSell.limitPrice = activeStop.limitPrice;
+      }
+      console.log('✅ ACTIVE TRAILING STOP SELL at end of backtest:', {
+        stopPrice: activeStop.stopPrice,
+        highestPrice: activeStop.highestPrice,
+        lastUpdatePrice: activeStop.lastUpdatePrice,
+        recentBottomReference: activeStop.recentBottomReference,
+        orderType: activeStop.orderType
+      });
+    } else {
+      backtestResult.activeTrailingStopSell = {
+        isActive: false
+      };
+      console.log('❌ NO ACTIVE TRAILING STOP SELL at end of backtest');
+    }
+
+    // Add active trailing stop buy information (if any) to result
+    if (trailingStopBuy) {
+      backtestResult.activeTrailingStopBuy = {
+        isActive: true,
+        stopPrice: trailingStopBuy.stopPrice,
+        lowestPrice: trailingStopBuy.lastUpdatePrice,  // Actual bottom price when order was last updated
+        recentPeakReference: trailingStopBuy.recentPeakReference,
+        triggeredAt: trailingStopBuy.triggeredAt,
+        activatedDate: trailingStopBuy.activatedDate
+      };
+      console.log('✅ ACTIVE TRAILING STOP BUY at end of backtest:', {
+        stopPrice: trailingStopBuy.stopPrice,
+        lowestPrice: trailingStopBuy.lastUpdatePrice,
+        recentPeakReference: trailingStopBuy.recentPeakReference
+      });
+    } else {
+      backtestResult.activeTrailingStopBuy = {
+        isActive: false
+      };
+      console.log('❌ NO ACTIVE TRAILING STOP BUY at end of backtest');
     }
 
     console.log(`🔍 DCA Backtest Debug - Enhanced Transactions: ${enhancedTransactions.length} total`);

@@ -212,7 +212,9 @@ function AppContent() {
           scenarioAnalysis: backtestResult.data.summary?.scenarioAnalysis,
           recentPeak: backtestResult.data.recentPeak,
           recentBottom: backtestResult.data.recentBottom,
-          lastTransactionDate: backtestResult.data.lastTransactionDate
+          lastTransactionDate: backtestResult.data.lastTransactionDate,
+          activeTrailingStopSell: backtestResult.data.activeTrailingStopSell,
+          activeTrailingStopBuy: backtestResult.data.activeTrailingStopBuy
         };
 
         setChartData(finalChartData);
@@ -338,7 +340,9 @@ function AppContent() {
           scenarioAnalysis: backtestResult.data.summary?.scenarioAnalysis,
           recentPeak: backtestResult.data.recentPeak,
           recentBottom: backtestResult.data.recentBottom,
-          lastTransactionDate: backtestResult.data.lastTransactionDate
+          lastTransactionDate: backtestResult.data.lastTransactionDate,
+          activeTrailingStopSell: backtestResult.data.activeTrailingStopSell,
+          activeTrailingStopBuy: backtestResult.data.activeTrailingStopBuy
         };
 
         setChartData(finalChartData);
