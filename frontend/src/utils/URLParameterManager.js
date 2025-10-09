@@ -451,6 +451,10 @@ class URLParameterManager {
     if (parameters.enableConsecutiveIncrementalSellProfit !== undefined) params.set('enableConsecutiveIncrementalSellProfit', parameters.enableConsecutiveIncrementalSellProfit.toString());
     if (parameters.enableScenarioDetection !== undefined) params.set('enableScenarioDetection', parameters.enableScenarioDetection.toString());
 
+    // Spec 23: Average-based features
+    if (parameters.enableAverageBasedGrid !== undefined) params.set('enableAverageBasedGrid', parameters.enableAverageBasedGrid.toString());
+    if (parameters.enableAverageBasedSell !== undefined) params.set('enableAverageBasedSell', parameters.enableAverageBasedSell.toString());
+
     // Grid option numeric parameters
     if (parameters.dynamicGridMultiplier !== undefined) params.set('dynamicGridMultiplier', parameters.dynamicGridMultiplier.toString());
     if (parameters.gridConsecutiveIncrement !== undefined) params.set('gridConsecutiveIncrement', parameters.gridConsecutiveIncrement.toString());
@@ -517,7 +521,9 @@ class URLParameterManager {
       'normalizeToReference',
       'enableConsecutiveIncrementalBuyGrid',
       'enableConsecutiveIncrementalSellProfit',
-      'enableScenarioDetection'
+      'enableScenarioDetection',
+      'enableAverageBasedGrid',
+      'enableAverageBasedSell'
     ];
 
     booleanFlags.forEach(flag => {
@@ -612,6 +618,14 @@ class URLParameterManager {
     }
     if (params.enableScenarioDetection !== undefined) {
       decoded.enableScenarioDetection = this._parseBoolean(params.enableScenarioDetection, true);
+    }
+
+    // Spec 23: Average-based features
+    if (params.enableAverageBasedGrid !== undefined) {
+      decoded.enableAverageBasedGrid = this._parseBoolean(params.enableAverageBasedGrid, false);
+    }
+    if (params.enableAverageBasedSell !== undefined) {
+      decoded.enableAverageBasedSell = this._parseBoolean(params.enableAverageBasedSell, false);
     }
 
     // Grid option numeric parameters
@@ -815,7 +829,8 @@ class URLParameterManager {
       'enableBetaScaling', 'isManualBetaOverride',
       'enableDynamicGrid',
       'normalizeToReference', 'enableConsecutiveIncrementalSellProfit',
-      'enableConsecutiveIncrementalBuyGrid'
+      'enableConsecutiveIncrementalBuyGrid',
+      'enableAverageBasedGrid', 'enableAverageBasedSell'
     ];
 
     const stringParams = ['symbol', 'startDate', 'endDate', 'strategyMode', 'source'];
