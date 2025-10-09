@@ -142,6 +142,7 @@ const BatchResults = ({ data }) => {
     urlParams.enableConsecutiveIncrementalSellProfit = batchRequestParams.enableConsecutiveIncrementalSellProfit ?? parameters.enableConsecutiveIncrementalSellProfit ?? true;
     urlParams.enableScenarioDetection = batchRequestParams.enableScenarioDetection ?? parameters.enableScenarioDetection ?? false;
     urlParams.gridConsecutiveIncrement = batchRequestParams.gridConsecutiveIncrement ?? parameters.gridConsecutiveIncrement;
+    urlParams.trailingStopOrderType = batchRequestParams.trailingStopOrderType ?? parameters.trailingStopOrderType ?? 'limit';
 
     // Use combination parameters for varying values (these CAN differ per combination)
     if (parameters.dynamicGridMultiplier !== undefined) urlParams.dynamicGridMultiplier = parameters.dynamicGridMultiplier;

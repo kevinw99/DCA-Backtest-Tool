@@ -455,6 +455,11 @@ class URLParameterManager {
     if (parameters.dynamicGridMultiplier !== undefined) params.set('dynamicGridMultiplier', parameters.dynamicGridMultiplier.toString());
     if (parameters.gridConsecutiveIncrement !== undefined) params.set('gridConsecutiveIncrement', parameters.gridConsecutiveIncrement.toString());
 
+    // Trailing stop order type (only include if not 'limit' to keep URLs clean)
+    if (parameters.trailingStopOrderType && parameters.trailingStopOrderType !== 'limit') {
+      params.set('trailingStopOrderType', parameters.trailingStopOrderType);
+    }
+
     // Source information for debugging
     if (parameters.source) params.set('source', parameters.source);
   }
@@ -528,6 +533,12 @@ class URLParameterManager {
     }
     if (parameters.gridConsecutiveIncrement !== undefined) {
       params.set('gridConsecutiveIncrement', parameters.gridConsecutiveIncrement.toString());
+    }
+
+    // Trailing stop order type (only include if not 'limit')
+    const trailingStopOrderType = parameters.trailingStopOrderType || parameters.parameterRanges?.trailingStopOrderType;
+    if (trailingStopOrderType && trailingStopOrderType !== 'limit') {
+      params.set('trailingStopOrderType', trailingStopOrderType);
     }
   }
 
@@ -611,6 +622,9 @@ class URLParameterManager {
       decoded.gridConsecutiveIncrement = this._parseNumber(params.gridConsecutiveIncrement, 5);
     }
 
+    // Trailing stop order type
+    decoded.trailingStopOrderType = params.trailingStopOrderType || 'limit';
+
     return decoded;
   }
 
@@ -661,6 +675,9 @@ class URLParameterManager {
       decoded.parameterRanges.hardStopLossPercent = this._decodePercentageArray(params.hardStopLossPercent, [50]);
       decoded.parameterRanges.portfolioStopLossPercent = this._decodePercentageArray(params.portfolioStopLossPercent, [30]);
     }
+
+    // Trailing stop order type (non-varying parameter for batch)
+    decoded.trailingStopOrderType = params.trailingStopOrderType || 'limit';
 
     return decoded;
   }
