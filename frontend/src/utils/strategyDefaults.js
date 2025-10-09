@@ -15,7 +15,10 @@ function ensureCompleteParameters(parameters) {
     enableConsecutiveIncrementalSellProfit: false,
     enableScenarioDetection: false,
     normalizeToReference: false,
-    gridConsecutiveIncrement: 5
+    gridConsecutiveIncrement: 5,
+    // Spec 23: Average-based features
+    enableAverageBasedGrid: false,
+    enableAverageBasedSell: false
   };
 
   return { ...requiredDefaults, ...parameters };
