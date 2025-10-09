@@ -93,7 +93,9 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
       gridConsecutiveIncrement: [5],
       enableConsecutiveIncrementalSellProfit: true,
       enableScenarioDetection: true,
-      trailingStopOrderType: 'limit'
+      trailingStopOrderType: 'limit',
+      enableAverageBasedGrid: false,
+      enableAverageBasedSell: false
     };
 
     if (saved) {
@@ -389,6 +391,8 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
         normalizeToReference: (value) => value === 'true' || value === true,
         enableConsecutiveIncrementalBuyGrid: (value) => value === 'true' || value === true,
         enableConsecutiveIncrementalSellProfit: (value) => value === 'true' || value === true,
+        enableAverageBasedGrid: (value) => value === 'true' || value === true,
+        enableAverageBasedSell: (value) => value === 'true' || value === true,
         enableScenarioDetection: (value) => value === 'true' || value === true,
 
         // Trailing stop order type
@@ -425,6 +429,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
             // Grid & Incremental Options boolean flags
             'enableDynamicGrid', 'normalizeToReference', 'enableConsecutiveIncrementalBuyGrid',
             'enableConsecutiveIncrementalSellProfit', 'enableScenarioDetection',
+            'enableAverageBasedGrid', 'enableAverageBasedSell',
             // Grid option numeric parameters
             'dynamicGridMultiplier', 'gridConsecutiveIncrement',
             // Trailing stop order type
@@ -1978,6 +1983,35 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                   </label>
                   <span className="form-help">
                     Analyze market scenarios (Downtrend, Missed Rally, Oscillating Uptrend) with recommendations
+                  </span>
+                </div>
+
+                {/* Spec 23: Average-Based Features */}
+                <div className="form-group checkbox-group">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={parameters.enableAverageBasedGrid ?? false}
+                      onChange={(e) => handleChange('enableAverageBasedGrid', e.target.checked)}
+                    />
+                    Enable Average-Based Grid Spacing
+                  </label>
+                  <span className="form-help">
+                    Use average cost for grid spacing (O(1)) instead of checking all lots (O(n)). For real portfolios where only average cost is known.
+                  </span>
+                </div>
+
+                <div className="form-group checkbox-group">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={parameters.enableAverageBasedSell ?? false}
+                      onChange={(e) => handleChange('enableAverageBasedSell', e.target.checked)}
+                    />
+                    Enable Average-Based Sell Logic
+                  </label>
+                  <span className="form-help">
+                    Check sell profitability against average cost instead of individual lot prices. Matches broker's tracking method.
                   </span>
                 </div>
 
