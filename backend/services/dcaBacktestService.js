@@ -19,6 +19,36 @@ const { detectScenario } = require('./scenarioDetectionService');
  * 2. Command line execution (with static parameters)
  */
 
+/**
+ * Profile definitions for dynamic profile switching (Spec 24)
+ * @constant
+ */
+const PROFILES = {
+  CONSERVATIVE: {
+    name: 'Conservative',
+    description: 'Preserve capital when losing money',
+    trigger: 'Total P/L < 0 for 3+ consecutive days',
+    overrides: {
+      trailingBuyActivationPercent: 0.10,  // Harder to buy
+      profitRequirement: 0.00              // Easier to sell
+    },
+    color: 'blue'
+  },
+
+  AGGRESSIVE: {
+    name: 'Aggressive',
+    description: 'Maximize gains when making money',
+    trigger: 'Total P/L >= 0 for 3+ consecutive days',
+    overrides: {
+      trailingBuyActivationPercent: 0.00,  // Easier to buy
+      profitRequirement: 0.10              // Harder to sell
+    },
+    color: 'green'
+  }
+};
+
+const HYSTERESIS_DAYS = 3;  // Require 3 consecutive days before switching profiles
+
 // --- Utility Functions ---
 function calculateMetrics(dailyValues, capitalDeployed, transactionLog, prices, enhancedTransactions = []) {
   const returns = [];
@@ -360,6 +390,7 @@ async function runDCABacktest(params) {
     trailingStopOrderType = 'limit', // Order type: 'limit' (cancels if exceeds peak/bottom) or 'market' (always executes)
     enableAverageBasedGrid = false, // Enable average-cost based grid spacing (Spec 23 Feature #1)
     enableAverageBasedSell = false, // Enable average-cost based sell profitability (Spec 23 Feature #2)
+    enableDynamicProfile = false, // Enable dynamic profile switching based on P/L (Spec 24)
     verbose = true
   } = params;
 
@@ -376,6 +407,15 @@ async function runDCABacktest(params) {
     throw new Error(`enableAverageBasedSell must be boolean, got: ${typeof enableAverageBasedSell}`);
   }
 
+  // Validate dynamic profile parameter (Spec 24)
+  if (typeof enableDynamicProfile !== 'boolean') {
+    throw new Error(`enableDynamicProfile must be boolean, got: ${typeof enableDynamicProfile}`);
+  }
+  // Batch mode: must be single boolean, NOT an array
+  if (Array.isArray(enableDynamicProfile)) {
+    throw new Error('enableDynamicProfile cannot be an array in batch mode. Use single boolean (true or false).');
+  }
+
   // Always log order type for debugging
   console.log(`🔧 Trailing Stop Order Type: ${trailingStopOrderType.toUpperCase()}`);
 
@@ -390,6 +430,14 @@ async function runDCABacktest(params) {
   if (enableAverageBasedSell) {
     console.log(`📊 Feature: Average-Based Sell Logic = ENABLED`);
     console.log(`   Sell profitability will be checked against average cost`);
+  }
+
+  // Log dynamic profile feature status (Spec 24)
+  if (enableDynamicProfile) {
+    console.log(`🔄 Feature: Dynamic Profile Switching = ENABLED`);
+    console.log(`   Conservative when P/L < 0: Harder to buy (10%), easier to sell (0%)`);
+    console.log(`   Aggressive when P/L >= 0: Easier to buy (0%), harder to sell (10%)`);
+    console.log(`   Requires ${HYSTERESIS_DAYS} consecutive days before switching`);
   }
 
   if (verbose) {
@@ -551,6 +599,16 @@ async function runDCABacktest(params) {
     let recentBottom = null; // Lowest price since last transaction
     let trailingStopBuy = null; // Active trailing stop buy order
     let lastTransactionDate = null; // Track when peak/bottom tracking started
+
+    // Dynamic Profile Switching State (Spec 24)
+    let currentProfile = null;           // Current active profile ('CONSERVATIVE' | 'AGGRESSIVE' | null)
+    let profileSwitchCount = 0;          // Total number of switches
+    let daysInConservative = 0;          // Total days spent in Conservative
+    let daysInAggressive = 0;            // Total days spent in Aggressive
+    let consecutiveDaysInRegion = 0;    // Counter for hysteresis
+    let lastPnLSign = null;              // Track P/L sign ('positive' | 'negative')
+    let originalParams = null;           // Store original parameters
+    const profileSwitches = [];          // Profile switch history
 
     const recalculateAverageCost = () => {
       if (lots.length > 0) {
@@ -1256,6 +1314,78 @@ async function runDCABacktest(params) {
     // Enhanced transaction records for UI
     const enhancedTransactions = [];
 
+    /**
+     * Determine and apply dynamic profile based on P/L (Spec 24)
+     * @param {string} currentDate - Current date
+     * @param {number} unrealizedPNL - Unrealized profit/loss
+     */
+    const determineAndApplyProfile = (currentDate, unrealizedPNL) => {
+      if (!enableDynamicProfile) {
+        return; // Feature disabled
+      }
+
+      const totalPNL = unrealizedPNL + realizedPNL;
+      const currentPnLSign = totalPNL >= 0 ? 'positive' : 'negative';
+      const targetProfile = totalPNL >= 0 ? 'AGGRESSIVE' : 'CONSERVATIVE';
+
+      // Check if P/L sign changed (reset hysteresis counter)
+      if (currentPnLSign !== lastPnLSign) {
+        consecutiveDaysInRegion = 1;  // Reset to 1 (current day)
+        lastPnLSign = currentPnLSign;
+      } else {
+        consecutiveDaysInRegion++;
+      }
+
+      // Check if we should switch profiles
+      if (targetProfile !== currentProfile && consecutiveDaysInRegion >= HYSTERESIS_DAYS) {
+        const oldProfile = currentProfile || 'NONE';
+        currentProfile = targetProfile;
+        profileSwitchCount++;
+
+        // Store original parameters on first switch
+        if (!originalParams) {
+          originalParams = {
+            trailingBuyActivationPercent: params.trailingBuyActivationPercent,
+            profitRequirement: params.profitRequirement
+          };
+        }
+
+        // Apply profile overrides
+        const profile = PROFILES[currentProfile];
+        params.trailingBuyActivationPercent = profile.overrides.trailingBuyActivationPercent;
+        params.profitRequirement = profile.overrides.profitRequirement;
+
+        // Log the switch
+        const switchInfo = {
+          date: currentDate,
+          from: oldProfile,
+          to: currentProfile,
+          pnl: totalPNL,
+          consecutiveDays: consecutiveDaysInRegion
+        };
+        profileSwitches.push(switchInfo);
+
+        transactionLog.push(colorize(
+          `  🔄 PROFILE SWITCH: ${oldProfile} → ${currentProfile} (P/L: $${totalPNL.toFixed(2)}, ${consecutiveDaysInRegion} days)`,
+          'magenta'
+        ));
+        transactionLog.push(colorize(
+          `     Buy Activation: ${(profile.overrides.trailingBuyActivationPercent * 100).toFixed(0)}%, Profit Req: ${(profile.overrides.profitRequirement * 100).toFixed(0)}%`,
+          'cyan'
+        ));
+
+        // Reset consecutive counter after switch
+        consecutiveDaysInRegion = 0;
+      }
+
+      // Track days in each profile
+      if (currentProfile === 'CONSERVATIVE') {
+        daysInConservative++;
+      } else if (currentProfile === 'AGGRESSIVE') {
+        daysInAggressive++;
+      }
+    };
+
     // Main loop through each day's data
     for (let i = 0; i < pricesWithIndicators.length; i++) {
       const dayData = pricesWithIndicators[i];
@@ -1299,6 +1429,33 @@ async function runDCABacktest(params) {
       const totalCostOfHeldLots = holdingsAtStartOfDay.reduce((sum, lot) => sum + lot.price * lot.shares, 0);
       const unrealizedPNL = (totalSharesHeld * currentPrice) - totalCostOfHeldLots;
       const totalPNL = realizedPNL + unrealizedPNL;
+
+      // ===== PROFILE DETERMINATION (Spec 24) =====
+      if (i === 0) {
+        // First day: initialize profile
+        if (enableDynamicProfile) {
+          currentProfile = totalPNL >= 0 ? 'AGGRESSIVE' : 'CONSERVATIVE';
+          lastPnLSign = totalPNL >= 0 ? 'positive' : 'negative';
+          consecutiveDaysInRegion = 1;
+
+          // Apply initial profile
+          const profile = PROFILES[currentProfile];
+          originalParams = {
+            trailingBuyActivationPercent: params.trailingBuyActivationPercent,
+            profitRequirement: params.profitRequirement
+          };
+          params.trailingBuyActivationPercent = profile.overrides.trailingBuyActivationPercent;
+          params.profitRequirement = profile.overrides.profitRequirement;
+
+          transactionLog.push(colorize(
+            `  🎯 INITIAL PROFILE: ${currentProfile} (P/L: $${totalPNL.toFixed(2)})`,
+            'magenta'
+          ));
+        }
+      } else {
+        // Subsequent days: check for profile switches
+        determineAndApplyProfile(dayData.date, unrealizedPNL);
+      }
 
       // Portfolio tracking
       // When no positions are held, show the available capital as baseline
@@ -1877,6 +2034,7 @@ async function runDCABacktest(params) {
         enableConsecutiveIncrementalBuyGrid,
         gridConsecutiveIncrement,
         enableScenarioDetection,
+        enableDynamicProfile,
         enableAdaptiveStrategy: params.enableAdaptiveStrategy || false,
         adaptationCheckIntervalDays: params.adaptationCheckIntervalDays || 30,
         adaptationRollingWindowDays: params.adaptationRollingWindowDays || 90,
@@ -1898,7 +2056,25 @@ async function runDCABacktest(params) {
       transactions: enhancedTransactions,
       winningTrades: winningTrades,
       losingTrades: losingTrades,
-      buyAndHoldReturn: buyAndHoldResults.totalReturn
+      buyAndHoldReturn: buyAndHoldResults.totalReturn,
+
+      // Dynamic Profile Switching Metrics (Spec 24)
+      profileMetrics: {
+        enabled: enableDynamicProfile,
+        totalSwitches: profileSwitchCount,
+        daysInConservative: daysInConservative,
+        daysInAggressive: daysInAggressive,
+        conservativePercent: pricesWithIndicators.length > 0 ? (daysInConservative / pricesWithIndicators.length * 100) : 0,
+        aggressivePercent: pricesWithIndicators.length > 0 ? (daysInAggressive / pricesWithIndicators.length * 100) : 0,
+        switchHistory: profileSwitches.map(sw => ({
+          date: sw.date,
+          from: sw.from,
+          to: sw.to,
+          pnl: sw.pnl,
+          consecutiveDays: sw.consecutiveDays
+        })),
+        finalProfile: currentProfile
+      }
     };
 
     // Run scenario detection if enabled

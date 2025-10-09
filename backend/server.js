@@ -920,6 +920,7 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
       trailingStopOrderType: finalParams.trailingStopOrderType,
       enableAverageBasedGrid: finalParams.enableAverageBasedGrid,
       enableAverageBasedSell: finalParams.enableAverageBasedSell,
+      enableDynamicProfile: finalParams.enableDynamicProfile,
       verbose: false // Don't log to console for API calls
     });
 
@@ -1004,8 +1005,13 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
         recentPeak: results.recentPeak,
         recentBottom: results.recentBottom,
         lastTransactionDate: results.lastTransactionDate,
+        // Active trailing stop information
+        activeTrailingStopSell: results.activeTrailingStopSell,
+        activeTrailingStopBuy: results.activeTrailingStopBuy,
         // Include Beta information if Beta scaling was used
-        ...(betaInfo && { betaInfo: betaInfo })
+        ...(betaInfo && { betaInfo: betaInfo }),
+        // Include profile metrics if dynamic profile switching is enabled
+        ...(results.profileMetrics && { profileMetrics: results.profileMetrics })
       }
     });
 

@@ -95,7 +95,8 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
       enableScenarioDetection: true,
       trailingStopOrderType: 'limit',
       enableAverageBasedGrid: false,
-      enableAverageBasedSell: false
+      enableAverageBasedSell: false,
+      enableDynamicProfile: false
     };
 
     if (saved) {
@@ -393,6 +394,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
         enableConsecutiveIncrementalSellProfit: (value) => value === 'true' || value === true,
         enableAverageBasedGrid: (value) => value === 'true' || value === true,
         enableAverageBasedSell: (value) => value === 'true' || value === true,
+        enableDynamicProfile: (value) => value === 'true' || value === true,
         enableScenarioDetection: (value) => value === 'true' || value === true,
 
         // Trailing stop order type
@@ -429,7 +431,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
             // Grid & Incremental Options boolean flags
             'enableDynamicGrid', 'normalizeToReference', 'enableConsecutiveIncrementalBuyGrid',
             'enableConsecutiveIncrementalSellProfit', 'enableScenarioDetection',
-            'enableAverageBasedGrid', 'enableAverageBasedSell',
+            'enableAverageBasedGrid', 'enableAverageBasedSell', 'enableDynamicProfile',
             // Grid option numeric parameters
             'dynamicGridMultiplier', 'gridConsecutiveIncrement',
             // Trailing stop order type
@@ -2012,6 +2014,21 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                   </label>
                   <span className="form-help">
                     Check sell profitability against average cost instead of individual lot prices. Matches broker's tracking method.
+                  </span>
+                </div>
+
+                {/* Spec 24: Dynamic Profile Switching */}
+                <div className="form-group checkbox-group">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={parameters.enableDynamicProfile ?? false}
+                      onChange={(e) => handleChange('enableDynamicProfile', e.target.checked)}
+                    />
+                    Enable Dynamic Profile Switching
+                  </label>
+                  <span className="form-help">
+                    Automatically adjust strategy based on Total P/L: Conservative (harder to buy, easier to sell) when P/L &lt; 0, Aggressive (easier to buy, harder to sell) when P/L ≥ 0. Requires 3 consecutive days before switching profiles.
                   </span>
                 </div>
 
