@@ -917,6 +917,7 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
       adaptationRollingWindowDays: finalParams.adaptationRollingWindowDays,
       minDataDaysBeforeAdaptation: finalParams.minDataDaysBeforeAdaptation,
       confidenceThreshold: finalParams.confidenceThreshold,
+      trailingStopOrderType: finalParams.trailingStopOrderType,
       verbose: false // Don't log to console for API calls
     });
 
