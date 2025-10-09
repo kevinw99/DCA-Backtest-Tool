@@ -368,6 +368,7 @@ async function runDCABacktest(params) {
 
   if (verbose) {
     console.log(`🎯 Starting DCA backtest for ${symbol}...`);
+    console.log(`🔧 Trailing Stop Order Type: ${trailingStopOrderType.toUpperCase()}`);  // DEBUG: Show order type
     if (enableDynamicGrid) {
       console.log(`📊 Parameters: ${lotSizeUsd} USD/lot, ${maxLots} max lots, ${maxLotsToSell} max lots per sell`);
       console.log(`📐 Dynamic Grid: ${normalizeToReference ? 'Normalized' : 'Absolute'} (multiplier: ${dynamicGridMultiplier})`);
