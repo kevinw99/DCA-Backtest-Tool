@@ -630,7 +630,17 @@ async function runBatchBacktest(options, progressCallback = null, sessionId = nu
     sortedBy: sortBy,
     validSymbols: validSymbols,
     invalidSymbols: invalidSymbols.length > 0 ? invalidSymbols : undefined,
-    stockValidationErrors: stockValidationErrors.length > 0 ? stockValidationErrors : undefined
+    stockValidationErrors: stockValidationErrors.length > 0 ? stockValidationErrors : undefined,
+    // Include original batch request parameters so frontend can use them for URL generation
+    batchRequestParameters: {
+      enableBetaScaling: mergedParameterRanges.enableBetaScaling,
+      enableDynamicGrid: mergedParameterRanges.enableDynamicGrid,
+      normalizeToReference: mergedParameterRanges.normalizeToReference,
+      enableConsecutiveIncrementalBuyGrid: mergedParameterRanges.enableConsecutiveIncrementalBuyGrid,
+      enableConsecutiveIncrementalSellProfit: mergedParameterRanges.enableConsecutiveIncrementalSellProfit,
+      gridConsecutiveIncrement: mergedParameterRanges.gridConsecutiveIncrement,
+      enableScenarioDetection: mergedParameterRanges.enableScenarioDetection
+    }
   };
 
   // Emit completion event via SSE

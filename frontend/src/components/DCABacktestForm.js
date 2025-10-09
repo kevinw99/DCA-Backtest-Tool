@@ -2559,12 +2559,12 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                 </div>
 
                 <div className="parameter-range">
-                  <label>Trailing Buy Activation (%) - Range: 0 to 20, step 5</label>
+                  <label>Trailing Buy Activation (%) - Range: 0 to 30, step 5</label>
                   <div className="selection-controls">
                     <button
                       type="button"
                       className="control-button"
-                      onClick={() => handleSelectAll('trailingBuyActivationPercent', [0, ...generateRange(5, 20, 5)])}
+                      onClick={() => handleSelectAll('trailingBuyActivationPercent', generateRange(0, 30, 5))}
                     >
                       Select All
                     </button>
@@ -2577,7 +2577,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                     </button>
                   </div>
                   <div className="checkbox-grid">
-                    {[0, ...generateRange(5, 20, 5)].map(val => (
+                    {generateRange(0, 30, 5).map(val => (
                       <label key={val} className="checkbox-item">
                         <input
                           type="checkbox"
@@ -2597,12 +2597,12 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                 </div>
 
                 <div className="parameter-range">
-                  <label>Trailing Buy Rebound (%) - Range: 0 to 10, step 5</label>
+                  <label>Trailing Buy Rebound (%) - Range: 0 to 30, step 5</label>
                   <div className="selection-controls">
                     <button
                       type="button"
                       className="control-button"
-                      onClick={() => handleSelectAll('trailingBuyReboundPercent', generateRange(0, 10, 5))}
+                      onClick={() => handleSelectAll('trailingBuyReboundPercent', generateRange(0, 30, 5))}
                     >
                       Select All
                     </button>
@@ -2615,7 +2615,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                     </button>
                   </div>
                   <div className="checkbox-grid">
-                    {generateRange(0, 10, 5).map(val => (
+                    {generateRange(0, 30, 5).map(val => (
                       <label key={val} className="checkbox-item">
                         <input
                           type="checkbox"
@@ -2635,12 +2635,12 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                 </div>
 
                 <div className="parameter-range">
-                  <label>Trailing Sell Activation (%) - Range: 0 to 50, step 10</label>
+                  <label>Trailing Sell Activation (%) - Range: 0 to 30, step 5</label>
                   <div className="selection-controls">
                     <button
                       type="button"
                       className="control-button"
-                      onClick={() => handleSelectAll('trailingSellActivationPercent', [0, ...generateRange(10, 50, 10)])}
+                      onClick={() => handleSelectAll('trailingSellActivationPercent', generateRange(0, 30, 5))}
                     >
                       Select All
                     </button>
@@ -2653,7 +2653,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                     </button>
                   </div>
                   <div className="checkbox-grid">
-                    {[0, ...generateRange(10, 50, 10)].map(val => (
+                    {generateRange(0, 30, 5).map(val => (
                       <label key={val} className="checkbox-item">
                         <input
                           type="checkbox"
@@ -2673,12 +2673,12 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                 </div>
 
                 <div className="parameter-range">
-                  <label>Trailing Sell Pullback (%) - Range: 0 to 10, step 5</label>
+                  <label>Trailing Sell Pullback (%) - Range: 0 to 30, step 5</label>
                   <div className="selection-controls">
                     <button
                       type="button"
                       className="control-button"
-                      onClick={() => handleSelectAll('trailingSellPullbackPercent', generateRange(0, 10, 5))}
+                      onClick={() => handleSelectAll('trailingSellPullbackPercent', generateRange(0, 30, 5))}
                     >
                       Select All
                     </button>
@@ -2691,7 +2691,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                     </button>
                   </div>
                   <div className="checkbox-grid">
-                    {generateRange(0, 10, 5).map(val => (
+                    {generateRange(0, 30, 5).map(val => (
                       <label key={val} className="checkbox-item">
                         <input
                           type="checkbox"
@@ -2873,7 +2873,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                     shortBatchParameters.trailingCoverReboundPercent.length
                   ) : (
                     batchParameters.symbols.length *
-                    (batchParameters.coefficients.length || 1) *
+                    (enableBetaScaling ? (batchParameters.coefficients.length || 1) : 1) *
                     (batchParameters.maxLotsToSell.length || 1) *
                     batchParameters.profitRequirement.length *
                     batchParameters.gridIntervalPercent.length *

@@ -117,33 +117,44 @@ const BatchResults = ({ data }) => {
     }
 
     // Add advanced parameters that affect the backtest algorithm
-    console.log('🔍 Checking for boolean flags in parameters:', {
-      enableDynamicGrid: parameters.enableDynamicGrid,
-      normalizeToReference: parameters.normalizeToReference,
-      enableConsecutiveIncrementalBuyGrid: parameters.enableConsecutiveIncrementalBuyGrid,
-      enableConsecutiveIncrementalSellProfit: parameters.enableConsecutiveIncrementalSellProfit,
-      enableScenarioDetection: parameters.enableScenarioDetection,
-      dynamicGridMultiplier: parameters.dynamicGridMultiplier,
-      gridConsecutiveIncrement: parameters.gridConsecutiveIncrement
+    // IMPORTANT: Use batchRequestParameters for boolean flags that should NOT vary per combination
+    // These come from the original batch request, not from individual combination parameters
+    const batchRequestParams = data.batchRequestParameters || {};
+
+    console.log('🔍 Checking for boolean flags:', {
+      batchRequestParams,
+      parametersValues: {
+        enableDynamicGrid: parameters.enableDynamicGrid,
+        normalizeToReference: parameters.normalizeToReference,
+        enableConsecutiveIncrementalBuyGrid: parameters.enableConsecutiveIncrementalBuyGrid,
+        enableConsecutiveIncrementalSellProfit: parameters.enableConsecutiveIncrementalSellProfit,
+        enableScenarioDetection: parameters.enableScenarioDetection,
+        dynamicGridMultiplier: parameters.dynamicGridMultiplier,
+        gridConsecutiveIncrement: parameters.gridConsecutiveIncrement
+      }
     });
 
-    if (parameters.enableDynamicGrid !== undefined) urlParams.enableDynamicGrid = parameters.enableDynamicGrid;
-    if (parameters.normalizeToReference !== undefined) urlParams.normalizeToReference = parameters.normalizeToReference;
-    if (parameters.enableConsecutiveIncrementalBuyGrid !== undefined) urlParams.enableConsecutiveIncrementalBuyGrid = parameters.enableConsecutiveIncrementalBuyGrid;
-    if (parameters.enableConsecutiveIncrementalSellProfit !== undefined) urlParams.enableConsecutiveIncrementalSellProfit = parameters.enableConsecutiveIncrementalSellProfit;
-    if (parameters.enableScenarioDetection !== undefined) urlParams.enableScenarioDetection = parameters.enableScenarioDetection;
+    // Use batch request parameters for boolean flags (non-varying parameters)
+    // Fall back to combination parameters if batch request parameters are not available (backward compatibility)
+    urlParams.enableDynamicGrid = batchRequestParams.enableDynamicGrid ?? parameters.enableDynamicGrid ?? true;
+    urlParams.normalizeToReference = batchRequestParams.normalizeToReference ?? parameters.normalizeToReference ?? true;
+    urlParams.enableConsecutiveIncrementalBuyGrid = batchRequestParams.enableConsecutiveIncrementalBuyGrid ?? parameters.enableConsecutiveIncrementalBuyGrid ?? false;
+    urlParams.enableConsecutiveIncrementalSellProfit = batchRequestParams.enableConsecutiveIncrementalSellProfit ?? parameters.enableConsecutiveIncrementalSellProfit ?? true;
+    urlParams.enableScenarioDetection = batchRequestParams.enableScenarioDetection ?? parameters.enableScenarioDetection ?? false;
+    urlParams.gridConsecutiveIncrement = batchRequestParams.gridConsecutiveIncrement ?? parameters.gridConsecutiveIncrement;
+
+    // Use combination parameters for varying values (these CAN differ per combination)
     if (parameters.dynamicGridMultiplier !== undefined) urlParams.dynamicGridMultiplier = parameters.dynamicGridMultiplier;
-    if (parameters.gridConsecutiveIncrement !== undefined) urlParams.gridConsecutiveIncrement = parameters.gridConsecutiveIncrement;
+
+    // CRITICAL: Force beta parameters to prevent double-scaling
+    // The parameters in batch results are ALREADY beta-scaled, so we must disable beta scaling
+    // to prevent the single test from scaling them AGAIN (which would cause incorrect results)
+    urlParams.beta = parameters.beta || 1;  // Include for display purposes
+    urlParams.coefficient = parameters.coefficient || 1;  // Include for display purposes
+    urlParams.enableBetaScaling = false;  // FORCE to false - parameters already scaled (this should ALWAYS be false)
+    urlParams.isManualBetaOverride = false;  // Not relevant for batch results
 
     console.log('🔍 Final urlParams being passed to generateShareableURL:', urlParams);
-
-    // DO NOT add beta parameters when opening from batch results
-    // The parameters are already Beta-scaled, so we pass them as-is without Beta scaling metadata
-    // If we include enableBetaScaling=true, the single test will scale them AGAIN (double scaling bug)
-    // urlParams.beta - NOT included (for display only)
-    // urlParams.coefficient - NOT included (for display only)
-    // urlParams.enableBetaScaling - NOT included (parameters already scaled)
-    // urlParams.isManualBetaOverride - NOT included (not relevant)
 
     console.log(`🔄 PARAMETER CONVERSION (decimal → percentage for ${isShortStrategy ? 'SHORT' : 'LONG'} strategy URL):`);
     console.log(`  📊 Strategy Mode: ${urlParams.strategyMode}`);
