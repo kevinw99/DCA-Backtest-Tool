@@ -380,6 +380,9 @@ async function runDCABacktest(params) {
   console.log(`🔧 Trailing Stop Order Type: ${trailingStopOrderType.toUpperCase()}`);
 
   // Log average-based features status (Spec 23)
+  console.log(`🔍 DEBUG: enableAverageBasedGrid = ${enableAverageBasedGrid} (type: ${typeof enableAverageBasedGrid})`);
+  console.log(`🔍 DEBUG: enableAverageBasedSell = ${enableAverageBasedSell} (type: ${typeof enableAverageBasedSell})`);
+
   if (enableAverageBasedGrid) {
     console.log(`📊 Feature: Average-Based Grid Spacing = ENABLED`);
     console.log(`   Grid spacing will be checked against average cost (not individual lots)`);

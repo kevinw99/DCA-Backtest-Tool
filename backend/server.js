@@ -918,6 +918,8 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
       minDataDaysBeforeAdaptation: finalParams.minDataDaysBeforeAdaptation,
       confidenceThreshold: finalParams.confidenceThreshold,
       trailingStopOrderType: finalParams.trailingStopOrderType,
+      enableAverageBasedGrid: finalParams.enableAverageBasedGrid,
+      enableAverageBasedSell: finalParams.enableAverageBasedSell,
       verbose: false // Don't log to console for API calls
     });
 
