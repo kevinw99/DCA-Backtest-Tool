@@ -1,35 +1,115 @@
-At the end of single backtest, please create a new section in the result "Future Trade" after "Current
- Holdings" to
- print the activated trailing a
- buy
-and
-sell order,
-if there is no pending orders, then anticipate how much price need to move to activate the next trailing buy and
-trailing
-sell order,
-and then what trailing order would be activated.
-you need to list both direction so the user can see the next possible trade in both direction.
+spec 23 answers inline: "Open Questions
+  Asymmetric Spacing: Half spacing (5%) or full spacing (10%) when buying above average cost?
 
-Before you implement it, lets
-test it out, can you take PLTR as an example, take the default parameters, and tell me when it started on
-09/01/2021, what price it is, what is the next trailing buy and sell order, and when it is activated, what will be
-the next trailing buy and sell order?
+  Recommendation: Half spacing (more flexible)
+  No, full spacing
 
 
+  Lot Selection: Keep highest-price first or change to lowest-price first?
 
-till the same! single
-http://localhost:3000/backtest?mode=single&symbol=PLTR&startDate=2021-09-01&endDate=2025-10-08&strategyMode=long
-&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=25.95&profitRequirement=25
-.95&trailingBuyActivationPercent=12.975&trailingBuyReboundPercent=12.975&trailingSellActivationPercent=25
-.95&trailingSellPullbackPercent=12.975&enableDynamicGrid=false&normalizeToReference=false&enableBetaScaling=false
-&enableConsecutiveIncrementalBuyGrid=true&enableConsecutiveIncrementalSellProfit=false&dynamicGridMultiplier=1&source=batch
-
-http://localhost:3000/backtest/long/PLTR/results?startDate=2021-09-01&endDate=2025-10-08&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=10&profitRequirement=10&trailingBuyActivationPercent=5&trailingBuyReboundPercent=5&trailingSellActivationPercent=10&trailingSellPullbackPercent=5&maxShorts=6&maxShortsToCovers=3&trailingShortActivationPercent=2500&trailingShortPullbackPercent=1500&trailingCoverActivationPercent=2000&trailingCoverReboundPercent=1000&hardStopLossPercent=3000&portfolioStopLossPercent=2500&beta=2.595&coefficient=1&enableBetaScaling=true&isManualBetaOverride=false&enableDynamicGrid=false&normalizeToReference=false&enableConsecutiveIncrementalBuyGrid=true&enableConsecutiveIncrementalSellProfit=false&enableScenarioDetection=false&dynamicGridMultiplier=1&gridConsecutiveIncrement=10
+  Recommendation: Keep highest-price first (no breaking changes)
+  ok.
 
 
-http://localhost:3000/backtest/long/PLTR/results?startDate=2021-09-01&endDate=2025-10-08&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=10&profitRequirement=10&trailingBuyActivationPercent=5&trailingBuyReboundPercent=5&trailingSellActivationPercent=10&trailingSellPullbackPercent=5&maxShorts=6&maxShortsToCovers=3&trailingShortActivationPercent=2500&trailingShortPullbackPercent=1500&trailingCoverActivationPercent=2000&trailingCoverReboundPercent=1000&hardStopLossPercent=3000&portfolioStopLossPercent=2500&beta=2.595&coefficient=1&enableBetaScaling=false&isManualBetaOverride=false&enableDynamicGrid=false&normalizeToReference=false&enableConsecutiveIncrementalBuyGrid=true&enableConsecutiveIncrementalSellProfit=false&enableScenarioDetection=false&dynamicGridMultiplier=1&gridConsecutiveIncrement=10
+  Consecutive Feature Priority: Average-based or consecutive incremental takes precedence?
+
+  Recommendation: Average-based uses average cost reference, but applies incremental sizing
+  ok.
 
 
+Spec 24 "Conservative Profile (active when Total P/L < 0):
+
+         Goal: Preserve capital, reduce risk
+         Behavior: Make buying harder, selling easier
+         Parameter Overrides:
+         trailingBuyActivationPercent = 10% (require 10% drop before buy activation)
+         profitRequirement = 0% (sell at any profit to lock in gains)
+         All other parameters: Keep user-specified values
+"   I realized this is contradictory, if selling require profit requirement > 0%, then P/L > 0, which means aggressive profile.
+So the cutoff should be  1. based on unrealized P/L, not total P/L, 2. when unrealized P/L < 0, then conservative
+profile, the profit requirement > -10%, and max_lots_to_sell = max_lots, so it can sell all lots to reduce risk.
+When unrealized P/L > 0, then aggressive profile, profit requirement = 10%, and max_lots_to_sell = 1, so it can sell
+slowly to maximize profit.
+
+
+Spec 24 "Active trailing stops:
+
+         Are NOT cancelled when profile switches (let them complete naturally)
+         New trailing stops use new profile parameters
+" I think we need to horner the new profile, e.g, if we switch to conservative profile, we need to update to new
+trailing buy and sell order if they are different under the new parameters. Please make sure to add log like
+"Switching to conservative profile, updating trailing buy and sell orders with new parameters" and then the
+details of order for
+debugging purpose.
+
+
+
+We need to make several changes to the DCA algo. I will list some ideas here, but I need you to think through what
+is impact and come up with a complete design doc before you start coding.
+1.  for buy logic,
+instead of track each lot individually, we can track the total lots and average price of all lots.
+then remove the grid spacing of all lots, and just use the average price of all lots for spacing. what should be
+reasonable spacing condition?
+
+2. but individual lot price(target lot)  is used in the sell logic, so how to change the sell logic to use
+average price of all lots?
+
+
+2b: do we introduce a new parameter to control the spacing behavior? e.g. grid spacing based on average price of
+all lots, or orginal grid spacing based on individual lot price? remember we need to have backward compatibility,
+so it can fall back if the new idea does not work.
+
+3. I also like to indroduce the concept of profile dynamic switch, similar to adaptive strategy, but it is more
+deterministic. Once example coulde be:
+
+When P/L < 0, conservative profile, when p/L >0, aggressive profile.
+In 2nd phase, we can consider MV or other TA indicator to switch profile. but not now.
+
+Conservative profile: make it harder to buy, easier to sell
+trailing buy activation % = 10%
+profit requirement = 0
+other possible parameter change: set consecutive incremental buy grid to true, so the grid size increase for consecutive buys
+but let's not do this for now. can be 2nd phase.
+
+Aggressive profile: make it easier to buy, harder to sell
+trailing buy activation % = 0
+profit requirement = 10%
+other possible parameter change: set consecutive incremental sell profit to true, so the profit requirement
+increase for consecutive sells
+but let's not do this for now. can be 2nd phase.
+
+All other parameters use the default value and remain the same for both profiles.
+
+4. think through the logic , and add a parameter to enable or disable this dynamic profile switch. handle the
+parameter like other parameters, so it can be used in both single and batch mode. and has UI control in the parameters page.
+
+5. how does #3 combined with #1 and #2? does #1 and #2 make it easier or harder to implement #3 or they are independent?
+
+6. one of the motivation of #1 and #2 is to be able to use this algo to manage a real stock portfolio, where the
+buy and sell, and they don't necessarily has individual lot price. but average price of all lots is always
+available.
+
+7.please identify flaws and gaps of the above ideas, and come up with a complete design doc before you start coding.
+
+
+
+Use TA again?
+Actually once you control the buy and sell, then the whole algo is adjusted.
+
+h
+
+
+
+
+3, 464.68%
+http://localhost:3000/backtest?mode=single&symbol=PLTR&startDate=2021-09-01&endDate=2025-09-01&strategyMode=long&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=10&profitRequirement=10&trailingBuyActivationPercent=5&trailingBuyReboundPercent=5&trailingSellActivationPercent=10&trailingSellPullbackPercent=5&beta=1&coefficient=1&enableBetaScaling=false&isManualBetaOverride=false&enableDynamicGrid=true&normalizeToReference=true&enableConsecutiveIncrementalBuyGrid=false&enableConsecutiveIncrementalSellProfit=true&dynamicGridMultiplier=1&source=batch
+
+batch
+http://localhost:3000/batch/PLTR/results?symbols=PLTR&profitRequirement=10&gridIntervalPercent=10&trailingBuyActivationPercent=10%2C5&trailingBuyReboundPercent=5&trailingSellActivationPercent=10&trailingSellPullbackPercent=5&coefficients=1%2C0.5&enableBetaScaling=false&enableDynamicGrid=false&normalizeToReference=true&enableConsecutiveIncrementalBuyGrid=false&enableConsecutiveIncrementalSellProfit=false&enableScenarioDetection=false
+
+http://localhost:3000/backtest?mode=single&symbol=PLTR&startDate=2021-09-01&endDate=2025-10-08&strategyMode=long&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=10&profitRequirement=10&trailingBuyActivationPercent=10&trailingBuyReboundPercent=5&trailingSellActivationPercent=10&trailingSellPullbackPercent=5&enableDynamicGrid=false&normalizeToReference=true&enableConsecutiveIncrementalBuyGrid=false&enableConsecutiveIncrementalSellProfit=false&dynamicGridMultiplier=1&source=batch
+
+http://localhost:3000/backtest?mode=single&symbol=PLTR&startDate=2021-09-01&endDate=2025-10-08&strategyMode=long&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=10&profitRequirement=10&trailingBuyActivationPercent=5&trailingBuyReboundPercent=5&trailingSellActivationPercent=10&trailingSellPullbackPercent=5&enableDynamicGrid=false&normalizeToReference=true&enableConsecutiveIncrementalBuyGrid=false&enableConsecutiveIncrementalSellProfit=false&dynamicGridMultiplier=1&source=batch
 For long running batch test, is there a way to stop in the middle of the batch test? Please evaluate what it takes
 before making any change.
 
@@ -38,15 +118,6 @@ Best Result So Far:
 PLTR
 •
 1232.81% total return
-
-I see this value actaully dropp, it was 1300+% earlier within the same batch, you only update when it is higher, right?
-
-I notice now it takes longer time to run a batch test compare to before. is it that the batch mode didn't really do
- the real job or there is some problem slowing it down now?
-
-http://localhost:3000/backtest?mode=single&symbol=PLTR&startDate=2021-09-01&endDate=2025-10-07&strategyMode=long&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=0.2595&profitRequirement=0.2595&trailingBuyActivationPercent=0&trailingBuyReboundPercent=0.12975&trailingSellActivationPercent=0.2595&trailingSellPullbackPercent=0.12975&source=batch
-
-http://localhost:3000/batch/PLTR/results?symbols=PLTR&profitRequirement=10&gridIntervalPercent=10&trailingBuyActivationPercent=10%2C5&trailingBuyReboundPercent=5&trailingSellActivationPercent=10&trailingSellPullbackPercent=5&coefficients=1%2C0.5&enableBetaScaling=true&enableDynamicGrid=false&normalizeToReference=true&enableConsecutiveIncrementalBuyGrid=true&enableConsecutiveIncrementalSellProfit=false&enableScenarioDetection=false
 
   Next Phase: Real-Time Adaptive Strategy
 
@@ -60,64 +131,6 @@ can you compare the performance of the adaptive strategy disabled vs enabled, an
 
 http://localhost:3000/batch/TSLA/results?parameterRanges=%7B%22symbols%22%3A%5B%22TSLA%22%5D%2C%22coefficients%22%3A%5B1%5D%2C%22maxLotsToSell%22%3A%5B1%2C2%5D%2C%22profitRequirement%22%3A%5B5%2C10%2C0%5D%2C%22gridIntervalPercent%22%3A%5B10%2C5%5D%2C%22trailingBuyActivationPercent%22%3A%5B10%2C5%5D%2C%22trailingBuyReboundPercent%22%3A%5B5%2C10%5D%2C%22trailingSellActivationPercent%22%3A%5B20%2C10%5D%2C%22trailingSellPullbackPercent%22%3A%5B10%2C5%2C0%5D%2C%22dynamicGridMultiplier%22%3A%5B1%5D%2C%22gridConsecutiveIncrement%22%3A%5B5%5D%2C%22startDate%22%3A%222021-09-01%22%2C%22endDate%22%3A%222025-10-06%22%2C%22lotSizeUsd%22%3A10000%2C%22maxLots%22%3A10%7D&enableBetaScaling=false&enableDynamicGrid=false&normalizeToReference=true&enableConsecutiveIncrementalBuyGrid=false&enableConsecutiveIncrementalSellProfit=false&enableScenarioDetection=false&sortBy=totalReturn
 
-
-The key things is the Algo is a multi leg DCA, so each stage the captial deployed is differnt. I only have a max
-capital available  100,000, and each time the algo only deploys 10,000 to buy. If the actual max total capital
-deployed is 50,000, I want to calculate the return based on 50,000, not 100,000. To be even more preise, I want to
-at differnt time period, the capital deployed is differnt, e.g., at the begining, I only have 10,000 deployed, then
- after 3 months, I have 30,000 deployed, then after 6 months, I have 50,000 deployed. I think the performace is
- will be different from I used deploy 50k throughout the 6 months, because the 40k is not deployed at the begining,
-  it can be used to invest in other stocks, or in fixed income, so the opportunity cost is different. So I want to
-  calculate the these performance based on the actual capital deployed at differnt time period.
-
-help me crate a CLAUDE.md file to include these instructions
-1. The following actions is what you need to do, in additional to wonderful jobs you already do without these
-additional instructions.
-2. when I report a problem or a bug, other than fixing the problem or bug, you should:
-  a. find out the root cause of the problem or bug, and fix it.
-  b. find out if there are similar problems or bugs in other places, and fix them.
-  c. find out if there are any technical debts in the related code, and refactor the code to remove them.
-  d. find out if there are any related features that can be improved, and improve them.
-  e. update the relevant documentation to reflect the changes you made.
-
-  f. do as much as testing to verify the changes you made, and make sure you do not break anything.
-  for example, for backend, you should test a curl command with appropriate URL parameters to verify the changes you
-  for front end, you should also use curl command to verify the changes you made.
-  g. if it is not clear or you don't have a high confidence of fixing it, try to add debugging log
-  h you can then use combination of of f and g to investigate and fix the problem or bug.It can be iteraitve and
-  take some times, but please make sure you do it thoroughly. The goal is to save me from doing manual testing and
-  report the log back to you. If you can try f and get g, then don't ask me to do it.
-
-3. therefore, you should make a tasks list for each problem or bug, and mark them as done when you complete them.
-4. everytime when you claim you fix a problem, please provide the URL you used to verify the fix, so I can
-  verify it too.
-5. if it can not be verified by URL, then suggest what changes need to make it so it can be verified by URL, or
-other ways that require minimal manual effort from me to verify it
-6 after a big change of fixing similar issues, please pick optimum times to suggest a git commit, so we can stage
-the development and have a good commit history.
-7. consider I allow all permissions, you should try to do as much as possible without asking me for permission.
-8. when I make statment or request, first please validate if I am making any mistake or worng assumption, don't
-assume what I ask is valid. Be critial and faithful to the truth. You are my partner, not a yes man.
-
-I see you have the capability to run parallel tasks, can you use it to speed up the testing and verification
-process automaitically, wihtout me using the command like /rapid-development:experimental:*?
-
-ok lets implement the " Proposed URL Schema Solution:
-
-   " will you using multipel agents/sesssions? I want to see some exeuction track that shows multiple agents,
-  just when I use commands like /rapid-development:experimental:*
-
-pelase add this to CLAUDE.md: when taking actions, first list the steps you will take, and whether parallel
-sessions are needed, and how many sessions are needed. then execute the steps.
-
-make sure the backend server is restarted after you make changes to the backend code.
-
-
-
-Can you do a thorough review of all parameters with beta scaling:
-scaling should be done in front end,
-and the scaled value should be passed to backend, not the original value.
-Make sure all parameters are handled the same way in both single and batch mode.
 
 
 http://localhost:3000/batch?mode=batch&symbols=COST%2CTSLA&profitRequirement=0%2C5%2C10&gridIntervalPercent=10%2C15&trailingBuyActivationPercent=10&trailingBuyReboundPercent=0%2C5&trailingSellActivationPercent=10%2C20&trailingSellPullbackPercent=0%2C5&coefficients=0.5%2C0.25&enableBetaScaling=true
@@ -1389,235 +1402,3 @@ can you add a front end to
 
 it says "No chart data available" when I select "All available data"
 
-
-API Requests and Data Requirements
-
-## Stock Data Requirements
-- Symbol: NVDA
-- Date Range: 2021-11-01 to 2023-11-01
-- Data Type: Daily OHLCV (Open, High, Low, Close, Volume)
-- Source: Database (backend/stocks.db)
-
-## Database Queries
-1. Get stock ID by symbol
-2. Fetch daily price data within date range
-3. Ensure data completeness for backtesting period
-
-## Backend API Endpoints
-- GET /api/stocks/:symbol - Get stock information
-- GET /api/stocks/:id/prices - Get historical price data
-- POST /api/data/fetch - Trigger data fetch from external APIs
-
-## External Data Sources (for reference)
-- Financial Modeling Prep (FMP)
-- Alpha Vantage
-- Tiingo
-- Twelve Data
-
-## Data Format
-```json
-{
-  "date": "YYYY-MM-DD",
-  "open": number,
-  "high": number,
-  "low": number,
-  "close": number,
-  "volume": number
-}
-```
-
-## Backtest Requirements
-- Process daily price data sequentially
-- Calculate PNL on each day
-- Track lot purchases and sales
-- Maintain transaction log
-- Generate performance summary
-
-
-ting single backtest for TSLA
-App.js:105 === DEBUG: API Call Info ===
-App.js:106 Strategy Mode: long
-App.js:107 Selected Endpoint: http://localhost:3001/api/backtest/dca
-App.js:108 Full Parameters: {symbol: 'TSLA', startDate: '2021-09-01', endDate: '2025-09-01', lotSizeUsd: 10000, maxLots: 10, …}
-App.js:109 ============================
-App.js:55 Starting single backtest for TSLA
-App.js:105 === DEBUG: API Call Info ===
-App.js:106 Strategy Mode: long
-App.js:107 Selected Endpoint: http://localhost:3001/api/backtest/dca
-App.js:108 Full Parameters: {symbol: 'TSLA', startDate: '2021-09-01', endDate: '2025-09-01', lotSizeUsd: 10000, maxLots: 10, …}
-App.js:109 ============================
-App.js:111  POST http://localhost:3001/api/backtest/dca 400 (Bad Request)
-handleBacktestSubmit @ App.js:111
-(anonymous) @ DCABacktestForm.js:312
-setTimeout
-(anonymous) @ DCABacktestForm.js:297
-commitHookEffectListMount @ react-dom.development.js:23189
-commitPassiveMountOnFiber @ react-dom.development.js:24965
-commitPassiveMountEffects_complete @ react-dom.development.js:24930
-commitPassiveMountEffects_begin @ react-dom.development.js:24917
-commitPassiveMountEffects @ react-dom.development.js:24905
-flushPassiveEffectsImpl @ react-dom.development.js:27078
-flushPassiveEffects @ react-dom.development.js:27023
-(anonymous) @ react-dom.development.js:26808
-workLoop @ scheduler.development.js:266
-flushWork @ scheduler.development.js:239
-performWorkUntilDeadline @ scheduler.development.js:533Understand this error
-App.js:145 Error in backtest : Error: Backtest failed: Bad Request
-    at handleBacktestSubmit (App.js:120:1)
-overrideMethod @ hook.js:608
-handleBacktestSubmit @ App.js:145
-await in handleBacktestSubmit
-(anonymous) @ DCABacktestForm.js:312
-setTimeout
-(anonymous) @ DCABacktestForm.js:297
-commitHookEffectListMount @ react-dom.development.js:23189
-commitPassiveMountOnFiber @ react-dom.development.js:24965
-commitPassiveMountEffects_complete @ react-dom.development.js:24930
-commitPassiveMountEffects_begin @ react-dom.development.js:24917
-commitPassiveMountEffects @ react-dom.development.js:24905
-flushPassiveEffectsImpl @ react-dom.development.js:27078
-flushPassiveEffects @ react-dom.development.js:27023
-(anonymous) @ react-dom.development.js:26808
-workLoop @ scheduler.development.js:266
-flushWork @ scheduler.development.js:239
-performWorkUntilDeadline @ scheduler.development.js:533Understand this error
-App.js:111  POST http://localhost:3001/api/backtest/dca 400 (Bad Request)
-handleBacktestSubmit @ App.js:111
-(anonymous) @ DCABacktestForm.js:312
-setTimeout
-(anonymous) @ DCABacktestForm.js:297
-commitHookEffectListMount @ react-dom.development.js:23189
-commitPassiveMountOnFiber @ react-dom.development.js:24965
-commitPassiveMountEffects_complete @ react-dom.development.js:24930
-commitPassiveMountEffects_begin @ react-dom.development.js:24917
-commitPassiveMountEffects @ react-dom.development.js:24905
-flushPassiveEffectsImpl @ react-dom.development.js:27078
-flushPassiveEffects @ react-dom.development.js:27023
-(anonymous) @ react-dom.development.js:26808
-workLoop @ scheduler.development.js:266
-flushWork @ scheduler.development.js:239
-performWorkUntilDeadline @ scheduler.development.js:533Understand this error
-App.js:145 Error in backtest : Error: Backtest failed: Bad Request
-    at handleBacktestSubmit (App.js:120:1)
-overrideMethod @ hook.js:608
-handleBacktestSubmit @ App.js:145
-await in handleBacktestSubmit
-(anonymous) @ DCABacktestForm.js:312
-setTimeout
-(anonymous) @ DCABacktestForm.js:297
-commitHookEffectListMount @ react-dom.development.js:23189
-commitPassiveMountOnFiber @ react-dom.development.js:24965
-commitPassiveMountEffects_complete @ react-dom.development.js:24930
-commitPassiveMountEffects_begin @ react-dom.development.js:24917
-commitPassiveMountEffects @ react-dom.development.js:24905
-flushPassiveEffectsImpl @ react-dom.development.js:27078
-flushPassiveEffects @ react-dom.development.js:27023
-(anonymous) @ react-dom.development.js:26808
-workLoop @ scheduler.development.js:266
-flushWork @ scheduler.development.js:239
-performWorkUntilDeadline @ scheduler.development.js:533Understand this error
-App.js:111  POST http://localhost:3001/api/backtest/dca 400 (Bad Request)
-handleBacktestSubmit @ App.js:111
-(anonymous) @ DCABacktestForm.js:312
-setTimeout
-(anonymous) @ DCABacktestForm.js:297
-commitHookEffectListMount @ react-dom.development.js:23189
-commitPassiveMountOnFiber @ react-dom.development.js:24965
-commitPassiveMountEffects_complete @ react-dom.development.js:24930
-commitPassiveMountEffects_begin @ react-dom.development.js:24917
-commitPassiveMountEffects @ react-dom.development.js:24905
-flushPassiveEffectsImpl @ react-dom.development.js:27078
-flushPassiveEffects @ react-dom.development.js:27023
-(anonymous) @ react-dom.development.js:26808
-workLoop @ scheduler.development.js:266
-flushWork @ scheduler.development.js:239
-performWorkUntilDeadline @ scheduler.development.js:533Understand this error
-App.js:145 Error in backtest : Error: Backtest failed: Bad Request
-    at handleBacktestSubmit (App.js:120:1)
-overrideMethod @ hook.js:608
-handleBacktestSubmit @ App.js:145
-await in handleBacktestSubmit
-(anonymous) @ DCABacktestForm.js:312
-setTimeout
-(anonymous) @ DCABacktestForm.js:297
-commitHookEffectListMount @ react-dom.development.js:23189
-commitPassiveMountOnFiber @ react-dom.development.js:24965
-commitPassiveMountEffects_complete @ react-dom.development.js:24930
-commitPassiveMountEffects_begin @ react-dom.development.js:24917
-commitPassiveMountEffects @ react-dom.development.js:24905
-flushPassiveEffectsImpl @ react-dom.development.js:27078
-flushPassiveEffects @ react-dom.development.js:27023
-(anonymous) @ react-dom.development.js:26808
-workLoop @ scheduler.development.js:266
-flushWork @ scheduler.development.js:239
-performWorkUntilDeadline @ scheduler.development.js:533Understand this error
-App.js:111  POST http://localhost:3001/api/backtest/dca 400 (Bad Request)
-handleBacktestSubmit @ App.js:111
-(anonymous) @ DCABacktestForm.js:312
-setTimeout
-(anonymous) @ DCABacktestForm.js:297
-commitHookEffectListMount @ react-dom.development.js:23189
-commitPassiveMountOnFiber @ react-dom.development.js:24965
-commitPassiveMountEffects_complete @ react-dom.development.js:24930
-commitPassiveMountEffects_begin @ react-dom.development.js:24917
-commitPassiveMountEffects @ react-dom.development.js:24905
-flushPassiveEffectsImpl @ react-dom.development.js:27078
-flushPassiveEffects @ react-dom.development.js:27023
-(anonymous) @ react-dom.development.js:26808
-workLoop @ scheduler.development.js:266
-flushWork @ scheduler.development.js:239
-performWorkUntilDeadline @ scheduler.development.js:533Understand this error
-App.js:145 Error in backtest : Error: Backtest failed: Bad Request
-    at handleBacktestSubmit (App.js:120:1)
-overrideMethod @ hook.js:608
-handleBacktestSubmit @ App.js:145
-await in handleBacktestSubmit
-(anonymous) @ DCABacktestForm.js:312
-setTimeout
-(anonymous) @ DCABacktestForm.js:297
-commitHookEffectListMount @ react-dom.development.js:23189
-commitPassiveMountOnFiber @ react-dom.development.js:24965
-commitPassiveMountEffects_complete @ react-dom.development.js:24930
-commitPassiveMountEffects_begin @ react-dom.development.js:24917
-commitPassiveMountEffects @ react-dom.development.js:24905
-flushPassiveEffectsImpl @ react-dom.development.js:27078
-flushPassiveEffects @ react-dom.development.js:27023
-(anonymous) @ react-dom.development.js:26808
-workLoop @ scheduler.development.js:266
-flushWork @ scheduler.development.js:239
-performWorkUntilDeadline @ scheduler.development.js:533Understand this error
-App.js:111  POST http://localhost:3001/api/backtest/dca 400 (Bad Request)
-handleBacktestSubmit @ App.js:111
-(anonymous) @ DCABacktestForm.js:312
-setTimeout
-(anonymous) @ DCABacktestForm.js:297
-commitHookEffectListMount @ react-dom.development.js:23189
-commitPassiveMountOnFiber @ react-dom.development.js:24965
-commitPassiveMountEffects_complete @ react-dom.development.js:24930
-commitPassiveMountEffects_begin @ react-dom.development.js:24917
-commitPassiveMountEffects @ react-dom.development.js:24905
-flushPassiveEffectsImpl @ react-dom.development.js:27078
-flushPassiveEffects @ react-dom.development.js:27023
-(anonymous) @ react-dom.development.js:26808
-workLoop @ scheduler.development.js:266
-flushWork @ scheduler.development.js:239
-performWorkUntilDeadline @ scheduler.development.js:533Understand this error
-App.js:145 Error in backtest : Error: Backtest failed: Bad Request
-    at handleBacktestSubmit (App.js:120:1)
-overrideMethod @ hook.js:608
-handleBacktestSubmit @ App.js:145
-await in handleBacktestSubmit
-(anonymous) @ DCABacktestForm.js:312
-setTimeout
-(anonymous) @ DCABacktestForm.js:297
-commitHookEffectListMount @ react-dom.development.js:23189
-commitPassiveMountOnFiber @ react-dom.development.js:24965
-commitPassiveMountEffects_complete @ react-dom.development.js:24930
-commitPassiveMountEffects_begin @ react-dom.development.js:24917
-commitPassiveMountEffects @ react-dom.development.js:24905
-flushPassiveEffectsImpl @ react-dom.development.js:27078
-flushPassiveEffects @ react-dom.development.js:27023
-(anonymous) @ react-dom.development.js:26808
-workLoop @ scheduler.development.js:266
-flushWork @ scheduler.development.js:239
-performWorkUntilDeadline @ scheduler.development.js:533Understand this error

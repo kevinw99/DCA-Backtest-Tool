@@ -358,6 +358,8 @@ async function runDCABacktest(params) {
     gridConsecutiveIncrement = 0.05, // Grid increment per consecutive buy (default 0.05 for 5%)
     enableScenarioDetection = true, // Enable scenario detection and analysis
     trailingStopOrderType = 'limit', // Order type: 'limit' (cancels if exceeds peak/bottom) or 'market' (always executes)
+    enableAverageBasedGrid = false, // Enable average-cost based grid spacing (Spec 23 Feature #1)
+    enableAverageBasedSell = false, // Enable average-cost based sell profitability (Spec 23 Feature #2)
     verbose = true
   } = params;
 
@@ -366,8 +368,26 @@ async function runDCABacktest(params) {
     throw new Error(`Invalid trailingStopOrderType: '${trailingStopOrderType}'. Must be 'limit' or 'market'.`);
   }
 
+  // Validate average-based parameters (Spec 23)
+  if (typeof enableAverageBasedGrid !== 'boolean') {
+    throw new Error(`enableAverageBasedGrid must be boolean, got: ${typeof enableAverageBasedGrid}`);
+  }
+  if (typeof enableAverageBasedSell !== 'boolean') {
+    throw new Error(`enableAverageBasedSell must be boolean, got: ${typeof enableAverageBasedSell}`);
+  }
+
   // Always log order type for debugging
   console.log(`🔧 Trailing Stop Order Type: ${trailingStopOrderType.toUpperCase()}`);
+
+  // Log average-based features status (Spec 23)
+  if (enableAverageBasedGrid) {
+    console.log(`📊 Feature: Average-Based Grid Spacing = ENABLED`);
+    console.log(`   Grid spacing will be checked against average cost (not individual lots)`);
+  }
+  if (enableAverageBasedSell) {
+    console.log(`📊 Feature: Average-Based Sell Logic = ENABLED`);
+    console.log(`   Sell profitability will be checked against average cost`);
+  }
 
   if (verbose) {
     console.log(`🎯 Starting DCA backtest for ${symbol}...`);
@@ -693,33 +713,73 @@ async function runDCABacktest(params) {
               transactionLog.push(colorize(`  DEBUG: Before spacing check - consecutiveBuyCount: ${consecutiveBuyCount}, buyGridSize: ${(buyGridSize * 100).toFixed(1)}%, enabledFlag: ${enableConsecutiveIncrementalBuyGrid}`, 'cyan'));
             }
 
-            // Calculate dynamic grid spacing for validation
-            const respectsGridSpacing = lots.every((lot, index) => {
-              const midPrice = (currentPrice + lot.price) / 2;
-              const ref = referencePrice || midPrice; // Use midPrice if no reference yet
+            // Calculate grid spacing validation
+            let respectsGridSpacing;
 
-              let gridSize;
-              if (enableDynamicGrid) {
-                gridSize = calculateDynamicGridSpacing(midPrice, ref, dynamicGridMultiplier, normalizeToReference);
-              } else if (enableConsecutiveIncrementalBuyGrid) {
-                // For consecutive incremental buy grid:
-                // - Check spacing from LAST buy (most recent) using buyGridSize
-                // - Check spacing from OTHER buys using base gridIntervalPercent
-                const isLastBuy = (index === lots.length - 1);
-                gridSize = isLastBuy ? buyGridSize : gridIntervalPercent;
+            if (enableAverageBasedGrid) {
+              // Spec 23 Feature #1: Check spacing against average cost only (O(1))
+              if (lots.length === 0) {
+                // First buy always allowed
+                respectsGridSpacing = true;
+              } else if (averageCost === 0) {
+                // Safety check
+                respectsGridSpacing = true;
               } else {
-                gridSize = gridIntervalPercent; // Legacy fixed percentage
+                // Symmetric spacing: full spacing required both above and below average
+                const spacing = Math.abs(currentPrice - averageCost) / averageCost;
+
+                // Determine required grid size
+                let gridSize;
+                if (enableDynamicGrid) {
+                  const midPrice = (currentPrice + averageCost) / 2;
+                  const ref = referencePrice || midPrice;
+                  gridSize = calculateDynamicGridSpacing(midPrice, ref, dynamicGridMultiplier, normalizeToReference);
+                } else if (enableConsecutiveIncrementalBuyGrid) {
+                  gridSize = buyGridSize; // Use incremental grid size
+                } else {
+                  gridSize = gridIntervalPercent; // Use base grid size
+                }
+
+                respectsGridSpacing = spacing >= gridSize;
+
+                if (verbose) {
+                  transactionLog.push(colorize(
+                    `  AVG-GRID: Price $${currentPrice.toFixed(2)}, Avg Cost $${averageCost.toFixed(2)}, ` +
+                    `Spacing ${(spacing * 100).toFixed(1)}%, Required ${(gridSize * 100).toFixed(1)}% → ${respectsGridSpacing ? 'PASS' : 'FAIL'}`,
+                    respectsGridSpacing ? 'cyan' : 'yellow'
+                  ));
+                }
               }
+            } else {
+              // Original lot-based grid spacing check
+              respectsGridSpacing = lots.every((lot, index) => {
+                const midPrice = (currentPrice + lot.price) / 2;
+                const ref = referencePrice || midPrice; // Use midPrice if no reference yet
 
-              const spacing = Math.abs(currentPrice - lot.price) / lot.price;
-              const meetsSpacing = spacing >= gridSize;
+                let gridSize;
+                if (enableDynamicGrid) {
+                  gridSize = calculateDynamicGridSpacing(midPrice, ref, dynamicGridMultiplier, normalizeToReference);
+                } else if (enableConsecutiveIncrementalBuyGrid) {
+                  // For consecutive incremental buy grid:
+                  // - Check spacing from LAST buy (most recent) using buyGridSize
+                  // - Check spacing from OTHER buys using base gridIntervalPercent
+                  const isLastBuy = (index === lots.length - 1);
+                  gridSize = isLastBuy ? buyGridSize : gridIntervalPercent;
+                } else {
+                  gridSize = gridIntervalPercent; // Legacy fixed percentage
+                }
 
-              if (verbose && enableConsecutiveIncrementalBuyGrid) {
-                transactionLog.push(colorize(`    Lot #${index} at $${lot.price.toFixed(2)}: spacing=${(spacing*100).toFixed(1)}%, required=${(gridSize*100).toFixed(1)}%, isLast=${index === lots.length - 1}, passes=${meetsSpacing}`, 'cyan'));
-              }
+                const spacing = Math.abs(currentPrice - lot.price) / lot.price;
+                const meetsSpacing = spacing >= gridSize;
 
-              return meetsSpacing;
-            });
+                if (verbose && enableConsecutiveIncrementalBuyGrid) {
+                  transactionLog.push(colorize(`    Lot #${index} at $${lot.price.toFixed(2)}: spacing=${(spacing*100).toFixed(1)}%, required=${(gridSize*100).toFixed(1)}%, isLast=${index === lots.length - 1}, passes=${meetsSpacing}`, 'cyan'));
+                }
+
+                return meetsSpacing;
+              });
+            }
+
             if (respectsGridSpacing) {
 
             // PRICE RESTRICTION CHECK (CONSECUTIVE BUY GRID FEATURE):
@@ -939,14 +999,56 @@ async function runDCABacktest(params) {
           transactionLog.push(colorize(`DEBUG LOT SELECTION: currentPrice=${currentPrice.toFixed(2)}, stopPrice=${stopPrice.toFixed(2)}, baseProfitReq=${profitRequirement}, lotProfitReq=${lotProfitRequirement}, averageCost=${averageCost.toFixed(2)}, minProfitablePrice=${minProfitablePrice.toFixed(2)}, isConsecutiveSell=${isConsecutiveSell}, lastSellPrice=${lastSellPrice ? lastSellPrice.toFixed(2) : 'null'}, consecutiveSellCount=${consecutiveSellCount}`, 'cyan'));
           transactionLog.push(colorize(`DEBUG ALL LOTS: ${lots.map(lot => `$${lot.price.toFixed(2)}`).join(', ')}`, 'cyan'));
 
-          // Select lots that would be profitable to sell (meeting profit requirement)
-          // Use lastSellPrice as reference if consecutive sell, otherwise use lot price
-          const eligibleLots = lots.filter(lot => {
-            let refPrice = isConsecutiveSell ? lastSellPrice : lot.price;
-            return currentPrice > refPrice * (1 + lotProfitRequirement);
-          });
+          // Select lots that would be profitable to sell
+          let eligibleLots;
 
-          transactionLog.push(colorize(`DEBUG ELIGIBLE LOTS: ${eligibleLots.map(lot => `$${lot.price.toFixed(2)}`).join(', ')} (${eligibleLots.length} eligible)${isConsecutiveSell ? `, using lastSellPrice=$${lastSellPrice.toFixed(2)} as reference` : ', using lot prices as reference'}`, 'cyan'));
+          if (enableAverageBasedSell) {
+            // Spec 23 Feature #2: Check profitability against average cost
+            if (averageCost === 0 || lots.length === 0) {
+              eligibleLots = [];
+            } else {
+              // Determine reference price (average cost or lastSellPrice for consecutive sells)
+              let refPrice = (enableConsecutiveIncrementalSellProfit && isConsecutiveSell) ? lastSellPrice : averageCost;
+
+              // Check if current price exceeds required profit from reference
+              const isProfitable = currentPrice > refPrice * (1 + lotProfitRequirement);
+
+              if (isProfitable) {
+                // ALL lots are eligible when average-based condition met
+                eligibleLots = [...lots];
+
+                if (verbose) {
+                  transactionLog.push(colorize(
+                    `  AVG-SELL: Price $${currentPrice.toFixed(2)}, Ref $${refPrice.toFixed(2)} ` +
+                    `(${isConsecutiveSell ? 'Last Sell' : 'Avg Cost'}), ` +
+                    `Profit ${(((currentPrice - refPrice) / refPrice) * 100).toFixed(1)}%, ` +
+                    `Required ${(lotProfitRequirement * 100).toFixed(1)}% → ALL ${lots.length} lots eligible`,
+                    'cyan'
+                  ));
+                }
+              } else {
+                eligibleLots = [];
+
+                if (verbose) {
+                  transactionLog.push(colorize(
+                    `  AVG-SELL: Price $${currentPrice.toFixed(2)}, Ref $${refPrice.toFixed(2)}, ` +
+                    `Profit ${(((currentPrice - refPrice) / refPrice) * 100).toFixed(1)}%, ` +
+                    `Required ${(lotProfitRequirement * 100).toFixed(1)}% → NO lots eligible`,
+                    'yellow'
+                  ));
+                }
+              }
+            }
+          } else {
+            // Original lot-based profitability check
+            // Use lastSellPrice as reference if consecutive sell, otherwise use lot price
+            eligibleLots = lots.filter(lot => {
+              let refPrice = isConsecutiveSell ? lastSellPrice : lot.price;
+              return currentPrice > refPrice * (1 + lotProfitRequirement);
+            });
+
+            transactionLog.push(colorize(`DEBUG ELIGIBLE LOTS: ${eligibleLots.map(lot => `$${lot.price.toFixed(2)}`).join(', ')} (${eligibleLots.length} eligible)${isConsecutiveSell ? `, using lastSellPrice=$${lastSellPrice.toFixed(2)} as reference` : ', using lot prices as reference'}`, 'cyan'));
+          }
 
           if (eligibleLots.length > 0) {
             const sortedEligibleLots = eligibleLots.sort((a, b) => b.price - a.price);
