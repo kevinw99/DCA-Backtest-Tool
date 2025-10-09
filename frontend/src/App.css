@@ -2198,3 +2198,42 @@
     gap: 0.5rem;
   }
 }
+
+/* Radio Group Styles */
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.radio-option:hover {
+  background-color: #f5f5f5;
+}
+
+.radio-option input[type="radio"] {
+  cursor: pointer;
+}
+
+.help-text {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.9em;
+  color: #666;
+  line-height: 1.5;
+}
+
+.help-text strong {
+  color: #333;
+}

@@ -92,7 +92,8 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
       enableConsecutiveIncrementalBuyGrid: false,
       gridConsecutiveIncrement: [5],
       enableConsecutiveIncrementalSellProfit: true,
-      enableScenarioDetection: true
+      enableScenarioDetection: true,
+      trailingStopOrderType: 'limit'
     };
 
     if (saved) {
@@ -390,6 +391,9 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
         enableConsecutiveIncrementalSellProfit: (value) => value === 'true' || value === true,
         enableScenarioDetection: (value) => value === 'true' || value === true,
 
+        // Trailing stop order type
+        trailingStopOrderType: (value) => value || 'limit',
+
         // Numeric parameters for grid options
         dynamicGridMultiplier: (value) => {
           const parsed = parseFloat(value);
@@ -422,7 +426,9 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
             'enableDynamicGrid', 'normalizeToReference', 'enableConsecutiveIncrementalBuyGrid',
             'enableConsecutiveIncrementalSellProfit', 'enableScenarioDetection',
             // Grid option numeric parameters
-            'dynamicGridMultiplier', 'gridConsecutiveIncrement'
+            'dynamicGridMultiplier', 'gridConsecutiveIncrement',
+            // Trailing stop order type
+            'trailingStopOrderType'
           ];
 
           // Long strategy specific parameters
@@ -760,7 +766,8 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
           normalizeToReference: batchParameters.normalizeToReference,
           enableConsecutiveIncrementalBuyGrid: batchParameters.enableConsecutiveIncrementalBuyGrid,
           enableConsecutiveIncrementalSellProfit: batchParameters.enableConsecutiveIncrementalSellProfit,
-          enableScenarioDetection: batchParameters.enableScenarioDetection
+          enableScenarioDetection: batchParameters.enableScenarioDetection,
+          trailingStopOrderType: batchParameters.trailingStopOrderType
         },
         sortBy: 'totalReturn'
       };
@@ -784,7 +791,9 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
         enableBetaScaling: enableBetaScaling,
         isManualBetaOverride: isManualBetaOverride,
         // Add strategy mode
-        strategyMode: strategyMode
+        strategyMode: strategyMode,
+        // Add trailing stop order type
+        trailingStopOrderType: parameters.trailingStopOrderType || 'limit'
       };
       onSubmit(backendParams, false); // false indicates single mode
     }
@@ -1972,6 +1981,38 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                   </span>
                 </div>
 
+                {/* Trailing Stop Order Type */}
+                <div className="form-group">
+                  <label htmlFor="trailingStopOrderType">Trailing Stop Order Type</label>
+                  <div className="radio-group">
+                    <label className="radio-option">
+                      <input
+                        type="radio"
+                        name="trailingStopOrderType"
+                        value="limit"
+                        checked={(parameters.trailingStopOrderType || 'limit') === 'limit'}
+                        onChange={(e) => handleChange('trailingStopOrderType', e.target.value)}
+                      />
+                      <span>Limit - Cancels if price exceeds peak (buy) or bottom (sell)</span>
+                    </label>
+                    <label className="radio-option">
+                      <input
+                        type="radio"
+                        name="trailingStopOrderType"
+                        value="market"
+                        checked={parameters.trailingStopOrderType === 'market'}
+                        onChange={(e) => handleChange('trailingStopOrderType', e.target.value)}
+                      />
+                      <span>Market - Always executes when stop triggers, no cancellation</span>
+                    </label>
+                  </div>
+                  <small className="help-text">
+                    <strong>Limit (Default):</strong> Prevents buying above recent peak or selling below recent bottom.
+                    <br />
+                    <strong>Market:</strong> Guarantees execution but may fill at unfavorable prices.
+                  </small>
+                </div>
+
                 <div className="form-group">
                   <label htmlFor="trailingBuyActivationPercent">
                     Trailing Buy Activation (%)
@@ -2007,7 +2048,6 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                     value={parameters.trailingBuyReboundPercent}
                     onChange={(e) => handleChange('trailingBuyReboundPercent', parseFloat(e.target.value))}
                     min="0"
-                    max="10"
                     step="0.1"
                     required
                     disabled={enableBetaScaling}
@@ -2806,6 +2846,38 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                       />
                       Enable Scenario Detection
                     </label>
+                  </div>
+
+                  {/* Trailing Stop Order Type for Batch Mode */}
+                  <div className="form-group">
+                    <label htmlFor="batchTrailingStopOrderType">Trailing Stop Order Type</label>
+                    <div className="radio-group">
+                      <label className="radio-option">
+                        <input
+                          type="radio"
+                          name="batchTrailingStopOrderType"
+                          value="limit"
+                          checked={(batchParameters.trailingStopOrderType || 'limit') === 'limit'}
+                          onChange={(e) => handleBatchParameterChange('trailingStopOrderType', e.target.value)}
+                        />
+                        <span>Limit - Cancels if price exceeds peak (buy) or bottom (sell)</span>
+                      </label>
+                      <label className="radio-option">
+                        <input
+                          type="radio"
+                          name="batchTrailingStopOrderType"
+                          value="market"
+                          checked={batchParameters.trailingStopOrderType === 'market'}
+                          onChange={(e) => handleBatchParameterChange('trailingStopOrderType', e.target.value)}
+                        />
+                        <span>Market - Always executes when stop triggers, no cancellation</span>
+                      </label>
+                    </div>
+                    <small className="help-text">
+                      <strong>Limit (Default):</strong> Prevents buying above recent peak or selling below recent bottom.
+                      <br />
+                      <strong>Market:</strong> Guarantees execution but may fill at unfavorable prices.
+                    </small>
                   </div>
                 </div>
 
