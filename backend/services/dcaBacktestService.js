@@ -929,7 +929,51 @@ async function runDCABacktest(params) {
 
               return true; // Transaction occurred
             } else {
-              transactionLog.push(colorize(`  INFO: TRAILING STOP BUY blocked at ${currentPrice.toFixed(2)} - violates grid spacing rule`, 'yellow'));
+              // Detailed grid spacing violation message
+              if (enableAverageBasedGrid) {
+                // Average-based grid: show average cost and spacing details
+                const spacing = Math.abs(currentPrice - averageCost) / averageCost;
+                let gridSize;
+                if (enableDynamicGrid) {
+                  const midPrice = (currentPrice + averageCost) / 2;
+                  const ref = referencePrice || midPrice;
+                  gridSize = calculateDynamicGridSpacing(midPrice, ref, dynamicGridMultiplier, normalizeToReference);
+                } else if (enableConsecutiveIncrementalBuyGrid) {
+                  gridSize = buyGridSize;
+                } else {
+                  gridSize = gridIntervalPercent;
+                }
+                transactionLog.push(colorize(
+                  `  INFO: TRAILING STOP BUY blocked at $${currentPrice.toFixed(2)} - violates average-based grid spacing\n` +
+                  `        Average Cost: $${averageCost.toFixed(2)}, Current Spacing: ${(spacing * 100).toFixed(2)}%, Required: ${(gridSize * 100).toFixed(2)}%`,
+                  'yellow'
+                ));
+              } else {
+                // Lot-based grid: show which lot(s) violated spacing
+                const violations = [];
+                lots.forEach((lot, index) => {
+                  const midPrice = (currentPrice + lot.price) / 2;
+                  const ref = referencePrice || midPrice;
+                  let gridSize;
+                  if (enableDynamicGrid) {
+                    gridSize = calculateDynamicGridSpacing(midPrice, ref, dynamicGridMultiplier, normalizeToReference);
+                  } else if (enableConsecutiveIncrementalBuyGrid) {
+                    const isLastBuy = (index === lots.length - 1);
+                    gridSize = isLastBuy ? buyGridSize : gridIntervalPercent;
+                  } else {
+                    gridSize = gridIntervalPercent;
+                  }
+                  const spacing = Math.abs(currentPrice - lot.price) / lot.price;
+                  if (spacing < gridSize) {
+                    violations.push(`Lot #${index + 1} @ $${lot.price.toFixed(2)}: ${(spacing * 100).toFixed(2)}% < ${(gridSize * 100).toFixed(2)}% required`);
+                  }
+                });
+                transactionLog.push(colorize(
+                  `  INFO: TRAILING STOP BUY blocked at $${currentPrice.toFixed(2)} - violates lot-based grid spacing\n` +
+                  `        ${violations.join(', ')}`,
+                  'yellow'
+                ));
+              }
             }
           } else {
             transactionLog.push(colorize(`  INFO: TRAILING STOP BUY blocked at ${currentPrice.toFixed(2)} - max lots reached`, 'yellow'));
