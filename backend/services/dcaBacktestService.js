@@ -357,8 +357,14 @@ async function runDCABacktest(params) {
     enableConsecutiveIncrementalBuyGrid = false, // Enable incremental grid spacing for consecutive downtrend buys
     gridConsecutiveIncrement = 0.05, // Grid increment per consecutive buy (default 0.05 for 5%)
     enableScenarioDetection = true, // Enable scenario detection and analysis
+    trailingStopOrderType = 'limit', // Order type: 'limit' (cancels if exceeds peak/bottom) or 'market' (always executes)
     verbose = true
   } = params;
+
+  // Validate trailingStopOrderType
+  if (!['limit', 'market'].includes(trailingStopOrderType)) {
+    throw new Error(`Invalid trailingStopOrderType: '${trailingStopOrderType}'. Must be 'limit' or 'market'.`);
+  }
 
   if (verbose) {
     console.log(`🎯 Starting DCA backtest for ${symbol}...`);
@@ -628,9 +634,16 @@ async function runDCABacktest(params) {
     };
 
     // Cancel trailing stop buy if price exceeds the peak (limit price)
+    // SKIP cancellation for market orders (they always execute when stop is triggered)
     const cancelTrailingStopBuyIfAbovePeak = (currentPrice) => {
+      // Market orders never cancel due to limit price
+      if (trailingStopOrderType === 'market') {
+        return false;
+      }
+
+      // Limit orders cancel if price exceeds peak reference
       if (trailingStopBuy && currentPrice > trailingStopBuy.recentPeakReference) {
-        transactionLog.push(colorize(`  ACTION: TRAILING STOP BUY CANCELLED - Price ${currentPrice.toFixed(2)} > limit price ${trailingStopBuy.recentPeakReference.toFixed(2)} (peak)`, 'yellow'));
+        transactionLog.push(colorize(`  ACTION: TRAILING STOP BUY CANCELLED (LIMIT) - Price ${currentPrice.toFixed(2)} > limit price ${trailingStopBuy.recentPeakReference.toFixed(2)} (peak)`, 'yellow'));
         trailingStopBuy = null;
         return true;
       }

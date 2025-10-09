@@ -639,7 +639,8 @@ async function runBatchBacktest(options, progressCallback = null, sessionId = nu
       enableConsecutiveIncrementalBuyGrid: mergedParameterRanges.enableConsecutiveIncrementalBuyGrid,
       enableConsecutiveIncrementalSellProfit: mergedParameterRanges.enableConsecutiveIncrementalSellProfit,
       gridConsecutiveIncrement: mergedParameterRanges.gridConsecutiveIncrement,
-      enableScenarioDetection: mergedParameterRanges.enableScenarioDetection
+      enableScenarioDetection: mergedParameterRanges.enableScenarioDetection,
+      trailingStopOrderType: mergedParameterRanges.trailingStopOrderType || 'limit'
     }
   };
 
