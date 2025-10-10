@@ -16,6 +16,13 @@ import {
 import PerformanceSummary from './PerformanceSummary';
 import ScenarioAnalysis from './ScenarioAnalysis';
 import { formatCurrency, formatPercent, formatParameterPercent, formatDate } from '../utils/formatters';
+import {
+  calculatePNLPercentage,
+  findMostRecentTransaction,
+  calculateBuyAndHoldPercent,
+  getCurrentLots,
+  calculateCapitalDeployed
+} from '../utils/chartCalculations';
 
 const BacktestResults = ({ data, chartData: priceData }) => {
   const [visibleIndicators, setVisibleIndicators] = useState({
@@ -72,9 +79,8 @@ const BacktestResults = ({ data, chartData: priceData }) => {
 
       if (transaction) {
         // Use transaction's portfolio state - handle both long and short positions
-        const currentLots = transaction.lotsAfterTransaction ? transaction.lotsAfterTransaction.length :
-                           (transaction.shortsAfterTransaction ? transaction.shortsAfterTransaction.length : 0);
-        totalCapitalDeployed = currentLots * lotSizeUsd;
+        const currentLots = getCurrentLots(transaction);
+        totalCapitalDeployed = calculateCapitalDeployed(currentLots, lotSizeUsd);
 
         // Use totalPNL directly from transaction (matches Enhanced Transaction History table)
         totalPNL = transaction.totalPNL || 0;
@@ -83,23 +89,14 @@ const BacktestResults = ({ data, chartData: priceData }) => {
         maxCapitalDeployed = Math.max(maxCapitalDeployed, totalCapitalDeployed);
 
         // Calculate Total P&L % based on MAX capital deployed
-        if (maxCapitalDeployed > 0) {
-          totalPNLPercent = (totalPNL / maxCapitalDeployed) * 100;
-        }
+        totalPNLPercent = calculatePNLPercentage(totalPNL, maxCapitalDeployed);
       } else {
         // Find most recent transaction for capital deployed calculation
-        let mostRecentTransaction = null;
-        for (let i = transactionsToUse.length - 1; i >= 0; i--) {
-          if (new Date(transactionsToUse[i].date) <= new Date(day.date)) {
-            mostRecentTransaction = transactionsToUse[i];
-            break;
-          }
-        }
+        const mostRecentTransaction = findMostRecentTransaction(transactionsToUse, day.date);
 
         if (mostRecentTransaction) {
-          const currentLots = mostRecentTransaction.lotsAfterTransaction ? mostRecentTransaction.lotsAfterTransaction.length :
-                             (mostRecentTransaction.shortsAfterTransaction ? mostRecentTransaction.shortsAfterTransaction.length : 0);
-          totalCapitalDeployed = currentLots * lotSizeUsd;
+          const currentLots = getCurrentLots(mostRecentTransaction);
+          totalCapitalDeployed = calculateCapitalDeployed(currentLots, lotSizeUsd);
 
           // Calculate current portfolio state for non-transaction days
           let unrealizedPNL = 0;
@@ -125,14 +122,12 @@ const BacktestResults = ({ data, chartData: priceData }) => {
           maxCapitalDeployed = Math.max(maxCapitalDeployed, totalCapitalDeployed);
 
           // Calculate Total P&L % based on MAX capital deployed
-          if (maxCapitalDeployed > 0) {
-            totalPNLPercent = (totalPNL / maxCapitalDeployed) * 100;
-          }
+          totalPNLPercent = calculatePNLPercentage(totalPNL, maxCapitalDeployed);
         }
       }
 
       // Calculate Buy & Hold P&L % (simple percentage change from start)
-      const buyAndHoldPercent = startPrice > 0 ? ((currentPrice - startPrice) / startPrice) * 100 : 0;
+      const buyAndHoldPercent = calculateBuyAndHoldPercent(currentPrice, startPrice);
 
       // Calculate break-even value (capital deployed)
       const breakEvenValue = totalCapitalDeployed;
@@ -143,16 +138,12 @@ const BacktestResults = ({ data, chartData: priceData }) => {
 
       if (transaction) {
         // For transaction days, use current transaction's lots
-        currentLotsCount = transaction.lotsAfterTransaction ? transaction.lotsAfterTransaction.length :
-                          (transaction.shortsAfterTransaction ? transaction.shortsAfterTransaction.length : 0);
+        currentLotsCount = getCurrentLots(transaction);
       } else {
         // For non-transaction days, find most recent transaction
-        for (let i = transactionsToUse.length - 1; i >= 0; i--) {
-          if (new Date(transactionsToUse[i].date) <= new Date(day.date)) {
-            currentLotsCount = transactionsToUse[i].lotsAfterTransaction ? transactionsToUse[i].lotsAfterTransaction.length :
-                              (transactionsToUse[i].shortsAfterTransaction ? transactionsToUse[i].shortsAfterTransaction.length : 0);
-            break;
-          }
+        const recentTx = findMostRecentTransaction(transactionsToUse, day.date);
+        if (recentTx) {
+          currentLotsCount = getCurrentLots(recentTx);
         }
       }
 
@@ -512,8 +503,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
       // (Aborted events are already filtered out when creating the map)
       if (transaction) {
         // Get the number of positions from lotsAfterTransaction or shortsAfterTransaction
-        const currentLots = transaction.lotsAfterTransaction ? transaction.lotsAfterTransaction.length :
-                           (transaction.shortsAfterTransaction ? transaction.shortsAfterTransaction.length : 0);
+        const currentLots = getCurrentLots(transaction);
 
         // Calculate holdings value by summing each position's current value
         let holdingsMarketValue = 0;
@@ -545,14 +535,14 @@ const BacktestResults = ({ data, chartData: priceData }) => {
         const totalPNL = transaction.totalPNL || 0;
 
         // Calculate Buy & Hold percentage from start price
-        const buyAndHoldPercent = startPrice > 0 ? ((currentPrice - startPrice) / startPrice) * 100 : 0;
+        const buyAndHoldPercent = calculateBuyAndHoldPercent(currentPrice, startPrice);
 
         // Track max capital deployed (only increases, never decreases)
-        const currentCapitalDeployed = currentLots * lotSizeUsd;
+        const currentCapitalDeployed = calculateCapitalDeployed(currentLots, lotSizeUsd);
         maxCapitalDeployed = Math.max(maxCapitalDeployed, currentCapitalDeployed);
 
         // Calculate Total P&L % based on MAX capital deployed
-        const totalPNLPercent = maxCapitalDeployed > 0 ? (totalPNL / maxCapitalDeployed) * 100 : null;
+        const totalPNLPercent = calculatePNLPercentage(totalPNL, maxCapitalDeployed);
 
         // Calculate lots deployed as percentage (0-100%)
         const lotsDeployedPercent = maxLots > 0 ? (currentLots / maxLots) * 100 : 0;
@@ -576,18 +566,10 @@ const BacktestResults = ({ data, chartData: priceData }) => {
 
       // For days without transactions, we need to calculate using the most recent transaction state
       // Find the most recent transaction before this date (skip aborted events)
-      let mostRecentTransaction = null;
-      for (let i = transactionsToUse.length - 1; i >= 0; i--) {
-        if (new Date(transactionsToUse[i].date) <= new Date(date) &&
-            !['ABORTED_BUY', 'ABORTED_SELL'].includes(transactionsToUse[i].type)) {
-          mostRecentTransaction = transactionsToUse[i];
-          break;
-        }
-      }
+      const mostRecentTransaction = findMostRecentTransaction(transactionsToUse, date);
 
       if (mostRecentTransaction) {
-        const currentLots = mostRecentTransaction.lotsAfterTransaction ? mostRecentTransaction.lotsAfterTransaction.length :
-                           (mostRecentTransaction.shortsAfterTransaction ? mostRecentTransaction.shortsAfterTransaction.length : 0);
+        const currentLots = getCurrentLots(mostRecentTransaction);
 
         // Calculate holdings value using current price but most recent position configuration
         let holdingsMarketValue = 0;
@@ -620,14 +602,14 @@ const BacktestResults = ({ data, chartData: priceData }) => {
         const totalPNL = unrealizedPNL + cumulativeRealizedPNL;
 
         // Calculate Buy & Hold percentage from start price
-        const buyAndHoldPercent = startPrice > 0 ? ((currentPrice - startPrice) / startPrice) * 100 : 0;
+        const buyAndHoldPercent = calculateBuyAndHoldPercent(currentPrice, startPrice);
 
         // Track max capital deployed (only increases, never decreases)
-        const currentCapitalDeployed = currentLots * lotSizeUsd;
+        const currentCapitalDeployed = calculateCapitalDeployed(currentLots, lotSizeUsd);
         maxCapitalDeployed = Math.max(maxCapitalDeployed, currentCapitalDeployed);
 
         // Calculate Total P&L % based on MAX capital deployed
-        const totalPNLPercent = maxCapitalDeployed > 0 ? (totalPNL / maxCapitalDeployed) * 100 : null;
+        const totalPNLPercent = calculatePNLPercentage(totalPNL, maxCapitalDeployed);
 
         // Calculate lots deployed as percentage (0-100%)
         const lotsDeployedPercent = maxLots > 0 ? (currentLots / maxLots) * 100 : 0;
@@ -655,7 +637,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
       const hasSell = transaction && transaction.type === 'SELL';
 
       // Calculate Buy & Hold percentage from start price
-      const buyAndHoldPercent = startPrice > 0 ? ((currentPrice - startPrice) / startPrice) * 100 : 0;
+      const buyAndHoldPercent = calculateBuyAndHoldPercent(currentPrice, startPrice);
 
       // No capital deployed yet - maxCapitalDeployed stays at 0
 
