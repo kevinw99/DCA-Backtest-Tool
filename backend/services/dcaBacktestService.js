@@ -51,6 +51,16 @@ const PROFILES = {
 
 const HYSTERESIS_DAYS = 3;  // Require 3 consecutive days before switching profiles
 
+/**
+ * Adaptive trailing stop constants (Spec 25)
+ * These control how trailing stop parameters decay during consecutive trades
+ * @constant
+ */
+const ADAPTIVE_SELL_PULLBACK_DECAY = 0.5;    // 50% decay per iteration (faster exit during downtrends)
+const ADAPTIVE_BUY_REBOUND_DECAY = 0.8;      // 20% decay per iteration (faster accumulation during uptrends)
+const MIN_ADAPTIVE_SELL_PULLBACK = 0.02;     // 2% minimum (prevents too-tight sell stops)
+const MIN_ADAPTIVE_BUY_REBOUND = 0.05;       // 5% minimum (prevents too-tight buy stops)
+
 // --- Utility Functions ---
 function calculateMetrics(dailyValues, capitalDeployed, transactionLog, prices, enhancedTransactions = []) {
   const returns = [];
@@ -356,6 +366,132 @@ function calculateBuyGridSize(
 }
 
 /**
+ * Calculate adaptive sell trailing stop parameters (Spec 25)
+ * Automatically adjusts trailing stop parameters based on price direction during consecutive sells
+ *
+ * @param {number} currentPrice - Current market price
+ * @param {number|null} lastSellPrice - Price of most recent sell (null if no previous sell)
+ * @param {number} trailingSellActivationPercent - Base activation threshold (decimal)
+ * @param {number} trailingSellPullbackPercent - Base pullback threshold (decimal)
+ * @param {number|null} lastSellPullback - Last used pullback % (null on first sell)
+ * @param {number} consecutiveSellCount - Number of consecutive sells
+ * @param {boolean} enableConsecutiveIncrementalSellProfit - Is feature enabled?
+ * @returns {Object} Adaptive parameters: { activation, pullback, skipProfitRequirement, isAdaptive, direction, previousPullback? }
+ */
+function calculateAdaptiveSellParameters(
+  currentPrice,
+  lastSellPrice,
+  trailingSellActivationPercent,
+  trailingSellPullbackPercent,
+  lastSellPullback,
+  consecutiveSellCount,
+  enableConsecutiveIncrementalSellProfit
+) {
+  // Default to standard parameters
+  let activation = trailingSellActivationPercent;
+  let pullback = trailingSellPullbackPercent;
+  let skipProfitRequirement = false;
+
+  // Only apply adaptive logic if consecutive feature enabled and we have a previous sell
+  if (!enableConsecutiveIncrementalSellProfit || consecutiveSellCount === 0 || !lastSellPrice) {
+    return { activation, pullback, skipProfitRequirement, isAdaptive: false, direction: 'none' };
+  }
+
+  // Determine price direction
+  const isDowntrend = currentPrice < lastSellPrice;
+
+  if (isDowntrend) {
+    // CASE 1: Price falling - exit faster
+    activation = 0;  // Skip activation check
+    skipProfitRequirement = true;  // Skip profit requirement
+
+    // Calculate decayed pullback
+    const basePullback = lastSellPullback || trailingSellPullbackPercent;
+    const decayedPullback = basePullback * ADAPTIVE_SELL_PULLBACK_DECAY;
+    pullback = Math.max(decayedPullback, MIN_ADAPTIVE_SELL_PULLBACK);
+
+    return {
+      activation,
+      pullback,
+      skipProfitRequirement,
+      isAdaptive: true,
+      direction: 'down',
+      previousPullback: basePullback
+    };
+  }
+
+  // CASE 2: Price rising - standard behavior
+  return {
+    activation,
+    pullback,
+    skipProfitRequirement: false,
+    isAdaptive: false,
+    direction: 'up'
+  };
+}
+
+/**
+ * Calculate adaptive buy trailing stop parameters (Spec 25)
+ * Automatically adjusts trailing stop parameters based on price direction during consecutive buys
+ *
+ * @param {number} currentPrice - Current market price
+ * @param {number|null} lastBuyPrice - Price of most recent buy (null if no previous buy)
+ * @param {number} trailingBuyActivationPercent - Base activation threshold (decimal)
+ * @param {number} trailingBuyReboundPercent - Base rebound threshold (decimal)
+ * @param {number|null} lastBuyRebound - Last used rebound % (null on first buy)
+ * @param {number} consecutiveBuyCount - Number of consecutive buys
+ * @param {boolean} enableConsecutiveIncrementalBuyGrid - Is feature enabled?
+ * @returns {Object} Adaptive parameters: { activation, rebound, isAdaptive, direction, previousRebound? }
+ */
+function calculateAdaptiveBuyParameters(
+  currentPrice,
+  lastBuyPrice,
+  trailingBuyActivationPercent,
+  trailingBuyReboundPercent,
+  lastBuyRebound,
+  consecutiveBuyCount,
+  enableConsecutiveIncrementalBuyGrid
+) {
+  // Default to standard parameters
+  let activation = trailingBuyActivationPercent;
+  let rebound = trailingBuyReboundPercent;
+
+  // Only apply adaptive logic if consecutive feature enabled and we have a previous buy
+  if (!enableConsecutiveIncrementalBuyGrid || consecutiveBuyCount === 0 || !lastBuyPrice) {
+    return { activation, rebound, isAdaptive: false, direction: 'none' };
+  }
+
+  // Determine price direction
+  const isUptrend = currentPrice > lastBuyPrice;
+
+  if (isUptrend) {
+    // CASE 1: Price rising - accumulate faster
+    activation = 0;  // Skip activation check
+
+    // Calculate decayed rebound
+    const baseRebound = lastBuyRebound || trailingBuyReboundPercent;
+    const decayedRebound = baseRebound * ADAPTIVE_BUY_REBOUND_DECAY;
+    rebound = Math.max(decayedRebound, MIN_ADAPTIVE_BUY_REBOUND);
+
+    return {
+      activation,
+      rebound,
+      isAdaptive: true,
+      direction: 'up',
+      previousRebound: baseRebound
+    };
+  }
+
+  // CASE 2: Price falling - standard behavior
+  return {
+    activation,
+    rebound,
+    isAdaptive: false,
+    direction: 'down'
+  };
+}
+
+/**
  * Core DCA Backtest Algorithm
  * @param {Object} params - Backtest parameters
  * @param {string} params.symbol - Stock symbol
@@ -594,6 +730,10 @@ async function runDCABacktest(params) {
     let totalGridSizeUsed = 0; // Sum of all grid sizes used for buys
     let totalBuysCount = 0; // Total number of buys executed
 
+    // Adaptive trailing stop state (Spec 25)
+    let lastSellPullback = null; // Last used pullback % for consecutive sells (for decay calculation)
+    let lastBuyRebound = null;   // Last used rebound % for consecutive buys (for decay calculation)
+
     // Questionable events monitoring
     const questionableEvents = [];
     const dailyTransactionTypes = new Map(); // Track transaction types per date
@@ -695,28 +835,79 @@ async function runDCABacktest(params) {
 
     // Check if trailing stop buy should be activated
     const checkTrailingStopBuyActivation = (currentPrice, currentDate) => {
-      if (!trailingStopBuy && recentPeak && currentPrice <= recentPeak * (1 - params.trailingBuyActivationPercent)) {
-        // Price dropped {params.trailingBuyActivationPercent}% from recent peak - activate trailing stop buy
+      // Calculate adaptive parameters for buy (Spec 25)
+      const adaptiveBuyParams = calculateAdaptiveBuyParameters(
+        currentPrice,
+        lastBuyPrice,
+        params.trailingBuyActivationPercent,
+        params.trailingBuyReboundPercent,
+        lastBuyRebound,
+        consecutiveBuyCount,
+        enableConsecutiveIncrementalBuyGrid
+      );
+
+      // Use adaptive or standard parameters
+      const effectiveActivation = adaptiveBuyParams.activation;
+      const effectiveRebound = adaptiveBuyParams.rebound;
+
+      // Log adaptive mode if active
+      if (adaptiveBuyParams.isAdaptive && verbose) {
+        transactionLog.push(colorize(
+          `  🎯 Adaptive Buy: Direction=${adaptiveBuyParams.direction}, ` +
+          `Activation=${(effectiveActivation * 100).toFixed(1)}%, ` +
+          `Rebound=${(effectiveRebound * 100).toFixed(1)}% ` +
+          `(was ${(adaptiveBuyParams.previousRebound * 100).toFixed(1)}%)`,
+          'cyan'
+        ));
+      }
+
+      if (!trailingStopBuy && recentPeak && currentPrice <= recentPeak * (1 - effectiveActivation)) {
+        // Price dropped {effectiveActivation}% from recent peak - activate trailing stop buy
         trailingStopBuy = {
-          stopPrice: currentPrice * (1 + params.trailingBuyReboundPercent), // {params.trailingBuyReboundPercent}% above current price
+          stopPrice: currentPrice * (1 + effectiveRebound), // {effectiveRebound}% above current price
           triggeredAt: currentPrice,
           activatedDate: currentDate,
           recentPeakReference: recentPeak,
           lastUpdatePrice: currentPrice  // Track the actual bottom price (price when order was last updated)
         };
-        transactionLog.push(colorize(`  ACTION: TRAILING STOP BUY ACTIVATED - Stop: ${trailingStopBuy.stopPrice.toFixed(2)}, Triggered by ${(params.trailingBuyActivationPercent*100).toFixed(1)}% drop from peak ${recentPeak.toFixed(2)}`, 'blue'));
+
+        // Update adaptive state for next iteration
+        if (adaptiveBuyParams.isAdaptive) {
+          lastBuyRebound = effectiveRebound;
+        }
+
+        transactionLog.push(colorize(`  ACTION: TRAILING STOP BUY ACTIVATED - Stop: ${trailingStopBuy.stopPrice.toFixed(2)}, Triggered by ${(effectiveActivation*100).toFixed(1)}% drop from peak ${recentPeak.toFixed(2)}${adaptiveBuyParams.isAdaptive ? ' [ADAPTIVE]' : ''}`, 'blue'));
       }
     };
 
     // Update trailing stop buy (move stop down if price goes down further)
     const updateTrailingStopBuy = (currentPrice) => {
       if (trailingStopBuy) {
-        const newStopPrice = currentPrice * (1 + params.trailingBuyReboundPercent); // Always {params.trailingBuyReboundPercent}% above current price
+        // Calculate adaptive parameters (Spec 25)
+        const adaptiveBuyParams = calculateAdaptiveBuyParameters(
+          currentPrice,
+          lastBuyPrice,
+          params.trailingBuyActivationPercent,
+          params.trailingBuyReboundPercent,
+          lastBuyRebound,
+          consecutiveBuyCount,
+          enableConsecutiveIncrementalBuyGrid
+        );
+
+        const effectiveRebound = adaptiveBuyParams.rebound;
+        const newStopPrice = currentPrice * (1 + effectiveRebound); // Use adaptive or standard rebound
+
         if (newStopPrice < trailingStopBuy.stopPrice) {
           const oldStopPrice = trailingStopBuy.stopPrice;
           trailingStopBuy.stopPrice = newStopPrice;
           trailingStopBuy.lastUpdatePrice = currentPrice;  // Update the actual bottom price
-          transactionLog.push(colorize(`  ACTION: TRAILING STOP BUY UPDATED from ${oldStopPrice.toFixed(2)} to ${newStopPrice.toFixed(2)} (Price: ${currentPrice.toFixed(2)})`, 'blue'));
+
+          // Update adaptive state for next iteration
+          if (adaptiveBuyParams.isAdaptive) {
+            lastBuyRebound = effectiveRebound;
+          }
+
+          transactionLog.push(colorize(`  ACTION: TRAILING STOP BUY UPDATED from ${oldStopPrice.toFixed(2)} to ${newStopPrice.toFixed(2)} (Price: ${currentPrice.toFixed(2)})${adaptiveBuyParams.isAdaptive ? ' [ADAPTIVE]' : ''}`, 'blue'));
         }
       }
     };
@@ -912,6 +1103,7 @@ async function runDCABacktest(params) {
             lastActionType = 'buy';
             lastSellPrice = null; // Reset on buy
             consecutiveSellCount = 0; // Reset on buy
+            lastSellPullback = null; // Reset adaptive state on buy (Spec 25)
 
             // Save old lastBuyPrice before updating (needed for reset check)
             const oldLastBuyPrice = lastBuyPrice;
@@ -933,6 +1125,7 @@ async function runDCABacktest(params) {
                 transactionLog.push(colorize(`  RESET: Consecutive buy count reset from ${consecutiveBuyCount} to 0 - Buy price ${currentPrice.toFixed(2)} >= old lastBuyPrice ${oldLastBuyPrice.toFixed(2)} (lastBuyPrice kept at ${lastBuyPrice.toFixed(2)})`, 'cyan'));
               }
               consecutiveBuyCount = 0;
+              lastBuyRebound = null; // Reset adaptive state (Spec 25)
               // Do NOT reset lastBuyPrice - keep it as the reference
             }
 
@@ -1056,8 +1249,36 @@ async function runDCABacktest(params) {
 
     // Check if trailing stop sell should be activated (when price rises from recent bottom)
     const checkTrailingStopSellActivation = (currentPrice, currentDate) => {
-      if (lots.length > 0 && currentPrice > averageCost && !activeStop && recentBottom && currentPrice >= recentBottom * (1 + trailingSellActivationPercent)) {
-        // Price rose {trailingSellActivationPercent}% from recent bottom - activate trailing stop sell
+      // Calculate adaptive sell parameters before activation check (Spec 25)
+      const adaptiveSellParams = calculateAdaptiveSellParameters(
+        currentPrice,
+        lastSellPrice,
+        trailingSellActivationPercent,
+        trailingSellPullbackPercent,
+        lastSellPullback,
+        consecutiveSellCount,
+        enableConsecutiveIncrementalSellProfit
+      );
+
+      // Use adaptive or standard parameters
+      const effectiveActivation = adaptiveSellParams.activation;
+      const effectivePullback = adaptiveSellParams.pullback;
+      const skipProfitRequirement = adaptiveSellParams.skipProfitRequirement;
+
+      // Log adaptive mode if active
+      if (adaptiveSellParams.isAdaptive && verbose) {
+        transactionLog.push(colorize(
+          `  🎯 Adaptive Sell: Direction=${adaptiveSellParams.direction}, ` +
+          `Activation=${(effectiveActivation * 100).toFixed(1)}%, ` +
+          `Pullback=${(effectivePullback * 100).toFixed(1)}% ` +
+          `(was ${(adaptiveSellParams.previousPullback * 100).toFixed(1)}%), ` +
+          `ProfitReq=${skipProfitRequirement ? 'SKIPPED' : 'Required'}`,
+          'cyan'
+        ));
+      }
+
+      if (lots.length > 0 && currentPrice > averageCost && !activeStop && recentBottom && currentPrice >= recentBottom * (1 + effectiveActivation)) {
+        // Price rose {effectiveActivation}% from recent bottom - activate trailing stop sell
         // Calculate current unrealized P&L
         const totalSharesHeld = lots.reduce((sum, lot) => sum + lot.shares, 0);
         const totalCostOfHeldLots = lots.reduce((sum, lot) => sum + lot.price * lot.shares, 0);
@@ -1098,8 +1319,8 @@ async function runDCABacktest(params) {
           }
 
           // Find the highest-priced lot that is eligible for selling
-          // Calculate stop price using parameterized pullback percentage
-          const stopPrice = currentPrice * (1 - trailingSellPullbackPercent);
+          // Calculate stop price using adaptive or standard pullback percentage (Spec 25)
+          const stopPrice = currentPrice * (1 - effectivePullback);
           const minProfitablePrice = averageCost * (1 + params.profitRequirement); // ✅ BASE for average cost
 
           // Reference price for profit requirement check
@@ -1111,7 +1332,16 @@ async function runDCABacktest(params) {
           // Select lots that would be profitable to sell
           let eligibleLots;
 
-          if (enableAverageBasedSell) {
+          // Spec 25: If adaptive mode says skip profit requirement, select all lots
+          if (skipProfitRequirement) {
+            eligibleLots = [...lots];
+            if (verbose) {
+              transactionLog.push(colorize(
+                `  🎯 ADAPTIVE SKIP PROFIT: ALL ${lots.length} lots eligible (profit requirement bypassed)`,
+                'cyan'
+              ));
+            }
+          } else if (enableAverageBasedSell) {
             // Spec 23 Feature #2: Check profitability against average cost
             if (averageCost === 0 || lots.length === 0) {
               eligibleLots = [];
@@ -1167,9 +1397,9 @@ async function runDCABacktest(params) {
             transactionLog.push(colorize(`DEBUG SELECTED LOTS: ${lotsToSell.map(lot => `$${lot.price.toFixed(2)}`).join(', ')} (${lotsToSell.length} of ${eligibleLots.length} eligible, max ${maxLotsToSell})`, 'cyan'));
 
             // New pricing logic based on requirements:
-            // Stop Price: current price * (1 - trailingSellPullbackPercent) below current price
+            // Stop Price: current price * (1 - effectivePullback) below current price (Spec 25)
             // Limit Price: max(highest-priced eligible lot, stopPrice * 0.95) - only for LIMIT orders
-            const stopPrice = currentPrice * (1 - trailingSellPullbackPercent);
+            const stopPrice = currentPrice * (1 - effectivePullback);
             const highestLotPrice = lotsToSell[0].price; // Highest price among selected lots
 
             // Build activeStop object - only include limitPrice for LIMIT orders
@@ -1184,6 +1414,11 @@ async function runDCABacktest(params) {
               lotProfitRequirement: lotProfitRequirement,  // Store for transaction history
               orderType: trailingStopOrderType  // Track order type
             };
+
+            // Update adaptive state for next iteration (Spec 25)
+            if (adaptiveSellParams.isAdaptive) {
+              lastSellPullback = effectivePullback;
+            }
 
             // Add limitPrice only for LIMIT orders
             let orderTypeInfo;
@@ -1233,8 +1468,22 @@ async function runDCABacktest(params) {
     // Update trailing stop when price moves higher (maintains 10% below current price)
     const updateTrailingStop = (currentPrice) => {
       if (activeStop && currentPrice > activeStop.highestPrice) {
-        // Keep stop price at current price * (1 - trailingSellPullbackPercent) below current price
-        const newStopPrice = currentPrice * (1 - trailingSellPullbackPercent);
+        // Calculate adaptive sell parameters for update (Spec 25)
+        const adaptiveSellParams = calculateAdaptiveSellParameters(
+          currentPrice,
+          lastSellPrice,
+          trailingSellActivationPercent,
+          trailingSellPullbackPercent,
+          lastSellPullback,
+          consecutiveSellCount,
+          enableConsecutiveIncrementalSellProfit
+        );
+
+        // Use adaptive or standard pullback
+        const effectivePullback = adaptiveSellParams.pullback;
+
+        // Keep stop price at current price * (1 - effectivePullback) below current price (Spec 25)
+        const newStopPrice = currentPrice * (1 - effectivePullback);
 
         if (newStopPrice > activeStop.stopPrice) {
           const oldStopPrice = activeStop.stopPrice;
@@ -1280,6 +1529,11 @@ async function runDCABacktest(params) {
             activeStop.highestPrice = currentPrice;
             activeStop.lastUpdatePrice = currentPrice;
             activeStop.lotProfitRequirement = lotProfitRequirement; // Update for transaction history
+
+            // Update adaptive state for next iteration (Spec 25)
+            if (adaptiveSellParams.isAdaptive) {
+              lastSellPullback = effectivePullback;
+            }
 
             // Update limitPrice only for LIMIT orders
             let updateOrderInfo;
@@ -1715,6 +1969,7 @@ async function runDCABacktest(params) {
           }
           consecutiveBuyCount = 0;
           lastBuyPrice = null;
+          lastBuyRebound = null; // Reset adaptive state (Spec 25)
 
           // Clear active stop and reset peak/bottom tracking after sell
           activeStop = null;
