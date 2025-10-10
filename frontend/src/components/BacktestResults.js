@@ -58,9 +58,8 @@ const BacktestResults = ({ data, chartData: priceData }) => {
     // Check if this is short selling strategy
     const isShortSelling = summary?.strategy === 'SHORT_DCA';
 
-    // Track cumulative capital for average calculation
-    let cumulativeCapitalDeployed = 0;
-    let totalDays = 0;
+    // Track max capital deployed (only goes up, never down)
+    let maxCapitalDeployed = 0;
 
     return priceData.dailyPrices.map(day => {
       const transaction = transactionMap[day.date];
@@ -80,14 +79,12 @@ const BacktestResults = ({ data, chartData: priceData }) => {
         // Use totalPNL directly from transaction (matches Enhanced Transaction History table)
         totalPNL = transaction.totalPNL || 0;
 
-        // Track cumulative capital for average calculation
-        cumulativeCapitalDeployed += totalCapitalDeployed;
-        totalDays += 1;
+        // Track max capital deployed (only increases, never decreases)
+        maxCapitalDeployed = Math.max(maxCapitalDeployed, totalCapitalDeployed);
 
-        // Calculate Total P&L % based on AVERAGE capital deployed
-        const avgCapitalDeployed = totalDays > 0 ? cumulativeCapitalDeployed / totalDays : 0;
-        if (avgCapitalDeployed > 0) {
-          totalPNLPercent = (totalPNL / avgCapitalDeployed) * 100;
+        // Calculate Total P&L % based on MAX capital deployed
+        if (maxCapitalDeployed > 0) {
+          totalPNLPercent = (totalPNL / maxCapitalDeployed) * 100;
         }
       } else {
         // Find most recent transaction for capital deployed calculation
@@ -124,14 +121,12 @@ const BacktestResults = ({ data, chartData: priceData }) => {
 
           totalPNL = unrealizedPNL + (mostRecentTransaction.realizedPNL || 0);
 
-          // Track cumulative capital for average calculation
-          cumulativeCapitalDeployed += totalCapitalDeployed;
-          totalDays += 1;
+          // Track max capital deployed (only increases, never decreases)
+          maxCapitalDeployed = Math.max(maxCapitalDeployed, totalCapitalDeployed);
 
-          // Calculate Total P&L % based on AVERAGE capital deployed
-          const avgCapitalDeployed = totalDays > 0 ? cumulativeCapitalDeployed / totalDays : 0;
-          if (avgCapitalDeployed > 0) {
-            totalPNLPercent = (totalPNL / avgCapitalDeployed) * 100;
+          // Calculate Total P&L % based on MAX capital deployed
+          if (maxCapitalDeployed > 0) {
+            totalPNLPercent = (totalPNL / maxCapitalDeployed) * 100;
           }
         }
       }
@@ -505,9 +500,8 @@ const BacktestResults = ({ data, chartData: priceData }) => {
       }
     });
 
-    // Initialize cumulative capital tracking for average capital deployed calculation (across ALL days)
-    let cumulativeCapitalDeployed = 0;
-    let totalDays = 0;
+    // Initialize max capital deployed tracking (only goes up, never down)
+    let maxCapitalDeployed = 0;
 
     return pricesData.map((daily) => {
       const date = daily.date;
@@ -553,14 +547,12 @@ const BacktestResults = ({ data, chartData: priceData }) => {
         // Calculate Buy & Hold percentage from start price
         const buyAndHoldPercent = startPrice > 0 ? ((currentPrice - startPrice) / startPrice) * 100 : 0;
 
-        // Track cumulative capital for average calculation
+        // Track max capital deployed (only increases, never decreases)
         const currentCapitalDeployed = currentLots * lotSizeUsd;
-        cumulativeCapitalDeployed += currentCapitalDeployed;
-        totalDays += 1;
+        maxCapitalDeployed = Math.max(maxCapitalDeployed, currentCapitalDeployed);
 
-        // Calculate Total P&L % based on AVERAGE capital deployed
-        const avgCapitalDeployed = totalDays > 0 ? cumulativeCapitalDeployed / totalDays : 0;
-        const totalPNLPercent = avgCapitalDeployed > 0 ? (totalPNL / avgCapitalDeployed) * 100 : null;
+        // Calculate Total P&L % based on MAX capital deployed
+        const totalPNLPercent = maxCapitalDeployed > 0 ? (totalPNL / maxCapitalDeployed) * 100 : null;
 
         // Calculate lots deployed as percentage (0-100%)
         const lotsDeployedPercent = maxLots > 0 ? (currentLots / maxLots) * 100 : 0;
@@ -630,14 +622,12 @@ const BacktestResults = ({ data, chartData: priceData }) => {
         // Calculate Buy & Hold percentage from start price
         const buyAndHoldPercent = startPrice > 0 ? ((currentPrice - startPrice) / startPrice) * 100 : 0;
 
-        // Track cumulative capital for average calculation
+        // Track max capital deployed (only increases, never decreases)
         const currentCapitalDeployed = currentLots * lotSizeUsd;
-        cumulativeCapitalDeployed += currentCapitalDeployed;
-        totalDays += 1;
+        maxCapitalDeployed = Math.max(maxCapitalDeployed, currentCapitalDeployed);
 
-        // Calculate Total P&L % based on AVERAGE capital deployed
-        const avgCapitalDeployed = totalDays > 0 ? cumulativeCapitalDeployed / totalDays : 0;
-        const totalPNLPercent = avgCapitalDeployed > 0 ? (totalPNL / avgCapitalDeployed) * 100 : null;
+        // Calculate Total P&L % based on MAX capital deployed
+        const totalPNLPercent = maxCapitalDeployed > 0 ? (totalPNL / maxCapitalDeployed) * 100 : null;
 
         // Calculate lots deployed as percentage (0-100%)
         const lotsDeployedPercent = maxLots > 0 ? (currentLots / maxLots) * 100 : 0;
@@ -667,15 +657,13 @@ const BacktestResults = ({ data, chartData: priceData }) => {
       // Calculate Buy & Hold percentage from start price
       const buyAndHoldPercent = startPrice > 0 ? ((currentPrice - startPrice) / startPrice) * 100 : 0;
 
-      // No capital deployed yet
-      cumulativeCapitalDeployed += 0;
-      totalDays += 1;
+      // No capital deployed yet - maxCapitalDeployed stays at 0
 
       return {
         date: new Date(date).toLocaleDateString(),
         totalPNL: 0,
         totalPNLPercent: null,
-        avgCapitalDeployed: 0,
+        currentCapitalDeployed: 0,
         holdingsValue: 0,
         realizedPNL: 0,
         breakEvenValue: 0,
