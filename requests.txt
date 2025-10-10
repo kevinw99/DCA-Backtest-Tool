@@ -1,21 +1,78 @@
-spec 23 answers inline: "Open Questions
-  Asymmetric Spacing: Half spacing (5%) or full spacing (10%) when buying above average cost?
+Let's make 2 interal flags:
+winning_position  (true when Unrealized P/L > lotsizeUsd *10%):
+losing_position  (true when Unrealized P/L < -lotsizeUsd *10%):
 
-  Recommendation: Half spacing (more flexible)
-  No, full spacing
+these do not need ui control, just internal flags to help us decide which profile to use.
+
+with these, we add more condition to spec 25:
+1. only when in winning_position, we allow buy when price to go up in consecutive incremental buy, given all other
+conditions are met.
+otherwise only allow buy when price to go down
 
 
-  Lot Selection: Keep highest-price first or change to lowest-price first?
-
-  Recommendation: Keep highest-price first (no breaking changes)
-  ok.
+2. only when in losing_position, we allow sell when price to go down in consecutive incremental sell profit, given all other conditions are met.
+otherwise only allow sell when price to go up
 
 
-  Consecutive Feature Priority: Average-based or consecutive incremental takes precedence?
 
-  Recommendation: Average-based uses average cost reference, but applies incremental sizing
-  ok.
 
+dynamic profile, change to
+Conservative Profile (active when Unrealized P/L < -lotsizeUsd *10%):
+Aggressive Profile (active when Unrealized P/L > -lotsizeUsd *10%):
+no-profile (active when -10% <= Unrealized P/L <= 10%): including initial state when there is no position
+
+Consecutive Incremental Buy Grid:
+only when
+
+
+For trailing stop sell:
+if price keep going up the same direction, either up or down, then we keep incrementing the count
+if price reverses direction, then we reset the increment count = 1
+if there is buy order, then it resets the increment count = 0
+
+please clearly log these events in the daily transaction log for debugging purpose:
+when increment count incremented, what direction
+when increment count reset = 1, why,
+
+http://localhost:3000/backtest/long/PLTR/results?startDate=2021-09-01&endDate=2025-10-09&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=10&profitRequirement=10&trailingBuyActivationPercent=5&trailingBuyReboundPercent=5&trailingSellActivationPercent=20&trailingSellPullbackPercent=10&beta=2.595&coefficient=1&enableBetaScaling=false&isManualBetaOverride=false&enableDynamicGrid=false&normalizeToReference=true&enableConsecutiveIncrementalBuyGrid=true&enableConsecutiveIncrementalSellProfit=true&enableScenarioDetection=false&enableAverageBasedGrid=false&enableAverageBasedSell=true&enableDynamicProfile=false&dynamicGridMultiplier=1&gridConsecutiveIncrement=5&trailingStopOrderType=market
+
+on parameter page, I  set Grid Consecutive Increment (%) =5,
+url shows gridConsecutiveIncrement=5, correct
+but in test result, it shows
+
+let me know what lable to look for in the log for these events
+
+Please develop a new spec -  when consecutive buy or sell opotion are enabled
+
+we need to separate consecutive sell scenario into 2 cases:
+1. if price going down, i.e, current price < previous sell price,
+  we can ignore profit requirement and activation
+  in fact, the pullback can be smaller each time!
+    trailing sell stop pullback = max (previous pullback * 0.5 , 2%)
+2 if going up, then current handling
+
+Simialry, we need to separate consecutive buy scenario into 2 cases:
+1. if price going up
+  can ignore activation
+  and rebound can be smaller each time
+  trailing buy rebound = max (previous rebound * 0.8, 5%)
+2. if going down, then current handling
+
+Actually we need to make more change to the spec:
+Conservative Profile (active when Unrealized P/L < 0):
+
+Parameter Overrides:
+trailingBuyActivationPercent = 20% (harder to buy - wait for 10% drop)
+trailingSellActivationPercent = 0% (easier to sell - no activation needed)
+...the rest continue as before
+
+Aggressive Profile (active when Unrealized P/L >= 0):
+
+Parameter Overrides:
+trailingBuyActivationPercent = 0% (easier to buy - accumulate winners)
+trailingSellActivationPercent = 20% (harder to sell - wait for gain)
+...the rest continue as before
+Please update and then redo the test.
 
 Spec 24 "Conservative Profile (active when Total P/L < 0):
 

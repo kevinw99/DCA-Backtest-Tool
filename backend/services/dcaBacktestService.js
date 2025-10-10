@@ -385,7 +385,8 @@ function calculateAdaptiveSellParameters(
   trailingSellPullbackPercent,
   lastSellPullback,
   consecutiveSellCount,
-  enableConsecutiveIncrementalSellProfit
+  enableConsecutiveIncrementalSellProfit,
+  positionStatus  // Spec 26: position status for sell gating
 ) {
   // Default to standard parameters
   let activation = trailingSellActivationPercent;
@@ -401,7 +402,20 @@ function calculateAdaptiveSellParameters(
   const isDowntrend = currentPrice < lastSellPrice;
 
   if (isDowntrend) {
-    // CASE 1: Price falling - exit faster
+    // Spec 26: Downtrend sells ONLY allowed when in losing position
+    if (positionStatus !== 'losing') {
+      // Block downtrend sell - return standard behavior (uptrend logic)
+      return {
+        activation,
+        pullback,
+        skipProfitRequirement: false,
+        isAdaptive: false,
+        direction: 'down_blocked',  // Indicates downtrend but blocked by position
+        blockReason: `position_${positionStatus}`
+      };
+    }
+
+    // CASE 1: Price falling + losing position - exit faster
     activation = 0;  // Skip activation check
     skipProfitRequirement = true;  // Skip profit requirement
 
@@ -450,7 +464,8 @@ function calculateAdaptiveBuyParameters(
   trailingBuyReboundPercent,
   lastBuyRebound,
   consecutiveBuyCount,
-  enableConsecutiveIncrementalBuyGrid
+  enableConsecutiveIncrementalBuyGrid,
+  positionStatus  // Spec 26: position status for buy gating
 ) {
   // Default to standard parameters
   let activation = trailingBuyActivationPercent;
@@ -465,7 +480,19 @@ function calculateAdaptiveBuyParameters(
   const isUptrend = currentPrice > lastBuyPrice;
 
   if (isUptrend) {
-    // CASE 1: Price rising - accumulate faster
+    // Spec 26: Uptrend buys ONLY allowed when in winning position
+    if (positionStatus !== 'winning') {
+      // Block uptrend buy - return standard behavior (downtrend logic)
+      return {
+        activation,
+        rebound,
+        isAdaptive: false,
+        direction: 'up_blocked',  // Indicates uptrend but blocked by position
+        blockReason: `position_${positionStatus}`
+      };
+    }
+
+    // CASE 1: Price rising + winning position - accumulate faster
     activation = 0;  // Skip activation check
 
     // Calculate decayed rebound
@@ -738,6 +765,11 @@ async function runDCABacktest(params) {
     let lastBuyDirection = null;  // 'up' | 'down' | null - direction of last buy relative to previous buy
     let lastSellDirection = null; // 'up' | 'down' | null - direction of last sell relative to previous sell
 
+    // Position-Based Adaptive Behavior (Spec 26)
+    let positionStatus = 'neutral'; // 'winning' | 'losing' | 'neutral'
+    let portfolioUnrealizedPNL = 0;          // Current unrealized P/L
+    const positionThreshold = lotSizeUsd * 0.10; // 10% of lot size
+
     // Questionable events monitoring
     const questionableEvents = [];
     const dailyTransactionTypes = new Map(); // Track transaction types per date
@@ -765,6 +797,24 @@ async function runDCABacktest(params) {
         return totalCost / totalShares;
       }
       return 0;
+    };
+
+    // Calculate position status based on unrealized P/L (Spec 26)
+    const calculatePositionStatus = (lotArray, currentPrice, threshold) => {
+      // Calculate unrealized P/L
+      const pnl = lotArray.reduce((sum, lot) => {
+        return sum + (currentPrice - lot.price) * lot.shares;
+      }, 0);
+
+      // Determine position status
+      let status = 'neutral';
+      if (pnl > threshold) {
+        status = 'winning';
+      } else if (pnl < -threshold) {
+        status = 'losing';
+      }
+
+      return { status, pnl, threshold };
     };
 
     const getLotsPrices = (lotArray) => `[${lotArray.map(l => l.price.toFixed(2)).join(', ')}]`;
@@ -847,7 +897,8 @@ async function runDCABacktest(params) {
         params.trailingBuyReboundPercent,
         lastBuyRebound,
         consecutiveBuyCount,
-        enableConsecutiveIncrementalBuyGrid
+        enableConsecutiveIncrementalBuyGrid,
+        positionStatus  // Spec 26: position-based buy gating
       );
 
       // Use adaptive or standard parameters
@@ -862,6 +913,15 @@ async function runDCABacktest(params) {
           `Rebound=${(effectiveRebound * 100).toFixed(1)}% ` +
           `(was ${(adaptiveBuyParams.previousRebound * 100).toFixed(1)}%)`,
           'cyan'
+        ));
+      }
+
+      // Spec 26: Log position-based buy blocks
+      if (adaptiveBuyParams.direction === 'up_blocked' && verbose) {
+        transactionLog.push(colorize(
+          `  🚫 BLOCKED: Uptrend buy prevented (Position: ${positionStatus.toUpperCase()}, P/L: ${portfolioUnrealizedPNL >= 0 ? '+' : ''}$${portfolioUnrealizedPNL.toFixed(2)}) - ` +
+          `Only allow uptrend buys in WINNING position. Using standard downtrend logic instead.`,
+          'yellow'
         ));
       }
 
@@ -895,7 +955,8 @@ async function runDCABacktest(params) {
           params.trailingBuyReboundPercent,
           lastBuyRebound,
           consecutiveBuyCount,
-          enableConsecutiveIncrementalBuyGrid
+          enableConsecutiveIncrementalBuyGrid,
+          positionStatus  // Spec 26: position-based buy gating
         );
 
         const effectiveRebound = adaptiveBuyParams.rebound;
@@ -1253,7 +1314,8 @@ async function runDCABacktest(params) {
         trailingSellPullbackPercent,
         lastSellPullback,
         consecutiveSellCount,
-        enableConsecutiveIncrementalSellProfit
+        enableConsecutiveIncrementalSellProfit,
+        positionStatus  // Spec 26: position-based sell gating
       );
 
       // Use adaptive or standard parameters
@@ -1270,6 +1332,15 @@ async function runDCABacktest(params) {
           `(was ${(adaptiveSellParams.previousPullback * 100).toFixed(1)}%), ` +
           `ProfitReq=${skipProfitRequirement ? 'SKIPPED' : 'Required'}`,
           'cyan'
+        ));
+      }
+
+      // Spec 26: Log position-based sell blocks
+      if (adaptiveSellParams.direction === 'down_blocked' && verbose) {
+        transactionLog.push(colorize(
+          `  🚫 BLOCKED: Downtrend sell prevented (Position: ${positionStatus.toUpperCase()}, P/L: ${portfolioUnrealizedPNL >= 0 ? '+' : ''}$${portfolioUnrealizedPNL.toFixed(2)}) - ` +
+          `Only allow downtrend sells in LOSING position. Using standard uptrend logic instead.`,
+          'yellow'
         ));
       }
 
@@ -1472,7 +1543,8 @@ async function runDCABacktest(params) {
           trailingSellPullbackPercent,
           lastSellPullback,
           consecutiveSellCount,
-          enableConsecutiveIncrementalSellProfit
+          enableConsecutiveIncrementalSellProfit,
+          positionStatus  // Spec 26: position-based sell gating
         );
 
         // Use adaptive or standard pullback
@@ -1648,6 +1720,17 @@ async function runDCABacktest(params) {
       const holdingsAtStartOfDay = [...lots];
       averageCost = recalculateAverageCost();
 
+      // Spec 26: Calculate position status based on unrealized P/L
+      const positionCalc = calculatePositionStatus(lots, currentPrice, positionThreshold);
+      const previousPositionStatus = positionStatus;
+      positionStatus = positionCalc.status;
+      portfolioUnrealizedPNL = positionCalc.pnl;
+
+      // Log position status changes
+      if (verbose && positionStatus !== previousPositionStatus) {
+        transactionLog.push(colorize(`📊 Position Status Changed: ${previousPositionStatus.toUpperCase()} → ${positionStatus.toUpperCase()} (P/L: ${portfolioUnrealizedPNL >= 0 ? '+' : ''}$${portfolioUnrealizedPNL.toFixed(2)}, threshold: ±$${positionThreshold.toFixed(2)})`, 'cyan'));
+      }
+
       const marketCondition = assessMarketCondition(dayData);
 
       // Adaptive Strategy: Check and adjust parameters based on market regime
@@ -1682,8 +1765,8 @@ async function runDCABacktest(params) {
       // Daily PNL Calculation
       const totalSharesHeld = holdingsAtStartOfDay.reduce((sum, lot) => sum + lot.shares, 0);
       const totalCostOfHeldLots = holdingsAtStartOfDay.reduce((sum, lot) => sum + lot.price * lot.shares, 0);
-      const unrealizedPNL = (totalSharesHeld * currentPrice) - totalCostOfHeldLots;
-      const totalPNL = realizedPNL + unrealizedPNL;
+      // Note: portfolioUnrealizedPNL is already calculated above using calculatePositionStatus (line 1678)
+      const totalPNL = realizedPNL + portfolioUnrealizedPNL;
 
       // ===== PROFILE DETERMINATION (Spec 24) =====
       if (i === 0) {
@@ -1715,7 +1798,7 @@ async function runDCABacktest(params) {
         }
       } else {
         // Subsequent days: check for profile switches
-        determineAndApplyProfile(dayData.date, unrealizedPNL);
+        determineAndApplyProfile(dayData.date, portfolioUnrealizedPNL);
       }
 
       // Portfolio tracking
@@ -1723,7 +1806,7 @@ async function runDCABacktest(params) {
       const maxExposure = maxLots * lotSizeUsd;
       const deployedCapital = totalCostOfHeldLots;
       const availableCapital = maxExposure - deployedCapital;
-      const currentPortfolioValue = availableCapital + totalCostOfHeldLots + unrealizedPNL + realizedPNL;
+      const currentPortfolioValue = availableCapital + totalCostOfHeldLots + portfolioUnrealizedPNL + realizedPNL;
 
       dailyPortfolioValues.push(currentPortfolioValue);
       dailyCapitalDeployed.push(totalCostOfHeldLots);
@@ -2039,14 +2122,14 @@ async function runDCABacktest(params) {
         let header = `--- ${dayData.date} ---\n`;
         header += `${pad('Price: ' + currentPrice.toFixed(2), 18)}| `;
         header += `${pad('R.PNL: ' + realizedPNL.toFixed(0), 18)}| `;
-        header += `${pad('U.PNL: ' + unrealizedPNL.toFixed(0), 18)}| `;
+        header += `${pad('U.PNL: ' + portfolioUnrealizedPNL.toFixed(0), 18)}| `;
         header += `${pad('T.PNL: ' + totalPNL.toFixed(0), 18)}| `;
         header += `Holdings: ${getLotsPrices(holdingsAtStartOfDay)}`;
 
         transactionLog.splice(dayStartLogLength, 0, header);
       } else if (verbose) {
         // For command line, show all days. For API, only show action days
-        const singleLine = `--- ${dayData.date} --- ${pad('Price: ' + currentPrice.toFixed(2), 18)}| ${pad('R.PNL: ' + realizedPNL.toFixed(0), 18)}| ${pad('U.PNL: ' + unrealizedPNL.toFixed(0), 18)}| ${pad('T.PNL: ' + totalPNL.toFixed(0), 18)}| Holdings: ${getLotsPrices(holdingsAtStartOfDay)}`;
+        const singleLine = `--- ${dayData.date} --- ${pad('Price: ' + currentPrice.toFixed(2), 18)}| ${pad('R.PNL: ' + realizedPNL.toFixed(0), 18)}| ${pad('U.PNL: ' + portfolioUnrealizedPNL.toFixed(0), 18)}| ${pad('T.PNL: ' + totalPNL.toFixed(0), 18)}| Holdings: ${getLotsPrices(holdingsAtStartOfDay)}`;
         transactionLog.push(singleLine);
       }
 

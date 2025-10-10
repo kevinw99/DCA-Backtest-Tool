@@ -14,6 +14,28 @@ This spec **modifies and supersedes** the counting logic from Spec 17 (Consecuti
 
 **Key principle**: Grid spacing determines HOW FAR buys must be spaced. Adaptive parameters determine HOW TIGHT the trailing stop is. Both can operate in uptrends and downtrends.
 
+### Interaction with Spec 26 Position-Based Behavior
+
+**Spec 26 (Position-Based Adaptive Behavior)** adds position-aware restrictions to Spec 25:
+
+- **Spec 25** controls: Adaptive parameters (skip activation, tighter stops) based on price direction
+- **Spec 26** controls: WHEN adaptive behavior is allowed based on portfolio P/L status
+- **Together**: Creates strategic risk management framework
+
+**Position-Based Gating:**
+
+1. **Uptrend Buys (Spec 25 adaptive)**:
+   - **Allowed**: Only when portfolio is in `winning_position` (P/L > +10% of lot size)
+   - **Blocked**: When portfolio is `neutral` or `losing`
+   - **Rationale**: Pyramid up when winning, avoid FOMO when not
+
+2. **Downtrend Sells (Spec 25 adaptive)**:
+   - **Allowed**: Only when portfolio is in `losing_position` (P/L < -10% of lot size)
+   - **Blocked**: When portfolio is `neutral` or `winning`
+   - **Rationale**: Cut losses fast when losing, avoid panic sells when winning
+
+**Key principle**: Spec 26 acts as a strategic gate on Spec 25's adaptive behavior. Adaptive parameters still work, but execution is restricted based on portfolio risk status.
+
 ### Revised Consecutive Count Logic
 
 **For Trailing Stop Buy (`consecutiveBuyCount`)**:
