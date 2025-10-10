@@ -1117,17 +1117,11 @@ async function runDCABacktest(params) {
 
             averageCost = recalculateAverageCost();
 
-            // CHECK IF COUNT SHOULD RESET (but NOT lastBuyPrice):
-            // If this buy was at price >= old lastBuyPrice, reset count to 0
-            // This allows next buy to use base grid, but still requires price < lastBuyPrice if price continues down
-            if (oldLastBuyPrice !== null && currentPrice >= oldLastBuyPrice) {
-              if (verbose) {
-                transactionLog.push(colorize(`  RESET: Consecutive buy count reset from ${consecutiveBuyCount} to 0 - Buy price ${currentPrice.toFixed(2)} >= old lastBuyPrice ${oldLastBuyPrice.toFixed(2)} (lastBuyPrice kept at ${lastBuyPrice.toFixed(2)})`, 'cyan'));
-              }
-              consecutiveBuyCount = 0;
-              lastBuyRebound = null; // Reset adaptive state (Spec 25)
-              // Do NOT reset lastBuyPrice - keep it as the reference
-            }
+            // NOTE: Spec 17's reset logic removed to enable Spec 25 adaptive trailing stops
+            // Spec 25 handles both uptrend and downtrend cases intelligently:
+            // - Uptrend (price > lastBuyPrice): Skip activation, decay rebound
+            // - Downtrend (price <= lastBuyPrice): Use standard parameters
+            // No need to reset consecutiveBuyCount when price increases
 
             // Calculate P&L values after trailing stop buy
             const totalSharesHeldAfterBuy = lots.reduce((sum, lot) => sum + lot.shares, 0);
