@@ -916,8 +916,8 @@ async function runDCABacktest(params) {
         ));
       }
 
-      // Spec 26: Log position-based buy blocks
-      if (adaptiveBuyParams.direction === 'up_blocked' && verbose) {
+      // Spec 26: Log position-based buy blocks (always visible)
+      if (adaptiveBuyParams.direction === 'up_blocked') {
         transactionLog.push(colorize(
           `  🚫 BLOCKED: Uptrend buy prevented (Position: ${positionStatus.toUpperCase()}, P/L: ${portfolioUnrealizedPNL >= 0 ? '+' : ''}$${portfolioUnrealizedPNL.toFixed(2)}) - ` +
           `Only allow uptrend buys in WINNING position. Using standard downtrend logic instead.`,
@@ -1335,8 +1335,8 @@ async function runDCABacktest(params) {
         ));
       }
 
-      // Spec 26: Log position-based sell blocks
-      if (adaptiveSellParams.direction === 'down_blocked' && verbose) {
+      // Spec 26: Log position-based sell blocks (always visible)
+      if (adaptiveSellParams.direction === 'down_blocked') {
         transactionLog.push(colorize(
           `  🚫 BLOCKED: Downtrend sell prevented (Position: ${positionStatus.toUpperCase()}, P/L: ${portfolioUnrealizedPNL >= 0 ? '+' : ''}$${portfolioUnrealizedPNL.toFixed(2)}) - ` +
           `Only allow downtrend sells in LOSING position. Using standard uptrend logic instead.`,
@@ -1726,8 +1726,8 @@ async function runDCABacktest(params) {
       positionStatus = positionCalc.status;
       portfolioUnrealizedPNL = positionCalc.pnl;
 
-      // Log position status changes
-      if (verbose && positionStatus !== previousPositionStatus) {
+      // Log position status changes (Spec 26: always visible)
+      if (positionStatus !== previousPositionStatus) {
         transactionLog.push(colorize(`📊 Position Status Changed: ${previousPositionStatus.toUpperCase()} → ${positionStatus.toUpperCase()} (P/L: ${portfolioUnrealizedPNL >= 0 ? '+' : ''}$${portfolioUnrealizedPNL.toFixed(2)}, threshold: ±$${positionThreshold.toFixed(2)})`, 'cyan'));
       }
 
