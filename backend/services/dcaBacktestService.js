@@ -734,6 +734,10 @@ async function runDCABacktest(params) {
     let lastSellPullback = null; // Last used pullback % for consecutive sells (for decay calculation)
     let lastBuyRebound = null;   // Last used rebound % for consecutive buys (for decay calculation)
 
+    // Direction tracking for consecutive trades (Spec 25 - revised from Specs 17 & 18)
+    let lastBuyDirection = null;  // 'up' | 'down' | null - direction of last buy relative to previous buy
+    let lastSellDirection = null; // 'up' | 'down' | null - direction of last sell relative to previous sell
+
     // Questionable events monitoring
     const questionableEvents = [];
     const dailyTransactionTypes = new Map(); // Track transaction types per date
@@ -1104,24 +1108,45 @@ async function runDCABacktest(params) {
             lastSellPrice = null; // Reset on buy
             consecutiveSellCount = 0; // Reset on buy
             lastSellPullback = null; // Reset adaptive state on buy (Spec 25)
+            lastSellDirection = null; // Reset sell direction on buy
 
-            // Save old lastBuyPrice before updating (needed for reset check)
-            const oldLastBuyPrice = lastBuyPrice;
+            // Update consecutive buy tracking state with direction-based counting (Spec 25)
+            if (consecutiveBuyCount === 0) {
+              // First buy in sequence
+              consecutiveBuyCount = 1;
+              lastBuyDirection = null; // No previous buy to compare
+              transactionLog.push(colorize(`  🔢 CONSEC BUY COUNT: Set to 1 (first buy in sequence)`, 'cyan'));
+            } else {
+              // Determine direction relative to last buy
+              const currentDirection = (currentPrice > lastBuyPrice) ? 'up' : 'down';
 
-            // Update consecutive buy tracking state
-            consecutiveBuyCount++;
+              if (lastBuyDirection === null) {
+                // Second buy in sequence, establish direction
+                const oldCount = consecutiveBuyCount;
+                consecutiveBuyCount++;
+                lastBuyDirection = currentDirection;
+                transactionLog.push(colorize(`  🔢 CONSEC BUY COUNT: ${oldCount} → ${consecutiveBuyCount} (direction established: ${currentDirection.toUpperCase()}, price: $${lastBuyPrice.toFixed(2)} → $${currentPrice.toFixed(2)})`, 'cyan'));
+              } else if (currentDirection === lastBuyDirection) {
+                // Same direction, increment count
+                const oldCount = consecutiveBuyCount;
+                consecutiveBuyCount++;
+                transactionLog.push(colorize(`  🔢 CONSEC BUY COUNT: ${oldCount} → ${consecutiveBuyCount} (same direction: ${currentDirection.toUpperCase()}, price: $${lastBuyPrice.toFixed(2)} → $${currentPrice.toFixed(2)})`, 'cyan'));
+              } else {
+                // Direction reversed, reset to 1 and save new direction
+                const oldCount = consecutiveBuyCount;
+                const oldDirection = lastBuyDirection;
+                consecutiveBuyCount = 1;
+                lastBuyDirection = currentDirection;
+                transactionLog.push(colorize(`  🔄 CONSEC BUY COUNT: ${oldCount} → 1 (DIRECTION REVERSED: ${oldDirection.toUpperCase()} → ${currentDirection.toUpperCase()}, price: $${lastBuyPrice.toFixed(2)} → $${currentPrice.toFixed(2)})`, 'yellow'));
+              }
+            }
+
             lastBuyPrice = currentPrice;
             maxConsecutiveBuyCount = Math.max(maxConsecutiveBuyCount, consecutiveBuyCount);
             totalGridSizeUsed += buyGridSize;
             totalBuysCount++;
 
             averageCost = recalculateAverageCost();
-
-            // NOTE: Spec 17's reset logic removed to enable Spec 25 adaptive trailing stops
-            // Spec 25 handles both uptrend and downtrend cases intelligently:
-            // - Uptrend (price > lastBuyPrice): Skip activation, decay rebound
-            // - Downtrend (price <= lastBuyPrice): Use standard parameters
-            // No need to reset consecutiveBuyCount when price increases
 
             // Calculate P&L values after trailing stop buy
             const totalSharesHeldAfterBuy = lots.reduce((sum, lot) => sum + lot.shares, 0);
@@ -1945,15 +1970,39 @@ async function runDCABacktest(params) {
             colorize(`    Total PNL: ${pnl.toFixed(2)}, Remaining lots: ${getLotsPrices(lots)}, New Avg Cost: ${averageCost.toFixed(2)}`, 'red')
           );
 
-          // Update consecutive sell tracking state
+          // Update consecutive sell tracking state with direction-based counting (Spec 25)
           lastActionType = 'sell';
 
-          // Update consecutiveSellCount
-          if (lastSellPrice !== null && executionPrice > lastSellPrice) {
-            consecutiveSellCount++;
+          if (consecutiveSellCount === 0) {
+            // First sell in sequence
+            consecutiveSellCount = 1;
+            lastSellDirection = null; // No previous sell to compare
+            transactionLog.push(colorize(`  🔢 CONSEC SELL COUNT: Set to 1 (first sell in sequence)`, 'cyan'));
           } else {
-            consecutiveSellCount = 1; // First sell or price declined
+            // Determine direction relative to last sell
+            const currentDirection = (executionPrice > lastSellPrice) ? 'up' : 'down';
+
+            if (lastSellDirection === null) {
+              // Second sell in sequence, establish direction
+              const oldCount = consecutiveSellCount;
+              consecutiveSellCount++;
+              lastSellDirection = currentDirection;
+              transactionLog.push(colorize(`  🔢 CONSEC SELL COUNT: ${oldCount} → ${consecutiveSellCount} (direction established: ${currentDirection.toUpperCase()}, price: $${lastSellPrice.toFixed(2)} → $${executionPrice.toFixed(2)})`, 'cyan'));
+            } else if (currentDirection === lastSellDirection) {
+              // Same direction, increment count
+              const oldCount = consecutiveSellCount;
+              consecutiveSellCount++;
+              transactionLog.push(colorize(`  🔢 CONSEC SELL COUNT: ${oldCount} → ${consecutiveSellCount} (same direction: ${currentDirection.toUpperCase()}, price: $${lastSellPrice.toFixed(2)} → $${executionPrice.toFixed(2)})`, 'cyan'));
+            } else {
+              // Direction reversed, reset to 1 and save new direction
+              const oldCount = consecutiveSellCount;
+              const oldDirection = lastSellDirection;
+              consecutiveSellCount = 1;
+              lastSellDirection = currentDirection;
+              transactionLog.push(colorize(`  🔄 CONSEC SELL COUNT: ${oldCount} → 1 (DIRECTION REVERSED: ${oldDirection.toUpperCase()} → ${currentDirection.toUpperCase()}, price: $${lastSellPrice.toFixed(2)} → $${executionPrice.toFixed(2)})`, 'yellow'));
+            }
           }
+
           lastSellPrice = executionPrice;
 
           // Reset consecutive buy tracking state (sell breaks the consecutive buy chain)
@@ -1964,6 +2013,7 @@ async function runDCABacktest(params) {
           consecutiveBuyCount = 0;
           lastBuyPrice = null;
           lastBuyRebound = null; // Reset adaptive state (Spec 25)
+          lastBuyDirection = null; // Reset buy direction on sell
 
           // Clear active stop and reset peak/bottom tracking after sell
           activeStop = null;
