@@ -334,6 +334,7 @@ function calculateBuyAndHold(prices, initialCapital, avgCapitalForComparison = n
  * @param {number|null} lastBuyPrice - Price of last buy (null if no previous buy)
  * @param {number} currentBuyPrice - Current potential buy price
  * @param {boolean} enableConsecutiveIncrementalBuyGrid - Feature enabled?
+ * @param {string|null} lastBuyDirection - Direction of last buy ('up'|'down'|null)
  * @returns {number} Grid size to use for next buy (as decimal, e.g., 0.10 for 10%)
  */
 function calculateBuyGridSize(
@@ -342,7 +343,8 @@ function calculateBuyGridSize(
   consecutiveBuyCount,
   lastBuyPrice,
   currentBuyPrice,
-  enableConsecutiveIncrementalBuyGrid
+  enableConsecutiveIncrementalBuyGrid,
+  lastBuyDirection
 ) {
   // Default to base grid size
   let nextGridSize = gridIntervalPercent;
@@ -358,8 +360,32 @@ function calculateBuyGridSize(
     lastBuyPrice !== null &&
     currentBuyPrice < lastBuyPrice
   ) {
-    // Formula: base_grid + (consecutive_count * increment)
-    nextGridSize = gridIntervalPercent + (consecutiveBuyCount * gridConsecutiveIncrement);
+    // CRITICAL FIX: Predict what the consecutiveBuyCount will be AFTER this trade executes
+    // This ensures the grid size shown in the transaction matches the actual count in effect
+    let predictedCount;
+
+    if (consecutiveBuyCount === 0) {
+      // First buy - count will become 1
+      predictedCount = 1;
+    } else {
+      // Determine direction of this buy relative to last buy
+      const currentDirection = (currentBuyPrice > lastBuyPrice) ? 'up' : 'down';
+
+      if (lastBuyDirection === null) {
+        // Second buy - direction will be established, count will increment
+        predictedCount = consecutiveBuyCount + 1;
+      } else if (currentDirection === lastBuyDirection) {
+        // Same direction - count will increment
+        predictedCount = consecutiveBuyCount + 1;
+      } else {
+        // Direction reversal - count will reset to 1
+        predictedCount = 1;
+      }
+    }
+
+    // Formula: base_grid + (predicted_count * increment)
+    // Use the count that will be in effect AFTER this trade, not the current count
+    nextGridSize = gridIntervalPercent + (predictedCount * gridConsecutiveIncrement);
   }
 
   return nextGridSize;
@@ -402,20 +428,7 @@ function calculateAdaptiveSellParameters(
   const isDowntrend = currentPrice < lastSellPrice;
 
   if (isDowntrend) {
-    // Spec 26: Downtrend sells ONLY allowed when in losing position
-    if (positionStatus !== 'losing') {
-      // Block downtrend sell - return standard behavior (uptrend logic)
-      return {
-        activation,
-        pullback,
-        skipProfitRequirement: false,
-        isAdaptive: false,
-        direction: 'down_blocked',  // Indicates downtrend but blocked by position
-        blockReason: `position_${positionStatus}`
-      };
-    }
-
-    // CASE 1: Price falling + losing position - exit faster
+    // CASE 1: Price falling - exit faster
     activation = 0;  // Skip activation check
     skipProfitRequirement = true;  // Skip profit requirement
 
@@ -1027,7 +1040,8 @@ async function runDCABacktest(params) {
               consecutiveBuyCount,
               lastBuyPrice,
               currentPrice,
-              enableConsecutiveIncrementalBuyGrid
+              enableConsecutiveIncrementalBuyGrid,
+              lastBuyDirection
             );
 
             if (verbose && enableConsecutiveIncrementalBuyGrid) {
@@ -1332,15 +1346,6 @@ async function runDCABacktest(params) {
           `(was ${(adaptiveSellParams.previousPullback * 100).toFixed(1)}%), ` +
           `ProfitReq=${skipProfitRequirement ? 'SKIPPED' : 'Required'}`,
           'cyan'
-        ));
-      }
-
-      // Spec 26: Log position-based sell blocks (always visible)
-      if (adaptiveSellParams.direction === 'down_blocked') {
-        transactionLog.push(colorize(
-          `  🚫 BLOCKED: Downtrend sell prevented (Position: ${positionStatus.toUpperCase()}, P/L: ${portfolioUnrealizedPNL >= 0 ? '+' : ''}$${portfolioUnrealizedPNL.toFixed(2)}) - ` +
-          `Only allow downtrend sells in LOSING position. Using standard uptrend logic instead.`,
-          'yellow'
         ));
       }
 
