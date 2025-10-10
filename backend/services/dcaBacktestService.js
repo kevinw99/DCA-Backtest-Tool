@@ -29,8 +29,9 @@ const PROFILES = {
     description: 'Preserve capital when losing money',
     trigger: 'Total P/L < 0 for 3+ consecutive days',
     overrides: {
-      trailingBuyActivationPercent: 0.10,  // Harder to buy
-      profitRequirement: 0.00              // Easier to sell
+      trailingBuyActivationPercent: 0.20,  // Harder to buy - wait for 20% drop
+      trailingSellActivationPercent: 0.00, // Easier to sell - no activation needed
+      profitRequirement: 0.00              // Easier to sell - no profit requirement
     },
     color: 'blue'
   },
@@ -40,8 +41,9 @@ const PROFILES = {
     description: 'Maximize gains when making money',
     trigger: 'Total P/L >= 0 for 3+ consecutive days',
     overrides: {
-      trailingBuyActivationPercent: 0.00,  // Easier to buy
-      profitRequirement: 0.10              // Harder to sell
+      trailingBuyActivationPercent: 0.00,  // Easier to buy - accumulate winners
+      trailingSellActivationPercent: 0.20, // Harder to sell - wait for 20% gain
+      profitRequirement: 0.10              // Harder to sell - require 10% profit
     },
     color: 'green'
   }
@@ -434,9 +436,11 @@ async function runDCABacktest(params) {
 
   // Log dynamic profile feature status (Spec 24)
   if (enableDynamicProfile) {
+    const consProfile = PROFILES.CONSERVATIVE;
+    const aggProfile = PROFILES.AGGRESSIVE;
     console.log(`🔄 Feature: Dynamic Profile Switching = ENABLED`);
-    console.log(`   Conservative when P/L < 0: Harder to buy (10%), easier to sell (0%)`);
-    console.log(`   Aggressive when P/L >= 0: Easier to buy (0%), harder to sell (10%)`);
+    console.log(`   Conservative when P/L < 0: Harder to buy (${(consProfile.overrides.trailingBuyActivationPercent * 100).toFixed(0)}%), easier to sell (${(consProfile.overrides.trailingSellActivationPercent * 100).toFixed(0)}%)`);
+    console.log(`   Aggressive when P/L >= 0: Easier to buy (${(aggProfile.overrides.trailingBuyActivationPercent * 100).toFixed(0)}%), harder to sell (${(aggProfile.overrides.trailingSellActivationPercent * 100).toFixed(0)}%)`);
     console.log(`   Requires ${HYSTERESIS_DAYS} consecutive days before switching`);
   }
 
@@ -691,23 +695,23 @@ async function runDCABacktest(params) {
 
     // Check if trailing stop buy should be activated
     const checkTrailingStopBuyActivation = (currentPrice, currentDate) => {
-      if (!trailingStopBuy && recentPeak && currentPrice <= recentPeak * (1 - trailingBuyActivationPercent)) {
-        // Price dropped {trailingBuyActivationPercent}% from recent peak - activate trailing stop buy
+      if (!trailingStopBuy && recentPeak && currentPrice <= recentPeak * (1 - params.trailingBuyActivationPercent)) {
+        // Price dropped {params.trailingBuyActivationPercent}% from recent peak - activate trailing stop buy
         trailingStopBuy = {
-          stopPrice: currentPrice * (1 + trailingBuyReboundPercent), // {trailingBuyReboundPercent}% above current price
+          stopPrice: currentPrice * (1 + params.trailingBuyReboundPercent), // {params.trailingBuyReboundPercent}% above current price
           triggeredAt: currentPrice,
           activatedDate: currentDate,
           recentPeakReference: recentPeak,
           lastUpdatePrice: currentPrice  // Track the actual bottom price (price when order was last updated)
         };
-        transactionLog.push(colorize(`  ACTION: TRAILING STOP BUY ACTIVATED - Stop: ${trailingStopBuy.stopPrice.toFixed(2)}, Triggered by ${(trailingBuyActivationPercent*100).toFixed(1)}% drop from peak ${recentPeak.toFixed(2)}`, 'blue'));
+        transactionLog.push(colorize(`  ACTION: TRAILING STOP BUY ACTIVATED - Stop: ${trailingStopBuy.stopPrice.toFixed(2)}, Triggered by ${(params.trailingBuyActivationPercent*100).toFixed(1)}% drop from peak ${recentPeak.toFixed(2)}`, 'blue'));
       }
     };
 
     // Update trailing stop buy (move stop down if price goes down further)
     const updateTrailingStopBuy = (currentPrice) => {
       if (trailingStopBuy) {
-        const newStopPrice = currentPrice * (1 + trailingBuyReboundPercent); // Always {trailingBuyReboundPercent}% above current price
+        const newStopPrice = currentPrice * (1 + params.trailingBuyReboundPercent); // Always {params.trailingBuyReboundPercent}% above current price
         if (newStopPrice < trailingStopBuy.stopPrice) {
           const oldStopPrice = trailingStopBuy.stopPrice;
           trailingStopBuy.stopPrice = newStopPrice;
@@ -1065,7 +1069,7 @@ async function runDCABacktest(params) {
           const isConsecutiveSell = (lastSellPrice !== null && currentPrice > lastSellPrice);
 
           // Calculate lot-level profit requirement (dynamic for consecutive uptrend sells)
-          let lotProfitRequirement = profitRequirement; // Default to base
+          let lotProfitRequirement = params.profitRequirement; // Default to base
           if (enableConsecutiveIncrementalSellProfit && isConsecutiveSell) {
             // Consecutive uptrend sell - calculate dynamic grid size
             let gridSize;
@@ -1084,11 +1088,11 @@ async function runDCABacktest(params) {
             } else {
               gridSize = gridIntervalPercent;
             }
-            lotProfitRequirement = profitRequirement + gridSize;
+            lotProfitRequirement = params.profitRequirement + gridSize;
 
             if (verbose) {
               transactionLog.push(
-                colorize(`  📈 Consecutive uptrend sell (count: ${consecutiveSellCount}): lot profit req ${(lotProfitRequirement * 100).toFixed(2)}% (base ${(profitRequirement * 100).toFixed(2)}% + grid ${(gridSize * 100).toFixed(2)}%)`, 'cyan')
+                colorize(`  📈 Consecutive uptrend sell (count: ${consecutiveSellCount}): lot profit req ${(lotProfitRequirement * 100).toFixed(2)}% (base ${(params.profitRequirement * 100).toFixed(2)}% + grid ${(gridSize * 100).toFixed(2)}%)`, 'cyan')
               );
             }
           }
@@ -1096,12 +1100,12 @@ async function runDCABacktest(params) {
           // Find the highest-priced lot that is eligible for selling
           // Calculate stop price using parameterized pullback percentage
           const stopPrice = currentPrice * (1 - trailingSellPullbackPercent);
-          const minProfitablePrice = averageCost * (1 + profitRequirement); // ✅ BASE for average cost
+          const minProfitablePrice = averageCost * (1 + params.profitRequirement); // ✅ BASE for average cost
 
           // Reference price for profit requirement check
           const referenceForProfit = isConsecutiveSell ? lastSellPrice : null;
 
-          transactionLog.push(colorize(`DEBUG LOT SELECTION: currentPrice=${currentPrice.toFixed(2)}, stopPrice=${stopPrice.toFixed(2)}, baseProfitReq=${profitRequirement}, lotProfitReq=${lotProfitRequirement}, averageCost=${averageCost.toFixed(2)}, minProfitablePrice=${minProfitablePrice.toFixed(2)}, isConsecutiveSell=${isConsecutiveSell}, lastSellPrice=${lastSellPrice ? lastSellPrice.toFixed(2) : 'null'}, consecutiveSellCount=${consecutiveSellCount}`, 'cyan'));
+          transactionLog.push(colorize(`DEBUG LOT SELECTION: currentPrice=${currentPrice.toFixed(2)}, stopPrice=${stopPrice.toFixed(2)}, baseProfitReq=${params.profitRequirement}, lotProfitReq=${lotProfitRequirement}, averageCost=${averageCost.toFixed(2)}, minProfitablePrice=${minProfitablePrice.toFixed(2)}, isConsecutiveSell=${isConsecutiveSell}, lastSellPrice=${lastSellPrice ? lastSellPrice.toFixed(2) : 'null'}, consecutiveSellCount=${consecutiveSellCount}`, 'cyan'));
           transactionLog.push(colorize(`DEBUG ALL LOTS: ${lots.map(lot => `$${lot.price.toFixed(2)}`).join(', ')}`, 'cyan'));
 
           // Select lots that would be profitable to sell
@@ -1191,8 +1195,8 @@ async function runDCABacktest(params) {
               orderTypeInfo = `Stop: ${stopPrice.toFixed(2)} (MARKET)`;
             }
             transactionLog.push(colorize(`  ACTION: TRAILING STOP SELL ACTIVATED - ${orderTypeInfo}, Triggered by ${(trailingSellActivationPercent * 100).toFixed(1)}% rise from bottom ${recentBottom.toFixed(2)} (Unrealized P&L: ${unrealizedPNL.toFixed(2)})`, 'yellow'));
-            if (enableConsecutiveIncrementalSellProfit && lotProfitRequirement !== profitRequirement) {
-              transactionLog.push(colorize(`  📈 CONSECUTIVE SELL: Lot profit requirement ${(lotProfitRequirement * 100).toFixed(2)}% (base ${(profitRequirement * 100).toFixed(2)}%)`, 'cyan'));
+            if (enableConsecutiveIncrementalSellProfit && lotProfitRequirement !== params.profitRequirement) {
+              transactionLog.push(colorize(`  📈 CONSECUTIVE SELL: Lot profit requirement ${(lotProfitRequirement * 100).toFixed(2)}% (base ${(params.profitRequirement * 100).toFixed(2)}%)`, 'cyan'));
             }
           } else if (enableConsecutiveIncrementalSellProfit && isConsecutiveSell) {
             // Track aborted sell event when consecutive sell conditions fail
@@ -1240,7 +1244,7 @@ async function runDCABacktest(params) {
           const isConsecutiveSell = (lastSellPrice !== null && currentPrice > lastSellPrice);
 
           // Calculate lot-level profit requirement (same logic as activation)
-          let lotProfitRequirement = profitRequirement; // Default to base
+          let lotProfitRequirement = params.profitRequirement; // Default to base
           if (enableConsecutiveIncrementalSellProfit && isConsecutiveSell) {
             let gridSize;
             if (enableDynamicGrid) {
@@ -1253,7 +1257,7 @@ async function runDCABacktest(params) {
             } else {
               gridSize = gridIntervalPercent;
             }
-            lotProfitRequirement = profitRequirement + gridSize;
+            lotProfitRequirement = params.profitRequirement + gridSize;
           }
 
           // Recalculate lot selection with new stop price using profit requirement
@@ -1288,8 +1292,8 @@ async function runDCABacktest(params) {
             }
             transactionLog.push(colorize(`  ACTION: TRAILING STOP SELL UPDATED from ${updateOrderInfo}, lots: ${newLotsToSell.map(lot => `$${lot.price.toFixed(2)}`).join(', ')} (High: ${currentPrice.toFixed(2)})`, 'cyan'));
             transactionLog.push(colorize(`  DEBUG: Updated eligible lots: ${eligibleLots.map(lot => `$${lot.price.toFixed(2)}`).join(', ')}, selected: ${newLotsToSell.map(lot => `$${lot.price.toFixed(2)}`).join(', ')}`, 'cyan'));
-            if (enableConsecutiveIncrementalSellProfit && lotProfitRequirement !== profitRequirement) {
-              transactionLog.push(colorize(`  📈 CONSECUTIVE SELL: Lot profit requirement ${(lotProfitRequirement * 100).toFixed(2)}% (base ${(profitRequirement * 100).toFixed(2)}%)`, 'cyan'));
+            if (enableConsecutiveIncrementalSellProfit && lotProfitRequirement !== params.profitRequirement) {
+              transactionLog.push(colorize(`  📈 CONSECUTIVE SELL: Lot profit requirement ${(lotProfitRequirement * 100).toFixed(2)}% (base ${(params.profitRequirement * 100).toFixed(2)}%)`, 'cyan'));
             }
           } else {
             // No eligible lots, cancel the stop
@@ -1302,11 +1306,11 @@ async function runDCABacktest(params) {
 
     // Cancel trailing stop if price falls below profit requirement threshold
     const cancelTrailingStopIfUnprofitable = (currentPrice) => {
-      const minProfitablePrice = averageCost * (1 + profitRequirement);
+      const minProfitablePrice = averageCost * (1 + params.profitRequirement);
       if (activeStop && currentPrice <= minProfitablePrice) {
         const cancelledStopPrice = activeStop.stopPrice;
         activeStop = null;
-        transactionLog.push(colorize(`  ACTION: TRAILING STOP CANCELLED - Price ${currentPrice.toFixed(2)} <= min profitable price ${minProfitablePrice.toFixed(2)} (avg cost ${averageCost.toFixed(2)}, profit requirement ${(profitRequirement*100).toFixed(1)}%, stop was ${cancelledStopPrice.toFixed(2)})`, 'yellow'));
+        transactionLog.push(colorize(`  ACTION: TRAILING STOP CANCELLED - Price ${currentPrice.toFixed(2)} <= min profitable price ${minProfitablePrice.toFixed(2)} (avg cost ${averageCost.toFixed(2)}, profit requirement ${(params.profitRequirement*100).toFixed(1)}%, stop was ${cancelledStopPrice.toFixed(2)})`, 'yellow'));
       }
     };
 
@@ -1353,6 +1357,7 @@ async function runDCABacktest(params) {
         // Apply profile overrides
         const profile = PROFILES[currentProfile];
         params.trailingBuyActivationPercent = profile.overrides.trailingBuyActivationPercent;
+        params.trailingSellActivationPercent = profile.overrides.trailingSellActivationPercent;
         params.profitRequirement = profile.overrides.profitRequirement;
 
         // Log the switch
@@ -1370,7 +1375,7 @@ async function runDCABacktest(params) {
           'magenta'
         ));
         transactionLog.push(colorize(
-          `     Buy Activation: ${(profile.overrides.trailingBuyActivationPercent * 100).toFixed(0)}%, Profit Req: ${(profile.overrides.profitRequirement * 100).toFixed(0)}%`,
+          `     Buy Activation: ${(profile.overrides.trailingBuyActivationPercent * 100).toFixed(0)}%, Sell Activation: ${(profile.overrides.trailingSellActivationPercent * 100).toFixed(0)}%, Profit Req: ${(profile.overrides.profitRequirement * 100).toFixed(0)}%`,
           'cyan'
         ));
 
@@ -1442,14 +1447,20 @@ async function runDCABacktest(params) {
           const profile = PROFILES[currentProfile];
           originalParams = {
             trailingBuyActivationPercent: params.trailingBuyActivationPercent,
+            trailingSellActivationPercent: params.trailingSellActivationPercent,
             profitRequirement: params.profitRequirement
           };
           params.trailingBuyActivationPercent = profile.overrides.trailingBuyActivationPercent;
+          params.trailingSellActivationPercent = profile.overrides.trailingSellActivationPercent;
           params.profitRequirement = profile.overrides.profitRequirement;
 
           transactionLog.push(colorize(
             `  🎯 INITIAL PROFILE: ${currentProfile} (P/L: $${totalPNL.toFixed(2)})`,
             'magenta'
+          ));
+          transactionLog.push(colorize(
+            `     Buy Activation: ${(profile.overrides.trailingBuyActivationPercent * 100).toFixed(0)}%, Sell Activation: ${(profile.overrides.trailingSellActivationPercent * 100).toFixed(0)}%, Profit Req: ${(profile.overrides.profitRequirement * 100).toFixed(0)}%`,
+            'cyan'
           ));
         }
       } else {
@@ -1520,9 +1531,9 @@ async function runDCABacktest(params) {
           // Always use current price as execution price
           const executionPrice = currentPrice;
 
-          // Execute only if execution price > limit price AND execution price > average cost * (1 + profitRequirement)
+          // Execute only if execution price > limit price AND execution price > average cost * (1 + params.profitRequirement)
           // For market orders, skip the limit price check
-          const minProfitablePrice = averageCost * (1 + profitRequirement);
+          const minProfitablePrice = averageCost * (1 + params.profitRequirement);
           const aboveLimitPrice = trailingStopOrderType === 'market' || executionPrice > limitPrice;
           if (aboveLimitPrice && executionPrice > minProfitablePrice) {
           let totalSaleValue = 0;
@@ -1614,7 +1625,7 @@ async function runDCABacktest(params) {
               annualizedReturn: lotAnnualizedReturn, // Individual lot annualized return
               annualizedReturnPercent: lotAnnualizedReturn * 100,
               actualDaysHeld: actualDaysHeldForLot, // Individual lot holding period
-              lotProfitRequirement: activeStop.lotProfitRequirement || profitRequirement, // Profit requirement used for this sell
+              lotProfitRequirement: activeStop.lotProfitRequirement || params.profitRequirement, // Profit requirement used for this sell
               ocoOrderDetail: null,
               trailingStopDetail: {
                 triggered: true,
@@ -1640,11 +1651,11 @@ async function runDCABacktest(params) {
           );
 
           // Log consecutive sell profit information if applicable
-          const lotProfitReq = activeStop.lotProfitRequirement || profitRequirement;
+          const lotProfitReq = activeStop.lotProfitRequirement || params.profitRequirement;
           if (enableConsecutiveIncrementalSellProfit) {
-            if (lotProfitReq !== profitRequirement) {
+            if (lotProfitReq !== params.profitRequirement) {
               transactionLog.push(
-                colorize(`  📈 CONSECUTIVE SELL PROFIT: Lot profit requirement was ${(lotProfitReq * 100).toFixed(2)}% (base ${(profitRequirement * 100).toFixed(2)}%)`, 'cyan')
+                colorize(`  📈 CONSECUTIVE SELL PROFIT: Lot profit requirement was ${(lotProfitReq * 100).toFixed(2)}% (base ${(params.profitRequirement * 100).toFixed(2)}%)`, 'cyan')
               );
               if (lastSellPrice !== null) {
                 transactionLog.push(
@@ -1653,7 +1664,7 @@ async function runDCABacktest(params) {
               }
             } else {
               transactionLog.push(
-                colorize(`  ℹ️  CONSECUTIVE SELL: Not in consecutive uptrend (using base profit req ${(profitRequirement * 100).toFixed(2)}%)`, 'cyan')
+                colorize(`  ℹ️  CONSECUTIVE SELL: Not in consecutive uptrend (using base profit req ${(params.profitRequirement * 100).toFixed(2)}%)`, 'cyan')
               );
             }
           }

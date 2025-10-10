@@ -455,6 +455,9 @@ class URLParameterManager {
     if (parameters.enableAverageBasedGrid !== undefined) params.set('enableAverageBasedGrid', parameters.enableAverageBasedGrid.toString());
     if (parameters.enableAverageBasedSell !== undefined) params.set('enableAverageBasedSell', parameters.enableAverageBasedSell.toString());
 
+    // Spec 24: Dynamic profile switching
+    if (parameters.enableDynamicProfile !== undefined) params.set('enableDynamicProfile', parameters.enableDynamicProfile.toString());
+
     // Grid option numeric parameters
     if (parameters.dynamicGridMultiplier !== undefined) params.set('dynamicGridMultiplier', parameters.dynamicGridMultiplier.toString());
     if (parameters.gridConsecutiveIncrement !== undefined) params.set('gridConsecutiveIncrement', parameters.gridConsecutiveIncrement.toString());
@@ -523,7 +526,8 @@ class URLParameterManager {
       'enableConsecutiveIncrementalSellProfit',
       'enableScenarioDetection',
       'enableAverageBasedGrid',
-      'enableAverageBasedSell'
+      'enableAverageBasedSell',
+      'enableDynamicProfile'
     ];
 
     booleanFlags.forEach(flag => {
@@ -626,6 +630,11 @@ class URLParameterManager {
     }
     if (params.enableAverageBasedSell !== undefined) {
       decoded.enableAverageBasedSell = this._parseBoolean(params.enableAverageBasedSell, false);
+    }
+
+    // Spec 24: Dynamic profile switching
+    if (params.enableDynamicProfile !== undefined) {
+      decoded.enableDynamicProfile = this._parseBoolean(params.enableDynamicProfile, false);
     }
 
     // Grid option numeric parameters
