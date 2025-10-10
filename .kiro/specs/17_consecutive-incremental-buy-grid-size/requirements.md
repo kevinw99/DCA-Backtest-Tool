@@ -36,30 +36,23 @@ The grid spacing increases **ONLY** when **BOTH** conditions are met:
 
 If either condition fails, reset to base grid size.
 
-### Consecutive Buy Restrictions
+### Consecutive Buy Grid Spacing Logic
 
-**IMPORTANT**: These restrictions apply **regardless of whether `enableConsecutiveIncrementalBuyGrid` is enabled or disabled**.
+**IMPORTANT**: When `enableConsecutiveIncrementalBuyGrid` is enabled, the feature controls **grid spacing calculation**, not buy execution blocking.
 
-1. **Price restriction when `lastBuyPrice` exists (not null)**:
-   - Buy orders can **ONLY** execute when `currentPrice < lastBuyPrice`
-   - This applies whether `consecutiveBuyCount > 0` or `consecutiveBuyCount = 0`
-   - If price rises above or equals last buy price, the trailing stop buy is **canceled**
+1. **Grid spacing determination based on price direction**:
+   - **Downtrend** (`currentPrice < lastBuyPrice`): Use incremental grid spacing
+     - Grid size = `gridIntervalPercent + (consecutiveBuyCount * gridConsecutiveIncrement)`
+     - Example: 10% base + (2 buys × 5%) = 20% grid
+   - **Uptrend** (`currentPrice >= lastBuyPrice`) or **no previous buy**: Use base grid spacing
+     - Grid size = `gridIntervalPercent` (constant)
+     - Example: Always 10% grid regardless of consecutive count
+   - **Rationale**: Wider spacing only needed in downtrends to preserve capital; uptrends use standard spacing
 
-2. **Consecutive buy count resets to 0 when**:
-   - **A.** A sell order executes
-     - Reset both `consecutiveBuyCount = 0` and `lastBuyPrice = null`
-   - **B.** A buy order executes at a price >= lastBuyPrice
-     - This buy must still respect **base grid spacing** from all existing lots
-     - After this buy executes, reset `consecutiveBuyCount = 0`
-     - **Keep `lastBuyPrice` unchanged** (do NOT reset to null)
-     - **Rationale**: If buy price >= lastBuyPrice, we're NOT in a consecutive downtrend anymore
-     - This allows next buy to use base grid, but still requires price < lastBuyPrice if price continues down
-     - If price goes up further, then it's not a consecutive buy, so next buy can execute at any price (as long as other conditions like grid spacing are met)
-
-3. **After count reset (consecutiveBuyCount = 0)**:
-   - If `lastBuyPrice = null` (after sell): Next buy can execute at any price (only grid spacing required)
-   - If `lastBuyPrice` is kept (after buy >= lastBuyPrice): Next buy still requires price < lastBuyPrice
-   - Grid size always uses base grid when count = 0
+2. **Consecutive buy count management**:
+   - **Updated by Spec 25**: Uses direction-based counting (see Spec 25 requirements)
+   - Count increments/resets based on price direction between consecutive buys
+   - Count tracks the sequence length and affects grid size (in downtrends only)
 
 ## Detailed Requirements
 
@@ -101,85 +94,35 @@ Track the following variables during backtest:
 
 ### 3. Grid Size Calculation Logic
 
-#### Price Restriction Check Before Buy Execution
+#### Grid Size Determination Based on Price Direction
 
-**CRITICAL**: Before executing any buy order, check price restrictions:
+**When calculating grid spacing for the most recent lot during grid spacing check**:
 
 ```javascript
-// PRICE RESTRICTION CHECK
-// If lastBuyPrice exists, only allow buys when price < lastBuyPrice
-// This applies regardless of consecutiveBuyCount value
-if (lastBuyPrice !== null && currentPrice >= lastBuyPrice) {
-  // Block the buy and cancel trailing stop buy
-  if (verbose) {
-    const countMsg = consecutiveBuyCount > 0 ? `count: ${consecutiveBuyCount}` : `count: 0`;
-    log(`BLOCKED: Buy prevented - Price ${currentPrice} >= last buy ${lastBuyPrice} (${countMsg})`);
+// Determine grid size based on price direction
+if (enableConsecutiveIncrementalBuyGrid) {
+  const isLastBuy = (index === lots.length - 1);
+
+  if (isLastBuy && lastBuyPrice !== null && currentPrice < lastBuyPrice) {
+    // DOWNTREND: Apply incremental grid spacing
+    gridSize = gridIntervalPercent + (consecutiveBuyCount * gridConsecutiveIncrement);
+  } else {
+    // UPTREND or no previous buy: Use base grid spacing
+    gridSize = gridIntervalPercent;
   }
-  cancelTrailingStopBuy();
-  return false; // Do not execute buy
+} else {
+  gridSize = gridIntervalPercent; // Feature disabled, use base grid
 }
 ```
 
-#### Reset Consecutive Buy Count
+**Grid size conditions**:
 
-Reset **ONLY** when:
+- **Downtrend** (`currentPrice < lastBuyPrice`): Incremental grid (e.g., 10%, 15%, 20%, ...)
+- **Uptrend** (`currentPrice >= lastBuyPrice`): Base grid (e.g., 10%, 10%, 10%, ...)
+- **No previous buy** (`lastBuyPrice === null`): Base grid (e.g., 10%)
+- **Feature disabled**: Always base grid
 
-**A. After sell execution:**
-
-```javascript
-// After sell executes
-consecutiveBuyCount = 0;
-lastBuyPrice = null;
-```
-
-**B. After buy execution at price >= average cost:**
-
-```javascript
-// After buy executes, check if we need to reset count
-// IMPORTANT: Get OLD average cost BEFORE this buy was added
-const oldAverageCost = calculateOldAverageCost(); // Before current buy
-
-if (oldAverageCost > 0 && currentBuyPrice >= oldAverageCost) {
-  // This buy was at or above average cost
-  // Reset consecutive count but KEEP lastBuyPrice
-  consecutiveBuyCount = 0;
-  // Do NOT reset lastBuyPrice - keep the reference
-  // Log the reset
-}
-```
-
-**IMPORTANT**: Do NOT reset based on price movements alone. Only reset when an actual buy or sell executes.
-
-#### Calculate Dynamic Grid Size
-
-```javascript
-// Calculate grid size for next buy
-let nextGridSize = gridIntervalPercent; // Default to base
-
-if (
-  enableConsecutiveIncrementalBuyGrid &&
-  consecutiveBuyCount > 0 &&
-  lastBuyPrice !== null &&
-  currentBuyPrice < lastBuyPrice
-) {
-  // Consecutive downtrend buy - apply incremental spacing
-  nextGridSize = gridIntervalPercent + consecutiveBuyCount * gridConsecutiveIncrement;
-}
-```
-
-**Reset conditions** (nextGridSize = gridIntervalPercent):
-
-- No previous buy (first buy, consecutiveBuyCount = 0)
-- Last action was a sell (consecutiveBuyCount reset to 0)
-- Previous buy was at or above average cost (consecutiveBuyCount reset to 0)
-- Current buy price ≥ last buy price (price not declining - incremental grid not applicable)
-
-#### Calculate Next Buy Price
-
-```javascript
-// For trailing stop buy system
-const nextBuyPrice = currentBuyPrice * (1 - nextGridSize);
-```
+**Key insight**: Grid spacing calculation determines HOW FAR the next buy must be from the last buy. It does NOT block buy execution - only enforces spacing requirements.
 
 ### 4. Integration with Trailing Stop Buy System
 

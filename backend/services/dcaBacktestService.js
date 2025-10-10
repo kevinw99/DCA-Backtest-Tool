@@ -1021,10 +1021,17 @@ async function runDCABacktest(params) {
                   gridSize = calculateDynamicGridSpacing(midPrice, ref, dynamicGridMultiplier, normalizeToReference);
                 } else if (enableConsecutiveIncrementalBuyGrid) {
                   // For consecutive incremental buy grid:
-                  // - Check spacing from LAST buy (most recent) using buyGridSize
+                  // - Check spacing from LAST buy (most recent) using direction-based grid size
                   // - Check spacing from OTHER buys using base gridIntervalPercent
                   const isLastBuy = (index === lots.length - 1);
-                  gridSize = isLastBuy ? buyGridSize : gridIntervalPercent;
+
+                  if (isLastBuy && lastBuyPrice !== null && currentPrice < lastBuyPrice) {
+                    // DOWNTREND: Use incremental grid spacing (Spec 17)
+                    gridSize = buyGridSize; // gridIntervalPercent + (consecutiveBuyCount * gridConsecutiveIncrement)
+                  } else {
+                    // UPTREND or no previous buy: Use base grid spacing
+                    gridSize = gridIntervalPercent;
+                  }
                 } else {
                   gridSize = gridIntervalPercent; // Legacy fixed percentage
                 }
@@ -1042,49 +1049,12 @@ async function runDCABacktest(params) {
 
             if (respectsGridSpacing) {
 
-            // PRICE RESTRICTION CHECK (CONSECUTIVE BUY GRID FEATURE):
-            // If consecutive buy grid is enabled AND lastBuyPrice exists,
-            // only allow buys at prices LOWER than last buy.
-            // This prevents buying on uptrends during consecutive buy sequences.
-            // FIX: Only apply this restriction when the feature is enabled!
-            if (enableConsecutiveIncrementalBuyGrid && lastBuyPrice !== null && currentPrice >= lastBuyPrice) {
-              const countMsg = consecutiveBuyCount > 0 ? `count: ${consecutiveBuyCount}` : `count: 0`;
-              transactionLog.push(colorize(`  BLOCKED: Consecutive buy prevented - Price ${currentPrice.toFixed(2)} >= last buy ${lastBuyPrice.toFixed(2)} (${countMsg})`, 'yellow'));
-
-              // Track aborted buy event
-              if (consecutiveBuyCount > 0) {
-                enhancedTransactions.push({
-                  date: currentDate,
-                  type: 'ABORTED_BUY',
-                  price: currentPrice,
-                  shares: 0,
-                  value: 0,
-                  lotsDetails: null,
-                  lotsAfterTransaction: [...lots],
-                  averageCost: averageCost,
-                  unrealizedPNL: null,
-                  realizedPNL: realizedPNL,
-                  totalPNL: null,
-                  realizedPNLFromTrade: 0,
-                  abortReason: `Price ${currentPrice.toFixed(2)} not lower than last buy ${lastBuyPrice.toFixed(2)}`,
-                  consecutiveBuyCount: consecutiveBuyCount,
-                  buyGridSize: buyGridSize,
-                  lastBuyPrice: lastBuyPrice
-                });
-
-                if (verbose) {
-                  transactionLog.push(colorize(`  🚫 ABORTED BUY: Consecutive buy condition failed - Price must be < ${lastBuyPrice.toFixed(2)}`, 'yellow'));
-                }
-              }
-
-              // Cancel the trailing stop buy since we can't execute it
-              transactionLog.push(colorize(`  INFO: Trailing stop buy cleared - consecutive buy price restriction not met`, 'cyan'));
-              trailingStopBuy = null;
-              return false;
-            }
-
+            // Spec 17 & 25: Grid spacing check passed - proceed with buy execution
+            // Note: Grid spacing already accounts for direction (downtrend=incremental, uptrend=base)
             if (verbose && enableConsecutiveIncrementalBuyGrid) {
-              transactionLog.push(colorize(`  DEBUG: Consecutive Buy Grid - Count: ${consecutiveBuyCount}, Last Buy: ${lastBuyPrice ? lastBuyPrice.toFixed(2) : 'null'}, Grid Size: ${(buyGridSize * 100).toFixed(1)}%`, 'cyan'));
+              const direction = (lastBuyPrice && currentPrice < lastBuyPrice) ? 'DOWNTREND' :
+                               (lastBuyPrice && currentPrice >= lastBuyPrice) ? 'UPTREND' : 'FIRST BUY';
+              transactionLog.push(colorize(`  DEBUG: Consecutive Buy Grid - Direction: ${direction}, Count: ${consecutiveBuyCount}, Last Buy: ${lastBuyPrice ? lastBuyPrice.toFixed(2) : 'null'}, Grid Size: ${(buyGridSize * 100).toFixed(1)}%`, 'cyan'));
             }
 
             // Capture OLD average cost BEFORE executing this buy
@@ -1236,7 +1206,14 @@ async function runDCABacktest(params) {
                     gridSize = calculateDynamicGridSpacing(midPrice, ref, dynamicGridMultiplier, normalizeToReference);
                   } else if (enableConsecutiveIncrementalBuyGrid) {
                     const isLastBuy = (index === lots.length - 1);
-                    gridSize = isLastBuy ? buyGridSize : gridIntervalPercent;
+
+                    if (isLastBuy && lastBuyPrice !== null && currentPrice < lastBuyPrice) {
+                      // DOWNTREND: Use incremental grid spacing
+                      gridSize = buyGridSize;
+                    } else {
+                      // UPTREND or no previous buy: Use base grid spacing
+                      gridSize = gridIntervalPercent;
+                    }
                   } else {
                     gridSize = gridIntervalPercent;
                   }
