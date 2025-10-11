@@ -92,6 +92,9 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
       enableConsecutiveIncrementalBuyGrid: false,
       gridConsecutiveIncrement: [5],
       enableConsecutiveIncrementalSellProfit: true,
+      // Spec 27: Directional strategy control flags
+      enableAdaptiveTrailingBuy: false,
+      enableAdaptiveTrailingSell: false,
       enableScenarioDetection: true,
       trailingStopOrderType: 'limit',
       enableAverageBasedGrid: false,
@@ -392,6 +395,9 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
         normalizeToReference: (value) => value === 'true' || value === true,
         enableConsecutiveIncrementalBuyGrid: (value) => value === 'true' || value === true,
         enableConsecutiveIncrementalSellProfit: (value) => value === 'true' || value === true,
+        // Spec 27: Directional strategy control flags
+        enableAdaptiveTrailingBuy: (value) => value === 'true' || value === true,
+        enableAdaptiveTrailingSell: (value) => value === 'true' || value === true,
         enableAverageBasedGrid: (value) => value === 'true' || value === true,
         enableAverageBasedSell: (value) => value === 'true' || value === true,
         enableDynamicProfile: (value) => value === 'true' || value === true,
@@ -430,7 +436,10 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
             'symbol', 'startDate', 'endDate', 'lotSizeUsd', 'gridIntervalPercent', 'profitRequirement',
             // Grid & Incremental Options boolean flags
             'enableDynamicGrid', 'normalizeToReference', 'enableConsecutiveIncrementalBuyGrid',
-            'enableConsecutiveIncrementalSellProfit', 'enableScenarioDetection',
+            'enableConsecutiveIncrementalSellProfit',
+            // Spec 27: Directional strategy control flags
+            'enableAdaptiveTrailingBuy', 'enableAdaptiveTrailingSell',
+            'enableScenarioDetection',
             'enableAverageBasedGrid', 'enableAverageBasedSell', 'enableDynamicProfile',
             // Grid option numeric parameters
             'dynamicGridMultiplier', 'gridConsecutiveIncrement',
@@ -1940,24 +1949,40 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                 </div>
 
                 {parameters.enableConsecutiveIncrementalBuyGrid && (
-                  <div className="form-group">
-                    <label htmlFor="gridConsecutiveIncrement">
-                      Grid Consecutive Increment (%)
-                    </label>
-                    <input
-                      id="gridConsecutiveIncrement"
-                      type="number"
-                      value={parameters.gridConsecutiveIncrement ?? 5}
-                      onChange={(e) => handleChange('gridConsecutiveIncrement', parseFloat(e.target.value))}
-                      min="0"
-                      max="20"
-                      step="1"
-                      required
-                    />
-                    <span className="form-help">
-                      Amount to add to base grid for each consecutive buy (e.g., 5% means 1st buy: 10%, 2nd: 15%, 3rd: 20%)
-                    </span>
-                  </div>
+                  <>
+                    <div className="form-group">
+                      <label htmlFor="gridConsecutiveIncrement">
+                        Grid Consecutive Increment (%)
+                      </label>
+                      <input
+                        id="gridConsecutiveIncrement"
+                        type="number"
+                        value={parameters.gridConsecutiveIncrement ?? 5}
+                        onChange={(e) => handleChange('gridConsecutiveIncrement', parseFloat(e.target.value))}
+                        min="0"
+                        max="20"
+                        step="1"
+                        required
+                      />
+                      <span className="form-help">
+                        Amount to add to base grid for each consecutive buy (e.g., 5% means 1st buy: 10%, 2nd: 15%, 3rd: 20%)
+                      </span>
+                    </div>
+
+                    <div className="form-group checkbox-group" style={{ marginLeft: '20px' }}>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={parameters.enableAdaptiveTrailingBuy ?? false}
+                          onChange={(e) => handleChange('enableAdaptiveTrailingBuy', e.target.checked)}
+                        />
+                        Enable Adaptive Uptrend Buys (Spec 25)
+                      </label>
+                      <span className="form-help">
+                        When enabled: Allow momentum buys when price rises (Spec 25). When disabled: Only buy on downtrends (Spec 17 traditional)
+                      </span>
+                    </div>
+                  </>
                 )}
 
                 <div className="form-group checkbox-group">
@@ -1973,6 +1998,23 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                     Increase profit requirement for consecutive sells during uptrends (profit req + grid size)
                   </span>
                 </div>
+
+                {/* Spec 27: Adaptive Sell Direction Control */}
+                {parameters.enableConsecutiveIncrementalSellProfit && (
+                  <div className="form-group checkbox-group" style={{ marginLeft: '20px' }}>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={parameters.enableAdaptiveTrailingSell ?? false}
+                        onChange={(e) => handleChange('enableAdaptiveTrailingSell', e.target.checked)}
+                      />
+                      Enable Adaptive Downtrend Sells (Spec 25)
+                    </label>
+                    <span className="form-help">
+                      When enabled: Allow stop-loss sells when price falls (Spec 25). When disabled: Only sell on uptrends (Spec 18 traditional)
+                    </span>
+                  </div>
+                )}
 
                 <div className="form-group checkbox-group">
                   <label>
@@ -2028,7 +2070,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                     Enable Dynamic Profile Switching
                   </label>
                   <span className="form-help">
-                    Automatically adjust strategy based on Total P/L: Conservative (harder to buy, easier to sell) when P/L &lt; 0, Aggressive (easier to buy, harder to sell) when P/L ≥ 0. Requires 3 consecutive days before switching profiles.
+                    Automatically adjust strategy based on position status: Conservative (buy: 20% drop, sell: easier) when LOSING, Aggressive (buy: immediate, sell: 20% from peak + 10% profit) when WINNING. Requires 3 consecutive days in same position status before switching.
                   </span>
                 </div>
 

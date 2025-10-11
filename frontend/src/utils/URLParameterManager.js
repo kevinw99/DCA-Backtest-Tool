@@ -460,7 +460,7 @@ class URLParameterManager {
 
     // Grid option numeric parameters
     if (parameters.dynamicGridMultiplier !== undefined) params.set('dynamicGridMultiplier', parameters.dynamicGridMultiplier.toString());
-    if (parameters.gridConsecutiveIncrement !== undefined) params.set('gridConsecutiveIncrement', parameters.gridConsecutiveIncrement.toString());
+    if (parameters.gridConsecutiveIncrement !== undefined) params.set('gridConsecutiveIncrement', this._formatDecimalAsPercentage(parameters.gridConsecutiveIncrement).toString());
 
     // Trailing stop order type (only include if not 'limit' to keep URLs clean)
     if (parameters.trailingStopOrderType && parameters.trailingStopOrderType !== 'limit') {
@@ -542,7 +542,7 @@ class URLParameterManager {
       params.set('dynamicGridMultiplier', parameters.dynamicGridMultiplier.toString());
     }
     if (parameters.gridConsecutiveIncrement !== undefined) {
-      params.set('gridConsecutiveIncrement', parameters.gridConsecutiveIncrement.toString());
+      params.set('gridConsecutiveIncrement', this._formatDecimalAsPercentage(parameters.gridConsecutiveIncrement).toString());
     }
 
     // Trailing stop order type (only include if not 'limit')
@@ -642,7 +642,7 @@ class URLParameterManager {
       decoded.dynamicGridMultiplier = this._parseNumber(params.dynamicGridMultiplier, 1.0);
     }
     if (params.gridConsecutiveIncrement !== undefined) {
-      decoded.gridConsecutiveIncrement = this._parseNumber(params.gridConsecutiveIncrement, 5);
+      decoded.gridConsecutiveIncrement = this._parsePercentageAsDecimal(params.gridConsecutiveIncrement, 5);
     }
 
     // Trailing stop order type

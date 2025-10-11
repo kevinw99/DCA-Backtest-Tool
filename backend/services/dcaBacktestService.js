@@ -26,8 +26,8 @@ const { detectScenario } = require('./scenarioDetectionService');
 const PROFILES = {
   CONSERVATIVE: {
     name: 'Conservative',
-    description: 'Preserve capital when losing money',
-    trigger: 'Total P/L < 0 for 3+ consecutive days',
+    description: 'Preserve capital when in losing position',
+    trigger: 'Position status = LOSING for 3+ consecutive days',
     overrides: {
       trailingBuyActivationPercent: 0.20,  // Harder to buy - wait for 20% drop
       trailingSellActivationPercent: 0.00, // Easier to sell - no activation needed
@@ -38,8 +38,8 @@ const PROFILES = {
 
   AGGRESSIVE: {
     name: 'Aggressive',
-    description: 'Maximize gains when making money',
-    trigger: 'Total P/L >= 0 for 3+ consecutive days',
+    description: 'Maximize gains when in winning position',
+    trigger: 'Position status = WINNING for 3+ consecutive days',
     overrides: {
       trailingBuyActivationPercent: 0.00,  // Easier to buy - accumulate winners
       trailingSellActivationPercent: 0.20, // Harder to sell - wait for 20% gain
@@ -392,7 +392,7 @@ function calculateBuyGridSize(
 }
 
 /**
- * Calculate adaptive sell trailing stop parameters (Spec 25)
+ * Calculate adaptive sell trailing stop parameters (Spec 25 + Spec 27)
  * Automatically adjusts trailing stop parameters based on price direction during consecutive sells
  *
  * @param {number} currentPrice - Current market price
@@ -402,6 +402,8 @@ function calculateBuyGridSize(
  * @param {number|null} lastSellPullback - Last used pullback % (null on first sell)
  * @param {number} consecutiveSellCount - Number of consecutive sells
  * @param {boolean} enableConsecutiveIncrementalSellProfit - Is feature enabled?
+ * @param {string} positionStatus - Position status for sell gating (Spec 26)
+ * @param {boolean} enableAdaptiveTrailingSell - Enable adaptive (downtrend) selling (Spec 27)
  * @returns {Object} Adaptive parameters: { activation, pullback, skipProfitRequirement, isAdaptive, direction, previousPullback? }
  */
 function calculateAdaptiveSellParameters(
@@ -412,7 +414,8 @@ function calculateAdaptiveSellParameters(
   lastSellPullback,
   consecutiveSellCount,
   enableConsecutiveIncrementalSellProfit,
-  positionStatus  // Spec 26: position status for sell gating
+  positionStatus,  // Spec 26: position status for sell gating
+  enableAdaptiveTrailingSell = false  // Spec 27: directional control
 ) {
   // Default to standard parameters
   let activation = trailingSellActivationPercent;
@@ -427,8 +430,21 @@ function calculateAdaptiveSellParameters(
   // Determine price direction
   const isDowntrend = currentPrice < lastSellPrice;
 
+  // Spec 27: Check if we should block or allow downtrend sells
   if (isDowntrend) {
-    // CASE 1: Price falling - exit faster
+    if (!enableAdaptiveTrailingSell) {
+      // BLOCKED: Downtrend sell prevented by Spec 27 (traditional Spec 18 behavior)
+      return {
+        activation,
+        pullback,
+        skipProfitRequirement: false,
+        isAdaptive: false,
+        direction: 'down_blocked_spec27',
+        blockReason: 'traditional_uptrend_only'
+      };
+    }
+
+    // CASE 1: Price falling + adaptive enabled - exit faster (Spec 25)
     activation = 0;  // Skip activation check
     skipProfitRequirement = true;  // Skip profit requirement
 
@@ -447,7 +463,7 @@ function calculateAdaptiveSellParameters(
     };
   }
 
-  // CASE 2: Price rising - standard behavior
+  // CASE 2: Price rising - standard behavior (Spec 18)
   return {
     activation,
     pullback,
@@ -458,7 +474,7 @@ function calculateAdaptiveSellParameters(
 }
 
 /**
- * Calculate adaptive buy trailing stop parameters (Spec 25)
+ * Calculate adaptive buy trailing stop parameters (Spec 25 + Spec 27)
  * Automatically adjusts trailing stop parameters based on price direction during consecutive buys
  *
  * @param {number} currentPrice - Current market price
@@ -468,6 +484,8 @@ function calculateAdaptiveSellParameters(
  * @param {number|null} lastBuyRebound - Last used rebound % (null on first buy)
  * @param {number} consecutiveBuyCount - Number of consecutive buys
  * @param {boolean} enableConsecutiveIncrementalBuyGrid - Is feature enabled?
+ * @param {string} positionStatus - Position status for buy gating (Spec 26)
+ * @param {boolean} enableAdaptiveTrailingBuy - Enable adaptive (uptrend) buying (Spec 27)
  * @returns {Object} Adaptive parameters: { activation, rebound, isAdaptive, direction, previousRebound? }
  */
 function calculateAdaptiveBuyParameters(
@@ -478,7 +496,8 @@ function calculateAdaptiveBuyParameters(
   lastBuyRebound,
   consecutiveBuyCount,
   enableConsecutiveIncrementalBuyGrid,
-  positionStatus  // Spec 26: position status for buy gating
+  positionStatus,  // Spec 26: position status for buy gating
+  enableAdaptiveTrailingBuy = false  // Spec 27: directional control
 ) {
   // Default to standard parameters
   let activation = trailingBuyActivationPercent;
@@ -492,10 +511,22 @@ function calculateAdaptiveBuyParameters(
   // Determine price direction
   const isUptrend = currentPrice > lastBuyPrice;
 
+  // Spec 27: Check if we should block or allow uptrend buys
   if (isUptrend) {
-    // Spec 26: Uptrend buys ONLY allowed when in winning position
+    if (!enableAdaptiveTrailingBuy) {
+      // BLOCKED: Uptrend buy prevented by Spec 27 (traditional Spec 17 behavior)
+      return {
+        activation,
+        rebound,
+        isAdaptive: false,
+        direction: 'up_blocked_spec27',
+        blockReason: 'traditional_downtrend_only'
+      };
+    }
+
+    // Adaptive enabled - check Spec 26 position gating
     if (positionStatus !== 'winning') {
-      // Block uptrend buy - return standard behavior (downtrend logic)
+      // Block uptrend buy - Spec 26 position gating
       return {
         activation,
         rebound,
@@ -505,7 +536,7 @@ function calculateAdaptiveBuyParameters(
       };
     }
 
-    // CASE 1: Price rising + winning position - accumulate faster
+    // CASE 1: Price rising + adaptive enabled + winning position - accumulate faster (Spec 25)
     activation = 0;  // Skip activation check
 
     // Calculate decayed rebound
@@ -522,7 +553,7 @@ function calculateAdaptiveBuyParameters(
     };
   }
 
-  // CASE 2: Price falling - standard behavior
+  // CASE 2: Price falling - standard behavior (Spec 17)
   return {
     activation,
     rebound,
@@ -564,6 +595,8 @@ async function runDCABacktest(params) {
     enableConsecutiveIncrementalSellProfit = true, // Enable incremental profit req for consecutive uptrend sells
     enableConsecutiveIncrementalBuyGrid = false, // Enable incremental grid spacing for consecutive downtrend buys
     gridConsecutiveIncrement = 0.05, // Grid increment per consecutive buy (default 0.05 for 5%)
+    enableAdaptiveTrailingBuy = false, // Spec 27: Enable adaptive buy (uptrend) vs traditional (downtrend only)
+    enableAdaptiveTrailingSell = false, // Spec 27: Enable adaptive sell (downtrend) vs traditional (uptrend only)
     enableScenarioDetection = true, // Enable scenario detection and analysis
     trailingStopOrderType = 'limit', // Order type: 'limit' (cancels if exceeds peak/bottom) or 'market' (always executes)
     enableAverageBasedGrid = false, // Enable average-cost based grid spacing (Spec 23 Feature #1)
@@ -615,9 +648,25 @@ async function runDCABacktest(params) {
     const consProfile = PROFILES.CONSERVATIVE;
     const aggProfile = PROFILES.AGGRESSIVE;
     console.log(`🔄 Feature: Dynamic Profile Switching = ENABLED`);
-    console.log(`   Conservative when P/L < 0: Harder to buy (${(consProfile.overrides.trailingBuyActivationPercent * 100).toFixed(0)}%), easier to sell (${(consProfile.overrides.trailingSellActivationPercent * 100).toFixed(0)}%)`);
-    console.log(`   Aggressive when P/L >= 0: Easier to buy (${(aggProfile.overrides.trailingBuyActivationPercent * 100).toFixed(0)}%), harder to sell (${(aggProfile.overrides.trailingSellActivationPercent * 100).toFixed(0)}%)`);
-    console.log(`   Requires ${HYSTERESIS_DAYS} consecutive days before switching`);
+    console.log(`   Conservative when position = LOSING: Harder to buy (${(consProfile.overrides.trailingBuyActivationPercent * 100).toFixed(0)}%), easier to sell (${(consProfile.overrides.trailingSellActivationPercent * 100).toFixed(0)}%)`);
+    console.log(`   Aggressive when position = WINNING: Easier to buy (${(aggProfile.overrides.trailingBuyActivationPercent * 100).toFixed(0)}%), harder to sell (${(aggProfile.overrides.trailingSellActivationPercent * 100).toFixed(0)}%)`);
+    console.log(`   Requires ${HYSTERESIS_DAYS} consecutive days in same position status before switching`);
+  }
+
+  // Log directional strategy control flags (Spec 27)
+  if (enableConsecutiveIncrementalBuyGrid) {
+    if (enableAdaptiveTrailingBuy) {
+      console.log(`📈 Buy Direction: ADAPTIVE (Spec 25) - allows uptrend buys`);
+    } else {
+      console.log(`📉 Buy Direction: TRADITIONAL (Spec 17) - downtrend only`);
+    }
+  }
+  if (enableConsecutiveIncrementalSellProfit) {
+    if (enableAdaptiveTrailingSell) {
+      console.log(`📉 Sell Direction: ADAPTIVE (Spec 25) - allows downtrend sells`);
+    } else {
+      console.log(`📈 Sell Direction: TRADITIONAL (Spec 18) - uptrend only`);
+    }
   }
 
   if (verbose) {
@@ -902,7 +951,7 @@ async function runDCABacktest(params) {
 
     // Check if trailing stop buy should be activated
     const checkTrailingStopBuyActivation = (currentPrice, currentDate) => {
-      // Calculate adaptive parameters for buy (Spec 25)
+      // Calculate adaptive parameters for buy (Spec 25 + Spec 27)
       const adaptiveBuyParams = calculateAdaptiveBuyParameters(
         currentPrice,
         lastBuyPrice,
@@ -911,7 +960,8 @@ async function runDCABacktest(params) {
         lastBuyRebound,
         consecutiveBuyCount,
         enableConsecutiveIncrementalBuyGrid,
-        positionStatus  // Spec 26: position-based buy gating
+        positionStatus,  // Spec 26: position-based buy gating
+        enableAdaptiveTrailingBuy  // Spec 27: directional control
       );
 
       // Use adaptive or standard parameters
@@ -929,10 +979,19 @@ async function runDCABacktest(params) {
         ));
       }
 
+      // Spec 27: Log directional buy blocks (always visible)
+      if (adaptiveBuyParams.direction === 'up_blocked_spec27') {
+        transactionLog.push(colorize(
+          `  🚫 BLOCKED (Spec 27): Uptrend buy prevented - Traditional mode (Spec 17) only allows downtrend buys. ` +
+          `Enable "enableAdaptiveTrailingBuy" for uptrend momentum buys (Spec 25).`,
+          'yellow'
+        ));
+      }
+
       // Spec 26: Log position-based buy blocks (always visible)
       if (adaptiveBuyParams.direction === 'up_blocked') {
         transactionLog.push(colorize(
-          `  🚫 BLOCKED: Uptrend buy prevented (Position: ${positionStatus.toUpperCase()}, P/L: ${portfolioUnrealizedPNL >= 0 ? '+' : ''}$${portfolioUnrealizedPNL.toFixed(2)}) - ` +
+          `  🚫 BLOCKED (Spec 26): Uptrend buy prevented (Position: ${positionStatus.toUpperCase()}, P/L: ${portfolioUnrealizedPNL >= 0 ? '+' : ''}$${portfolioUnrealizedPNL.toFixed(2)}) - ` +
           `Only allow uptrend buys in WINNING position. Using standard downtrend logic instead.`,
           'yellow'
         ));
@@ -960,7 +1019,7 @@ async function runDCABacktest(params) {
     // Update trailing stop buy (move stop down if price goes down further)
     const updateTrailingStopBuy = (currentPrice) => {
       if (trailingStopBuy) {
-        // Calculate adaptive parameters (Spec 25)
+        // Calculate adaptive parameters (Spec 25 + Spec 27)
         const adaptiveBuyParams = calculateAdaptiveBuyParameters(
           currentPrice,
           lastBuyPrice,
@@ -969,7 +1028,8 @@ async function runDCABacktest(params) {
           lastBuyRebound,
           consecutiveBuyCount,
           enableConsecutiveIncrementalBuyGrid,
-          positionStatus  // Spec 26: position-based buy gating
+          positionStatus,  // Spec 26: position-based buy gating
+          enableAdaptiveTrailingBuy  // Spec 27: directional control
         );
 
         const effectiveRebound = adaptiveBuyParams.rebound;
@@ -1130,6 +1190,47 @@ async function runDCABacktest(params) {
               const direction = (lastBuyPrice && currentPrice < lastBuyPrice) ? 'DOWNTREND' :
                                (lastBuyPrice && currentPrice >= lastBuyPrice) ? 'UPTREND' : 'FIRST BUY';
               transactionLog.push(colorize(`  DEBUG: Consecutive Buy Grid - Direction: ${direction}, Count: ${consecutiveBuyCount}, Last Buy: ${lastBuyPrice ? lastBuyPrice.toFixed(2) : 'null'}, Grid Size: ${(buyGridSize * 100).toFixed(1)}%`, 'cyan'));
+            }
+
+            // BUG FIX: Re-check adaptive buy parameters at execution time
+            // The trailing stop may have been set during downtrend but executing during uptrend
+            const executionAdaptiveParams = calculateAdaptiveBuyParameters(
+              currentPrice,
+              lastBuyPrice,
+              trailingBuyActivationPercent,
+              trailingBuyReboundPercent,
+              lastBuyRebound,
+              consecutiveBuyCount,
+              enableConsecutiveIncrementalBuyGrid,
+              positionStatus,  // Current position status at execution
+              enableAdaptiveTrailingBuy  // Spec 27: directional control
+            );
+
+            // Check if this buy should be blocked at execution time
+            if (executionAdaptiveParams.direction === 'up_blocked_spec27') {
+              // BLOCKED: Uptrend buy prevented by Spec 27
+              transactionLog.push(colorize(
+                `  🚫 BLOCKED AT EXECUTION (Spec 27): Uptrend buy prevented - Traditional mode only allows downtrend buys. ` +
+                `Trailing stop was set at $${trailingStopBuy.stopPrice.toFixed(2)} but execution at $${currentPrice.toFixed(2)} would be uptrend (last buy: $${lastBuyPrice.toFixed(2)}). ` +
+                `Enable "enableAdaptiveTrailingBuy" for uptrend momentum buys.`,
+                'yellow'
+              ));
+              // Cancel the trailing stop
+              trailingStopBuy = null;
+              return false;
+            }
+
+            if (executionAdaptiveParams.direction === 'up_blocked') {
+              // BLOCKED: Uptrend buy prevented by Spec 26 position gating
+              transactionLog.push(colorize(
+                `  🚫 BLOCKED AT EXECUTION (Spec 26): Uptrend buy prevented (Position: ${positionStatus.toUpperCase()}, P/L: ${portfolioUnrealizedPNL >= 0 ? '+' : ''}$${portfolioUnrealizedPNL.toFixed(2)}) - ` +
+                `Trailing stop was set at $${trailingStopBuy.stopPrice.toFixed(2)} but execution at $${currentPrice.toFixed(2)} would be uptrend (last buy: $${lastBuyPrice.toFixed(2)}). ` +
+                `Only allow uptrend buys in WINNING position.`,
+                'yellow'
+              ));
+              // Cancel the trailing stop
+              trailingStopBuy = null;
+              return false;
             }
 
             // Capture OLD average cost BEFORE executing this buy
@@ -1320,7 +1421,7 @@ async function runDCABacktest(params) {
 
     // Check if trailing stop sell should be activated (when price rises from recent bottom)
     const checkTrailingStopSellActivation = (currentPrice, currentDate) => {
-      // Calculate adaptive sell parameters before activation check (Spec 25)
+      // Calculate adaptive sell parameters before activation check (Spec 25 + Spec 27)
       const adaptiveSellParams = calculateAdaptiveSellParameters(
         currentPrice,
         lastSellPrice,
@@ -1329,7 +1430,8 @@ async function runDCABacktest(params) {
         lastSellPullback,
         consecutiveSellCount,
         enableConsecutiveIncrementalSellProfit,
-        positionStatus  // Spec 26: position-based sell gating
+        positionStatus,  // Spec 26: position-based sell gating
+        enableAdaptiveTrailingSell  // Spec 27: directional control
       );
 
       // Use adaptive or standard parameters
@@ -1346,6 +1448,15 @@ async function runDCABacktest(params) {
           `(was ${(adaptiveSellParams.previousPullback * 100).toFixed(1)}%), ` +
           `ProfitReq=${skipProfitRequirement ? 'SKIPPED' : 'Required'}`,
           'cyan'
+        ));
+      }
+
+      // Spec 27: Log directional sell blocks (always visible)
+      if (adaptiveSellParams.direction === 'down_blocked_spec27') {
+        transactionLog.push(colorize(
+          `  🚫 BLOCKED (Spec 27): Downtrend sell prevented - Traditional mode (Spec 18) only allows uptrend sells. ` +
+          `Enable "enableAdaptiveTrailingSell" for downtrend stop loss sells (Spec 25).`,
+          'yellow'
         ));
       }
 
@@ -1540,7 +1651,7 @@ async function runDCABacktest(params) {
     // Update trailing stop when price moves higher (maintains 10% below current price)
     const updateTrailingStop = (currentPrice) => {
       if (activeStop && currentPrice > activeStop.highestPrice) {
-        // Calculate adaptive sell parameters for update (Spec 25)
+        // Calculate adaptive sell parameters for update (Spec 25 + Spec 27)
         const adaptiveSellParams = calculateAdaptiveSellParameters(
           currentPrice,
           lastSellPrice,
@@ -1549,7 +1660,8 @@ async function runDCABacktest(params) {
           lastSellPullback,
           consecutiveSellCount,
           enableConsecutiveIncrementalSellProfit,
-          positionStatus  // Spec 26: position-based sell gating
+          positionStatus,  // Spec 26: position-based sell gating
+          enableAdaptiveTrailingSell  // Spec 27: directional control
         );
 
         // Use adaptive or standard pullback
@@ -1646,29 +1758,37 @@ async function runDCABacktest(params) {
     const enhancedTransactions = [];
 
     /**
-     * Determine and apply dynamic profile based on P/L (Spec 24)
+     * Determine and apply dynamic profile based on position status (Spec 24)
      * @param {string} currentDate - Current date
      * @param {number} unrealizedPNL - Unrealized profit/loss
+     * @param {string} currentPositionStatus - Current position status ('winning'|'losing'|'neutral')
      */
-    const determineAndApplyProfile = (currentDate, unrealizedPNL) => {
+    const determineAndApplyProfile = (currentDate, unrealizedPNL, currentPositionStatus) => {
       if (!enableDynamicProfile) {
         return; // Feature disabled
       }
 
       const totalPNL = unrealizedPNL + realizedPNL;
-      const currentPnLSign = totalPNL >= 0 ? 'positive' : 'negative';
-      const targetProfile = totalPNL >= 0 ? 'AGGRESSIVE' : 'CONSERVATIVE';
 
-      // Check if P/L sign changed (reset hysteresis counter)
-      if (currentPnLSign !== lastPnLSign) {
+      // Determine target profile based on position status
+      let targetProfile = null;
+      if (currentPositionStatus === 'winning') {
+        targetProfile = 'AGGRESSIVE';
+      } else if (currentPositionStatus === 'losing') {
+        targetProfile = 'CONSERVATIVE';
+      }
+      // Note: neutral position doesn't trigger profile change
+
+      // Check if position status changed (reset hysteresis counter)
+      if (currentPositionStatus !== lastPnLSign) {
         consecutiveDaysInRegion = 1;  // Reset to 1 (current day)
-        lastPnLSign = currentPnLSign;
+        lastPnLSign = currentPositionStatus;
       } else {
         consecutiveDaysInRegion++;
       }
 
-      // Check if we should switch profiles
-      if (targetProfile !== currentProfile && consecutiveDaysInRegion >= HYSTERESIS_DAYS) {
+      // Check if we should switch profiles (only switch if targetProfile is defined)
+      if (targetProfile && targetProfile !== currentProfile && consecutiveDaysInRegion >= HYSTERESIS_DAYS) {
         const oldProfile = currentProfile || 'NONE';
         currentProfile = targetProfile;
         profileSwitchCount++;
@@ -1698,7 +1818,7 @@ async function runDCABacktest(params) {
         profileSwitches.push(switchInfo);
 
         transactionLog.push(colorize(
-          `  🔄 PROFILE SWITCH: ${oldProfile} → ${currentProfile} (P/L: $${totalPNL.toFixed(2)}, ${consecutiveDaysInRegion} days)`,
+          `  🔄 PROFILE SWITCH: ${oldProfile} → ${currentProfile} (Position: ${currentPositionStatus.toUpperCase()}, P/L: $${totalPNL.toFixed(2)}, ${consecutiveDaysInRegion} days)`,
           'magenta'
         ));
         transactionLog.push(colorize(
@@ -1775,35 +1895,44 @@ async function runDCABacktest(params) {
 
       // ===== PROFILE DETERMINATION (Spec 24) =====
       if (i === 0) {
-        // First day: initialize profile
+        // First day: initialize profile based on position status
         if (enableDynamicProfile) {
-          currentProfile = totalPNL >= 0 ? 'AGGRESSIVE' : 'CONSERVATIVE';
-          lastPnLSign = totalPNL >= 0 ? 'positive' : 'negative';
+          // Determine initial profile from position status
+          if (positionStatus === 'winning') {
+            currentProfile = 'AGGRESSIVE';
+          } else if (positionStatus === 'losing') {
+            currentProfile = 'CONSERVATIVE';
+          }
+          // Note: neutral position starts with no profile
+
+          lastPnLSign = positionStatus;
           consecutiveDaysInRegion = 1;
 
-          // Apply initial profile
-          const profile = PROFILES[currentProfile];
-          originalParams = {
-            trailingBuyActivationPercent: params.trailingBuyActivationPercent,
-            trailingSellActivationPercent: params.trailingSellActivationPercent,
-            profitRequirement: params.profitRequirement
-          };
-          params.trailingBuyActivationPercent = profile.overrides.trailingBuyActivationPercent;
-          params.trailingSellActivationPercent = profile.overrides.trailingSellActivationPercent;
-          params.profitRequirement = profile.overrides.profitRequirement;
+          // Apply initial profile if one was determined
+          if (currentProfile) {
+            const profile = PROFILES[currentProfile];
+            originalParams = {
+              trailingBuyActivationPercent: params.trailingBuyActivationPercent,
+              trailingSellActivationPercent: params.trailingSellActivationPercent,
+              profitRequirement: params.profitRequirement
+            };
+            params.trailingBuyActivationPercent = profile.overrides.trailingBuyActivationPercent;
+            params.trailingSellActivationPercent = profile.overrides.trailingSellActivationPercent;
+            params.profitRequirement = profile.overrides.profitRequirement;
 
-          transactionLog.push(colorize(
-            `  🎯 INITIAL PROFILE: ${currentProfile} (P/L: $${totalPNL.toFixed(2)})`,
-            'magenta'
-          ));
-          transactionLog.push(colorize(
-            `     Buy Activation: ${(profile.overrides.trailingBuyActivationPercent * 100).toFixed(0)}%, Sell Activation: ${(profile.overrides.trailingSellActivationPercent * 100).toFixed(0)}%, Profit Req: ${(profile.overrides.profitRequirement * 100).toFixed(0)}%`,
-            'cyan'
-          ));
+            transactionLog.push(colorize(
+              `  🎯 INITIAL PROFILE: ${currentProfile} (Position: ${positionStatus.toUpperCase()}, P/L: $${totalPNL.toFixed(2)})`,
+              'magenta'
+            ));
+            transactionLog.push(colorize(
+              `     Buy Activation: ${(profile.overrides.trailingBuyActivationPercent * 100).toFixed(0)}%, Sell Activation: ${(profile.overrides.trailingSellActivationPercent * 100).toFixed(0)}%, Profit Req: ${(profile.overrides.profitRequirement * 100).toFixed(0)}%`,
+              'cyan'
+            ));
+          }
         }
       } else {
         // Subsequent days: check for profile switches
-        determineAndApplyProfile(dayData.date, portfolioUnrealizedPNL);
+        determineAndApplyProfile(dayData.date, portfolioUnrealizedPNL, positionStatus);
       }
 
       // Portfolio tracking

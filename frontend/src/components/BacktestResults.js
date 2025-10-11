@@ -866,7 +866,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
             {priceData.backtestParameters.enableConsecutiveIncrementalBuyGrid && (
               <div className="parameter-card">
                 <span className="parameter-label">Grid Consecutive Increment</span>
-                <span className="parameter-value">{priceData.backtestParameters.gridConsecutiveIncrement}%</span>
+                <span className="parameter-value">{formatParameterPercent(priceData.backtestParameters.gridConsecutiveIncrement)}</span>
               </div>
             )}
             <div className="parameter-card">

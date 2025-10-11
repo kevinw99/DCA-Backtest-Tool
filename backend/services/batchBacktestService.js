@@ -49,7 +49,10 @@ async function generateParameterCombinations(paramRanges) {
     enableDynamicGrid = true,
     normalizeToReference = true,
     enableConsecutiveIncrementalBuyGrid = false,
-    enableConsecutiveIncrementalSellProfit = true
+    enableConsecutiveIncrementalSellProfit = true,
+    // Spec 27: Directional strategy control flags
+    enableAdaptiveTrailingBuy = false,
+    enableAdaptiveTrailingSell = false
   } = paramRanges;
 
   console.log('🔍 DEBUG: Parameter combinations input:', {
@@ -136,6 +139,9 @@ async function generateParameterCombinations(paramRanges) {
                             normalizeToReference,
                             enableConsecutiveIncrementalBuyGrid,
                             enableConsecutiveIncrementalSellProfit,
+                            // Spec 27: Directional strategy control flags
+                            enableAdaptiveTrailingBuy,
+                            enableAdaptiveTrailingSell,
                             betaInfo: {
                               beta: betaResult.beta,
                               coefficient: betaResult.coefficient,
@@ -193,7 +199,10 @@ async function generateParameterCombinations(paramRanges) {
                         enableDynamicGrid,
                         normalizeToReference,
                         enableConsecutiveIncrementalBuyGrid,
-                        enableConsecutiveIncrementalSellProfit
+                        enableConsecutiveIncrementalSellProfit,
+                        // Spec 27: Directional strategy control flags
+                        enableAdaptiveTrailingBuy,
+                        enableAdaptiveTrailingSell
                       });
                     }
                   }
@@ -262,6 +271,9 @@ async function runBatchBacktest(options, progressCallback = null, sessionId = nu
     normalizeToReference,
     enableConsecutiveIncrementalBuyGrid,
     enableConsecutiveIncrementalSellProfit,
+    // Spec 27: Directional strategy control flags
+    enableAdaptiveTrailingBuy,
+    enableAdaptiveTrailingSell,
     includeComparison = true,
     sortBy = 'annualizedReturn' // 'totalReturn', 'annualizedReturn', 'winRate'
   } = options;
@@ -276,7 +288,10 @@ async function runBatchBacktest(options, progressCallback = null, sessionId = nu
     enableDynamicGrid: enableDynamicGrid ?? parameterRanges.enableDynamicGrid,
     normalizeToReference: normalizeToReference ?? parameterRanges.normalizeToReference,
     enableConsecutiveIncrementalBuyGrid: enableConsecutiveIncrementalBuyGrid ?? parameterRanges.enableConsecutiveIncrementalBuyGrid,
-    enableConsecutiveIncrementalSellProfit: enableConsecutiveIncrementalSellProfit ?? parameterRanges.enableConsecutiveIncrementalSellProfit
+    enableConsecutiveIncrementalSellProfit: enableConsecutiveIncrementalSellProfit ?? parameterRanges.enableConsecutiveIncrementalSellProfit,
+    // Spec 27: Directional strategy control flags
+    enableAdaptiveTrailingBuy: enableAdaptiveTrailingBuy ?? parameterRanges.enableAdaptiveTrailingBuy,
+    enableAdaptiveTrailingSell: enableAdaptiveTrailingSell ?? parameterRanges.enableAdaptiveTrailingSell
   };
 
   console.log('🔍 DEBUG: Merged symbols into parameterRanges:', mergedParameterRanges.symbols);
@@ -477,6 +492,8 @@ async function runBatchBacktest(options, progressCallback = null, sessionId = nu
         `&normalizeToReference=${params.normalizeToReference}` +
         `&enableConsecutiveIncrementalBuyGrid=${params.enableConsecutiveIncrementalBuyGrid}` +
         `&enableConsecutiveIncrementalSellProfit=${params.enableConsecutiveIncrementalSellProfit}` +
+        `&enableAdaptiveTrailingBuy=${params.enableAdaptiveTrailingBuy || false}` +
+        `&enableAdaptiveTrailingSell=${params.enableAdaptiveTrailingSell || false}` +
         `&dynamicGridMultiplier=${params.dynamicGridMultiplier || 1}`;
 
       console.log(`🌐 URL: ${frontendUrl}`);
@@ -640,7 +657,10 @@ async function runBatchBacktest(options, progressCallback = null, sessionId = nu
       enableConsecutiveIncrementalSellProfit: mergedParameterRanges.enableConsecutiveIncrementalSellProfit,
       gridConsecutiveIncrement: mergedParameterRanges.gridConsecutiveIncrement,
       enableScenarioDetection: mergedParameterRanges.enableScenarioDetection,
-      trailingStopOrderType: mergedParameterRanges.trailingStopOrderType || 'limit'
+      trailingStopOrderType: mergedParameterRanges.trailingStopOrderType || 'limit',
+      // Spec 27: Directional strategy control flags
+      enableAdaptiveTrailingBuy: mergedParameterRanges.enableAdaptiveTrailingBuy,
+      enableAdaptiveTrailingSell: mergedParameterRanges.enableAdaptiveTrailingSell
     }
   };
 

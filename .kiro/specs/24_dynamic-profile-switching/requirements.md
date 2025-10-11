@@ -1,22 +1,23 @@
 # Spec 24: Dynamic Profile Switching - Requirements
 
 ## Overview
-Enable the DCA algorithm to automatically adjust strategy parameters based on portfolio performance (P/L). When losing money, switch to a Conservative profile (preserve capital). When making money, switch to an Aggressive profile (maximize gains).
+Enable the DCA algorithm to automatically adjust strategy parameters based on **position status** (from Spec 26). When in a losing position, switch to a Conservative profile (preserve capital). When in a winning position, switch to an Aggressive profile (maximize gains).
 
 ## Motivation
 
 ### Primary Goal
-**Automatic Risk Management**: Reduce drawdowns by automatically becoming defensive when losing, and maximize gains by becoming aggressive when profitable.
+**Automatic Risk Management**: Reduce drawdowns by automatically becoming defensive when in losing positions, and maximize gains by becoming aggressive when in winning positions.
 
 ### Key Insight
-The algorithm should "change its personality" based on whether it's winning or losing:
-- **Losing (P/L < 0)**: Be cautious - make buying harder, selling easier
-- **Winning (P/L >= 0)**: Be bold - make buying easier, selling harder
+The algorithm should "change its personality" based on position status (Spec 26):
+- **Losing Position**: Be cautious - make buying harder, selling easier
+- **Winning Position**: Be bold - make buying easier, selling harder
+- **Neutral Position**: No profile change (maintain current profile)
 
 ## Scope
 
 ### In Scope (This Spec)
-- ✅ **Feature #3**: P/L-based profile switching
+- ✅ **Feature #3**: Position status-based profile switching (integrates with Spec 26)
 - ✅ Conservative profile definition (preserve capital)
 - ✅ Aggressive profile definition (maximize gains)
 - ✅ Switching logic with hysteresis (prevent thrashing)
@@ -36,65 +37,71 @@ The algorithm should "change its personality" based on whether it's winning or l
 
 ## Requirements
 
-### Feature: P/L-Based Profile Switching
+### Feature: Position Status-Based Profile Switching
 
-**User Story**: As a trader, I want the algorithm to automatically adjust its aggressiveness based on my P/L, so that I preserve capital in losses and maximize gains in profits.
+**User Story**: As a trader, I want the algorithm to automatically adjust its aggressiveness based on my position status (from Spec 26), so that I preserve capital when in losing positions and maximize gains when in winning positions.
 
 #### Profile Definitions
 
-**Conservative Profile** (active when Unrealized P/L < 0):
-- **Goal**: Cut losses, reduce risk, exit losing positions
-- **Behavior**: Make buying harder, sell aggressively to limit losses
+**Conservative Profile** (active when Position Status = LOSING):
+- **Goal**: Preserve capital, reduce risk, easier to exit positions
+- **Behavior**: Make buying harder (wait for bigger dips), sell more easily
+- **Trigger**: Position status = LOSING for 3+ consecutive days
 - **Parameter Overrides**:
-  - `trailingBuyActivationPercent = 10%` (harder to buy - wait for 10% drop)
-  - `profitRequirement = -10%` (sell at -10% loss to cut losses!)
-  - `maxLotsToSell = maxLots` (sell all lots at once to exit quickly)
+  - `trailingBuyActivationPercent = 20%` (harder to buy - wait for 20% drop)
+  - `trailingSellActivationPercent = 0%` (easier to sell - no activation needed)
+  - `profitRequirement = 0%` (easier to sell - no profit requirement)
 - **All other parameters**: Keep user-specified values
 
-**Aggressive Profile** (active when Unrealized P/L >= 0):
-- **Goal**: Maximize gains, hold winners, scale in
-- **Behavior**: Make buying easier, sell slowly at good profit
+**Aggressive Profile** (active when Position Status = WINNING):
+- **Goal**: Maximize gains, hold winners, accumulate more
+- **Behavior**: Make buying easier (accumulate winners), sell only at good profits
+- **Trigger**: Position status = WINNING for 3+ consecutive days
 - **Parameter Overrides**:
   - `trailingBuyActivationPercent = 0%` (easier to buy - accumulate winners)
+  - `trailingSellActivationPercent = 20%` (harder to sell - wait for 20% gain from peak)
   - `profitRequirement = 10%` (only sell at +10% profit)
-  - `maxLotsToSell = 1` (sell slowly - 1 lot at a time to maximize gains)
 - **All other parameters**: Keep user-specified values
 
 #### Switching Logic
 
 ```
-// Use UNREALIZED P/L only (not total P/L)
-Unrealized P/L = (total shares held × current price) - (total cost of held lots)
+// Position status is calculated by Spec 26
+Position Status = calculatePositionStatus(lots, currentPrice, positionThreshold)
+// Returns 'winning', 'losing', or 'neutral'
 
 At start of each trading day:
-  IF Unrealized P/L < 0 AND current profile != CONSERVATIVE:
-    IF P/L has been < 0 for >= 3 consecutive days:  // Hysteresis
+  IF Position Status == 'losing' AND current profile != CONSERVATIVE:
+    IF Position Status has been 'losing' for >= 3 consecutive days:  // Hysteresis
       Switch to CONSERVATIVE
-      Log switch with P/L amount
+      Log switch with position status and P/L amount
       Apply parameter overrides
 
-  ELSE IF Unrealized P/L >= 0 AND current profile != AGGRESSIVE:
-    IF P/L has been >= 0 for >= 3 consecutive days:  // Hysteresis
+  ELSE IF Position Status == 'winning' AND current profile != AGGRESSIVE:
+    IF Position Status has been 'winning' for >= 3 consecutive days:  // Hysteresis
       Switch to AGGRESSIVE
-      Log switch with P/L amount
+      Log switch with position status and P/L amount
       Apply parameter overrides
+
+  // Note: 'neutral' position status does not trigger profile changes
 ```
 
 **Key Points**:
-1. **Use Unrealized P/L** (current position health), NOT total P/L (includes realized gains)
+1. **Uses Position Status from Spec 26** (winning/losing/neutral based on unrealized P/L threshold)
 2. Check happens at **start of each day** (before any trading)
-3. **Hysteresis**: Require 3 consecutive days in P/L region before switching
-4. **Overrides 3 parameters**: Buy activation %, profit requirement, max lots to sell
-5. **All other parameters preserved**: Grid spacing, other trailing percentages, etc.
+3. **Hysteresis**: Require 3 consecutive days in same position status before switching
+4. **Neutral position**: Does NOT trigger profile changes (maintains current profile)
+5. **Overrides 3 parameters**: Buy activation %, sell activation %, profit requirement
+6. **All other parameters preserved**: Grid spacing, rebound percentages, etc.
 
 #### Acceptance Criteria
 
 1. When `enableDynamicProfile = true`:
-   - Profile is determined at start of each day based on **Unrealized P/L**
-   - Hysteresis prevents switching on single-day fluctuations (require 3 days)
+   - Profile is determined at start of each day based on **Position Status** (Spec 26)
+   - Hysteresis prevents switching on single-day fluctuations (require 3 consecutive days)
    - Parameter overrides are applied when profile switches
    - Original parameters are restored when feature is disabled
-   - Profile switches are logged in transaction log
+   - Profile switches are logged in transaction log with position status
    - Profile metrics are included in results summary
 
 2. When `enableDynamicProfile = false`:
@@ -129,29 +136,29 @@ At start of each trading day:
 
 **Scenario**:
 ```
-Starting balance: $100,000
-Day 1-10: Unrealized P/L = +$5,000 (holding profitable positions) → Aggressive profile active
+Starting: $100,000, Lot size: $1,000, Position threshold: $100 (10% of lot)
+Day 1-10: Position = WINNING (P/L > +$100) → Aggressive profile active
   - Buys activate immediately (0% drop requirement)
-  - Requires 10% profit to sell
-  - Sells 1 lot at a time
+  - Sells require 20% from peak, 10% profit
+  - Accumulating winner
 
-Day 11: Unrealized P/L = -$1,000 (positions underwater) → Still Aggressive (need 3 days)
-Day 12: Unrealized P/L = -$2,000 → Still Aggressive (need 3 days)
-Day 13: Unrealized P/L = -$2,500 → Switch to Conservative (3 days below 0)
-  - Now requires 10% drop before buy activates
-  - Will sell at -10% loss (cut losses!)
-  - Can sell ALL lots at once to exit quickly
+Day 11: Position = LOSING (P/L < -$100) → Still Aggressive (need 3 days)
+Day 12: Position = LOSING → Still Aggressive (need 3 days)
+Day 13: Position = LOSING → Switch to Conservative (3 days losing)
+  - Now requires 20% drop before buy activates
+  - Sells with no activation, no profit requirement (easier exit)
+  - Defensive mode to preserve capital
 
-Day 20: Unrealized P/L = +$100 (back to profit) → Still Conservative (need 3 days)
-Day 21: Unrealized P/L = +$300 → Still Conservative (need 3 days)
-Day 22: Unrealized P/L = +$500 → Switch to Aggressive (3 days above 0)
+Day 20: Position = WINNING (P/L > +$100) → Still Conservative (need 3 days)
+Day 21: Position = WINNING → Still Conservative (need 3 days)
+Day 22: Position = WINNING → Switch to Aggressive (3 days winning)
 ```
 
 **Acceptance Criteria**:
-- ✅ Profile switches to Conservative after 3 days of losses
-- ✅ Profile switches back to Aggressive after 3 days of profits
-- ✅ Hysteresis prevents thrashing on daily P/L fluctuations
-- ✅ All switches are logged with P/L amounts
+- ✅ Profile switches to Conservative after 3 days in LOSING position
+- ✅ Profile switches back to Aggressive after 3 days in WINNING position
+- ✅ Hysteresis prevents thrashing on daily position status fluctuations
+- ✅ All switches are logged with position status and P/L amounts
 
 ### US-24.2: Performance Comparison
 **As an** algo developer
@@ -183,64 +190,69 @@ Day 22: Unrealized P/L = +$500 → Switch to Aggressive (3 days above 0)
 #### `enableDynamicProfile` (boolean)
 - **Default**: `false` (backward compatible)
 - **UI**: Checkbox in "Strategy Options" section
-- **Description**: "Automatically switch between Conservative and Aggressive profiles based on unrealized P/L"
+- **Description**: "Automatically switch between Conservative and Aggressive profiles based on position status (Spec 26)"
 - **Batch Mode**: Single boolean only (NOT an array)
-- **Tooltip**: "Conservative when losing (Unrealized P/L < 0): harder to buy, sell at -10% loss to cut losses, exit all lots quickly. Aggressive when winning (Unrealized P/L >= 0): easier to buy, sell at +10% profit, sell 1 lot at a time. Requires 3 consecutive days before switching."
+- **Tooltip**: "Conservative when in LOSING position: harder to buy (20% drop), easier to sell (no activation, no profit req). Aggressive when in WINNING position: easier to buy (immediate), harder to sell (20% from peak, 10% profit req). Requires 3 consecutive days in same position status before switching."
 
 ### Configuration Constants
 
 These are hardcoded in Phase 1 (not user-configurable):
 
 ```javascript
-const PROFILE_CONFIG = {
-  HYSTERESIS_DAYS: 3,  // Require 3 consecutive days before switching
+const HYSTERESIS_DAYS = 3;  // Require 3 consecutive days before switching
 
+const PROFILES = {
   CONSERVATIVE: {
     name: 'Conservative',
-    description: 'Cut losses when positions are underwater',
-    trigger: 'Unrealized P/L < 0',
+    description: 'Preserve capital when in losing position',
+    trigger: 'Position status = LOSING for 3+ consecutive days',
     overrides: {
-      trailingBuyActivationPercent: 0.10,  // 10% - harder to buy
-      profitRequirement: -0.10,            // -10% - sell at loss to cut losses
-      maxLotsToSell: Number.MAX_SAFE_INTEGER  // Sell all lots at once
-    }
+      trailingBuyActivationPercent: 0.20,  // 20% - harder to buy
+      trailingSellActivationPercent: 0.00, // 0% - easier to sell
+      profitRequirement: 0.00              // 0% - easier to sell
+    },
+    color: 'blue'
   },
 
   AGGRESSIVE: {
     name: 'Aggressive',
-    description: 'Maximize gains when positions are profitable',
-    trigger: 'Unrealized P/L >= 0',
+    description: 'Maximize gains when in winning position',
+    trigger: 'Position status = WINNING for 3+ consecutive days',
     overrides: {
       trailingBuyActivationPercent: 0.00,  // 0% - easier to buy
-      profitRequirement: 0.10,             // 10% - sell only at good profit
-      maxLotsToSell: 1                     // Sell 1 lot at a time
-    }
+      trailingSellActivationPercent: 0.20, // 20% - harder to sell
+      profitRequirement: 0.10              // 10% - harder to sell
+    },
+    color: 'green'
   }
 };
 ```
 
 **Future Enhancement**: Make these user-configurable (Phase 2)
 
+**Note**: Position status thresholds are defined in Spec 26 (typically 10% of lot size)
+
 ---
 
 ## Edge Cases
 
 ### Edge Case 1: Starting Profile (Day 1)
-**Scenario**: First day of backtest, no realized P/L yet
+**Scenario**: First day of backtest, no positions yet
 **Issue**: What profile should be active?
-**Solution**: Start with NULL profile, determine on Day 1 based on initial P/L (usually 0 → Aggressive)
+**Solution**: Start with NULL profile, determine on Day 1 based on position status (usually neutral → no profile)
 
-### Edge Case 2: Unrealized P/L Oscillating Around Zero
-**Scenario**: Unrealized P/L crosses 0 every 2 days (volatile market)
+### Edge Case 2: Position Status Oscillating (Volatile Market)
+**Scenario**: Position status fluctuates between winning/losing/neutral
 ```
-Day 1: Unrealized P/L = +$100 → Aggressive
-Day 2: Unrealized P/L = -$50  → Still Aggressive (need 3 days)
-Day 3: Unrealized P/L = +$200 → Reset counter, still Aggressive
-Day 4: Unrealized P/L = -$100 → Start counting (1 day)
-Day 5: Unrealized P/L = -$150 → Continue (2 days)
-Day 6: Unrealized P/L = +$50  → Reset counter, back to counting for Aggressive
+Day 1: Position = neutral → No profile active
+Day 2: Position = winning → Start counting (1 day)
+Day 3: Position = winning → Continue (2 days)
+Day 4: Position = neutral  → Reset counter, back to no profile
+Day 5: Position = losing   → Start counting (1 day)
+Day 6: Position = losing   → Continue (2 days)
+Day 7: Position = neutral  → Reset counter, back to no profile
 ```
-**Solution**: Hysteresis prevents switching. Need 3 CONSECUTIVE days in region.
+**Solution**: Hysteresis prevents switching. Need 3 CONSECUTIVE days in same status.
 
 ### Edge Case 3: Active Trailing Stop When Profile Switches
 **Scenario**:
@@ -525,12 +537,13 @@ These should be decided in kickoff meeting before implementation.
 
 ## Summary
 
-Spec 24 implements automatic strategy adjustment based on P/L performance:
-- **Conservative profile** when losing (preserve capital)
-- **Aggressive profile** when winning (maximize gains)
-- **3-day hysteresis** prevents thrashing
+Spec 24 implements automatic strategy adjustment based on position status (Spec 26):
+- **Conservative profile** when in LOSING position (preserve capital, easier to exit)
+- **Aggressive profile** when in WINNING position (maximize gains, accumulate more)
+- **3-day hysteresis** prevents thrashing on position status changes
+- **Integrates with Spec 26** (Position-Based Adaptive Behavior)
 - **Fully independent** of Spec 23 (average-cost features)
 
 **Timeline**: 3 weeks after Spec 23, or can be done in parallel.
 
-**Value**: Automatic risk management that adapts to market conditions, targeting 25% drawdown reduction while maintaining returns.
+**Value**: Automatic risk management that adapts to position performance, targeting drawdown reduction while maintaining returns.

@@ -689,7 +689,10 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
       beta,
       coefficient,
       enableBetaScaling,
-      isManualBetaOverride
+      isManualBetaOverride,
+      // Spec 27: Directional strategy control flags
+      enableAdaptiveTrailingBuy,
+      enableAdaptiveTrailingSell
     } = params;
 
     // Process Beta-adjusted parameters if Beta scaling is enabled
@@ -910,7 +913,7 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
       dynamicGridMultiplier: finalParams.dynamicGridMultiplier,
       enableConsecutiveIncrementalSellProfit: finalParams.enableConsecutiveIncrementalSellProfit,
       enableConsecutiveIncrementalBuyGrid: finalParams.enableConsecutiveIncrementalBuyGrid,
-      gridConsecutiveIncrement: finalParams.gridConsecutiveIncrement / 100,
+      gridConsecutiveIncrement: finalParams.gridConsecutiveIncrement,
       enableScenarioDetection: finalParams.enableScenarioDetection,
       enableAdaptiveStrategy: finalParams.enableAdaptiveStrategy,
       adaptationCheckIntervalDays: finalParams.adaptationCheckIntervalDays,
@@ -921,6 +924,9 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
       enableAverageBasedGrid: finalParams.enableAverageBasedGrid,
       enableAverageBasedSell: finalParams.enableAverageBasedSell,
       enableDynamicProfile: finalParams.enableDynamicProfile,
+      // Spec 27: Directional strategy control flags
+      enableAdaptiveTrailingBuy: finalParams.enableAdaptiveTrailingBuy,
+      enableAdaptiveTrailingSell: finalParams.enableAdaptiveTrailingSell,
       verbose: false // Don't log to console for API calls
     });
 

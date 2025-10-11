@@ -158,6 +158,15 @@ function validateDCABacktestParams(req, res, next) {
       throw new Error('enableConsecutiveIncrementalBuyGrid must be boolean');
     }
 
+    // Validate directional strategy control flags (optional, Spec 27)
+    const { enableAdaptiveTrailingBuy, enableAdaptiveTrailingSell } = req.body;
+    if (enableAdaptiveTrailingBuy !== undefined && typeof enableAdaptiveTrailingBuy !== 'boolean') {
+      throw new Error('enableAdaptiveTrailingBuy must be boolean');
+    }
+    if (enableAdaptiveTrailingSell !== undefined && typeof enableAdaptiveTrailingSell !== 'boolean') {
+      throw new Error('enableAdaptiveTrailingSell must be boolean');
+    }
+
     console.log('✅ Validation passed');
     next();
   } catch (error) {

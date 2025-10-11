@@ -1,6 +1,44 @@
 # CRITICAL CORRECTIONS to Spec 24: Dynamic Profile Switching
 
-## Date: 2025-10-09
+## Latest Update: 2025-10-10 - Position Status-Based Switching
+
+**IMPORTANT**: The implementation has evolved beyond the corrections described below. As of October 10, 2025:
+
+### Current Implementation (Spec 26 Integration)
+The dynamic profile switching now uses **position status** from Spec 26 instead of direct P/L comparison:
+
+```javascript
+// Current implementation uses position status
+const positionStatus = calculatePositionStatus(lots, currentPrice, positionThreshold);
+// Returns 'winning', 'losing', or 'neutral'
+
+if (positionStatus === 'winning') {
+  targetProfile = 'AGGRESSIVE';
+} else if (positionStatus === 'losing') {
+  targetProfile = 'CONSERVATIVE';
+}
+// Note: 'neutral' position doesn't trigger profile changes
+```
+
+**Benefits of Position Status Approach**:
+1. **Threshold-based stability**: Uses unrealized P/L threshold (10% of lot size) to avoid noise
+2. **Three states**: winning/losing/neutral provides better hysteresis
+3. **Integration with Spec 26**: Consistent with position-based adaptive behavior
+4. **More robust**: Prevents switching on small P/L fluctuations near zero
+
+**Profile Definitions (Updated)**:
+- **Conservative**: Active when position status = LOSING (P/L < -threshold)
+  - Buy: 20% drop required
+  - Sell: No activation, no profit requirement (easy exit)
+- **Aggressive**: Active when position status = WINNING (P/L > +threshold)
+  - Buy: Immediate (0% activation)
+  - Sell: 20% from peak, 10% profit requirement
+
+---
+
+## Historical Context: Original Corrections (2025-10-09)
+
+The sections below document the evolution from Total P/L → Unrealized P/L → Position Status.
 
 ## Summary of Critical Design Flaw and Corrections
 
