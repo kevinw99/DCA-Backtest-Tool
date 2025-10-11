@@ -1737,7 +1737,7 @@ async function runDCABacktest(params) {
           } else {
             // No eligible lots, cancel the stop
             activeStop = null;
-            transactionLog.push(colorize(`  ACTION: TRAILING STOP CANCELLED - No eligible lots at price ${currentPrice.toFixed(2)} (profit requirement: ${(lotProfitRequirement * 100).toFixed(2)}%)`, 'yellow'));
+            transactionLog.push(colorize(`  ACTION: TRAILING STOP SELL CANCELLED - No eligible lots at price ${currentPrice.toFixed(2)} (profit requirement: ${(lotProfitRequirement * 100).toFixed(2)}%)`, 'yellow'));
           }
         }
       }
@@ -1749,7 +1749,7 @@ async function runDCABacktest(params) {
       if (activeStop && currentPrice <= minProfitablePrice) {
         const cancelledStopPrice = activeStop.stopPrice;
         activeStop = null;
-        transactionLog.push(colorize(`  ACTION: TRAILING STOP CANCELLED - Price ${currentPrice.toFixed(2)} <= min profitable price ${minProfitablePrice.toFixed(2)} (avg cost ${averageCost.toFixed(2)}, profit requirement ${(params.profitRequirement*100).toFixed(1)}%, stop was ${cancelledStopPrice.toFixed(2)})`, 'yellow'));
+        transactionLog.push(colorize(`  ACTION: TRAILING STOP SELL CANCELLED - Price ${currentPrice.toFixed(2)} <= min profitable price ${minProfitablePrice.toFixed(2)} (avg cost ${averageCost.toFixed(2)}, profit requirement ${(params.profitRequirement*100).toFixed(1)}%, stop was ${cancelledStopPrice.toFixed(2)})`, 'yellow'));
       }
     };
 

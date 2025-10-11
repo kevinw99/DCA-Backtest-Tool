@@ -959,7 +959,7 @@ async function runShortDCABacktest(params) {
           } else {
             // No eligible shorts, cancel the stop
             activeStop = null;
-            transactionLog.push(colorize(`  ACTION: TRAILING STOP CANCELLED - No eligible shorts at price ${currentPrice.toFixed(2)}`, 'yellow'));
+            transactionLog.push(colorize(`  ACTION: TRAILING STOP COVER CANCELLED - No eligible shorts at price ${currentPrice.toFixed(2)}`, 'yellow'));
           }
         }
       }
@@ -971,7 +971,7 @@ async function runShortDCABacktest(params) {
       if (activeStop && currentPrice >= maxProfitablePrice) {
         const cancelledStopPrice = activeStop.stopPrice;
         activeStop = null;
-        transactionLog.push(colorize(`  ACTION: TRAILING STOP CANCELLED - Price ${currentPrice.toFixed(2)} >= max profitable price ${maxProfitablePrice.toFixed(2)} (avg short cost ${averageShortCost.toFixed(2)}, profit requirement ${(profitRequirement*100).toFixed(1)}%, stop was ${cancelledStopPrice.toFixed(2)})`, 'yellow'));
+        transactionLog.push(colorize(`  ACTION: TRAILING STOP COVER CANCELLED - Price ${currentPrice.toFixed(2)} >= max profitable price ${maxProfitablePrice.toFixed(2)} (avg short cost ${averageShortCost.toFixed(2)}, profit requirement ${(profitRequirement*100).toFixed(1)}%, stop was ${cancelledStopPrice.toFixed(2)})`, 'yellow'));
       }
     };
 
