@@ -548,7 +548,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
         const lotsDeployedPercent = maxLots > 0 ? (currentLots / maxLots) * 100 : 0;
 
         return {
-          date: new Date(date).toLocaleDateString(),
+          date: formatDate(date),
           totalPNL: totalPNL,
           totalPNLPercent: totalPNLPercent,
           currentCapitalDeployed: currentCapitalDeployed,
@@ -615,7 +615,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
         const lotsDeployedPercent = maxLots > 0 ? (currentLots / maxLots) * 100 : 0;
 
         return {
-          date: new Date(date).toLocaleDateString(),
+          date: formatDate(date),
           totalPNL: totalPNL,
           totalPNLPercent: totalPNLPercent,
           currentCapitalDeployed: currentCapitalDeployed,
@@ -1285,7 +1285,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
 
               return (
                 <div key={index} className={`table-row ${transaction.type.toLowerCase().replace('_', '-')}`}>
-                  <div>{new Date(transaction.date).toLocaleDateString()}</div>
+                  <div>{formatDate(transaction.date, 'long')}</div>
                   <div className={`transaction-type ${transaction.type.toLowerCase()}`}>
                     {getTransactionIcon(transaction.type)}
                   </div>
@@ -1396,7 +1396,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
 
             {transactions.map((transaction, index) => (
               <div key={index} className={`table-row ${transaction.type.toLowerCase()}`}>
-                <div>{new Date(transaction.date).toLocaleDateString()}</div>
+                <div>{formatDate(transaction.date, 'long')}</div>
                 <div className={`transaction-type ${transaction.type.toLowerCase()}`}>
                   {transaction.type === 'BUY' ? (
                     <><TrendingUp size={16} /> BUY</>
@@ -1449,7 +1449,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
 
               return (
                 <div key={index} className="table-row">
-                  <div>{new Date(lot.date).toLocaleDateString()}</div>
+                  <div>{formatDate(lot.date, 'long')}</div>
                   <div>{formatCurrency(lot.price)}</div>
                   <div>{lot.shares !== undefined ? lot.shares.toFixed(4) : 'N/A'}</div>
                   <div>{formatCurrency(currentPrice)}</div>
@@ -1490,7 +1490,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
 
               return (
                 <div key={index} className="table-row">
-                  <div>{new Date(short.date).toLocaleDateString()}</div>
+                  <div>{formatDate(short.date, 'long')}</div>
                   <div>{formatCurrency(short.price)}</div>
                   <div>{short.shares !== undefined ? short.shares.toFixed(4) : 'N/A'}</div>
                   <div>{formatCurrency(currentPrice)}</div>

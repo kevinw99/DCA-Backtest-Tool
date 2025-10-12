@@ -1,6 +1,34 @@
-Let's make 2 interal flags:
-winning_position  (true when Unrealized P/L > lotsizeUsd *10%):
-losing_position  (true when Unrealized P/L < -lotsizeUsd *10%):
+> [Image #1]http://localhost:3000/backtest/long/TSLA/results?startDate=2021-09-01&endDate=2025-10-09&lotSizeUs
+  d=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=10&profitRequirement=10&trailingBuyActivationPercent=
+  10&trailingBuyReboundPercent=5&trailingSellActivationPercent=20&trailingSellPullbackPercent=10&beta=2.086&co
+  efficient=1&enableBetaScaling=false&isManualBetaOverride=false&enableDynamicGrid=false&normalizeToReference=
+  true&enableConsecutiveIncrementalBuyGrid=false&enableConsecutiveIncrementalSellProfit=false&enableScenarioDe
+  tection=false&enableAverageBasedGrid=false&enableAverageBasedSell=true&enableDynamicProfile=false&dynamicGri
+  dMultiplier=1&gridConsecutiveIncrement=5&trailingStopOrderType=market, looking at this section of price
+  chart, when price goes up rapidly and comes down, since we have a lot of gain (p/l % > 50%)  if we focus on
+  the sell, ideally we want to sell into the strength, and then when price reverse, we continue to sell, so it
+  is a DCA on the sell sides to capture the gain when p/l is relatively large. Given the mechnisum we have
+  (these many options), what options we should chhose to accomplish that? or do we need other strategy other
+  options to acheive that?
+
+Currently buy is subject to grid spacing of all lots, which might not be possible to manage real stock portfolio,
+since only the average price of all lots is known, not individual lot price. Can you develop a new spec to handle
+this? similar to "Enable Average-Based Sell Logic", it should only depend on average price of all lots, not
+individual lot price. give me some idea what the spec should be before you start coding.
+
+
+should you also take into account the number of lots held? e.g. if only 1 lot and there are 5 lots held, teh
+condition could be differnet to stay close to the original algo of depending on individual lot price.
+
+no the requirement is individual lot price is not known, not matter how many lots are held, only average price of all lots is known.
+
+
+only when winning_position use aggressive profile
+and only when losing_position use conservative profile
+
+let's make a quick code change to see how it works, if it is good then we apply changes to docs and toehrs.
+
+
 
 these do not need ui control, just internal flags to help us decide which profile to use.
 

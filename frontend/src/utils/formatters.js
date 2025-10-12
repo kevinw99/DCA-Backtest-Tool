@@ -63,18 +63,27 @@ export const formatPerformancePercent = (value) => {
 };
 
 /**
- * Format dates consistently
+ * Format dates consistently without timezone conversion
+ * Parses date strings (YYYY-MM-DD) directly to avoid timezone shifts
  * @param {string|Date} dateStr - The date to format
  * @param {string} format - Format type: 'short' or 'long' (default: 'short')
  * @returns {string} Formatted date string
  */
 export const formatDate = (dateStr, format = 'short') => {
   if (!dateStr) return 'N/A';
+
+  // Parse date string as YYYY-MM-DD without timezone conversion
+  // Avoids the bug where "2024-07-24" becomes "7/23/2024" in negative UTC offsets
+  const dateString = typeof dateStr === 'string' ? dateStr : dateStr.toISOString();
+  const [year, month, day] = dateString.split('T')[0].split('-');
+
+  const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+
   const options =
     format === 'short'
       ? { month: 'short', day: 'numeric', year: '2-digit' }
       : { month: 'long', day: 'numeric', year: 'numeric' };
-  return new Date(dateStr).toLocaleDateString('en-US', options);
+  return date.toLocaleDateString('en-US', options);
 };
 
 /**

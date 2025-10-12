@@ -1346,8 +1346,9 @@ async function runDCABacktest(params) {
               : '';
             transactionLog.push(colorize(`  ACTION: TRAILING STOP BUY EXECUTED at ${currentPrice.toFixed(2)} (stop: ${trailingStopBuy.stopPrice.toFixed(2)}). Lots: ${getLotsPrices(lots)}, New Avg Cost: ${averageCost.toFixed(2)}${buyGridInfo}`, 'green'));
 
-            // Clear trailing stop buy and reset peak/bottom tracking
+            // Clear trailing stop buy and any active sell stop (mutual exclusion)
             trailingStopBuy = null;
+            activeStop = null; // Cancel opposing sell stop to prevent simultaneous execution
             resetPeakBottomTracking(currentPrice, currentDate);
 
               return true; // Transaction occurred
@@ -2211,8 +2212,9 @@ async function runDCABacktest(params) {
           lastBuyRebound = null; // Reset adaptive state (Spec 25)
           lastBuyDirection = null; // Reset buy direction on sell
 
-          // Clear active stop and reset peak/bottom tracking after sell
+          // Clear active sell stop and any active buy stop (mutual exclusion)
           activeStop = null;
+          trailingStopBuy = null; // Cancel opposing buy stop to prevent simultaneous execution
           resetPeakBottomTracking(currentPrice, dayData.date);
 
           actionsOccurred = true;
