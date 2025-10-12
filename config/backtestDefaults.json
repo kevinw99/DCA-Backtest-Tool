@@ -201,7 +201,7 @@
     "dynamicFeatures": {
       "enableDynamicGrid": false,
       "dynamicGridMultiplier": 1,
-      "enableConsecutiveIncrementalBuyGrid": false,
+      "enableConsecutiveIncrementalBuyGrid": true,
       "gridConsecutiveIncrement": 5,
       "enableConsecutiveIncrementalSellProfit": false,
       "enableScenarioDetection": false,
