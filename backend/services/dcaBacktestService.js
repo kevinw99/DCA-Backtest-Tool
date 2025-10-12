@@ -1362,7 +1362,8 @@ async function runDCABacktest(params) {
                   const ref = referencePrice || midPrice;
                   gridSize = calculateDynamicGridSpacing(midPrice, ref, dynamicGridMultiplier, normalizeToReference);
                 } else if (enableConsecutiveIncrementalBuyGrid) {
-                  gridSize = buyGridSize;
+                  // Use CURRENT count for spacing validation, not predicted count
+                  gridSize = gridIntervalPercent + (consecutiveBuyCount * gridConsecutiveIncrement);
                 } else {
                   gridSize = gridIntervalPercent;
                 }
@@ -1384,8 +1385,9 @@ async function runDCABacktest(params) {
                     const isLastBuy = (index === lots.length - 1);
 
                     if (isLastBuy && lastBuyPrice !== null && currentPrice < lastBuyPrice) {
-                      // DOWNTREND: Use incremental grid spacing
-                      gridSize = buyGridSize;
+                      // DOWNTREND: Use incremental grid spacing based on CURRENT count (not predicted)
+                      // For spacing validation, use the grid that's currently active, not the future grid
+                      gridSize = gridIntervalPercent + (consecutiveBuyCount * gridConsecutiveIncrement);
                     } else {
                       // UPTREND or no previous buy: Use base grid spacing
                       gridSize = gridIntervalPercent;

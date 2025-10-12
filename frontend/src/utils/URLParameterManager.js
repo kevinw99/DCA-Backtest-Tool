@@ -436,6 +436,7 @@ class URLParameterManager {
       if (parameters.trailingCoverReboundPercent !== undefined) params.set('trailingCoverReboundPercent', this._formatDecimalAsPercentage(parameters.trailingCoverReboundPercent).toString());
       if (parameters.hardStopLossPercent !== undefined) params.set('hardStopLossPercent', this._formatDecimalAsPercentage(parameters.hardStopLossPercent).toString());
       if (parameters.portfolioStopLossPercent !== undefined) params.set('portfolioStopLossPercent', this._formatDecimalAsPercentage(parameters.portfolioStopLossPercent).toString());
+      if (parameters.cascadeStopLossPercent !== undefined) params.set('cascadeStopLossPercent', this._formatDecimalAsPercentage(parameters.cascadeStopLossPercent).toString());
     }
 
     // Beta parameters
@@ -511,6 +512,7 @@ class URLParameterManager {
       if (ranges.trailingCoverReboundPercent) params.set('trailingCoverReboundPercent', this._encodeDecimalArrayAsPercentage(ranges.trailingCoverReboundPercent));
       if (ranges.hardStopLossPercent) params.set('hardStopLossPercent', this._encodeDecimalArrayAsPercentage(ranges.hardStopLossPercent));
       if (ranges.portfolioStopLossPercent) params.set('portfolioStopLossPercent', this._encodeDecimalArrayAsPercentage(ranges.portfolioStopLossPercent));
+      if (ranges.cascadeStopLossPercent) params.set('cascadeStopLossPercent', this._encodeDecimalArrayAsPercentage(ranges.cascadeStopLossPercent));
       if (ranges.coefficients) params.set('coefficients', this._encodeArray(ranges.coefficients)); // Coefficients are not percentages
     }
 
@@ -542,6 +544,7 @@ class URLParameterManager {
       params.set('dynamicGridMultiplier', parameters.dynamicGridMultiplier.toString());
     }
     if (parameters.gridConsecutiveIncrement !== undefined) {
+      // CP-4: gridConsecutiveIncrement is already in decimal form (0.05), convert to percentage for URL (5)
       params.set('gridConsecutiveIncrement', this._formatDecimalAsPercentage(parameters.gridConsecutiveIncrement).toString());
     }
 
@@ -605,6 +608,7 @@ class URLParameterManager {
       decoded.trailingCoverReboundPercent = this._parsePercentageAsDecimal(params.trailingCoverReboundPercent, 10);
       decoded.hardStopLossPercent = this._parsePercentageAsDecimal(params.hardStopLossPercent, 50);
       decoded.portfolioStopLossPercent = this._parsePercentageAsDecimal(params.portfolioStopLossPercent, 30);
+      decoded.cascadeStopLossPercent = this._parsePercentageAsDecimal(params.cascadeStopLossPercent, 35);
     }
 
     // Grid & Incremental Options boolean flags
@@ -697,6 +701,7 @@ class URLParameterManager {
       decoded.parameterRanges.trailingCoverReboundPercent = this._decodePercentageArray(params.trailingCoverReboundPercent, [10]);
       decoded.parameterRanges.hardStopLossPercent = this._decodePercentageArray(params.hardStopLossPercent, [50]);
       decoded.parameterRanges.portfolioStopLossPercent = this._decodePercentageArray(params.portfolioStopLossPercent, [30]);
+      decoded.parameterRanges.cascadeStopLossPercent = this._decodePercentageArray(params.cascadeStopLossPercent, [35]);
     }
 
     // Trailing stop order type (non-varying parameter for batch)

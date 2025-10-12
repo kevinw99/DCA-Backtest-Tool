@@ -770,7 +770,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
           trailingSellActivationPercent: convertPercentageArray(batchParameters.trailingSellActivationPercent),
           trailingSellPullbackPercent: convertPercentageArray(batchParameters.trailingSellPullbackPercent),
           dynamicGridMultiplier: batchParameters.dynamicGridMultiplier,  // Not percentage, leave as-is
-          gridConsecutiveIncrement: batchParameters.gridConsecutiveIncrement,  // Not percentage, leave as-is
+          gridConsecutiveIncrement: convertPercentageArray(batchParameters.gridConsecutiveIncrement),  // CP-2: Convert [5, 10] → [0.05, 0.10]
           // Fixed parameters from single mode
           startDate: parameters.startDate,
           endDate: parameters.endDate,
@@ -800,6 +800,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
         trailingBuyReboundPercent: parameters.trailingBuyReboundPercent / 100,
         trailingSellActivationPercent: parameters.trailingSellActivationPercent / 100,
         trailingSellPullbackPercent: parameters.trailingSellPullbackPercent / 100,
+        gridConsecutiveIncrement: parameters.gridConsecutiveIncrement / 100,  // CP-2: Convert 5 → 0.05
         // Add Beta information (not percentages, leave as-is)
         beta: beta,
         coefficient: coefficient,
