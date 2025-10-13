@@ -5,6 +5,7 @@ import DCABacktestForm from './components/DCABacktestForm';
 import BacktestResults from './components/BacktestResults';
 import BatchResults from './components/BatchResults';
 import BatchProgressBanner from './components/BatchProgressBanner';
+import PortfolioBacktestPage from './components/PortfolioBacktestPage';
 import URLParameterManager from './utils/URLParameterManager';
 import useSSEProgress from './hooks/useSSEProgress';
 import { Play, TrendingUp, Settings, Zap } from 'lucide-react';
@@ -170,55 +171,95 @@ function AppContent() {
           throw new Error('Invalid batch response: no sessionId or data');
         }
       } else {
-        // Determine the endpoint based on strategy mode
-        const endpoint = parameters.strategyMode === 'short'
-          ? 'http://localhost:3001/api/backtest/short-dca'
-          : 'http://localhost:3001/api/backtest/dca';
+        // Check if this is a portfolio drill-down request
+        if (parameters.portfolioRunId) {
+          console.log('=== DEBUG: Portfolio Stock Results API Call ===');
+          console.log('Portfolio Run ID:', parameters.portfolioRunId);
+          console.log('Symbol:', parameters.symbol);
+          console.log('================================================');
 
-        console.log('=== DEBUG: Auto API Call Info ===');
-        console.log('Strategy Mode:', parameters.strategyMode);
-        console.log('Selected Endpoint:', endpoint);
-        console.log('================================');
+          // Fetch from portfolio stock results cache
+          const portfolioStockEndpoint = `http://localhost:3001/api/portfolio-backtest/${parameters.portfolioRunId}/stock/${parameters.symbol}/results`;
 
-        const backtestResponse = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(parameters),
-        });
+          const portfolioResponse = await fetch(portfolioStockEndpoint);
 
-        if (!backtestResponse.ok) {
-          throw new Error(`Backtest failed: ${backtestResponse.statusText}`);
+          if (!portfolioResponse.ok) {
+            if (portfolioResponse.status === 404) {
+              throw new Error('Portfolio run not found or expired. Please re-run the portfolio backtest.');
+            }
+            throw new Error(`Failed to fetch portfolio stock results: ${portfolioResponse.statusText}`);
+          }
+
+          const portfolioResult = await portfolioResponse.json();
+
+          // The endpoint returns data in DCA format, so we can use it directly
+          setBacktestData(portfolioResult.data);
+
+          // Fetch chart data for the stock
+          const chartResponse = await fetch(
+            `http://localhost:3001/api/stocks/${parameters.symbol}?startDate=${parameters.startDate}&endDate=${parameters.endDate}`
+          );
+
+          if (!chartResponse.ok) {
+            throw new Error(`Chart data failed: ${chartResponse.statusText}`);
+          }
+
+          const chartResult = await chartResponse.json();
+          setChartData({ ...chartResult, backtestParameters: parameters });
+          setActiveTab('chart');
+          setLoading(false);
+        } else {
+          // Standard backtest flow
+          // Determine the endpoint based on strategy mode
+          const endpoint = parameters.strategyMode === 'short'
+            ? 'http://localhost:3001/api/backtest/short-dca'
+            : 'http://localhost:3001/api/backtest/dca';
+
+          console.log('=== DEBUG: Auto API Call Info ===');
+          console.log('Strategy Mode:', parameters.strategyMode);
+          console.log('Selected Endpoint:', endpoint);
+          console.log('================================');
+
+          const backtestResponse = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(parameters),
+          });
+
+          if (!backtestResponse.ok) {
+            throw new Error(`Backtest failed: ${backtestResponse.statusText}`);
+          }
+
+          const backtestResult = await backtestResponse.json();
+          setBacktestData(backtestResult.data);
+
+          const chartResponse = await fetch(
+            `http://localhost:3001/api/stocks/${parameters.symbol}?startDate=${parameters.startDate}&endDate=${parameters.endDate}`
+          );
+
+          if (!chartResponse.ok) {
+            throw new Error(`Chart data failed: ${chartResponse.statusText}`);
+          }
+
+          const chartResult = await chartResponse.json();
+          const finalChartData = {
+            ...chartResult,
+            backtestParameters: parameters,
+            transactions: backtestResult.data.transactions,
+            betaInfo: backtestResult.data.betaInfo,
+            scenarioAnalysis: backtestResult.data.summary?.scenarioAnalysis,
+            recentPeak: backtestResult.data.recentPeak,
+            recentBottom: backtestResult.data.recentBottom,
+            lastTransactionDate: backtestResult.data.lastTransactionDate,
+            activeTrailingStopSell: backtestResult.data.activeTrailingStopSell,
+            activeTrailingStopBuy: backtestResult.data.activeTrailingStopBuy
+          };
+
+          setChartData(finalChartData);
+          setActiveTab('chart');
         }
-
-        const backtestResult = await backtestResponse.json();
-        setBacktestData(backtestResult.data);
-
-        const chartResponse = await fetch(
-          `http://localhost:3001/api/stocks/${parameters.symbol}?startDate=${parameters.startDate}&endDate=${parameters.endDate}`
-        );
-
-        if (!chartResponse.ok) {
-          throw new Error(`Chart data failed: ${chartResponse.statusText}`);
-        }
-
-        const chartResult = await chartResponse.json();
-        const finalChartData = {
-          ...chartResult,
-          backtestParameters: parameters,
-          transactions: backtestResult.data.transactions,
-          betaInfo: backtestResult.data.betaInfo,
-          scenarioAnalysis: backtestResult.data.summary?.scenarioAnalysis,
-          recentPeak: backtestResult.data.recentPeak,
-          recentBottom: backtestResult.data.recentBottom,
-          lastTransactionDate: backtestResult.data.lastTransactionDate,
-          activeTrailingStopSell: backtestResult.data.activeTrailingStopSell,
-          activeTrailingStopBuy: backtestResult.data.activeTrailingStopBuy
-        };
-
-        setChartData(finalChartData);
-        setActiveTab('chart');
       }
     } catch (err) {
       console.error('Error in auto-execution:', err);
@@ -487,6 +528,9 @@ function App() {
         {/* Legacy routes (backward compatibility) */}
         <Route path="/backtest" element={<AppContent />} />
         <Route path="/batch" element={<AppContent />} />
+
+        {/* Portfolio backtest route */}
+        <Route path="/portfolio-backtest" element={<PortfolioBacktestPage />} />
 
         {/* Semantic routes for single backtest */}
         <Route path="/backtest/:strategyMode/:symbol" element={<AppContent />} />

@@ -1,0 +1,184 @@
+.multi-stock-price-chart {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  margin-bottom: 2rem;
+}
+
+.multi-stock-price-chart.empty {
+  text-align: center;
+  padding: 3rem;
+  color: #6c757d;
+  font-size: 1rem;
+}
+
+.multi-stock-price-chart h3 {
+  margin: 0 0 0.5rem 0;
+  color: #2c3e50;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.multi-stock-price-chart h4 {
+  margin: 0 0 0.75rem 0;
+  color: #2c3e50;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.chart-description {
+  margin: 0 0 1.5rem 0;
+  color: #6c757d;
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+.chart-controls {
+  display: flex;
+  gap: 3rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.stock-legend,
+.transaction-legend {
+  flex: 1;
+  min-width: 250px;
+}
+
+.stock-legend label,
+.transaction-legend label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #2c3e50;
+  transition: opacity 0.2s;
+  margin-bottom: 0.5rem;
+}
+
+.stock-legend label.disabled,
+.transaction-legend label.disabled {
+  opacity: 0.4;
+}
+
+.stock-legend input[type="checkbox"],
+.transaction-legend input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.legend-color {
+  width: 24px;
+  height: 4px;
+  border-radius: 2px;
+}
+
+.tx-marker {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid;
+}
+
+.tx-marker.buy {
+  background: #007bff;
+  border-color: #fff;
+  box-shadow: 0 0 0 1px #007bff;
+}
+
+.tx-marker.sell {
+  background: #fff;
+  border-color: #007bff;
+}
+
+.tx-marker.rejected {
+  background: #ffc107;
+  border-color: #ff9800;
+}
+
+.multi-stock-tooltip {
+  background: white;
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-width: 350px;
+}
+
+.multi-stock-tooltip .tooltip-label {
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  color: #2c3e50;
+  font-size: 0.9rem;
+  border-bottom: 1px solid #dee2e6;
+  padding-bottom: 0.5rem;
+}
+
+.multi-stock-tooltip .tooltip-prices {
+  margin-bottom: 0.5rem;
+}
+
+.multi-stock-tooltip .tooltip-prices p {
+  margin: 0.25rem 0;
+  font-size: 0.85rem;
+}
+
+.tooltip-transactions {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e9ecef;
+}
+
+.tooltip-transactions .tx-header {
+  font-weight: 700;
+  color: #2c3e50;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.tooltip-transactions p {
+  margin: 0.25rem 0;
+  font-size: 0.8rem;
+}
+
+.tooltip-transactions .tx-buy {
+  color: #007bff;
+}
+
+.tooltip-transactions .tx-sell {
+  color: #28a745;
+}
+
+.tooltip-transactions .tx-rejected {
+  color: #ffc107;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .multi-stock-price-chart {
+    padding: 1rem;
+  }
+
+  .multi-stock-price-chart h3 {
+    font-size: 1.2rem;
+  }
+
+  .chart-controls {
+    gap: 1.5rem;
+  }
+
+  .stock-legend,
+  .transaction-legend {
+    min-width: 100%;
+  }
+
+  .multi-stock-tooltip {
+    max-width: 250px;
+    padding: 0.75rem;
+  }
+}

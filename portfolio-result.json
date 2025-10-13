@@ -1,0 +1,1119 @@
+{
+  "success": true,
+  "data": {
+    "success": true,
+    "portfolioSummary": {
+      "totalCapital": 500000,
+      "finalPortfolioValue": 568781.3178610948,
+      "cashReserve": 486765.9749754882,
+      "deployedCapital": 80000,
+      "capitalUtilizationPercent": 16,
+      "avgCapitalUtilization": 17.6,
+      "maxCapitalUtilization": 24,
+      "minCapitalUtilization": 8,
+      "totalReturn": 68781.31786109484,
+      "totalReturnPercent": 13.756263572218968,
+      "cagr": 13.76630635102567,
+      "cagrPercent": 13.76630635102567,
+      "maxDrawdown": 40000,
+      "maxDrawdownPercent": 8,
+      "maxDrawdownDuration": 0,
+      "sharpeRatio": 12.261389088219444,
+      "sortinoRatio": 73.81261160536506,
+      "volatility": 50.02703748209407,
+      "totalBuys": 33,
+      "totalSells": 25,
+      "totalTrades": 58,
+      "rejectedBuys": 0,
+      "rejectedBuysValue": 0,
+      "rejectedBuysPercent": 0,
+      "winRate": 100,
+      "avgWin": 2670.6389990195235,
+      "avgLoss": 0,
+      "profitFactor": 0
+    },
+    "stockResults": [
+      {
+        "symbol": "TSLA",
+        "lotsHeld": 2,
+        "capitalDeployed": 20000,
+        "marketValue": 18006.820244311595,
+        "averageCost": 448.5411536947673,
+        "unrealizedPNL": -1993.1797556884048,
+        "realizedPNL": 41472.12376294687,
+        "totalPNL": 39478.94400725846,
+        "stockReturn": 39478.94400725846,
+        "stockReturnPercent": 197.3947200362923,
+        "cagr": -3.253363926456676,
+        "cagrPercent": -3.253363926456676,
+        "maxDrawdown": 0,
+        "maxDrawdownPercent": 0,
+        "sharpeRatio": 1.1286128150105272,
+        "totalBuys": 10,
+        "totalSells": 8,
+        "rejectedBuys": 0,
+        "rejectedBuyValues": 0,
+        "contributionToPortfolioReturn": 57.39777200400105,
+        "contributionToPortfolioValue": 3.1658600025799615,
+        "transactions": [
+          {
+            "date": "2024-01-02",
+            "type": "BUY",
+            "price": 248.4199981689453,
+            "shares": 40.254408154367695,
+            "value": 10000
+          },
+          {
+            "date": "2024-01-12",
+            "type": "BUY",
+            "price": 218.88999938964844,
+            "shares": 45.68504741141185,
+            "value": 10000
+          },
+          {
+            "date": "2024-01-25",
+            "type": "BUY",
+            "price": 182.6300048828125,
+            "shares": 54.755515154350796,
+            "value": 10000
+          },
+          {
+            "date": "2024-03-14",
+            "type": "BUY",
+            "price": 162.5,
+            "shares": 61.53846153846154,
+            "value": 10000
+          },
+          {
+            "date": "2024-04-22",
+            "type": "BUY",
+            "price": 142.0500030517578,
+            "shares": 70.39774575968413,
+            "value": 10000
+          },
+          {
+            "date": "2024-11-06",
+            "type": "SELL",
+            "price": 288.5299987792969,
+            "shares": 40.254408154367695,
+            "value": 11614.60433564103,
+            "lotsCost": 10000,
+            "lotsDetails": [
+              {
+                "price": 248.4199981689453,
+                "shares": 40.254408154367695,
+                "date": "2024-01-02"
+              }
+            ],
+            "realizedPNLFromTrade": 1614.60433564103
+          },
+          {
+            "date": "2024-11-07",
+            "type": "SELL",
+            "price": 296.9100036621094,
+            "shares": 45.68504741141185,
+            "value": 13564.347594225934,
+            "lotsCost": 10000,
+            "lotsDetails": [
+              {
+                "price": 218.88999938964844,
+                "shares": 45.68504741141185,
+                "date": "2024-01-12"
+              }
+            ],
+            "realizedPNLFromTrade": 3564.347594225934
+          },
+          {
+            "date": "2024-11-08",
+            "type": "SELL",
+            "price": 321.2200012207031,
+            "shares": 54.755515154350796,
+            "value": 17588.56664472079,
+            "lotsCost": 10000,
+            "lotsDetails": [
+              {
+                "price": 182.6300048828125,
+                "shares": 54.755515154350796,
+                "date": "2024-01-25"
+              }
+            ],
+            "realizedPNLFromTrade": 7588.566644720791
+          },
+          {
+            "date": "2024-11-11",
+            "type": "SELL",
+            "price": 350,
+            "shares": 61.53846153846154,
+            "value": 21538.46153846154,
+            "lotsCost": 10000,
+            "lotsDetails": [
+              {
+                "price": 162.5,
+                "shares": 61.53846153846154,
+                "date": "2024-03-14"
+              }
+            ],
+            "realizedPNLFromTrade": 11538.461538461539
+          },
+          {
+            "date": "2024-11-12",
+            "type": "SELL",
+            "price": 328.489990234375,
+            "shares": 70.39774575968413,
+            "value": 23124.95481712065,
+            "lotsCost": 10000.000000000002,
+            "lotsDetails": [
+              {
+                "price": 142.0500030517578,
+                "shares": 70.39774575968413,
+                "date": "2024-04-22"
+              }
+            ],
+            "realizedPNLFromTrade": 13124.95481712065
+          },
+          {
+            "date": "2024-11-12",
+            "type": "BUY",
+            "price": 328.489990234375,
+            "shares": 30.4423279164917,
+            "value": 10000
+          },
+          {
+            "date": "2024-12-05",
+            "type": "SELL",
+            "price": 369.489990234375,
+            "shares": 30.4423279164917,
+            "value": 11248.135444576159,
+            "lotsCost": 10000,
+            "lotsDetails": [
+              {
+                "price": 328.489990234375,
+                "shares": 30.4423279164917,
+                "date": "2024-11-12"
+              }
+            ],
+            "realizedPNLFromTrade": 1248.135444576159
+          },
+          {
+            "date": "2024-12-05",
+            "type": "BUY",
+            "price": 369.489990234375,
+            "shares": 27.064332632277257,
+            "value": 10000
+          },
+          {
+            "date": "2024-12-11",
+            "type": "SELL",
+            "price": 424.7699890136719,
+            "shares": 27.064332632277257,
+            "value": 11496.116274874772,
+            "lotsCost": 10000,
+            "lotsDetails": [
+              {
+                "price": 369.489990234375,
+                "shares": 27.064332632277257,
+                "date": "2024-12-05"
+              }
+            ],
+            "realizedPNLFromTrade": 1496.116274874772
+          },
+          {
+            "date": "2024-12-11",
+            "type": "BUY",
+            "price": 424.7699890136719,
+            "shares": 23.54215283245478,
+            "value": 10000
+          },
+          {
+            "date": "2024-12-17",
+            "type": "SELL",
+            "price": 479.8599853515625,
+            "shares": 23.54215283245478,
+            "value": 11296.937113325996,
+            "lotsCost": 10000,
+            "lotsDetails": [
+              {
+                "price": 424.7699890136719,
+                "shares": 23.54215283245478,
+                "date": "2024-12-11"
+              }
+            ],
+            "realizedPNLFromTrade": 1296.9371133259956
+          },
+          {
+            "date": "2024-12-17",
+            "type": "BUY",
+            "price": 479.8599853515625,
+            "shares": 20.83941213117331,
+            "value": 10000
+          },
+          {
+            "date": "2024-12-20",
+            "type": "BUY",
+            "price": 421.05999755859375,
+            "shares": 23.749584519979063,
+            "value": 10000
+          }
+        ]
+      },
+      {
+        "symbol": "NVDA",
+        "lotsHeld": 3,
+        "capitalDeployed": 30000,
+        "marketValue": 34226.16035610084,
+        "averageCost": 117.68257617804063,
+        "unrealizedPNL": 4226.160356100838,
+        "realizedPNL": 14662.90965863967,
+        "totalPNL": 18889.070014740508,
+        "stockReturn": 18889.070014740508,
+        "stockReturnPercent": 62.96356671580169,
+        "cagr": 9.496339585591596,
+        "cagrPercent": 9.496339585591596,
+        "maxDrawdown": 0,
+        "maxDrawdownPercent": 0,
+        "sharpeRatio": 1.736966917291515,
+        "totalBuys": 13,
+        "totalSells": 10,
+        "rejectedBuys": 0,
+        "rejectedBuyValues": 0,
+        "contributionToPortfolioReturn": 27.462500868167922,
+        "contributionToPortfolioValue": 6.017455088857084,
+        "transactions": [
+          {
+            "date": "2024-01-02",
+            "type": "BUY",
+            "price": 48.14385986328125,
+            "shares": 207.71080732616707,
+            "value": 10000
+          },
+          {
+            "date": "2024-01-09",
+            "type": "SELL",
+            "price": 53.11336898803711,
+            "shares": 207.71080732616707,
+            "value": 11032.220752317793,
+            "lotsCost": 10000,
+            "lotsDetails": [
+              {
+                "price": 48.14385986328125,
+                "shares": 207.71080732616707,
+                "date": "2024-01-02"
+              }
+            ],
+            "realizedPNLFromTrade": 1032.220752317793
+          },
+          {
+            "date": "2024-01-09",
+            "type": "BUY",
+            "price": 53.11336898803711,
+            "shares": 188.27651475567916,
+            "value": 10000
+          },
+          {
+            "date": "2024-01-19",
+            "type": "SELL",
+            "price": 59.46118927001953,
+            "shares": 188.27651475567916,
+            "value": 11195.145478987064,
+            "lotsCost": 10000,
+            "lotsDetails": [
+              {
+                "price": 53.11336898803711,
+                "shares": 188.27651475567916,
+                "date": "2024-01-09"
+              }
+            ],
+            "realizedPNLFromTrade": 1195.145478987064
+          },
+          {
+            "date": "2024-01-19",
+            "type": "BUY",
+            "price": 59.46118927001953,
+            "shares": 168.1769255335433,
+            "value": 10000
+          },
+          {
+            "date": "2024-02-02",
+            "type": "SELL",
+            "price": 66.1268539428711,
+            "shares": 168.1769255335433,
+            "value": 11121.010991317728,
+            "lotsCost": 10000,
+            "lotsDetails": [
+              {
+                "price": 59.46118927001953,
+                "shares": 168.1769255335433,
+                "date": "2024-01-19"
+              }
+            ],
+            "realizedPNLFromTrade": 1121.0109913177275
+          },
+          {
+            "date": "2024-02-02",
+            "type": "BUY",
+            "price": 66.1268539428711,
+            "shares": 151.22449358681558,
+            "value": 10000
+          },
+          {
+            "date": "2024-02-14",
+            "type": "SELL",
+            "price": 73.86297607421875,
+            "shares": 151.22449358681558,
+            "value": 11169.891151638807,
+            "lotsCost": 10000,
+            "lotsDetails": [
+              {
+                "price": 66.1268539428711,
+                "shares": 151.22449358681558,
+                "date": "2024-02-02"
+              }
+            ],
+            "realizedPNLFromTrade": 1169.891151638807
+          },
+          {
+            "date": "2024-02-14",
+            "type": "BUY",
+            "price": 73.86297607421875,
+            "shares": 135.38582563951707,
+            "value": 10000
+          },
+          {
+            "date": "2024-03-01",
+            "type": "SELL",
+            "price": 82.23775482177734,
+            "shares": 135.38582563951707,
+            "value": 11133.826335286501,
+            "lotsCost": 10000,
+            "lotsDetails": [
+              {
+                "price": 73.86297607421875,
+                "shares": 135.38582563951707,
+                "date": "2024-02-14"
+              }
+            ],
+            "realizedPNLFromTrade": 1133.8263352865015
+          },
+          {
+            "date": "2024-03-01",
+            "type": "BUY",
+            "price": 82.23775482177734,
+            "shares": 121.59865042122848,
+            "value": 10000
+          },
+          {
+            "date": "2024-03-07",
+            "type": "SELL",
+            "price": 92.62689971923828,
+            "shares": 121.59865042122848,
+            "value": 11263.305998561842,
+            "lotsCost": 10000,
+            "lotsDetails": [
+              {
+                "price": 82.23775482177734,
+                "shares": 121.59865042122848,
+                "date": "2024-03-01"
+              }
+            ],
+            "realizedPNLFromTrade": 1263.305998561842
+          },
+          {
+            "date": "2024-03-07",
+            "type": "BUY",
+            "price": 92.62689971923828,
+            "shares": 107.95999898853394,
+            "value": 10000
+          },
+          {
+            "date": "2024-04-19",
+            "type": "BUY",
+            "price": 76.16539001464844,
+            "shares": 131.29322909101836,
+            "value": 10000
+          },
+          {
+            "date": "2024-05-23",
+            "type": "SELL",
+            "price": 103.75186157226562,
+            "shares": 107.95999898853394,
+            "value": 11201.05087040031,
+            "lotsCost": 10000,
+            "lotsDetails": [
+              {
+                "price": 92.62689971923828,
+                "shares": 107.95999898853394,
+                "date": "2024-03-07"
+              }
+            ],
+            "realizedPNLFromTrade": 1201.0508704003096
+          },
+          {
+            "date": "2024-05-24",
+            "type": "SELL",
+            "price": 106.42063903808594,
+            "shares": 131.29322909101836,
+            "value": 13972.309341239988,
+            "lotsCost": 10000,
+            "lotsDetails": [
+              {
+                "price": 76.16539001464844,
+                "shares": 131.29322909101836,
+                "date": "2024-04-19"
+              }
+            ],
+            "realizedPNLFromTrade": 3972.3093412399885
+          },
+          {
+            "date": "2024-05-24",
+            "type": "BUY",
+            "price": 106.42063903808594,
+            "shares": 93.96673512194556,
+            "value": 10000
+          },
+          {
+            "date": "2024-06-05",
+            "type": "SELL",
+            "price": 122.3843765258789,
+            "shares": 93.96673512194556,
+            "value": 11500.060292071716,
+            "lotsCost": 10000,
+            "lotsDetails": [
+              {
+                "price": 106.42063903808594,
+                "shares": 93.96673512194556,
+                "date": "2024-05-24"
+              }
+            ],
+            "realizedPNLFromTrade": 1500.0602920717156
+          },
+          {
+            "date": "2024-06-05",
+            "type": "BUY",
+            "price": 122.3843765258789,
+            "shares": 81.70977606676323,
+            "value": 10000
+          },
+          {
+            "date": "2024-06-18",
+            "type": "SELL",
+            "price": 135.529541015625,
+            "shares": 81.70977606676323,
+            "value": 11074.088446817921,
+            "lotsCost": 10000,
+            "lotsDetails": [
+              {
+                "price": 122.3843765258789,
+                "shares": 81.70977606676323,
+                "date": "2024-06-05"
+              }
+            ],
+            "realizedPNLFromTrade": 1074.088446817921
+          },
+          {
+            "date": "2024-06-18",
+            "type": "BUY",
+            "price": 135.529541015625,
+            "shares": 73.7846518556948,
+            "value": 10000
+          },
+          {
+            "date": "2024-06-24",
+            "type": "BUY",
+            "price": 118.06603240966797,
+            "shares": 84.69836578654386,
+            "value": 10000
+          },
+          {
+            "date": "2024-07-30",
+            "type": "BUY",
+            "price": 103.69139099121094,
+            "shares": 96.44002172608155,
+            "value": 10000
+          }
+        ]
+      },
+      {
+        "symbol": "AAPL",
+        "lotsHeld": 1,
+        "capitalDeployed": 10000,
+        "marketValue": 9667.980405183871,
+        "averageCost": 258.1037292480469,
+        "unrealizedPNL": -332.01959481612903,
+        "realizedPNL": 8565.525631198283,
+        "totalPNL": 8233.506036382154,
+        "stockReturn": 8233.506036382154,
+        "stockReturnPercent": 82.33506036382154,
+        "cagr": -1.79445218523282,
+        "cagrPercent": -1.79445218523282,
+        "maxDrawdown": 0,
+        "maxDrawdownPercent": 0,
+        "sharpeRatio": 2.142264914979932,
+        "totalBuys": 6,
+        "totalSells": 5,
+        "rejectedBuys": 0,
+        "rejectedBuyValues": 0,
+        "contributionToPortfolioReturn": 11.970555802681586,
+        "contributionToPortfolioValue": 1.699771089799567,
+        "transactions": [
+          {
+            "date": "2024-01-02",
+            "type": "BUY",
+            "price": 184.0814971923828,
+            "shares": 54.323765030816986,
+            "value": 10000
+          },
+          {
+            "date": "2024-04-19",
+            "type": "BUY",
+            "price": 163.8235626220703,
+            "shares": 61.04128026485001,
+            "value": 10000
+          },
+          {
+            "date": "2024-06-11",
+            "type": "SELL",
+            "price": 205.9519805908203,
+            "shares": 54.323765030816986,
+            "value": 11188.087001247102,
+            "lotsCost": 10000,
+            "lotsDetails": [
+              {
+                "price": 184.0814971923828,
+                "shares": 54.323765030816986,
+                "date": "2024-01-02"
+              }
+            ],
+            "realizedPNLFromTrade": 1188.0870012471023
+          },
+          {
+            "date": "2024-06-12",
+            "type": "SELL",
+            "price": 211.8377685546875,
+            "shares": 61.04128026485001,
+            "value": 12930.84860102711,
+            "lotsCost": 10000,
+            "lotsDetails": [
+              {
+                "price": 163.8235626220703,
+                "shares": 61.04128026485001,
+                "date": "2024-04-19"
+              }
+            ],
+            "realizedPNLFromTrade": 2930.84860102711
+          },
+          {
+            "date": "2024-06-12",
+            "type": "BUY",
+            "price": 211.8377685546875,
+            "shares": 47.20593531657423,
+            "value": 10000
+          },
+          {
+            "date": "2024-07-15",
+            "type": "SELL",
+            "price": 233.04440307617188,
+            "shares": 47.20593531657423,
+            "value": 11001.079017503422,
+            "lotsCost": 10000,
+            "lotsDetails": [
+              {
+                "price": 211.8377685546875,
+                "shares": 47.20593531657423,
+                "date": "2024-06-12"
+              }
+            ],
+            "realizedPNLFromTrade": 1001.0790175034217
+          },
+          {
+            "date": "2024-07-15",
+            "type": "BUY",
+            "price": 233.04440307617188,
+            "shares": 42.91027747502455,
+            "value": 10000
+          },
+          {
+            "date": "2024-08-05",
+            "type": "BUY",
+            "price": 208.05975341796875,
+            "shares": 48.063115694995176,
+            "value": 10000
+          },
+          {
+            "date": "2024-12-24",
+            "type": "SELL",
+            "price": 257.2866516113281,
+            "shares": 42.91027747502455,
+            "value": 11040.241611262061,
+            "lotsCost": 10000,
+            "lotsDetails": [
+              {
+                "price": 233.04440307617188,
+                "shares": 42.91027747502455,
+                "date": "2024-07-15"
+              }
+            ],
+            "realizedPNLFromTrade": 1040.2416112620613
+          },
+          {
+            "date": "2024-12-26",
+            "type": "SELL",
+            "price": 258.1037292480469,
+            "shares": 48.063115694995176,
+            "value": 12405.269400158588,
+            "lotsCost": 10000,
+            "lotsDetails": [
+              {
+                "price": 208.05975341796875,
+                "shares": 48.063115694995176,
+                "date": "2024-08-05"
+              }
+            ],
+            "realizedPNLFromTrade": 2405.269400158588
+          },
+          {
+            "date": "2024-12-26",
+            "type": "BUY",
+            "price": 258.1037292480469,
+            "shares": 38.74411279966298,
+            "value": 10000
+          }
+        ]
+      },
+      {
+        "symbol": "MSFT",
+        "lotsHeld": 2,
+        "capitalDeployed": 20000,
+        "marketValue": 20114.381880010333,
+        "averageCost": 416.81277229533026,
+        "unrealizedPNL": 114.38188001033268,
+        "realizedPNL": 2065.4159227032796,
+        "totalPNL": 2179.7978027136123,
+        "stockReturn": 2179.7978027136123,
+        "stockReturnPercent": 10.89898901356806,
+        "cagr": 0.5201610300453074,
+        "cagrPercent": 0.5201610300453074,
+        "maxDrawdown": 0,
+        "maxDrawdownPercent": 0,
+        "sharpeRatio": 69.63969328480106,
+        "totalBuys": 4,
+        "totalSells": 2,
+        "rejectedBuys": 0,
+        "rejectedBuyValues": 0,
+        "contributionToPortfolioReturn": 3.169171325149301,
+        "contributionToPortfolioValue": 3.53639988662964,
+        "transactions": [
+          {
+            "date": "2024-01-02",
+            "type": "BUY",
+            "price": 366.1055603027344,
+            "shares": 27.314526421644494,
+            "value": 10000
+          },
+          {
+            "date": "2024-01-29",
+            "type": "SELL",
+            "price": 404.45648193359375,
+            "shares": 27.314526421644494,
+            "value": 11047.537262180525,
+            "lotsCost": 10000,
+            "lotsDetails": [
+              {
+                "price": 366.1055603027344,
+                "shares": 27.314526421644494,
+                "date": "2024-01-02"
+              }
+            ],
+            "realizedPNLFromTrade": 1047.5372621805254
+          },
+          {
+            "date": "2024-01-29",
+            "type": "BUY",
+            "price": 404.45648193359375,
+            "shares": 24.724538848265667,
+            "value": 10000
+          },
+          {
+            "date": "2024-06-21",
+            "type": "SELL",
+            "price": 445.625244140625,
+            "shares": 24.724538848265667,
+            "value": 11017.878660522754,
+            "lotsCost": 10000,
+            "lotsDetails": [
+              {
+                "price": 404.45648193359375,
+                "shares": 24.724538848265667,
+                "date": "2024-01-29"
+              }
+            ],
+            "realizedPNLFromTrade": 1017.8786605227542
+          },
+          {
+            "date": "2024-06-21",
+            "type": "BUY",
+            "price": 445.625244140625,
+            "shares": 22.44038041265975,
+            "value": 10000
+          },
+          {
+            "date": "2024-08-05",
+            "type": "BUY",
+            "price": 391.4998474121094,
+            "shares": 25.54279411882778,
+            "value": 10000
+          }
+        ]
+      }
+    ],
+    "capitalUtilizationTimeSeries": [
+      {
+        "date": "2024-01-02",
+        "totalCapital": 500000,
+        "deployedCapital": 40000,
+        "cashReserve": 460000,
+        "utilizationPercent": 8,
+        "portfolioValue": 460000,
+        "totalPNL": -40000,
+        "totalPNLPercent": -8
+      },
+      {
+        "date": "2024-02-14",
+        "totalCapital": 500000,
+        "deployedCapital": 60000,
+        "cashReserve": 445565.805636442,
+        "utilizationPercent": 12,
+        "portfolioValue": 503231.51040819177,
+        "totalPNL": 3231.510408191767,
+        "totalPNLPercent": 0.6463020816383535
+      },
+      {
+        "date": "2024-03-28",
+        "totalCapital": 500000,
+        "deployedCapital": 70000,
+        "cashReserve": 437962.9379702903,
+        "utilizationPercent": 14.000000000000002,
+        "portfolioValue": 502800.43819830904,
+        "totalPNL": 2800.4381983090425,
+        "totalPNLPercent": 0.5600876396618085
+      },
+      {
+        "date": "2024-05-10",
+        "totalCapital": 500000,
+        "deployedCapital": 100000,
+        "cashReserve": 407962.9379702903,
+        "utilizationPercent": 20,
+        "portfolioValue": 506523.6330741886,
+        "totalPNL": 6523.633074188605,
+        "totalPNLPercent": 1.304726614837721
+      },
+      {
+        "date": "2024-06-25",
+        "totalCapital": 500000,
+        "deployedCapital": 90000,
+        "cashReserve": 430847.26118361723,
+        "utilizationPercent": 18,
+        "portfolioValue": 521738.67979818187,
+        "totalPNL": 21738.679798181867,
+        "totalPNLPercent": 4.347735959636374
+      },
+      {
+        "date": "2024-08-07",
+        "totalCapital": 500000,
+        "deployedCapital": 120000,
+        "cashReserve": 401848.34020112065,
+        "utilizationPercent": 24,
+        "portfolioValue": 517252.1300401108,
+        "totalPNL": 17252.130040110787,
+        "totalPNLPercent": 3.4504260080221574
+      },
+      {
+        "date": "2024-09-19",
+        "totalCapital": 500000,
+        "deployedCapital": 120000,
+        "cashReserve": 401848.34020112065,
+        "utilizationPercent": 24,
+        "portfolioValue": 540005.2153993226,
+        "totalPNL": 40005.215399322566,
+        "totalPNLPercent": 8.001043079864512
+      },
+      {
+        "date": "2024-10-31",
+        "totalCapital": 500000,
+        "deployedCapital": 120000,
+        "cashReserve": 401848.34020112065,
+        "utilizationPercent": 24,
+        "portfolioValue": 543608.3880262092,
+        "totalPNL": 43608.3880262092,
+        "totalPNLPercent": 8.72167760524184
+      },
+      {
+        "date": "2024-12-13",
+        "totalCapital": 500000,
+        "deployedCapital": 80000,
+        "cashReserve": 482023.52685074153,
+        "utilizationPercent": 16,
+        "portfolioValue": 570346.8151446879,
+        "totalPNL": 70346.81514468789,
+        "totalPNLPercent": 14.069363028937579
+      },
+      {
+        "date": "2024-12-31",
+        "totalCapital": 500000,
+        "deployedCapital": 80000,
+        "cashReserve": 486765.9749754882,
+        "utilizationPercent": 16,
+        "portfolioValue": 568781.3178610948,
+        "totalPNL": 68781.31786109484,
+        "totalPNLPercent": 13.756263572218968
+      }
+    ],
+    "rejectedOrders": [],
+    "capitalFlow": [
+      {
+        "date": "2024-01-02",
+        "buys": 40000,
+        "sells": 0,
+        "netFlow": -40000,
+        "cumulativeCash": 460000
+      },
+      {
+        "date": "2024-01-09",
+        "buys": 10000,
+        "sells": 11032.220752317793,
+        "netFlow": 1032.220752317793,
+        "cumulativeCash": 481069.870146463
+      },
+      {
+        "date": "2024-01-12",
+        "buys": 10000,
+        "sells": 0,
+        "netFlow": -10000,
+        "cumulativeCash": 450000
+      },
+      {
+        "date": "2024-01-19",
+        "buys": 10000,
+        "sells": 11195.145478987064,
+        "netFlow": 1195.145478987064,
+        "cumulativeCash": 482265.01562545006
+      },
+      {
+        "date": "2024-01-25",
+        "buys": 10000,
+        "sells": 0,
+        "netFlow": -10000,
+        "cumulativeCash": 440000
+      },
+      {
+        "date": "2024-01-29",
+        "buys": 10000,
+        "sells": 11047.537262180525,
+        "netFlow": 1047.5372621805254,
+        "cumulativeCash": 485748.09631496546
+      },
+      {
+        "date": "2024-02-02",
+        "buys": 10000,
+        "sells": 11121.010991317728,
+        "netFlow": 1121.0109913177275,
+        "cumulativeCash": 483386.0266167678
+      },
+      {
+        "date": "2024-02-14",
+        "buys": 10000,
+        "sells": 11169.891151638807,
+        "netFlow": 1169.891151638807,
+        "cumulativeCash": 484555.9177684066
+      },
+      {
+        "date": "2024-03-01",
+        "buys": 10000,
+        "sells": 11133.826335286501,
+        "netFlow": 1133.8263352865015,
+        "cumulativeCash": 485689.7441036931
+      },
+      {
+        "date": "2024-03-07",
+        "buys": 10000,
+        "sells": 11263.305998561842,
+        "netFlow": 1263.305998561842,
+        "cumulativeCash": 486953.05010225496
+      },
+      {
+        "date": "2024-03-14",
+        "buys": 10000,
+        "sells": 0,
+        "netFlow": -10000,
+        "cumulativeCash": 430000
+      },
+      {
+        "date": "2024-04-19",
+        "buys": 20000,
+        "sells": 0,
+        "netFlow": -20000,
+        "cumulativeCash": 471472.12376294687
+      },
+      {
+        "date": "2024-04-22",
+        "buys": 10000,
+        "sells": 0,
+        "netFlow": -10000,
+        "cumulativeCash": 420000
+      },
+      {
+        "date": "2024-05-23",
+        "buys": 0,
+        "sells": 11201.05087040031,
+        "netFlow": 11201.05087040031,
+        "cumulativeCash": 498154.1009726553
+      },
+      {
+        "date": "2024-05-24",
+        "buys": 10000,
+        "sells": 13972.309341239988,
+        "netFlow": 3972.3093412399885,
+        "cumulativeCash": 502126.41031389526
+      },
+      {
+        "date": "2024-06-05",
+        "buys": 10000,
+        "sells": 11500.060292071716,
+        "netFlow": 1500.0602920717156,
+        "cumulativeCash": 503626.470605967
+      },
+      {
+        "date": "2024-06-11",
+        "buys": 0,
+        "sells": 11188.087001247102,
+        "netFlow": 11188.087001247102,
+        "cumulativeCash": 482660.21076419397
+      },
+      {
+        "date": "2024-06-12",
+        "buys": 10000,
+        "sells": 12930.84860102711,
+        "netFlow": 2930.84860102711,
+        "cumulativeCash": 485591.05936522107
+      },
+      {
+        "date": "2024-06-18",
+        "buys": 10000,
+        "sells": 11074.088446817921,
+        "netFlow": 1074.088446817921,
+        "cumulativeCash": 504700.5590527849
+      },
+      {
+        "date": "2024-06-21",
+        "buys": 10000,
+        "sells": 11017.878660522754,
+        "netFlow": 1017.8786605227542,
+        "cumulativeCash": 486765.9749754882
+      },
+      {
+        "date": "2024-06-24",
+        "buys": 10000,
+        "sells": 0,
+        "netFlow": -10000,
+        "cumulativeCash": 494700.5590527849
+      },
+      {
+        "date": "2024-07-15",
+        "buys": 10000,
+        "sells": 11001.079017503422,
+        "netFlow": 1001.0790175034217,
+        "cumulativeCash": 486592.1383827245
+      },
+      {
+        "date": "2024-07-30",
+        "buys": 10000,
+        "sells": 0,
+        "netFlow": -10000,
+        "cumulativeCash": 484700.5590527849
+      },
+      {
+        "date": "2024-08-05",
+        "buys": 20000,
+        "sells": 0,
+        "netFlow": -20000,
+        "cumulativeCash": 466592.1383827245
+      },
+      {
+        "date": "2024-11-06",
+        "buys": 0,
+        "sells": 11614.60433564103,
+        "netFlow": 11614.60433564103,
+        "cumulativeCash": 431614.604335641
+      },
+      {
+        "date": "2024-11-07",
+        "buys": 0,
+        "sells": 13564.347594225934,
+        "netFlow": 13564.347594225934,
+        "cumulativeCash": 445178.951929867
+      },
+      {
+        "date": "2024-11-08",
+        "buys": 0,
+        "sells": 17588.56664472079,
+        "netFlow": 17588.56664472079,
+        "cumulativeCash": 462767.51857458777
+      },
+      {
+        "date": "2024-11-11",
+        "buys": 0,
+        "sells": 21538.46153846154,
+        "netFlow": 21538.46153846154,
+        "cumulativeCash": 484305.9801130493
+      },
+      {
+        "date": "2024-11-12",
+        "buys": 10000,
+        "sells": 23124.95481712065,
+        "netFlow": 13124.954817120652,
+        "cumulativeCash": 497430.93493016995
+      },
+      {
+        "date": "2024-12-05",
+        "buys": 10000,
+        "sells": 11248.135444576159,
+        "netFlow": 1248.135444576159,
+        "cumulativeCash": 498679.0703747461
+      },
+      {
+        "date": "2024-12-11",
+        "buys": 10000,
+        "sells": 11496.116274874772,
+        "netFlow": 1496.116274874772,
+        "cumulativeCash": 500175.1866496209
+      },
+      {
+        "date": "2024-12-17",
+        "buys": 10000,
+        "sells": 11296.937113325996,
+        "netFlow": 1296.9371133259956,
+        "cumulativeCash": 501472.12376294687
+      },
+      {
+        "date": "2024-12-20",
+        "buys": 10000,
+        "sells": 0,
+        "netFlow": -10000,
+        "cumulativeCash": 491472.12376294687
+      },
+      {
+        "date": "2024-12-24",
+        "buys": 0,
+        "sells": 11040.241611262061,
+        "netFlow": 11040.241611262061,
+        "cumulativeCash": 477632.3799939866
+      },
+      {
+        "date": "2024-12-26",
+        "buys": 10000,
+        "sells": 12405.269400158588,
+        "netFlow": 2405.269400158588,
+        "cumulativeCash": 480037.6493941452
+      }
+    ]
+  }
+}

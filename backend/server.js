@@ -1393,6 +1393,311 @@ app.post('/api/backtest/beta-parameters', async (req, res) => {
   }
 });
 
+// Portfolio backtest API endpoint
+app.post('/api/portfolio-backtest', async (req, res) => {
+  try {
+    const {
+      totalCapital,
+      startDate,
+      endDate,
+      lotSizeUsd,
+      maxLotsPerStock = 10,
+      defaultParams,
+      stocks
+    } = req.body;
+
+    // Validation
+    if (!totalCapital || totalCapital <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid totalCapital',
+        message: 'Total capital must be a positive number'
+      });
+    }
+
+    if (!Array.isArray(stocks) || stocks.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid stocks array',
+        message: 'Please provide an array of stocks for the portfolio'
+      });
+    }
+
+    if (!lotSizeUsd || lotSizeUsd <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid lotSizeUsd',
+        message: 'Lot size must be a positive number'
+      });
+    }
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing date range',
+        message: 'Both startDate and endDate are required'
+      });
+    }
+
+    console.log(`📊 Portfolio backtest requested:`);
+    console.log(`   Capital: $${totalCapital.toLocaleString()}`);
+    console.log(`   Lot Size: $${lotSizeUsd.toLocaleString()}`);
+    console.log(`   Stocks: ${stocks.length} (${stocks.map(s => s.symbol).join(', ')})`);
+    console.log(`   Period: ${startDate} to ${endDate}`);
+
+    const portfolioBacktestService = require('./services/portfolioBacktestService');
+
+    const config = {
+      totalCapital,
+      startDate,
+      endDate,
+      lotSizeUsd,
+      maxLotsPerStock,
+      defaultParams,
+      stocks
+    };
+
+    const results = await portfolioBacktestService.runPortfolioBacktest(config);
+
+    console.log(`✅ Portfolio backtest complete:`);
+    console.log(`   Final Value: $${results.portfolioSummary.finalPortfolioValue.toLocaleString()}`);
+    console.log(`   Total Return: ${results.portfolioSummary.totalReturnPercent.toFixed(2)}%`);
+    console.log(`   CAGR: ${results.portfolioSummary.cagr.toFixed(2)}%`);
+    console.log(`   Capital Utilization: ${results.portfolioSummary.capitalUtilizationPercent.toFixed(1)}%`);
+    console.log(`   Rejected Buys: ${results.portfolioSummary.rejectedBuys}`);
+
+    // Cache results for drill-down
+    const portfolioResultsCache = require('./services/portfolioResultsCache');
+    portfolioResultsCache.set(results.portfolioRunId, results);
+
+    res.json({
+      success: true,
+      data: results
+    });
+
+  } catch (error) {
+    console.error('Portfolio backtest error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Portfolio backtest failed',
+      message: error.message
+    });
+  }
+});
+
+// Helper function to convert portfolio transactions to enhanced DCA format
+function convertPortfolioTransactionsToDCAFormat(transactions, priceData) {
+  const enhancedTransactions = [];
+  let lots = [];
+  let realizedPNL = 0;
+
+  // Create a date-to-price map for quick lookups
+  const priceMap = new Map();
+  if (priceData && priceData.dailyPrices) {
+    priceData.dailyPrices.forEach(day => {
+      priceMap.set(day.date, parseFloat(day.adjusted_close || day.close));
+    });
+  }
+
+  for (const tx of transactions) {
+    const currentPrice = priceMap.get(tx.date) || tx.price;
+
+    if (tx.type === 'BUY') {
+      // Add lot to holdings
+      lots.push({ price: tx.price, shares: tx.shares, date: tx.date });
+
+      // Calculate metrics
+      const totalShares = lots.reduce((sum, lot) => sum + lot.shares, 0);
+      const totalCost = lots.reduce((sum, lot) => sum + (lot.price * lot.shares), 0);
+      const averageCost = totalShares > 0 ? totalCost / totalShares : 0;
+      const marketValue = totalShares * currentPrice;
+      const unrealizedPNL = marketValue - totalCost;
+
+      enhancedTransactions.push({
+        date: tx.date,
+        type: 'TRAILING_STOP_LIMIT_BUY', // Frontend expects this type
+        price: tx.price,
+        shares: tx.shares,
+        amount: tx.value || (tx.price * tx.shares),
+        quantity: tx.shares, // Add explicit quantity field
+        lotsAfterTransaction: lots.map(l => ({ ...l })), // Deep copy
+        averageCost,
+        unrealizedPNL,
+        realizedPNL,
+        totalPNL: realizedPNL + unrealizedPNL,
+        pnl: 0, // No P&L on buy transactions
+        realizedPNLFromTrade: 0,
+        ocoOrderDetail: null,
+        trailingStopDetail: null
+      });
+
+    } else if (tx.type === 'SELL') {
+      // Calculate P&L before removing lots
+      const soldValue = tx.value || (tx.price * tx.shares);
+      const soldCost = tx.lotsCost || 0;
+      const tradeProfit = soldValue - soldCost;
+      realizedPNL += tradeProfit;
+
+      // Remove sold lots
+      if (tx.lotsDetails && Array.isArray(tx.lotsDetails)) {
+        for (const soldLot of tx.lotsDetails) {
+          const index = lots.findIndex(l =>
+            Math.abs(l.price - soldLot.price) < 0.01 &&
+            l.date === soldLot.date
+          );
+          if (index !== -1) {
+            lots.splice(index, 1);
+          }
+        }
+      }
+
+      // Recalculate metrics after sell
+      const totalShares = lots.reduce((sum, lot) => sum + lot.shares, 0);
+      const totalCost = lots.reduce((sum, lot) => sum + (lot.price * lot.shares), 0);
+      const averageCost = totalShares > 0 ? totalCost / totalShares : 0;
+      const marketValue = totalShares * currentPrice;
+      const unrealizedPNL = marketValue - totalCost;
+
+      enhancedTransactions.push({
+        date: tx.date,
+        type: 'SELL',
+        price: tx.price,
+        shares: tx.shares,
+        amount: soldValue,
+        quantity: tx.shares, // Add explicit quantity field
+        lotsDetails: tx.lotsDetails || [],
+        lotsAfterTransaction: lots.map(l => ({ ...l })), // Deep copy
+        averageCost,
+        unrealizedPNL,
+        realizedPNL,
+        totalPNL: realizedPNL + unrealizedPNL,
+        pnl: tradeProfit, // P&L for this specific sell
+        realizedPNLFromTrade: tradeProfit,
+        ocoOrderDetail: null
+      });
+    }
+  }
+
+  return enhancedTransactions;
+}
+
+// Portfolio stock results endpoint - retrieve individual stock from cached portfolio run
+app.get('/api/portfolio-backtest/:runId/stock/:symbol/results', async (req, res) => {
+  try {
+    const { runId, symbol } = req.params;
+
+    console.log(`📋 Portfolio stock results requested: ${symbol} from run ${runId}`);
+
+    const portfolioResultsCache = require('./services/portfolioResultsCache');
+    const portfolioResults = portfolioResultsCache.get(runId);
+
+    if (!portfolioResults) {
+      return res.status(404).json({
+        success: false,
+        error: 'Portfolio run not found',
+        message: 'This portfolio run may have expired or does not exist. Please re-run the portfolio backtest.'
+      });
+    }
+
+    // Find stock data in results
+    const stockData = portfolioResults.stockResults.find(s => s.symbol === symbol);
+
+    if (!stockData) {
+      return res.status(404).json({
+        success: false,
+        error: 'Stock not found in portfolio',
+        message: `Stock ${symbol} was not part of portfolio run ${runId}`
+      });
+    }
+
+    // Convert portfolio transactions to enhanced DCA format
+    const enhancedTransactions = convertPortfolioTransactionsToDCAFormat(
+      stockData.transactions,
+      stockData.priceData
+    );
+
+    // Convert to DCA backtest result format (compatible with existing results page)
+    const dcaFormatResult = {
+      symbol: stockData.symbol,
+      strategyMode: 'long',
+      parameters: {
+        ...portfolioResults.parameters.defaultParams,
+        ...stockData.params,
+        lotSizeUsd: portfolioResults.parameters.lotSizeUsd,
+        maxLots: portfolioResults.parameters.maxLotsPerStock
+      },
+
+      // Provide both enhanced and original transactions
+      transactions: enhancedTransactions,
+      enhancedTransactions: enhancedTransactions,
+
+      // Add "Insufficient Capital" events as special transactions
+      insufficientCapitalEvents: stockData.rejectedOrders.map(order => ({
+        date: order.date,
+        type: 'INSUFFICIENT_CAPITAL',
+        attemptedPrice: order.price,
+        attemptedShares: order.attemptedValue / order.price,
+        attemptedValue: order.attemptedValue,
+        availableCapital: order.availableCapital,
+        shortfall: order.shortfall,
+        reason: 'Portfolio capital deployed to other stocks',
+        competingStocks: order.competingStocks || []
+      })),
+
+      // Metrics
+      summary: {
+        totalReturn: stockData.totalPNL,
+        totalReturnPercent: stockData.stockReturnPercent,
+        realizedPNL: stockData.realizedPNL,
+        unrealizedPNL: stockData.unrealizedPNL,
+        totalBuys: stockData.totalBuys,
+        totalSells: stockData.totalSells,
+        rejectedBuys: stockData.rejectedBuys,
+        cagr: stockData.cagr,
+        sharpeRatio: stockData.sharpeRatio,
+        maxDrawdown: stockData.maxDrawdown,
+        maxDrawdownPercent: stockData.maxDrawdownPercent
+      },
+
+      // Price data for charting
+      priceData: stockData.priceData,
+
+      // Portfolio context
+      portfolioContext: {
+        fromPortfolio: true,
+        portfolioRunId: runId,
+        totalCapital: portfolioResults.portfolioSummary.totalCapital,
+        stocksInPortfolio: portfolioResults.stockResults.map(s => s.symbol),
+        contributionToPortfolio: stockData.contributionToPortfolioReturn,
+        dateRange: {
+          startDate: portfolioResults.parameters.startDate,
+          endDate: portfolioResults.parameters.endDate
+        }
+      }
+    };
+
+    console.log(`✅ Retrieved ${symbol} from portfolio run ${runId}`);
+
+    res.json({
+      success: true,
+      data: dcaFormatResult,
+      metadata: {
+        source: 'portfolio',
+        portfolioRunId: runId,
+        portfolioCapital: portfolioResults.portfolioSummary.totalCapital
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching portfolio stock results:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch stock results',
+      message: error.message
+    });
+  }
+});
+
 // Batch data refresh API endpoint
 app.post('/api/batch/refresh-data', async (req, res) => {
   try {

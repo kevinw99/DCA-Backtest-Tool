@@ -1,0 +1,174 @@
+.rejected-orders-table {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.rejected-orders-table.empty {
+  padding: 0;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  text-align: center;
+}
+
+.success-icon {
+  width: 80px;
+  height: 80px;
+  background: #d4edda;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  color: #28a745;
+  margin-bottom: 1.5rem;
+}
+
+.empty-state h3 {
+  margin: 0 0 0.5rem 0;
+  color: #28a745;
+  font-size: 1.5rem;
+}
+
+.empty-state p {
+  margin: 0.5rem 0;
+  color: #495057;
+  font-size: 1.1rem;
+}
+
+.empty-state .help-text {
+  font-size: 0.95rem;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.rejected-orders-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  background: #fff3cd;
+  border-bottom: 2px solid #ffc107;
+}
+
+.rejected-orders-header .summary {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.rejected-orders-header .summary > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.rejected-orders-header .count {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #856404;
+}
+
+.rejected-orders-header .value {
+  font-size: 0.9rem;
+  color: #856404;
+}
+
+.rejected-orders-header select {
+  padding: 0.5rem 1rem;
+  border: 2px solid #ffc107;
+  border-radius: 6px;
+  font-weight: 600;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.rejected-orders-header select:hover {
+  background: #fff9e6;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.rejected-orders-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.rejected-orders-table thead {
+  background: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.rejected-orders-table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #495057;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.rejected-orders-table td {
+  padding: 1rem;
+  font-size: 0.9rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.rejected-orders-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.rejected-orders-table .stock-symbol {
+  font-weight: 700;
+  color: #007bff;
+}
+
+.rejected-orders-table .shortfall {
+  color: #dc3545;
+  font-weight: 700;
+}
+
+.no-results {
+  text-align: center;
+  padding: 2rem;
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .rejected-orders-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+
+  .rejected-orders-header select {
+    width: 100%;
+  }
+
+  .rejected-orders-table {
+    overflow-x: auto;
+  }
+
+  .rejected-orders-table table {
+    min-width: 700px;
+  }
+
+  .rejected-orders-table th,
+  .rejected-orders-table td {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.85rem;
+  }
+}

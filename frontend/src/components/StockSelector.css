@@ -1,0 +1,124 @@
+.stock-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.stock-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.stock-chip {
+  padding: 0.5rem 1rem;
+  border: 2px solid #ccc;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+  font-weight: 500;
+  font-size: 0.9rem;
+  user-select: none;
+}
+
+.stock-chip:hover {
+  border-color: #007bff;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.2);
+}
+
+.stock-chip:focus {
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
+}
+
+.stock-chip.selected {
+  background: #007bff;
+  color: white;
+  border-color: #007bff;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+}
+
+.stock-chip .checkmark {
+  margin-left: 0.25rem;
+  font-weight: bold;
+}
+
+.custom-symbol {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.custom-symbol input {
+  flex: 1;
+  padding: 0.6rem;
+  border: 2px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  transition: border-color 0.2s;
+}
+
+.custom-symbol input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.custom-symbol button {
+  padding: 0.6rem 1.5rem;
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.custom-symbol button:hover {
+  background: #218838;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+}
+
+.custom-symbol button:active {
+  transform: translateY(0);
+}
+
+.selected-count {
+  font-size: 0.9rem;
+  color: #666;
+  padding-top: 0.5rem;
+  border-top: 1px solid #dee2e6;
+}
+
+.selected-count .selected-list {
+  color: #007bff;
+  font-weight: 500;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .stock-chips {
+    gap: 0.4rem;
+  }
+
+  .stock-chip {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
+
+  .custom-symbol {
+    flex-direction: column;
+  }
+
+  .custom-symbol button {
+    width: 100%;
+  }
+}

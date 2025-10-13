@@ -1,0 +1,168 @@
+.portfolio-summary-card {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  margin-bottom: 2rem;
+}
+
+.summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.summary-header h2 {
+  margin: 0;
+  font-size: 1.75rem;
+  color: #2c3e50;
+}
+
+.summary-badge {
+  padding: 0.5rem 1.5rem;
+  border-radius: 24px;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.summary-badge.positive {
+  background: #d4edda;
+  color: #155724;
+}
+
+.summary-badge.negative {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.metric-box {
+  display: flex;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border-left: 4px solid #007bff;
+  transition: all 0.3s;
+}
+
+.metric-box:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 123, 255, 0.15);
+}
+
+.metric-box.highlight {
+  background: #fff3cd;
+  border-left-color: #ffc107;
+}
+
+.metric-box.highlight:hover {
+  box-shadow: 0 8px 20px rgba(255, 193, 7, 0.15);
+}
+
+.metric-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: white;
+  border-radius: 12px;
+  color: #007bff;
+  flex-shrink: 0;
+}
+
+.metric-box.highlight .metric-icon {
+  color: #ffc107;
+}
+
+.metric-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.metric-label {
+  font-size: 0.875rem;
+  color: #6c757d;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metric-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 0.25rem;
+  word-break: break-word;
+}
+
+.metric-subvalue {
+  font-size: 0.875rem;
+  color: #6c757d;
+  margin-top: 0.25rem;
+}
+
+.metric-change {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+}
+
+.metric-change.positive {
+  background: #d4edda;
+  color: #155724;
+}
+
+.metric-change.negative {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .portfolio-summary-card {
+    padding: 1.5rem;
+  }
+
+  .summary-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .summary-badge {
+    align-self: stretch;
+    text-align: center;
+  }
+
+  .summary-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .metric-box {
+    padding: 1rem;
+  }
+
+  .metric-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .metric-value {
+    font-size: 1.25rem;
+  }
+}
