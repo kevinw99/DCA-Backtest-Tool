@@ -10,6 +10,7 @@
  */
 
 const dcaBacktestService = require('./dcaBacktestService');
+const dcaSignalEngine = require('./dcaSignalEngine');
 const database = require('../database');
 
 /**
@@ -409,106 +410,47 @@ async function processBuys(portfolio, date, priceDataMap) {
 }
 
 /**
- * Evaluate if stock should sell (delegates to DCA logic)
+ * Evaluate if stock should sell (uses DCA signal engine)
  */
 function evaluateSellSignal(stock, dayData, date) {
-  // Check if sell conditions met based on DCA state
-  // This is a simplified version - full implementation would delegate to dcaBacktestService
+  // Prepare state for signal engine
+  const state = {
+    lots: stock.lots,
+    dcaState: stock.dcaState,
+    consecutiveSells: stock.consecutiveSells || 0
+  };
 
-  if (stock.lots.length === 0) {
-    return { triggered: false };
-  }
+  // Use signal engine to evaluate sell signal
+  const signal = dcaSignalEngine.evaluateSellSignal(state, stock.params, dayData.close, {});
 
-  // Check trailing stop sell
-  if (stock.dcaState.activeStop) {
-    if (dayData.close <= stock.dcaState.activeStop.stopPrice) {
-      return {
-        triggered: true,
-        type: 'TRAILING_STOP_SELL',
-        stopPrice: stock.dcaState.activeStop.stopPrice,
-        price: dayData.close
-      };
-    }
-  }
-
-  // Simple profit-taking sell logic: Sell highest lot if profit >= profitRequirement
-  const profitRequirement = stock.params.profitRequirement || 0.10;
-  const sortedLots = [...stock.lots].sort((a, b) => b.price - a.price);
-  const highestLot = sortedLots[0];
-
-  if (highestLot && dayData.close >= highestLot.price * (1 + profitRequirement)) {
-    return {
-      triggered: true,
-      type: 'PROFIT_TAKING',
-      price: dayData.close,
-      lotPrice: highestLot.price,
-      profitPercent: ((dayData.close - highestLot.price) / highestLot.price) * 100
-    };
-  }
-
-  // Check for new sell signal activation
-  // (Simplified - full logic would match dcaBacktestService)
+  // Update peak tracking if price is rising
   if (stock.dcaState.peak && dayData.close > stock.dcaState.peak) {
     stock.dcaState.peak = dayData.close;
   }
 
-  return { triggered: false };
+  return signal;
 }
 
 /**
- * Evaluate if stock should buy (delegates to DCA logic)
+ * Evaluate if stock should buy (uses DCA signal engine)
  */
 function evaluateBuySignal(stock, dayData, date) {
-  // Check max lots constraint
-  if (stock.lots.length >= stock.params.maxLots) {
-    return { triggered: false };
-  }
+  // Prepare state for signal engine
+  const state = {
+    lots: stock.lots,
+    dcaState: stock.dcaState,
+    consecutiveBuys: stock.consecutiveBuys || 0
+  };
 
-  // Simple buy logic for testing: Buy first lot on first available date
-  if (stock.lots.length === 0) {
-    // Initialize bottom tracker
-    if (!stock.dcaState.bottom) {
-      stock.dcaState.bottom = dayData.close;
-    }
+  // Use signal engine to evaluate buy signal
+  const signal = dcaSignalEngine.evaluateBuySignal(state, stock.params, dayData.close, {});
 
-    return {
-      triggered: true,
-      type: 'INITIAL_BUY',
-      price: dayData.close
-    };
-  }
-
-  // Grid-based buy logic: Buy when price drops by gridIntervalPercent from last buy
-  const gridInterval = stock.params.gridIntervalPercent || 0.10;
-  const lastBuyPrice = stock.dcaState.lastBuyPrice || stock.lots[stock.lots.length - 1]?.price;
-
-  if (lastBuyPrice && dayData.close <= lastBuyPrice * (1 - gridInterval)) {
-    return {
-      triggered: true,
-      type: 'GRID_BUY',
-      price: dayData.close,
-      gridPrice: lastBuyPrice * (1 - gridInterval)
-    };
-  }
-
-  // Check trailing stop buy
-  if (stock.dcaState.trailingStopBuy) {
-    if (dayData.close >= stock.dcaState.trailingStopBuy.stopPrice) {
-      return {
-        triggered: true,
-        type: 'TRAILING_STOP_BUY',
-        stopPrice: stock.dcaState.trailingStopBuy.stopPrice,
-        price: dayData.close
-      };
-    }
-  }
-
-  // Update bottom tracker
-  if (stock.dcaState.bottom && dayData.close < stock.dcaState.bottom) {
+  // Update bottom tracker if price is falling
+  if (!stock.dcaState.bottom || dayData.close < stock.dcaState.bottom) {
     stock.dcaState.bottom = dayData.close;
   }
 
-  return { triggered: false };
+  return signal;
 }
 
 /**
@@ -517,9 +459,15 @@ function evaluateBuySignal(stock, dayData, date) {
 function executeSell(stock, signal, dayData, date) {
   if (stock.lots.length === 0) return null;
 
-  // Sell highest-priced lot (LIFO for max profit)
-  const sortedLots = [...stock.lots].sort((a, b) => b.price - a.price);
-  const lotToSell = sortedLots[0];
+  // Get lot to sell from signal (signal engine selected it)
+  const lotsToSell = signal.lotsToSell || [];
+  if (lotsToSell.length === 0) {
+    // Fallback: select highest-priced lot (LIFO)
+    const sortedLots = [...stock.lots].sort((a, b) => b.price - a.price);
+    lotsToSell.push(sortedLots[0]);
+  }
+
+  const lotToSell = lotsToSell[0];
 
   const sellValue = lotToSell.shares * dayData.close;
   const lotCost = lotToSell.shares * lotToSell.price;
@@ -531,7 +479,7 @@ function executeSell(stock, signal, dayData, date) {
 
   return {
     date,
-    type: 'SELL',
+    type: signal.type || 'SELL',
     price: dayData.close,
     shares: lotToSell.shares,
     value: sellValue,
