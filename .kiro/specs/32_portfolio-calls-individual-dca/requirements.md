@@ -125,7 +125,38 @@ FOR EACH day:
 
    **Test 1: APP (2021-09-01 to 2025-10-14)**
    ```
-   URL: http://localhost:3000/backtest/long/APP/results?startDate=2021-09-01&endDate=2025-10-14&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=10&profitRequirement=10&trailingBuyActivationPercent=5&trailingBuyReboundPercent=5&trailingSellActivationPercent=20&trailingSellPullbackPercent=10&beta=2.592&coefficient=1&enableBetaScaling=false&isManualBetaOverride=false&enableDynamicGrid=false&normalizeToReference=true&enableConsecutiveIncrementalBuyGrid=true&enableConsecutiveIncrementalSellProfit=true&enableScenarioDetection=false&enableAverageBasedGrid=false&enableAverageBasedSell=false&dynamicGridMultiplier=1&gridConsecutiveIncrement=5
+   Frontend URL:
+   http://localhost:3000/backtest/long/APP/results?startDate=2021-09-01&endDate=2025-10-14&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=10&profitRequirement=10&trailingBuyActivationPercent=5&trailingBuyReboundPercent=5&trailingSellActivationPercent=20&trailingSellPullbackPercent=10&beta=2.592&coefficient=1&enableBetaScaling=false&isManualBetaOverride=false&enableDynamicGrid=false&normalizeToReference=true&enableConsecutiveIncrementalBuyGrid=true&enableConsecutiveIncrementalSellProfit=true&enableScenarioDetection=false&enableAverageBasedGrid=false&enableAverageBasedSell=false&dynamicGridMultiplier=1&gridConsecutiveIncrement=5
+
+   Backend API (curl):
+   curl -X POST http://localhost:3001/api/backtest/dca -H "Content-Type: application/json" -d '{
+     "startDate": "2021-09-01",
+     "endDate": "2025-10-14",
+     "lotSizeUsd": 10000,
+     "maxLots": 10,
+     "maxLotsToSell": 1,
+     "gridIntervalPercent": 0.1,
+     "profitRequirement": 0.1,
+     "trailingBuyActivationPercent": 0.05,
+     "trailingBuyReboundPercent": 0.05,
+     "trailingSellActivationPercent": 0.2,
+     "trailingSellPullbackPercent": 0.1,
+     "beta": 2.592,
+     "coefficient": 1,
+     "enableBetaScaling": false,
+     "isManualBetaOverride": false,
+     "enableDynamicGrid": false,
+     "normalizeToReference": true,
+     "enableConsecutiveIncrementalBuyGrid": true,
+     "enableConsecutiveIncrementalSellProfit": true,
+     "enableScenarioDetection": false,
+     "enableAverageBasedGrid": false,
+     "enableAverageBasedSell": false,
+     "dynamicGridMultiplier": 1,
+     "gridConsecutiveIncrement": 0.05,
+     "symbol": "APP",
+     "strategyMode": "long"
+   }'
 
    Expected Results:
    - Total Return: $1,154,291.86
