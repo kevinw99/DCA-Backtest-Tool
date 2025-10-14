@@ -1678,6 +1678,65 @@ const BacktestResults = ({ data, chartData: priceData }) => {
         <ScenarioAnalysis scenarioAnalysis={priceData.scenarioAnalysis} />
       )}
 
+      {/* API Test URL */}
+      {priceData?.backtestParameters && (
+        <div className="api-url-section" style={{ marginTop: '20px', padding: '15px', backgroundColor: '#f5f5f5', borderRadius: '8px', border: '1px solid #ddd' }}>
+          <h3 style={{ marginTop: 0, marginBottom: '10px', fontSize: '16px' }}>Backend API URL for Testing</h3>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <input
+              type="text"
+              readOnly
+              value={(() => {
+                const params = new URLSearchParams();
+                Object.entries(priceData.backtestParameters).forEach(([key, value]) => {
+                  if (value !== null && value !== undefined && value !== '') {
+                    params.append(key, value);
+                  }
+                });
+                return `http://localhost:3001/api/backtest/dca?${params.toString()}`;
+              })()}
+              style={{
+                flex: 1,
+                padding: '8px 12px',
+                fontSize: '13px',
+                fontFamily: 'monospace',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                backgroundColor: 'white'
+              }}
+              onClick={(e) => e.target.select()}
+            />
+            <button
+              onClick={() => {
+                const params = new URLSearchParams();
+                Object.entries(priceData.backtestParameters).forEach(([key, value]) => {
+                  if (value !== null && value !== undefined && value !== '') {
+                    params.append(key, value);
+                  }
+                });
+                const url = `http://localhost:3001/api/backtest/dca?${params.toString()}`;
+                navigator.clipboard.writeText(url);
+                alert('API URL copied to clipboard!');
+              }}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#4CAF50',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              Copy URL
+            </button>
+          </div>
+          <p style={{ marginTop: '8px', marginBottom: 0, fontSize: '12px', color: '#666' }}>
+            Use this URL with curl or other HTTP clients to test the backend API directly
+          </p>
+        </div>
+      )}
+
       {/* Strategy Summary */}
       <div className="strategy-summary">
         <h3>Strategy Summary</h3>
