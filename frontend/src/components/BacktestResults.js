@@ -1678,22 +1678,19 @@ const BacktestResults = ({ data, chartData: priceData }) => {
         <ScenarioAnalysis scenarioAnalysis={priceData.scenarioAnalysis} />
       )}
 
-      {/* API Test URL */}
+      {/* API Test Command */}
       {priceData?.backtestParameters && (
         <div className="api-url-section" style={{ marginTop: '20px', padding: '15px', backgroundColor: '#f5f5f5', borderRadius: '8px', border: '1px solid #ddd' }}>
-          <h3 style={{ marginTop: 0, marginBottom: '10px', fontSize: '16px' }}>Backend API URL for Testing</h3>
+          <h3 style={{ marginTop: 0, marginBottom: '10px', fontSize: '16px' }}>Backend API Test Command</h3>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             <input
               type="text"
               readOnly
               value={(() => {
-                const params = new URLSearchParams();
-                Object.entries(priceData.backtestParameters).forEach(([key, value]) => {
-                  if (value !== null && value !== undefined && value !== '') {
-                    params.append(key, value);
-                  }
-                });
-                return `http://localhost:3001/api/backtest/dca?${params.toString()}`;
+                // Generate curl command for testing the backend API
+                // The backend expects POST with JSON body (not GET with query params)
+                const jsonBody = JSON.stringify(priceData.backtestParameters, null, 2);
+                return `curl -X POST http://localhost:3001/api/backtest/dca -H "Content-Type: application/json" -d '${jsonBody.replace(/\n/g, ' ')}'`;
               })()}
               style={{
                 flex: 1,
@@ -1708,15 +1705,10 @@ const BacktestResults = ({ data, chartData: priceData }) => {
             />
             <button
               onClick={() => {
-                const params = new URLSearchParams();
-                Object.entries(priceData.backtestParameters).forEach(([key, value]) => {
-                  if (value !== null && value !== undefined && value !== '') {
-                    params.append(key, value);
-                  }
-                });
-                const url = `http://localhost:3001/api/backtest/dca?${params.toString()}`;
-                navigator.clipboard.writeText(url);
-                alert('API URL copied to clipboard!');
+                const jsonBody = JSON.stringify(priceData.backtestParameters, null, 2);
+                const curlCommand = `curl -X POST http://localhost:3001/api/backtest/dca -H "Content-Type: application/json" -d '${jsonBody.replace(/\n/g, ' ')}'`;
+                navigator.clipboard.writeText(curlCommand);
+                alert('Curl command copied to clipboard!');
               }}
               style={{
                 padding: '8px 16px',
@@ -1728,11 +1720,11 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                 fontSize: '14px'
               }}
             >
-              Copy URL
+              Copy Command
             </button>
           </div>
           <p style={{ marginTop: '8px', marginBottom: 0, fontSize: '12px', color: '#666' }}>
-            Use this URL with curl or other HTTP clients to test the backend API directly
+            Use this curl command to test the backend API directly from terminal
           </p>
         </div>
       )}
