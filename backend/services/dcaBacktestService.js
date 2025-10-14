@@ -2672,8 +2672,33 @@ async function runDCABacktest(params) {
   }
 }
 
+/**
+ * Create a DCA executor for portfolio backtesting (Spec 32 Phase 2)
+ * This function creates a closure that encapsulates all DCA state and provides
+ * methods to process trading day-by-day with capital gating support.
+ *
+ * @param {string} symbol - Stock symbol
+ * @param {Object} params - DCA parameters (same as runDCABacktest)
+ * @param {Array} pricesWithIndicators - Pre-loaded price and indicator data
+ * @returns {Object} Executor with methods: { processDay, getState, getResults }
+ */
+async function createDCAExecutor(symbol, params, pricesWithIndicators) {
+  // This function will wrap the existing runDCABacktest logic
+  // For now, let's create a simple implementation that reuses runDCABacktest
+  // but allows day-by-day execution with capital gating
+
+  // The challenge: runDCABacktest is a complete backtest function
+  // We need to either:
+  // 1. Refactor it to support day-by-day execution (complex)
+  // 2. Run it normally and just return results (simple, but defeats purpose)
+
+  // For Phase 2, we'll implement approach 1 with a state-preserving executor
+  throw new Error('createDCAExecutor not yet implemented - this is Phase 2 work in progress');
+}
+
 module.exports = {
   runDCABacktest,
+  createDCAExecutor,
   calculateMetrics,
   calculatePortfolioDrawdown,
   assessMarketCondition,
