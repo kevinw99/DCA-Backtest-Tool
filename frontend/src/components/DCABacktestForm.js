@@ -820,9 +820,17 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
     if (window.confirm('Reset all parameters to default values?')) {
       if (strategyMode === 'long') {
         const currentSymbol = parameters.symbol || 'TSLA';
+        // Preserve dates - they are NOT parameters that should be reset
+        const currentStartDate = parameters.startDate;
+        const currentEndDate = parameters.endDate;
         // Load ticker-specific defaults from backend API
         const defaults = await getTickerDefaults(currentSymbol);
-        setParameters({ ...defaults, symbol: currentSymbol });
+        setParameters({
+          ...defaults,
+          symbol: currentSymbol,
+          startDate: currentStartDate,  // Preserve current start date
+          endDate: currentEndDate        // Preserve current end date
+        });
         setBeta(defaults.beta || 1.0);
         setCoefficient(defaults.coefficient || 1.0);
         setEnableBetaScaling(defaults.enableBetaScaling || false);
@@ -831,8 +839,16 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
         setFeedbackMessage(tickerDefaults ? `Reset to ${currentSymbol} defaults` : 'Reset to global defaults');
       } else {
         const currentSymbol = shortParameters.symbol || 'TSLA';
+        // Preserve dates - they are NOT parameters that should be reset
+        const currentStartDate = shortParameters.startDate;
+        const currentEndDate = shortParameters.endDate;
         const defaults = await getTickerDefaults(currentSymbol);
-        setShortParameters({ ...defaults, symbol: currentSymbol });
+        setShortParameters({
+          ...defaults,
+          symbol: currentSymbol,
+          startDate: currentStartDate,  // Preserve current start date
+          endDate: currentEndDate        // Preserve current end date
+        });
         setFeedbackMessage(tickerDefaults ? `Reset to ${currentSymbol} defaults` : 'Reset to global defaults');
       }
       setTimeout(() => setFeedbackMessage(''), 3000);

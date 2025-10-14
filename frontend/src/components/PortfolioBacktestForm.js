@@ -85,12 +85,13 @@ const PortfolioBacktestForm = ({ parameters, onParametersChange, onSubmit, loadi
   };
 
   const handleReset = () => {
+    // Preserve current dates - they are NOT parameters that should be reset
     onParametersChange({
       totalCapital: 500000,
       lotSizeUsd: 10000,
       maxLotsPerStock: 10,
-      startDate: '2024-01-01',
-      endDate: new Date().toISOString().split('T')[0],
+      startDate: parameters.startDate,  // Preserve current start date
+      endDate: parameters.endDate,      // Preserve current end date
       stocks: ['TSLA', 'AAPL', 'NVDA', 'MSFT'],
       defaultParams: {
         gridIntervalPercent: 10,
