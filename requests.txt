@@ -1,3 +1,39 @@
+Please use this url to test
+http://localhost:3000/backtest/long/APP/results?startDate=2021-09-01&endDate=2025-10-14&lotSizeUsd=10000&max
+Lots=10&maxLotsToSell=1&gridIntervalPercent=10&profitRequirement=10&trailingBuyActivationPercent=5&trailingB
+uyReboundPercent=5&trailingSellActivationPercent=20&trailingSellPullbackPercent=10&beta=2.592&coefficient=1&
+enableBetaScaling=false&isManualBetaOverride=false&enableDynamicGrid=false&normalizeToReference=true&enableC
+onsecutiveIncrementalBuyGrid=true&enableConsecutiveIncrementalSellProfit=true&enableScenarioDetection=false&
+enableAverageBasedGrid=false&enableAverageBasedSell=false&dynamicGridMultiplier=1&gridConsecutiveIncrement=5
+ , you should get Total Return
+$1,154,291.86
+|
++1648.99%
+|
+Avg Capital:
+$48,015.49
+|
+CAGR:
+100.36%  . 2. another test: http://localhost:3000/backtest/long/TSLA/results?startDate=2021-09-01&endDate=20
+25-10-14&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=10&profitRequirement=10&trailingBuy
+ActivationPercent=10&trailingBuyReboundPercent=5&trailingSellActivationPercent=20&trailingSellPullbackPercen
+t=10&beta=2.592&coefficient=1&enableBetaScaling=false&isManualBetaOverride=false&enableDynamicGrid=false&nor
+malizeToReference=true&enableConsecutiveIncrementalBuyGrid=true&enableConsecutiveIncrementalSellProfit=false
+&enableScenarioDetection=false&enableAverageBasedGrid=false&enableAverageBasedSell=false&dynamicGridMultipli
+er=1&gridConsecutiveIncrement=5 Total Return
+$69,148.32
+|
++115.25%
+|
+Avg Capital:
+$42,735.21
+|
+CAGR:
+20.46%
+
+
+
+
 3 " Selling Logic Documented: backend/SELLING_LOGIC.md
 
    The consecutive high-profit sells you observed are achieved through LIFO (Last In, First Out) selling:
@@ -25,9 +61,23 @@ in the second argument). So you can generalize the individual DCA and portfolio 
 additional lots) for each day.
 
 
-
+bug: when reset from defaults, the start and end date gets set to empty. They should not be affected by reset (it
+is not a parameter
 )
 .
+no, please evalute again. The movitvation is to utilize the mature single DCA to portfolio backtest. If they are
+two different algo, then it is hard to see how portfolio backtest affect the single DCA algo collectively, then
+there is no meaning to have portfolio backtest at all!
+
+I think there is a intergration point, in which everyday the portfolio backtest call the single DCA algo for each
+stock, if there is captial available, then it will be the same execution as single DCA, if no captial available,
+then the single DCA will log the event of no captial available and skipped the buy and only process sell. So the
+key to extract the daily execution of single DCA is to have a parameter to indicate whether to evalute buy or not.
+Then both single DCA and portfolio backtest can use the same code base.
+
+With this guideline, if you need to develop a new spec, please do so/
+
+
 
 stock parameters for portfolio management
 done- 1. use stock-specific default to each stock, if it is in the backtestDefaults.json , otherwise use general

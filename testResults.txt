@@ -28,6 +28,12 @@ http://localhost:3000/batch/AAPL+AMZN+API+BABA+JD+KNDI+LMND+META+MSFT+NIO+NVDA+P
 When P/L < 0, conservative profile, when p/L >0, aggressive profile?
 or depends on the MV , rather than P/L?
 
+APP:
+http://localhost:3000/backtest/long/APP/results?startDate=2021-09-01&endDate=2025-10-14&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=10&profitRequirement=10&trailingBuyActivationPercent=5&trailingBuyReboundPercent=5&trailingSellActivationPercent=20&trailingSellPullbackPercent=10&beta=2.527&coefficient=1&enableBetaScaling=false&isManualBetaOverride=false&enableDynamicGrid=false&normalizeToReference=true&enableConsecutiveIncrementalBuyGrid=true&enableConsecutiveIncrementalSellProfit=true&enableScenarioDetection=false&enableAverageBasedGrid=false&enableAverageBasedSell=false&dynamicGridMultiplier=1&gridConsecutiveIncrement=5
+
+HOOD:
+http://localhost:3000/backtest/long/HOOD/results?startDate=2021-09-01&endDate=2025-10-14&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=10&profitRequirement=10&trailingBuyActivationPercent=5&trailingBuyReboundPercent=5&trailingSellActivationPercent=20&trailingSellPullbackPercent=10&beta=2.527&coefficient=1&enableBetaScaling=false&isManualBetaOverride=false&enableDynamicGrid=false&normalizeToReference=true&enableConsecutiveIncrementalBuyGrid=true&enableConsecutiveIncrementalSellProfit=true&enableScenarioDetection=false&enableAverageBasedGrid=false&enableAverageBasedSell=false&dynamicGridMultiplier=1&gridConsecutiveIncrement=5
+
 
 Use TA again?
 Actually once you control the buy and sell, then the whole algo is adjusted.

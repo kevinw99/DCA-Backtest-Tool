@@ -1841,9 +1841,15 @@ async function runDCABacktest(params) {
       }
     };
 
-    // Main loop through each day's data
-    for (let i = 0; i < pricesWithIndicators.length; i++) {
-      const dayData = pricesWithIndicators[i];
+    /**
+     * Process one day of trading execution
+     * Extracted from main loop for Phase 1 of Spec 32
+     * @param {Object} dayData - Price and indicator data for the day
+     * @param {number} i - Day index
+     * @param {Object} context - Execution context
+     * @param {boolean} context.buyEnabled - Whether to execute buy orders (default: true)
+     */
+    const processOneDayOfTrading = async (dayData, i, context = { buyEnabled: true }) => {
       const currentPrice = dayData.adjusted_close;
       const holdingsAtStartOfDay = [...lots];
       averageCost = recalculateAverageCost();
@@ -2230,23 +2236,26 @@ async function runDCABacktest(params) {
       }
 
       // SECOND PRIORITY: Execute trailing stop buy orders
-      // First, check if we need to cancel due to price exceeding limit
-      const wasCancelled = cancelTrailingStopBuyIfAbovePeak(currentPrice);
-      if (wasCancelled) {
-        actionsOccurred = true;
-      }
-
-      const trailingStopBuyExecuted = checkTrailingStopBuyExecution(currentPrice, dayData.date);
-      if (trailingStopBuyExecuted) {
-        actionsOccurred = true;
-      } else {
-        // Check if trailing stop buy should be activated (only if not currently active)
-        if (!trailingStopBuy) {
-          checkTrailingStopBuyActivation(currentPrice, dayData.date);
+      // Gate buy execution based on context.buyEnabled (Spec 32 Phase 1)
+      if (context.buyEnabled) {
+        // First, check if we need to cancel due to price exceeding limit
+        const wasCancelled = cancelTrailingStopBuyIfAbovePeak(currentPrice);
+        if (wasCancelled) {
+          actionsOccurred = true;
         }
 
-        // Update trailing stop buy if active
-        updateTrailingStopBuy(currentPrice);
+        const trailingStopBuyExecuted = checkTrailingStopBuyExecution(currentPrice, dayData.date);
+        if (trailingStopBuyExecuted) {
+          actionsOccurred = true;
+        } else {
+          // Check if trailing stop buy should be activated (only if not currently active)
+          if (!trailingStopBuy) {
+            checkTrailingStopBuyActivation(currentPrice, dayData.date);
+          }
+
+          // Update trailing stop buy if active
+          updateTrailingStopBuy(currentPrice);
+        }
       }
 
       // ALL BUYING - Only through trailing stop buy orders (no initial purchase)
@@ -2274,6 +2283,11 @@ async function runDCABacktest(params) {
       // Update peak/bottom tracking AFTER all executions for the day
       // This ensures trailing stops are checked against yesterday's peaks, not today's
       updatePeakBottomTracking(currentPrice);
+    };
+
+    // Main loop through each day's data
+    for (let i = 0; i < pricesWithIndicators.length; i++) {
+      await processOneDayOfTrading(pricesWithIndicators[i], i, { buyEnabled: true });
     }
 
     // Calculate final results
