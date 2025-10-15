@@ -133,7 +133,7 @@ function calculatePerStockMetrics(portfolio, config, priceDataMap) {
     const endDate = new Date(config.endDate);
     const years = (endDate - startDate) / (365.25 * 24 * 60 * 60 * 1000);
 
-    const firstBuy = stock.transactions.find(t => t.type === 'BUY');
+    const firstBuy = stock.transactions.find(t => t.type.includes('BUY'));
     const stockYears = firstBuy ? (endDate - new Date(firstBuy.date)) / (365.25 * 24 * 60 * 60 * 1000) : years;
 
     const stockFinalValue = stock.marketValue + stock.realizedPNL;
@@ -317,7 +317,7 @@ function calculateStockMaxDrawdown(stock) {
   let peak = 0;
 
   for (const transaction of stock.transactions) {
-    if (transaction.type === 'BUY') {
+    if (transaction.type.includes('BUY')) {
       if (stock.marketValue > peak) {
         peak = stock.marketValue;
       }
@@ -371,7 +371,7 @@ function calculateCapitalFlow(portfolio) {
 
       const flow = flowByDate.get(transaction.date);
 
-      if (transaction.type === 'BUY') {
+      if (transaction.type.includes('BUY')) {
         flow.buys += transaction.value;
       } else if (transaction.type.includes('SELL')) {
         flow.sells += transaction.value;
@@ -562,10 +562,10 @@ function buildCompositionTimeSeries(portfolio, capitalUtilizationTimeSeries, pri
       // Replay transactions to reconstruct lots held at this specific date
       let lotsHeld = [];
       for (const tx of transactionsUpToDate) {
-        if (tx.type === 'BUY') {
+        if (tx.type.includes('BUY')) {
           // Add lot to holdings
           lotsHeld.push({ price: tx.price, shares: tx.shares, date: tx.date });
-        } else if (tx.type.includes('SELL') && tx.lotsDetails) {
+        } else if (tx.type.includes('SELL') && tx.lotsDetails && Array.isArray(tx.lotsDetails)) {
           // Remove sold lots
           for (const soldLot of tx.lotsDetails) {
             const index = lotsHeld.findIndex(l =>
@@ -628,7 +628,7 @@ function buildCapitalDeploymentTimeSeries(portfolio, capitalUtilizationTimeSerie
 
       let deployedCapital = 0;
       for (const tx of transactionsUpToDate) {
-        if (tx.type === 'BUY') {
+        if (tx.type.includes('BUY')) {
           deployedCapital += tx.value;
         } else if (tx.type.includes('SELL') && tx.lotsCost) {
           deployedCapital -= tx.lotsCost;

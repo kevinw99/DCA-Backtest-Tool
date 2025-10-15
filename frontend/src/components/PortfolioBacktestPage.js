@@ -32,7 +32,10 @@ const PortfolioBacktestPage = () => {
         trailingBuyActivationPercent: 10,
         trailingBuyReboundPercent: 5,
         trailingSellActivationPercent: 20,
-        trailingSellPullbackPercent: 10
+        trailingSellPullbackPercent: 10,
+        enableConsecutiveIncrementalBuyGrid: false,
+        gridConsecutiveIncrement: 0,
+        enableConsecutiveIncrementalSellProfit: false
       }
     };
   });
@@ -63,7 +66,10 @@ const PortfolioBacktestPage = () => {
           trailingBuyActivationPercent: parseFloat(searchParams.get('trailingBuyActivation')) || 10,
           trailingBuyReboundPercent: parseFloat(searchParams.get('trailingBuyRebound')) || 5,
           trailingSellActivationPercent: parseFloat(searchParams.get('trailingSellActivation')) || 20,
-          trailingSellPullbackPercent: parseFloat(searchParams.get('trailingSellPullback')) || 10
+          trailingSellPullbackPercent: parseFloat(searchParams.get('trailingSellPullback')) || 10,
+          enableConsecutiveIncrementalBuyGrid: searchParams.get('consecutiveBuyGrid') === 'true',
+          gridConsecutiveIncrement: parseFloat(searchParams.get('gridConsecutiveIncrement')) || 0,
+          enableConsecutiveIncrementalSellProfit: searchParams.get('consecutiveSellProfit') === 'true'
         }
       };
 
@@ -99,6 +105,9 @@ const PortfolioBacktestPage = () => {
     params.set('trailingBuyRebound', (parameters.defaultParams.trailingBuyReboundPercent || 5).toString());
     params.set('trailingSellActivation', (parameters.defaultParams.trailingSellActivationPercent || 20).toString());
     params.set('trailingSellPullback', (parameters.defaultParams.trailingSellPullbackPercent || 10).toString());
+    params.set('consecutiveBuyGrid', parameters.defaultParams.enableConsecutiveIncrementalBuyGrid ? 'true' : 'false');
+    params.set('gridConsecutiveIncrement', (parameters.defaultParams.gridConsecutiveIncrement || 0).toString());
+    params.set('consecutiveSellProfit', parameters.defaultParams.enableConsecutiveIncrementalSellProfit ? 'true' : 'false');
 
     setSearchParams(params, { replace: true });
   }, [parameters, setSearchParams]);
