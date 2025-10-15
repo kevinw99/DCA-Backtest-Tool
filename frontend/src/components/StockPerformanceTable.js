@@ -16,6 +16,11 @@ const StockPerformanceTable = ({ stocks, portfolioRunId, parameters }) => {
     }).format(value);
   };
 
+  const safeToFixed = (value, decimals = 2) => {
+    if (value == null || isNaN(value)) return 'N/A';
+    return value.toFixed(decimals);
+  };
+
   const sortedStocks = useMemo(() => {
     if (!stocks) return [];
 
@@ -143,10 +148,10 @@ const StockPerformanceTable = ({ stocks, portfolioRunId, parameters }) => {
                   {formatCurrency(stock.totalPNL)}
                 </td>
                 <td className={stock.stockReturnPercent >= 0 ? 'positive' : 'negative'}>
-                  {stock.stockReturnPercent.toFixed(2)}%
+                  {safeToFixed(stock.stockReturnPercent, 2)}%
                 </td>
-                <td>{stock.cagr.toFixed(2)}%</td>
-                <td>{stock.contributionToPortfolioReturn.toFixed(2)}%</td>
+                <td>{safeToFixed(stock.cagr, 2)}%</td>
+                <td>{safeToFixed(stock.contributionToPortfolioReturn, 2)}%</td>
                 <td>{stock.totalBuys}</td>
                 <td>{stock.totalSells}</td>
                 <td className={stock.rejectedBuys > 0 ? 'highlight' : ''}>
