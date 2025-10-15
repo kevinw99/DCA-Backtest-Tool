@@ -28,7 +28,11 @@ const PortfolioBacktestPage = () => {
         profitRequirement: 10,
         stopLossPercent: 30,
         enableTrailingBuy: false,
-        enableTrailingSell: false
+        enableTrailingSell: false,
+        trailingBuyActivationPercent: 10,
+        trailingBuyReboundPercent: 5,
+        trailingSellActivationPercent: 20,
+        trailingSellPullbackPercent: 10
       }
     };
   });
@@ -55,7 +59,11 @@ const PortfolioBacktestPage = () => {
           profitRequirement: parseFloat(searchParams.get('profitReq')) || 10,
           stopLossPercent: parseFloat(searchParams.get('stopLoss')) || 30,
           enableTrailingBuy: searchParams.get('trailingBuy') === 'true',
-          enableTrailingSell: searchParams.get('trailingSell') === 'true'
+          enableTrailingSell: searchParams.get('trailingSell') === 'true',
+          trailingBuyActivationPercent: parseFloat(searchParams.get('trailingBuyActivation')) || 10,
+          trailingBuyReboundPercent: parseFloat(searchParams.get('trailingBuyRebound')) || 5,
+          trailingSellActivationPercent: parseFloat(searchParams.get('trailingSellActivation')) || 20,
+          trailingSellPullbackPercent: parseFloat(searchParams.get('trailingSellPullback')) || 10
         }
       };
 
@@ -87,6 +95,10 @@ const PortfolioBacktestPage = () => {
     params.set('stopLoss', (parameters.defaultParams.stopLossPercent || 30).toString());
     params.set('trailingBuy', parameters.defaultParams.enableTrailingBuy ? 'true' : 'false');
     params.set('trailingSell', parameters.defaultParams.enableTrailingSell ? 'true' : 'false');
+    params.set('trailingBuyActivation', (parameters.defaultParams.trailingBuyActivationPercent || 10).toString());
+    params.set('trailingBuyRebound', (parameters.defaultParams.trailingBuyReboundPercent || 5).toString());
+    params.set('trailingSellActivation', (parameters.defaultParams.trailingSellActivationPercent || 20).toString());
+    params.set('trailingSellPullback', (parameters.defaultParams.trailingSellPullbackPercent || 10).toString());
 
     setSearchParams(params, { replace: true });
   }, [parameters, setSearchParams]);
@@ -110,7 +122,11 @@ const PortfolioBacktestPage = () => {
             profitRequirement: (stockParams.longStrategy.profitRequirement || paramsToUse.defaultParams.profitRequirement) / 100,
             stopLossPercent: (paramsToUse.defaultParams.stopLossPercent || 30) / 100,
             enableTrailingBuy: paramsToUse.defaultParams.enableTrailingBuy || false,
-            enableTrailingSell: paramsToUse.defaultParams.enableTrailingSell || false
+            enableTrailingSell: paramsToUse.defaultParams.enableTrailingSell || false,
+            trailingBuyActivationPercent: (stockParams.longStrategy.trailingBuyActivationPercent || paramsToUse.defaultParams.trailingBuyActivationPercent || 10) / 100,
+            trailingBuyReboundPercent: (stockParams.longStrategy.trailingBuyReboundPercent || paramsToUse.defaultParams.trailingBuyReboundPercent || 5) / 100,
+            trailingSellActivationPercent: (stockParams.longStrategy.trailingSellActivationPercent || paramsToUse.defaultParams.trailingSellActivationPercent || 20) / 100,
+            trailingSellPullbackPercent: (stockParams.longStrategy.trailingSellPullbackPercent || paramsToUse.defaultParams.trailingSellPullbackPercent || 10) / 100
           }
         };
       });
@@ -131,7 +147,11 @@ const PortfolioBacktestPage = () => {
             profitRequirement: paramsToUse.defaultParams.profitRequirement / 100,
             stopLossPercent: (paramsToUse.defaultParams.stopLossPercent || 30) / 100,
             enableTrailingBuy: paramsToUse.defaultParams.enableTrailingBuy || false,
-            enableTrailingSell: paramsToUse.defaultParams.enableTrailingSell || false
+            enableTrailingSell: paramsToUse.defaultParams.enableTrailingSell || false,
+            trailingBuyActivationPercent: (paramsToUse.defaultParams.trailingBuyActivationPercent || 10) / 100,
+            trailingBuyReboundPercent: (paramsToUse.defaultParams.trailingBuyReboundPercent || 5) / 100,
+            trailingSellActivationPercent: (paramsToUse.defaultParams.trailingSellActivationPercent || 20) / 100,
+            trailingSellPullbackPercent: (paramsToUse.defaultParams.trailingSellPullbackPercent || 10) / 100
           },
           stocks: stocksWithParams // Send stocks with their specific parameters
         })
