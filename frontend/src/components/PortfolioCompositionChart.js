@@ -168,6 +168,7 @@ const PortfolioCompositionChart = ({ compositionTimeSeries }) => {
             stroke="#666"
             tick={{ fontSize: 12 }}
             tickFormatter={formatCurrency}
+            domain={[0, 'auto']}
           />
           <Tooltip content={<CustomTooltip />} />
 

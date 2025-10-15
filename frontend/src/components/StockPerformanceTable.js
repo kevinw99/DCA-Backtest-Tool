@@ -219,7 +219,7 @@ const StockDetailView = ({ stock }) => {
               {stock.transactions.map((tx, idx) => (
                 <tr key={idx}>
                   <td>{tx.date}</td>
-                  <td className={tx.type === 'BUY' ? 'buy-type' : 'sell-type'}>
+                  <td className={tx.type.includes('BUY') ? 'buy-type' : 'sell-type'}>
                     {tx.type}
                   </td>
                   <td>${tx.price?.toFixed(2) || 'N/A'}</td>

@@ -4,7 +4,6 @@ import StockPerformanceTable from './StockPerformanceTable';
 import CapitalUtilizationChart from './CapitalUtilizationChart';
 import PortfolioCompositionChart from './PortfolioCompositionChart';
 import MultiStockPriceChart from './MultiStockPriceChart';
-import CapitalAllocationChart from './CapitalAllocationChart';
 import RejectedOrdersTable from './RejectedOrdersTable';
 import './PortfolioResults.css';
 
@@ -50,20 +49,6 @@ const PortfolioResults = ({ data }) => {
           </p>
         </div>
         <MultiStockPriceChart stockResults={stockResults} />
-      </section>
-
-      <section className="charts-section">
-        <div className="section-header">
-          <h3>💰 Capital Allocation Timeline</h3>
-          <p className="section-description">
-            Track capital deployment across stocks with utilization percentage overlay
-          </p>
-        </div>
-        <CapitalAllocationChart
-          compositionTimeSeries={portfolioCompositionTimeSeries}
-          capitalUtilizationTimeSeries={capitalUtilizationTimeSeries}
-          capitalDeploymentTimeSeries={capitalDeploymentTimeSeries}
-        />
       </section>
 
       <section className="charts-section">

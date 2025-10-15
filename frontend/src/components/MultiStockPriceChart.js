@@ -95,7 +95,7 @@ const MultiStockPriceChart = ({ stockResults }) => {
       // Buy transactions
       if (stock.transactions) {
         stock.transactions.forEach(tx => {
-          if (tx.type === 'BUY' && tx.date) {
+          if (tx.type.includes('BUY') && tx.date) {
             const dataPoint = normalizedData.find(d => d.date === tx.date);
             if (dataPoint && dataPoint[stock.symbol] !== null) {
               allTransactions.push({
@@ -108,7 +108,7 @@ const MultiStockPriceChart = ({ stockResults }) => {
                 color
               });
             }
-          } else if (tx.type === 'SELL' && tx.date) {
+          } else if (tx.type.includes('SELL') && tx.date) {
             const dataPoint = normalizedData.find(d => d.date === tx.date);
             if (dataPoint && dataPoint[stock.symbol] !== null) {
               allTransactions.push({
