@@ -321,7 +321,7 @@ function calculateStockMaxDrawdown(stock) {
       if (stock.marketValue > peak) {
         peak = stock.marketValue;
       }
-    } else if (transaction.type === 'SELL') {
+    } else if (transaction.type.includes('SELL')) {
       const drawdown = peak - stock.marketValue;
       const drawdownPercent = peak > 0 ? (drawdown / peak) * 100 : 0;
 
@@ -373,7 +373,7 @@ function calculateCapitalFlow(portfolio) {
 
       if (transaction.type === 'BUY') {
         flow.buys += transaction.value;
-      } else if (transaction.type === 'SELL') {
+      } else if (transaction.type.includes('SELL')) {
         flow.sells += transaction.value;
       }
     }
@@ -565,7 +565,7 @@ function buildCompositionTimeSeries(portfolio, capitalUtilizationTimeSeries, pri
         if (tx.type === 'BUY') {
           // Add lot to holdings
           lotsHeld.push({ price: tx.price, shares: tx.shares, date: tx.date });
-        } else if (tx.type === 'SELL' && tx.lotsDetails) {
+        } else if (tx.type.includes('SELL') && tx.lotsDetails) {
           // Remove sold lots
           for (const soldLot of tx.lotsDetails) {
             const index = lotsHeld.findIndex(l =>
@@ -630,7 +630,7 @@ function buildCapitalDeploymentTimeSeries(portfolio, capitalUtilizationTimeSerie
       for (const tx of transactionsUpToDate) {
         if (tx.type === 'BUY') {
           deployedCapital += tx.value;
-        } else if (tx.type === 'SELL' && tx.lotsCost) {
+        } else if (tx.type.includes('SELL') && tx.lotsCost) {
           deployedCapital -= tx.lotsCost;
         }
       }
