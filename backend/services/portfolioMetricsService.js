@@ -177,8 +177,8 @@ function calculatePerStockMetrics(portfolio, config, priceDataMap) {
       sharpeRatio: stockSharpe,
 
       // Activity
-      totalBuys: stock.transactions.filter(t => t.type === 'BUY').length,
-      totalSells: stock.transactions.filter(t => t.type === 'SELL').length,
+      totalBuys: stock.transactions.filter(t => t.type.includes('BUY')).length,
+      totalSells: stock.transactions.filter(t => t.type.includes('SELL')).length,
       rejectedBuys: stock.rejectedBuys,
       rejectedBuyValues: stock.rejectedBuyValues,
 
@@ -343,7 +343,7 @@ function calculateStockMaxDrawdown(stock) {
  */
 function calculateStockSharpeRatio(stock) {
   // Simplified based on realized trades
-  const sells = stock.transactions.filter(t => t.type === 'SELL');
+  const sells = stock.transactions.filter(t => t.type.includes('SELL'));
 
   if (sells.length < 2) return 0;
 
@@ -405,7 +405,7 @@ function calculateCapitalFlow(portfolio) {
 function countTotalBuys(portfolio) {
   let count = 0;
   for (const stock of portfolio.stocks.values()) {
-    count += stock.transactions.filter(t => t.type === 'BUY').length;
+    count += stock.transactions.filter(t => t.type.includes('BUY')).length;
   }
   return count;
 }
@@ -416,7 +416,7 @@ function countTotalBuys(portfolio) {
 function countTotalSells(portfolio) {
   let count = 0;
   for (const stock of portfolio.stocks.values()) {
-    count += stock.transactions.filter(t => t.type === 'SELL').length;
+    count += stock.transactions.filter(t => t.type.includes('SELL')).length;
   }
   return count;
 }
@@ -437,7 +437,7 @@ function calculateWinRate(portfolio) {
 
   for (const stock of portfolio.stocks.values()) {
     for (const transaction of stock.transactions) {
-      if (transaction.type === 'SELL') {
+      if (transaction.type.includes('SELL')) {
         total++;
         if (transaction.realizedPNLFromTrade > 0) {
           wins++;
@@ -457,7 +457,7 @@ function calculateAvgWin(portfolio) {
 
   for (const stock of portfolio.stocks.values()) {
     for (const transaction of stock.transactions) {
-      if (transaction.type === 'SELL' && transaction.realizedPNLFromTrade > 0) {
+      if (transaction.type.includes('SELL') && transaction.realizedPNLFromTrade > 0) {
         wins.push(transaction.realizedPNLFromTrade);
       }
     }
@@ -474,7 +474,7 @@ function calculateAvgLoss(portfolio) {
 
   for (const stock of portfolio.stocks.values()) {
     for (const transaction of stock.transactions) {
-      if (transaction.type === 'SELL' && transaction.realizedPNLFromTrade < 0) {
+      if (transaction.type.includes('SELL') && transaction.realizedPNLFromTrade < 0) {
         losses.push(Math.abs(transaction.realizedPNLFromTrade));
       }
     }
@@ -492,7 +492,7 @@ function calculateProfitFactor(portfolio) {
 
   for (const stock of portfolio.stocks.values()) {
     for (const transaction of stock.transactions) {
-      if (transaction.type === 'SELL') {
+      if (transaction.type.includes('SELL')) {
         if (transaction.realizedPNLFromTrade > 0) {
           totalWins += transaction.realizedPNLFromTrade;
         } else {
