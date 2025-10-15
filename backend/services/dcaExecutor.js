@@ -1653,6 +1653,7 @@ function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false
               price: executionPrice,
               shares: soldLot.shares,
               value: lotSaleValue,
+              lotsCost: soldLot.shares * soldLot.price, // Original cost of the lot sold
               lotPrice: soldLot.price, // Original purchase price of this specific lot
               lotsDetails: [{ price: soldLot.price, shares: soldLot.shares, date: buyTransaction?.date || dayData.date }], // Individual lot details
               lotsAfterTransaction: [...lots], // Portfolio state after all lots are sold
