@@ -346,7 +346,6 @@ function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false
     let maxDrawdownPercent = 0;
     let rejectedBuys = 0;
     let rejectedBuyValues = 0;
-    const transactions = []; // Legacy transaction format (for compatibility)
 
     // Consecutive incremental profit tracking
     let lastActionType = null; // 'buy' | 'sell' | null
@@ -1876,7 +1875,6 @@ function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false
 
       return {
         lots,
-        transactions,
         enhancedTransactions,
         realizedPNL,
         unrealizedPNL,
@@ -1927,8 +1925,8 @@ function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false
           maxCapitalDeployed,
           rejectedBuys,
           rejectedBuyValues,
-          buyTransactions: transactions.filter(t => t.type === 'BUY').length,
-          sellTransactions: transactions.filter(t => t.type !== 'BUY').length,
+          buyTransactions: enhancedTransactions.filter(t => t.type.includes('BUY')).length,
+          sellTransactions: enhancedTransactions.filter(t => t.type.includes('SELL')).length,
           profileSwitchCount,
           daysInConservative,
           daysInAggressive
