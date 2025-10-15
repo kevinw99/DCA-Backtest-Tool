@@ -97,8 +97,15 @@ const PortfolioBacktestForm = ({ parameters, onParametersChange, onSubmit, loadi
         gridIntervalPercent: 10,
         profitRequirement: 10,
         stopLossPercent: 30,
+        trailingBuyActivationPercent: 10,
+        trailingBuyReboundPercent: 5,
+        trailingSellActivationPercent: 20,
+        trailingSellPullbackPercent: 10,
         enableTrailingBuy: false,
-        enableTrailingSell: false
+        enableTrailingSell: false,
+        enableConsecutiveIncrementalBuyGrid: false,
+        gridConsecutiveIncrement: 5,
+        enableConsecutiveIncrementalSellProfit: false
       }
     });
     setValidationErrors([]);
@@ -291,6 +298,70 @@ const PortfolioBacktestForm = ({ parameters, onParametersChange, onSubmit, loadi
               max="100"
             />
           </div>
+
+          <div className="input-group">
+            <label htmlFor="trailingBuyActivationPercent">
+              Trailing Buy Activation (%)
+              <span className="help-text">Price drop % from peak to activate trailing buy</span>
+            </label>
+            <input
+              id="trailingBuyActivationPercent"
+              type="number"
+              value={parameters.defaultParams.trailingBuyActivationPercent || 10}
+              onChange={(e) => handleDefaultParamChange('trailingBuyActivationPercent', parseFloat(e.target.value) || 0)}
+              step="0.1"
+              min="0"
+              max="100"
+            />
+          </div>
+
+          <div className="input-group">
+            <label htmlFor="trailingBuyReboundPercent">
+              Trailing Buy Rebound (%)
+              <span className="help-text">Stop price % above current price for trailing buy</span>
+            </label>
+            <input
+              id="trailingBuyReboundPercent"
+              type="number"
+              value={parameters.defaultParams.trailingBuyReboundPercent || 5}
+              onChange={(e) => handleDefaultParamChange('trailingBuyReboundPercent', parseFloat(e.target.value) || 0)}
+              step="0.1"
+              min="0"
+              max="100"
+            />
+          </div>
+
+          <div className="input-group">
+            <label htmlFor="trailingSellActivationPercent">
+              Trailing Sell Activation (%)
+              <span className="help-text">Price rise % from bottom to activate trailing sell</span>
+            </label>
+            <input
+              id="trailingSellActivationPercent"
+              type="number"
+              value={parameters.defaultParams.trailingSellActivationPercent || 20}
+              onChange={(e) => handleDefaultParamChange('trailingSellActivationPercent', parseFloat(e.target.value) || 0)}
+              step="0.1"
+              min="0"
+              max="100"
+            />
+          </div>
+
+          <div className="input-group">
+            <label htmlFor="trailingSellPullbackPercent">
+              Trailing Sell Pullback (%)
+              <span className="help-text">Price pullback % before selling</span>
+            </label>
+            <input
+              id="trailingSellPullbackPercent"
+              type="number"
+              value={parameters.defaultParams.trailingSellPullbackPercent || 10}
+              onChange={(e) => handleDefaultParamChange('trailingSellPullbackPercent', parseFloat(e.target.value) || 0)}
+              step="0.1"
+              min="0"
+              max="100"
+            />
+          </div>
         </div>
 
         <div className="checkbox-grid">
@@ -315,6 +386,46 @@ const PortfolioBacktestForm = ({ parameters, onParametersChange, onSubmit, loadi
               />
               Enable Trailing Sell
               <span className="help-text">Wait for price pullback before selling</span>
+            </label>
+          </div>
+
+          <div className="checkbox-group">
+            <label>
+              <input
+                type="checkbox"
+                checked={parameters.defaultParams.enableConsecutiveIncrementalBuyGrid || false}
+                onChange={(e) => handleDefaultParamChange('enableConsecutiveIncrementalBuyGrid', e.target.checked)}
+              />
+              Enable Consecutive Incremental Buy Grid
+            </label>
+          </div>
+
+          {parameters.defaultParams.enableConsecutiveIncrementalBuyGrid && (
+            <div className="input-group">
+              <label htmlFor="gridConsecutiveIncrement">
+                Grid Consecutive Increment (%)
+                <span className="help-text">Grid consecutive increment %</span>
+              </label>
+              <input
+                id="gridConsecutiveIncrement"
+                type="number"
+                value={parameters.defaultParams.gridConsecutiveIncrement || 5}
+                onChange={(e) => handleDefaultParamChange('gridConsecutiveIncrement', parseFloat(e.target.value) || 0)}
+                step="0.1"
+                min="0"
+                max="100"
+              />
+            </div>
+          )}
+
+          <div className="checkbox-group">
+            <label>
+              <input
+                type="checkbox"
+                checked={parameters.defaultParams.enableConsecutiveIncrementalSellProfit || false}
+                onChange={(e) => handleDefaultParamChange('enableConsecutiveIncrementalSellProfit', e.target.checked)}
+              />
+              Enable Consecutive Incremental Sell Profit
             </label>
           </div>
         </div>
