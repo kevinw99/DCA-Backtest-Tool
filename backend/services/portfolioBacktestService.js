@@ -173,7 +173,7 @@ class StockState {
     if (transaction.lotsDetails && Array.isArray(transaction.lotsDetails)) {
       for (const soldLot of transaction.lotsDetails) {
         const index = this.lots.findIndex(lot =>
-          lot.price === soldLot.price && lot.date === soldLot.date
+          Math.abs(lot.price - soldLot.price) < 0.01 && lot.date === soldLot.date
         );
         if (index !== -1) {
           this.lots.splice(index, 1);
