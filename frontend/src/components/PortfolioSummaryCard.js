@@ -13,7 +13,13 @@ const PortfolioSummaryCard = ({ summary }) => {
   };
 
   const formatPercent = (value) => {
+    if (value == null || isNaN(value)) return 'N/A';
     return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+  };
+
+  const safeToFixed = (value, decimals = 2) => {
+    if (value == null || isNaN(value)) return 'N/A';
+    return value.toFixed(decimals);
   };
 
   return (
@@ -22,7 +28,7 @@ const PortfolioSummaryCard = ({ summary }) => {
         <h2>Portfolio Summary</h2>
         <div className={`summary-badge ${summary.totalReturnPercent >= 0 ? 'positive' : 'negative'}`}>
           {summary.totalReturnPercent >= 0 ? '▲' : '▼'}
-          {Math.abs(summary.totalReturnPercent).toFixed(2)}%
+          {safeToFixed(Math.abs(summary.totalReturnPercent), 2)}%
         </div>
       </div>
 
@@ -48,7 +54,7 @@ const PortfolioSummaryCard = ({ summary }) => {
 
         <MetricBox
           label="CAGR"
-          value={`${summary.cagr.toFixed(2)}%`}
+          value={`${safeToFixed(summary.cagr, 2)}%`}
           icon={<Activity size={24} />}
           subValue="Compound Annual Growth"
         />
@@ -56,13 +62,13 @@ const PortfolioSummaryCard = ({ summary }) => {
         <MetricBox
           label="Max Drawdown"
           value={formatCurrency(summary.maxDrawdown)}
-          subValue={`${summary.maxDrawdownPercent.toFixed(2)}%`}
+          subValue={`${safeToFixed(summary.maxDrawdownPercent, 2)}%`}
           icon={<TrendingDown size={24} />}
         />
 
         <MetricBox
           label="Sharpe Ratio"
-          value={summary.sharpeRatio.toFixed(2)}
+          value={safeToFixed(summary.sharpeRatio, 2)}
           icon={<Target size={24} />}
           subValue="Risk-adjusted return"
         />
@@ -76,13 +82,13 @@ const PortfolioSummaryCard = ({ summary }) => {
 
         <MetricBox
           label="Win Rate"
-          value={`${summary.winRate.toFixed(1)}%`}
+          value={`${safeToFixed(summary.winRate, 1)}%`}
           icon={<Target size={24} />}
         />
 
         <MetricBox
           label="Capital Utilization"
-          value={`${summary.capitalUtilizationPercent.toFixed(1)}%`}
+          value={`${safeToFixed(summary.capitalUtilizationPercent, 1)}%`}
           subValue={`Deployed: ${formatCurrency(summary.deployedCapital)}`}
           icon={<BarChart3 size={24} />}
         />
