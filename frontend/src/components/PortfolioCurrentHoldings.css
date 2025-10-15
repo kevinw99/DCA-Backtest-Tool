@@ -1,0 +1,167 @@
+.portfolio-holdings {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.portfolio-holdings.empty {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.holdings-summary {
+  display: flex;
+  gap: 30px;
+  margin-bottom: 30px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.summary-label {
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+}
+
+.summary-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+}
+
+.summary-value.positive {
+  color: #10b981;
+}
+
+.summary-value.negative {
+  color: #ef4444;
+}
+
+.holdings-by-stock {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.stock-holdings {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.stock-holdings-header {
+  background: #f8f9fa;
+  padding: 15px 20px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.stock-holdings-header h4 {
+  margin: 0 0 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  color: #333;
+}
+
+.stock-holdings-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #666;
+}
+
+.stock-holdings-summary .divider {
+  color: #ccc;
+}
+
+.stock-holdings-summary .positive {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.stock-holdings-summary .negative {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.lots-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.lots-table thead {
+  background: #fafafa;
+}
+
+.lots-table th {
+  padding: 12px 15px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.lots-table tbody tr {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.lots-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.lots-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.lots-table td {
+  padding: 12px 15px;
+  font-size: 14px;
+  color: #333;
+}
+
+.lots-table td.positive {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.lots-table td.negative {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.no-lot-details {
+  padding: 30px;
+  text-align: center;
+  color: #999;
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .holdings-summary {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .lots-table {
+    font-size: 12px;
+  }
+
+  .lots-table th,
+  .lots-table td {
+    padding: 8px 10px;
+  }
+}

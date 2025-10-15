@@ -5,6 +5,7 @@ import CapitalUtilizationChart from './CapitalUtilizationChart';
 import PortfolioCompositionChart from './PortfolioCompositionChart';
 import MultiStockPriceChart from './MultiStockPriceChart';
 import RejectedOrdersTable from './RejectedOrdersTable';
+import PortfolioCurrentHoldings from './PortfolioCurrentHoldings';
 import './PortfolioResults.css';
 
 const PortfolioResults = ({ data }) => {
@@ -59,6 +60,16 @@ const PortfolioResults = ({ data }) => {
           </p>
         </div>
         <CapitalUtilizationChart timeSeries={capitalUtilizationTimeSeries} />
+      </section>
+
+      <section className="current-holdings-section">
+        <div className="section-header">
+          <h3>💼 Current Holdings</h3>
+          <p className="section-description">
+            Detailed breakdown of all current positions at the end of the backtest period
+          </p>
+        </div>
+        <PortfolioCurrentHoldings stockResults={stockResults} />
       </section>
 
       <section className="stock-performance-section">
