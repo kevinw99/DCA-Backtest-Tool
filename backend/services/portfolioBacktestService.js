@@ -11,6 +11,7 @@
 
 const dcaBacktestService = require('./dcaBacktestService');
 const dcaSignalEngine = require('./dcaSignalEngine');
+const { createDCAExecutor } = require('./dcaExecutor');
 const database = require('../database');
 
 /**
@@ -218,13 +219,35 @@ async function runPortfolioBacktest(config) {
   console.log('📡 Loading price data for all stocks...');
   const priceDataMap = await loadAllPriceData(config.stocks, config.startDate, config.endDate);
 
-  // 3. Initialize stock states
+  // 3. Initialize executors and stock states for each stock
+  const executors = new Map();
+  const executorDayIndices = new Map();  // Track each executor's current day index
+
   for (const stockConfig of config.stocks) {
     const params = {
       ...config.defaultParams,
       ...stockConfig.params,
-      maxLots: config.maxLotsPerStock  // Add maxLots constraint from portfolio config
+      maxLots: config.maxLotsPerStock,  // Add maxLots constraint from portfolio config
+      lotSizeUsd: config.lotSizeUsd     // Ensure lot size is passed
     };
+
+    // Get price data as array for this stock
+    const dateMap = priceDataMap.get(stockConfig.symbol);
+    const pricesArray = Array.from(dateMap.values());
+
+    // Create DCA executor for this stock
+    const executor = createDCAExecutor(
+      stockConfig.symbol,
+      params,
+      pricesArray,
+      false,  // verbose
+      null    // adaptiveStrategy
+    );
+
+    executors.set(stockConfig.symbol, executor);
+    executorDayIndices.set(stockConfig.symbol, 0);  // Start at day 0
+
+    // Still create stock state for portfolio tracking
     portfolio.stocks.set(stockConfig.symbol, new StockState(stockConfig.symbol, params));
   }
 
@@ -232,29 +255,78 @@ async function runPortfolioBacktest(config) {
   const allDates = getAllUniqueDates(priceDataMap);
   console.log(`📅 Simulating ${allDates.length} trading days...`);
 
-  // 5. Simulate chronologically
+  // 5. Simulate chronologically using executors
   let transactionCount = 0;
   let rejectedCount = 0;
 
   for (let i = 0; i < allDates.length; i++) {
     const date = allDates[i];
 
-    // Update valuations for all stocks
-    for (const [symbol, stock] of portfolio.stocks) {
+    // Process each stock using its executor
+    const sortedSymbols = Array.from(portfolio.stocks.keys()).sort();
+
+    for (const symbol of sortedSymbols) {
+      const executor = executors.get(symbol);
+      const stock = portfolio.stocks.get(symbol);
       const dayData = priceDataMap.get(symbol).get(date);
-      if (dayData) {
-        stock.updateMarketValue(dayData.close);
+
+      if (!dayData) continue;
+
+      // Get the current day index for this executor
+      const dayIndex = executorDayIndices.get(symbol);
+
+      // Determine if buy is enabled based on capital availability
+      const hasCapital = portfolio.cashReserve >= config.lotSizeUsd;
+
+      // Get transaction count before processing
+      const stateBefore = executor.getState();
+      const txCountBefore = stateBefore.enhancedTransactions.length;
+
+      // Process one day using executor with correct day index
+      await executor.processDay(dayData, dayIndex, { buyEnabled: hasCapital });
+
+      // Increment day index for this executor
+      executorDayIndices.set(symbol, dayIndex + 1);
+
+      // Get state again after processing (state is updated by reference)
+      const stateAfter = executor.getState();
+      const txCountAfter = stateAfter.enhancedTransactions.length;
+
+      if (i % 100 === 0 && txCountAfter > 0) {
+        console.log(`📊 DEBUG Day ${i}: txCountBefore=${txCountBefore}, txCountAfter=${txCountAfter}, hasCapital=${hasCapital}`);
       }
+
+      // Check if a new transaction occurred
+      if (txCountAfter > txCountBefore) {
+        // Get the latest transaction
+        const tx = stateAfter.enhancedTransactions[txCountAfter - 1];
+
+        if (tx.type.includes('BUY')) {
+          if (hasCapital) {
+            // Execute buy: deduct from capital pool
+            portfolio.cashReserve -= tx.value;
+            portfolio.deployedCapital += tx.value;
+            stock.addBuy(tx);
+            transactionCount++;
+          } else {
+            // Rejected due to insufficient capital
+            logRejectedOrder(portfolio, stock, { triggered: true }, dayData, date);
+            rejectedCount++;
+          }
+        } else {
+          // SELL or other transaction types
+          // Add full sell value to cash (includes both original cost and profit/loss)
+          portfolio.cashReserve += tx.value;
+          // Reduce deployed capital by original cost
+          portfolio.deployedCapital -= tx.lotsCost;
+          stock.addSell(tx);
+          transactionCount++;
+        }
+      }
+
+      // Update market value
+      stock.updateMarketValue(dayData.close);
     }
-
-    // Process SELLS first (returns capital to pool)
-    const sellResults = await processSells(portfolio, date, priceDataMap);
-    transactionCount += sellResults.executed;
-
-    // Process BUYS (if capital available)
-    const buyResults = await processBuys(portfolio, date, priceDataMap);
-    transactionCount += buyResults.executed;
-    rejectedCount += buyResults.rejected;
 
     // Validate capital constraints after every date
     portfolio.validateCapitalConstraints();
