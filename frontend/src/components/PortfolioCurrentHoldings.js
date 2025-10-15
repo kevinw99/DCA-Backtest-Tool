@@ -21,9 +21,40 @@ const PortfolioCurrentHoldings = ({ stockResults }) => {
   // Filter stocks that have current holdings (lots held > 0)
   const stocksWithHoldings = stockResults.filter(stock => stock.lotsHeld > 0);
 
-  // Calculate totals
-  const totalMarketValue = stocksWithHoldings.reduce((sum, stock) => sum + (stock.marketValue || 0), 0);
-  const totalCapitalDeployed = stocksWithHoldings.reduce((sum, stock) => sum + (stock.capitalDeployed || 0), 0);
+  // Calculate totals by reconstructing lots for each stock
+  let totalMarketValue = 0;
+  let totalCapitalDeployed = 0;
+
+  stocksWithHoldings.forEach(stock => {
+    const currentPrice = stock.priceData && stock.priceData.length > 0
+      ? stock.priceData[stock.priceData.length - 1].close
+      : 0;
+
+    const buyTransactions = stock.transactions.filter(t => t.type.includes('BUY'));
+    const sellTransactions = stock.transactions.filter(t => t.type.includes('SELL'));
+
+    buyTransactions.forEach(buy => {
+      let remainingShares = buy.shares || buy.quantity || 0;
+      const buyPrice = buy.price || 0;
+      const buyDate = buy.date;
+
+      sellTransactions.forEach(sell => {
+        if (sell.lotsDetails && Array.isArray(sell.lotsDetails)) {
+          sell.lotsDetails.forEach(soldLot => {
+            if (Math.abs(soldLot.price - buyPrice) < 0.01 && soldLot.date === buyDate) {
+              remainingShares -= (soldLot.shares || 0);
+            }
+          });
+        }
+      });
+
+      if (remainingShares > 0.0001) {
+        totalMarketValue += remainingShares * currentPrice;
+        totalCapitalDeployed += remainingShares * buyPrice;
+      }
+    });
+  });
+
   const totalUnrealizedPNL = totalMarketValue - totalCapitalDeployed;
 
   if (stocksWithHoldings.length === 0) {
@@ -92,6 +123,15 @@ const PortfolioCurrentHoldings = ({ stockResults }) => {
             }
           });
 
+          // Recalculate market value and unrealized P&L from reconstructed lots
+          const recalculatedMarketValue = remainingLots.reduce((sum, lot) =>
+            sum + (lot.shares * currentPrice), 0
+          );
+          const recalculatedCapitalDeployed = remainingLots.reduce((sum, lot) =>
+            sum + (lot.shares * lot.price), 0
+          );
+          const recalculatedUnrealizedPNL = recalculatedMarketValue - recalculatedCapitalDeployed;
+
           return (
             <div key={stock.symbol} className="stock-holdings">
               <div className="stock-holdings-header">
@@ -100,12 +140,12 @@ const PortfolioCurrentHoldings = ({ stockResults }) => {
                   {stock.symbol}
                 </h4>
                 <div className="stock-holdings-summary">
-                  <span>{stock.lotsHeld} lots</span>
+                  <span>{remainingLots.length} lots</span>
                   <span className="divider">•</span>
-                  <span>{formatCurrency(stock.marketValue)} market value</span>
+                  <span>{formatCurrency(recalculatedMarketValue)} market value</span>
                   <span className="divider">•</span>
-                  <span className={stock.unrealizedPNL >= 0 ? 'positive' : 'negative'}>
-                    {formatCurrency(stock.unrealizedPNL)} unrealized P&L
+                  <span className={recalculatedUnrealizedPNL >= 0 ? 'positive' : 'negative'}>
+                    {formatCurrency(recalculatedUnrealizedPNL)} unrealized P&L
                   </span>
                 </div>
               </div>
