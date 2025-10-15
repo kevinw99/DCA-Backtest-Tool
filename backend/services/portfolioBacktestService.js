@@ -170,12 +170,14 @@ class StockState {
    */
   addSell(transaction) {
     // Remove sold lots
-    for (const soldLot of transaction.lotsDetails) {
-      const index = this.lots.findIndex(lot =>
-        lot.price === soldLot.price && lot.date === soldLot.date
-      );
-      if (index !== -1) {
-        this.lots.splice(index, 1);
+    if (transaction.lotsDetails && Array.isArray(transaction.lotsDetails)) {
+      for (const soldLot of transaction.lotsDetails) {
+        const index = this.lots.findIndex(lot =>
+          lot.price === soldLot.price && lot.date === soldLot.date
+        );
+        if (index !== -1) {
+          this.lots.splice(index, 1);
+        }
       }
     }
 
