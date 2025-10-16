@@ -1264,7 +1264,35 @@ const BacktestResults = ({ data, chartData: priceData }) => {
               <div>Total P&L %</div>
             </div>
 
-            {enhancedTransactions.map((transaction, index) => {
+            {(() => {
+              // Debug: Log transaction filtering
+              console.log('🔍 Enhanced Transaction History Filtering:');
+              console.log(`  Total enhanced transactions: ${enhancedTransactions.length}`);
+
+              // Filter out aborted transactions - they can have type='ABORTED_SELL'/'ABORTED_BUY' OR have shares=0 (aborted)
+              const abortedTxs = enhancedTransactions.filter(tx =>
+                tx.type.includes('ABORTED') ||
+                (tx.shares !== undefined && tx.shares === 0)
+              );
+              const filteredTxs = enhancedTransactions.filter(tx =>
+                !tx.type.includes('ABORTED') &&
+                !(tx.shares !== undefined && tx.shares === 0)
+              );
+
+              console.log(`  Aborted transactions: ${abortedTxs.length}`);
+              console.log(`  Filtered transactions (displayed): ${filteredTxs.length}`);
+
+              if (abortedTxs.length > 0) {
+                console.log('  📛 Aborted transaction types:');
+                abortedTxs.forEach(tx => {
+                  console.log(`    - ${tx.date}: ${tx.type}`);
+                });
+              }
+
+              // Sample of all transaction types
+              const txTypes = [...new Set(enhancedTransactions.map(tx => tx.type))];
+              console.log(`  Transaction types in data: ${txTypes.join(', ')}`);
+
               const getTransactionIcon = (type) => {
                 if (type === 'SELL') return <><TrendingDown size={16} /> SELL</>;
                 if (type === 'SHORT') return <><TrendingDown size={16} /> SHORT</>;
@@ -1283,7 +1311,7 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                 return <><TrendingUp size={16} /> BUY</>;
               };
 
-              return (
+              return filteredTxs.map((transaction, index) => (
                 <div key={index} className={`table-row ${transaction.type.toLowerCase().replace('_', '-')}`}>
                   <div>{formatDate(transaction.date, 'long')}</div>
                   <div className={`transaction-type ${transaction.type.toLowerCase()}`}>
@@ -1380,8 +1408,8 @@ const BacktestResults = ({ data, chartData: priceData }) => {
                     })()}
                   </div>
                 </div>
-              );
-            })}
+              ));
+            })()}
           </div>
         ) : transactions && transactions.length > 0 ? (
           // Fallback to original transaction table if enhanced data not available

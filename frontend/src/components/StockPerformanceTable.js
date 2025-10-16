@@ -68,9 +68,23 @@ const StockPerformanceTable = ({ stocks, portfolioRunId, parameters }) => {
 
     // Add stock-specific parameters (if any)
     if (stock.params) {
+      // List of parameters that are stored as decimals in backend but need to be whole numbers in URL
+      const percentageParams = [
+        'gridIntervalPercent', 'profitRequirement',
+        'trailingBuyActivationPercent', 'trailingBuyReboundPercent',
+        'trailingSellActivationPercent', 'trailingSellPullbackPercent',
+        'gridConsecutiveIncrement'
+      ];
+
       Object.entries(stock.params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
-          params.append(key, value);
+          // Convert decimal percentage values to whole numbers for URL
+          // Backend stores 0.1 (10%), URL expects 10 (which URLParameterManager converts back to 0.1)
+          if (percentageParams.includes(key)) {
+            params.append(key, value * 100);
+          } else {
+            params.append(key, value);
+          }
         }
       });
     }
@@ -202,11 +216,35 @@ const StockDetailView = ({ stock }) => {
     }).format(value);
   };
 
+  // Filter out aborted transactions (they don't represent actual trades)
+  const allTransactions = stock.transactions || [];
+  const actualTransactions = allTransactions.filter(tx => !tx.type.includes('ABORTED'));
+
+  // Debug logging
+  console.log(`🔍 ${stock.symbol} Transaction Filtering:`);
+  console.log(`  Total transactions: ${allTransactions.length}`);
+  console.log(`  Actual transactions (filtered): ${actualTransactions.length}`);
+  console.log(`  Aborted count: ${allTransactions.length - actualTransactions.length}`);
+
+  // Log first few transactions to see their types
+  allTransactions.slice(0, 5).forEach((tx, idx) => {
+    console.log(`  [${idx}] ${tx.date} - ${tx.type} (filtered out: ${tx.type.includes('ABORTED')})`);
+  });
+
+  // Log aborted transactions specifically
+  const abortedTransactions = allTransactions.filter(tx => tx.type.includes('ABORTED'));
+  if (abortedTransactions.length > 0) {
+    console.log(`  📛 Aborted transactions (${abortedTransactions.length}):`);
+    abortedTransactions.forEach(tx => {
+      console.log(`    - ${tx.date}: ${tx.type}`);
+    });
+  }
+
   return (
     <div className="stock-detail">
-      <h4>{stock.symbol} - Transaction History ({stock.transactions?.length || 0} transactions)</h4>
+      <h4>{stock.symbol} - Transaction History ({actualTransactions.length} transactions)</h4>
 
-      {stock.transactions && stock.transactions.length > 0 ? (
+      {actualTransactions.length > 0 ? (
         <div className="transaction-table-wrapper">
           <table className="transaction-table">
             <thead>
@@ -221,7 +259,7 @@ const StockDetailView = ({ stock }) => {
               </tr>
             </thead>
             <tbody>
-              {stock.transactions.map((tx, idx) => (
+              {actualTransactions.map((tx, idx) => (
                 <tr key={idx}>
                   <td>{tx.date}</td>
                   <td className={tx.type.includes('BUY') ? 'buy-type' : 'sell-type'}>
