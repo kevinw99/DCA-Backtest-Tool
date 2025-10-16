@@ -1,11 +1,249 @@
-import React, { useState } from 'react';
-import { TrendingUp, Target, Trophy, Activity, DollarSign, BarChart3, Users, Percent } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { TrendingUp, TrendingDown, Target, Trophy, Activity, DollarSign, BarChart3, Users, Percent } from 'lucide-react';
 import URLParameterManager from '../utils/URLParameterManager';
 import { formatCurrency, formatPercent, formatParameterPercent, formatPerformancePercent, formatNumber } from '../utils/formatters';
+
+/**
+ * FutureTradeCard Component (Spec 33)
+ * Displays future trade information for a single stock in batch results
+ */
+const FutureTradeCard = ({ symbol, futureTrades, parameters, isSelected }) => {
+  const [isExpanded, setIsExpanded] = useState(true);
+
+  if (!futureTrades) {
+    return null; // Skip if no future trades data
+  }
+
+  const { currentPrice, avgCost, hasHoldings, buyActivation, sellActivation } = futureTrades;
+
+  const handleToggle = () => setIsExpanded(!isExpanded);
+
+  // Helper function to calculate distance between current price and target price
+  const calculateDistance = (targetPrice) => {
+    if (!targetPrice || !currentPrice) return null;
+    const diff = targetPrice - currentPrice;
+    const pct = (diff / currentPrice) * 100;
+    return { diff, pct };
+  };
+
+  return (
+    <div className={`future-trade-card ${isSelected ? 'selected' : ''}`}>
+      <div
+        className="card-header"
+        onClick={handleToggle}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleToggle(); }}}
+        role="button"
+        tabIndex={0}
+        style={{ cursor: 'pointer' }}
+        aria-expanded={isExpanded}
+      >
+        <h4>{symbol}</h4>
+        <div className="header-info">
+          <span>Current: {formatCurrency(currentPrice)}</span>
+          <span className={hasHoldings ? 'has-holdings' : 'no-holdings'}>
+            {hasHoldings ? `Holdings: ${formatCurrency(avgCost)} avg` : 'No Holdings'}
+          </span>
+          <span className="expand-icon">{isExpanded ? '▼' : '▶'}</span>
+        </div>
+      </div>
+
+      {isExpanded && (
+        <div className="card-body">
+          <div className="current-price-section">
+            <div><span className="label">Current Price:</span> <span className="value">{formatCurrency(currentPrice)}</span></div>
+            {hasHoldings && <div><span className="label">Avg Cost:</span> <span className="value">{formatCurrency(avgCost)}</span></div>}
+          </div>
+          <div className="trade-directions">
+            {/* BUY Direction */}
+            <div className="buy-section">
+              <h5>
+                <TrendingDown size={16} />
+                {buyActivation.description}
+              </h5>
+              {buyActivation.isActive ? (
+                <>
+                  <div className="active-stop">
+                    <div>
+                      <span className="label">Stop Price:</span>
+                      <span className="value">{formatCurrency(buyActivation.stopPrice)}</span>
+                      {(() => {
+                        const dist = calculateDistance(buyActivation.stopPrice);
+                        return dist && <span className="distance">{dist.pct >= 0 ? '↑' : '↓'} {formatCurrency(Math.abs(dist.diff))} ({formatParameterPercent(Math.abs(dist.pct / 100))})</span>;
+                      })()}
+                    </div>
+                    <div className="detail">
+                      {formatParameterPercent(buyActivation.reboundPercent)} rebound
+                      from {formatCurrency(buyActivation.lowestPrice)}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="label">Lowest Price:</span>
+                    <span className="value">{formatCurrency(buyActivation.lowestPrice)}</span>
+                    {(() => {
+                      const dist = calculateDistance(buyActivation.lowestPrice);
+                      return dist && <span className="distance">{dist.pct >= 0 ? '↑' : '↓'} {formatCurrency(Math.abs(dist.diff))} ({formatParameterPercent(Math.abs(dist.pct / 100))})</span>;
+                    })()}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <span className="label">Activates at:</span>
+                    <span className="value">{formatCurrency(buyActivation.activationPrice)}</span>
+                    {(() => {
+                      const dist = calculateDistance(buyActivation.activationPrice);
+                      return dist && <span className="distance">{dist.pct >= 0 ? '↑' : '↓'} {formatCurrency(Math.abs(dist.diff))} ({formatParameterPercent(Math.abs(dist.pct / 100))})</span>;
+                    })()}
+                  </div>
+                  <div className="detail">
+                    {formatParameterPercent(buyActivation.activationPercent)} drop
+                    from {formatCurrency(buyActivation.referencePrice)}
+                  </div>
+                  <div>
+                    <span className="label">Reference Price:</span>
+                    <span className="value">{formatCurrency(buyActivation.referencePrice)}</span>
+                    {(() => {
+                      const dist = calculateDistance(buyActivation.referencePrice);
+                      return dist && <span className="distance">{dist.pct >= 0 ? '↑' : '↓'} {formatCurrency(Math.abs(dist.diff))} ({formatParameterPercent(Math.abs(dist.pct / 100))})</span>;
+                    })()}
+                  </div>
+                  <div>
+                    <span className="label">Executes on:</span>
+                    <span className="value">
+                      {formatParameterPercent(buyActivation.reboundPercent)} rebound
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* SELL Direction */}
+            {sellActivation ? (
+              <div className="sell-section">
+                <h5>
+                  <TrendingUp size={16} />
+                  {sellActivation.description}
+                </h5>
+                {sellActivation.isActive ? (
+                  <>
+                    <div className="active-stop">
+                      <div>
+                        <span className="label">Stop Price:</span>
+                        <span className="value">{formatCurrency(sellActivation.stopPrice)}</span>
+                        {(() => {
+                          const dist = calculateDistance(sellActivation.stopPrice);
+                          return dist && <span className="distance">{dist.pct >= 0 ? '↑' : '↓'} {formatCurrency(Math.abs(dist.diff))} ({formatParameterPercent(Math.abs(dist.pct / 100))})</span>;
+                        })()}
+                      </div>
+                      <div className="detail">
+                        {formatParameterPercent(sellActivation.pullbackPercent)} pullback
+                        from {formatCurrency(sellActivation.lastUpdatePrice)}
+                      </div>
+                    </div>
+                    {sellActivation.limitPrice && (
+                      <div>
+                        <span className="label">Limit Price:</span>
+                        <span className="value">{formatCurrency(sellActivation.limitPrice)}</span>
+                        {(() => {
+                          const dist = calculateDistance(sellActivation.limitPrice);
+                          return dist && <span className="distance">{dist.pct >= 0 ? '↑' : '↓'} {formatCurrency(Math.abs(dist.diff))} ({formatParameterPercent(Math.abs(dist.pct / 100))})</span>;
+                        })()}
+                      </div>
+                    )}
+                    <div>
+                      <span className="label">Last Update Price:</span>
+                      <span className="value">{formatCurrency(sellActivation.lastUpdatePrice)}</span>
+                      {(() => {
+                        const dist = calculateDistance(sellActivation.lastUpdatePrice);
+                        return dist && <span className="distance">{dist.pct >= 0 ? '↑' : '↓'} {formatCurrency(Math.abs(dist.diff))} ({formatParameterPercent(Math.abs(dist.pct / 100))})</span>;
+                      })()}
+                    </div>
+                    <div>
+                      <span className="label">Profit target:</span>
+                      <span className="value">{formatCurrency(sellActivation.profitRequirement)}</span>
+                      {(() => {
+                        const dist = calculateDistance(sellActivation.profitRequirement);
+                        return dist && <span className="distance">{dist.pct >= 0 ? '↑' : '↓'} {formatCurrency(Math.abs(dist.diff))} ({formatParameterPercent(Math.abs(dist.pct / 100))})</span>;
+                      })()}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <span className="label">Activates at:</span>
+                      <span className="value">{formatCurrency(sellActivation.activationPrice)}</span>
+                      {(() => {
+                        const dist = calculateDistance(sellActivation.activationPrice);
+                        return dist && <span className="distance">{dist.pct >= 0 ? '↑' : '↑'} {formatCurrency(Math.abs(dist.diff))} ({formatParameterPercent(Math.abs(dist.pct / 100))})</span>;
+                      })()}
+                    </div>
+                    <div className="detail">
+                      {formatParameterPercent(sellActivation.activationPercent)} rise
+                      from {formatCurrency(sellActivation.referencePrice)}
+                    </div>
+                    <div>
+                      <span className="label">Reference Price:</span>
+                      <span className="value">{formatCurrency(sellActivation.referencePrice)}</span>
+                      {(() => {
+                        const dist = calculateDistance(sellActivation.referencePrice);
+                        return dist && <span className="distance">{dist.pct >= 0 ? '↑' : '↓'} {formatCurrency(Math.abs(dist.diff))} ({formatParameterPercent(Math.abs(dist.pct / 100))})</span>;
+                      })()}
+                    </div>
+                    <div>
+                      <span className="label">Then trails:</span>
+                      <span className="value">
+                        {formatParameterPercent(sellActivation.pullbackPercent)} pullback
+                      </span>
+                    </div>
+                    <div>
+                      <span className="label">Profit target:</span>
+                      <span className="value">{formatCurrency(sellActivation.profitRequirement)}</span>
+                      {(() => {
+                        const dist = calculateDistance(sellActivation.profitRequirement);
+                        return dist && <span className="distance">{dist.pct >= 0 ? '↑' : '↓'} {formatCurrency(Math.abs(dist.diff))} ({formatParameterPercent(Math.abs(dist.pct / 100))})</span>;
+                      })()}
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="sell-section disabled">
+                <h5>Next SELL</h5>
+                <p>No holdings to sell</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const BatchResults = ({ data }) => {
   const [selectedStock, setSelectedStock] = useState('all');
   const [selectedBeta, setSelectedBeta] = useState('all');
+
+  // [Spec 33] Aggregate future trades by symbol (use best-performing config per stock)
+  // MUST be before early return to satisfy React Hooks rules
+  const futureTradesBySymbol = useMemo(() => {
+    if (!data?.results || data.results.length === 0) return {};
+
+    const grouped = {};
+    data.results.forEach(result => {
+      const symbol = result.parameters.symbol;
+      // Only store the first (best) result per symbol since results are pre-sorted
+      if (!grouped[symbol] && result.futureTrades) {
+        grouped[symbol] = {
+          futureTrades: result.futureTrades,
+          parameters: result.parameters,
+          rank: data.results.indexOf(result) + 1,
+          totalReturn: result.summary?.totalReturn || 0
+        };
+      }
+    });
+
+    return grouped;
+  }, [data?.results]);
 
   // DEBUG: Log the received data
   console.log('🐛 BatchResults received data:', data);
@@ -401,6 +639,24 @@ const BatchResults = ({ data }) => {
                   </div>
                 </div>
               </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Future Trades by Stock (Spec 33) */}
+      {Object.keys(futureTradesBySymbol).length > 0 && (
+        <div className="future-trades-section">
+          <h3>🎯 Future Trades by Stock</h3>
+          <div className="future-trades-grid">
+            {Object.entries(futureTradesBySymbol).map(([symbol, data]) => (
+              <FutureTradeCard
+                key={symbol}
+                symbol={symbol}
+                futureTrades={data.futureTrades}
+                parameters={data.parameters}
+                isSelected={selectedStock === symbol}
+              />
             ))}
           </div>
         </div>

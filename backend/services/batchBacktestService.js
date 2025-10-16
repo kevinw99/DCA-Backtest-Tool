@@ -257,6 +257,115 @@ function calculateBuyAndHoldPerformance(priceData, totalCapital, startDate, endD
 }
 
 /**
+ * Calculate future trade information for a backtest result (Spec 33)
+ * Extracts next BUY and SELL activation conditions for portfolio management
+ * @param {Object} result - DCA backtest result from runDCABacktest
+ * @returns {Object} Future trades object with buyActivation and sellActivation
+ */
+function calculateFutureTradesForResult(result) {
+  const {
+    lots = [],
+    shorts = [],
+    activeTrailingStopBuy,
+    activeTrailingStopSell,
+    recentPeak,
+    recentBottom,
+    backtestParameters: params,
+    summary,
+    finalMarketPrice
+  } = result;
+
+  // Determine strategy type
+  const isShortStrategy = summary?.strategy === 'SHORT_DCA';
+  const hasHoldings = isShortStrategy ? shorts.length > 0 : lots.length > 0;
+
+  // Get final price (last price in backtest)
+  const currentPrice = finalMarketPrice || summary?.finalPrice || 0;
+
+  // Calculate average cost
+  let avgCost = 0;
+  if (hasHoldings) {
+    const positions = isShortStrategy ? shorts : lots;
+    const totalValue = positions.reduce((sum, pos) => sum + (pos.price * pos.shares), 0);
+    const totalShares = positions.reduce((sum, pos) => sum + pos.shares, 0);
+    avgCost = totalShares > 0 ? totalValue / totalShares : 0;
+  }
+
+  // Calculate BUY activation (reuse logic from BacktestResults.js)
+  let buyActivation = null;
+  if (activeTrailingStopBuy && activeTrailingStopBuy.isActive) {
+    buyActivation = {
+      isActive: true,
+      stopPrice: activeTrailingStopBuy.stopPrice,
+      lowestPrice: activeTrailingStopBuy.lowestPrice,
+      recentPeakReference: activeTrailingStopBuy.recentPeakReference,
+      reboundPercent: isShortStrategy ? params.trailingShortPullbackPercent : params.trailingBuyReboundPercent,
+      description: isShortStrategy ? 'Active SHORT Stop' : 'Active BUY Stop'
+    };
+  } else {
+    const activationPercent = isShortStrategy ? params.trailingShortActivationPercent : params.trailingBuyActivationPercent;
+    const reboundPercent = isShortStrategy ? params.trailingShortPullbackPercent : params.trailingBuyReboundPercent;
+    const activationPrice = recentPeak
+      ? recentPeak * (1 - activationPercent)
+      : currentPrice * (1 - activationPercent);
+
+    buyActivation = {
+      isActive: false,
+      activationPercent,
+      reboundPercent,
+      activationPrice,
+      referencePrice: recentPeak || currentPrice,
+      description: isShortStrategy ? 'Next SHORT' : 'Next BUY'
+    };
+  }
+
+  // Calculate SELL activation (reuse logic from BacktestResults.js)
+  let sellActivation = null;
+  if (hasHoldings) {
+    if (activeTrailingStopSell && activeTrailingStopSell.isActive) {
+      sellActivation = {
+        isActive: true,
+        stopPrice: activeTrailingStopSell.stopPrice,
+        limitPrice: activeTrailingStopSell.limitPrice,
+        highestPrice: activeTrailingStopSell.highestPrice,
+        lastUpdatePrice: activeTrailingStopSell.lastUpdatePrice,
+        recentBottomReference: activeTrailingStopSell.recentBottomReference,
+        pullbackPercent: isShortStrategy ? params.trailingCoverReboundPercent : params.trailingSellPullbackPercent,
+        profitRequirement: avgCost * (1 + params.profitRequirement),
+        description: isShortStrategy ? 'Active COVER Stop' : 'Active SELL Stop'
+      };
+    } else {
+      const activationPercent = isShortStrategy ? params.trailingCoverActivationPercent : params.trailingSellActivationPercent;
+      const pullbackPercent = isShortStrategy ? params.trailingCoverReboundPercent : params.trailingSellPullbackPercent;
+      const activationPrice = recentBottom
+        ? recentBottom * (1 + activationPercent)
+        : currentPrice * (1 + activationPercent);
+
+      sellActivation = {
+        isActive: false,
+        activationPercent,
+        pullbackPercent,
+        activationPrice,
+        referencePrice: recentBottom || currentPrice,
+        profitRequirement: avgCost * (1 + params.profitRequirement),
+        description: isShortStrategy ? 'Next COVER' : 'Next SELL'
+      };
+    }
+  }
+
+  return {
+    currentPrice,
+    avgCost,
+    hasHoldings,
+    isShortStrategy,
+    recentPeak,
+    recentBottom,
+    buyActivation,
+    sellActivation
+  };
+}
+
+/**
  * Run batch backtests with multiple parameter combinations
  * @param {Object} options - Batch backtest options
  * @param {Function} progressCallback - Optional progress callback function
@@ -510,6 +619,18 @@ async function runBatchBacktest(options, progressCallback = null, sessionId = nu
       // Add parameter info to result
       result.parameters = params;
       result.testId = i + 1;
+
+      // [Spec 33] Calculate future trades for portfolio management
+      try {
+        result.futureTrades = calculateFutureTradesForResult(result);
+        // Debug log for first result only
+        if (i === 0) {
+          console.log('🔍 Sample futureTrades:', result.futureTrades);
+        }
+      } catch (error) {
+        console.warn(`⚠️ Failed to calculate future trades for ${params.symbol}:`, error.message);
+        result.futureTrades = null;
+      }
 
       // Use the original totalReturnPercent from DCA service (already correctly calculated)
       const actualTotalReturnPercent = result.totalReturnPercent || 0;
