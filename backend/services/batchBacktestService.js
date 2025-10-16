@@ -355,6 +355,7 @@ function calculateFutureTradesForResult(result) {
 
   return {
     currentPrice,
+    currentPriceDate: params.endDate, // Date of the current price (last date in backtest)
     avgCost,
     hasHoldings,
     isShortStrategy,
@@ -771,6 +772,8 @@ async function runBatchBacktest(options, progressCallback = null, sessionId = nu
     stockValidationErrors: stockValidationErrors.length > 0 ? stockValidationErrors : undefined,
     // Include original batch request parameters so frontend can use them for URL generation
     batchRequestParameters: {
+      startDate: mergedParameterRanges.startDate || '2021-09-01',
+      endDate: mergedParameterRanges.endDate || '2025-09-01',
       enableBetaScaling: mergedParameterRanges.enableBetaScaling,
       enableDynamicGrid: mergedParameterRanges.enableDynamicGrid,
       normalizeToReference: mergedParameterRanges.normalizeToReference,

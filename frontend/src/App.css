@@ -1905,6 +1905,69 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #fafafa;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+/* Active Order Styling - PROMINENT */
+.future-trade-card .buy-section.is-active {
+  border: 2px solid #06b6d4;
+  background: linear-gradient(135deg, #cffafe 0%, #e0f2fe 100%);
+  box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.4);
+  animation: pulse-buy 2s infinite;
+}
+
+.future-trade-card .sell-section.is-active {
+  border: 2px solid #dc2626;
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4);
+  animation: pulse-sell 2s infinite;
+}
+
+/* Pending Order Styling - SUBTLE */
+.future-trade-card .buy-section.is-pending {
+  border: 1px solid #cbd5e0;
+  background: #f7fafc;
+  opacity: 0.7;
+}
+
+.future-trade-card .sell-section.is-pending {
+  border: 1px solid #cbd5e0;
+  background: #f7fafc;
+  opacity: 0.7;
+}
+
+/* Pulsing Animations */
+@keyframes pulse-buy {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(6, 182, 212, 0);
+  }
+}
+
+@keyframes pulse-sell {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(220, 38, 38, 0);
+  }
+}
+
+/* Status Badge Animation */
+@keyframes badge-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
 }
 
 .future-trade-card .buy-section h5,
@@ -1927,6 +1990,41 @@
 
 .future-trade-card .sell-section.disabled h5 {
   color: #9ca3af;
+}
+
+/* Status Badges */
+.future-trade-card .status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-left: auto;
+}
+
+.future-trade-card .buy-section.is-active .status-badge,
+.future-trade-card .sell-section.is-active .status-badge {
+  background: rgba(255, 255, 255, 0.9);
+  color: #1f2937;
+  animation: badge-pulse 1.5s infinite;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.future-trade-card .buy-section.is-active .status-badge {
+  border: 1px solid #06b6d4;
+}
+
+.future-trade-card .sell-section.is-active .status-badge {
+  border: 1px solid #dc2626;
+}
+
+.future-trade-card .buy-section.is-pending .status-badge,
+.future-trade-card .sell-section.is-pending .status-badge {
+  background: #e5e7eb;
+  color: #6b7280;
+  border: 1px solid #cbd5e0;
 }
 
 .future-trade-card .active-stop {

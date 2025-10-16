@@ -14,7 +14,7 @@ const FutureTradeCard = ({ symbol, futureTrades, parameters, isSelected }) => {
     return null; // Skip if no future trades data
   }
 
-  const { currentPrice, avgCost, hasHoldings, buyActivation, sellActivation } = futureTrades;
+  const { currentPrice, currentPriceDate, avgCost, hasHoldings, buyActivation, sellActivation } = futureTrades;
 
   const handleToggle = () => setIsExpanded(!isExpanded);
 
@@ -39,7 +39,7 @@ const FutureTradeCard = ({ symbol, futureTrades, parameters, isSelected }) => {
       >
         <h4>{symbol}</h4>
         <div className="header-info">
-          <span>Current: {formatCurrency(currentPrice)}</span>
+          <span>Current: {formatCurrency(currentPrice)} as of {currentPriceDate}</span>
           <span className={hasHoldings ? 'has-holdings' : 'no-holdings'}>
             {hasHoldings ? `Holdings: ${formatCurrency(avgCost)} avg` : 'No Holdings'}
           </span>
@@ -55,10 +55,13 @@ const FutureTradeCard = ({ symbol, futureTrades, parameters, isSelected }) => {
           </div>
           <div className="trade-directions">
             {/* BUY Direction */}
-            <div className="buy-section">
+            <div className={`buy-section ${buyActivation.isActive ? 'is-active' : 'is-pending'}`}>
               <h5>
                 <TrendingDown size={16} />
                 {buyActivation.description}
+                <span className="status-badge">
+                  {buyActivation.isActive ? 'ACTIVE TRACKING' : 'PENDING'}
+                </span>
               </h5>
               {buyActivation.isActive ? (
                 <>
@@ -119,10 +122,13 @@ const FutureTradeCard = ({ symbol, futureTrades, parameters, isSelected }) => {
 
             {/* SELL Direction */}
             {sellActivation ? (
-              <div className="sell-section">
+              <div className={`sell-section ${sellActivation.isActive ? 'is-active' : 'is-pending'}`}>
                 <h5>
                   <TrendingUp size={16} />
                   {sellActivation.description}
+                  <span className="status-badge">
+                    {sellActivation.isActive ? 'ACTIVE TRACKING' : 'PENDING'}
+                  </span>
                 </h5>
                 {sellActivation.isActive ? (
                   <>
@@ -501,6 +507,111 @@ const BatchResults = ({ data }) => {
           <span>⏱️ {(executionTimeMs / 1000).toFixed(1)}s</span>
         </div>
       </div>
+
+      {/* Backend API Test Command */}
+      {data.batchRequestParameters && (
+        <div className="api-url-section" style={{ marginTop: '20px', padding: '15px', backgroundColor: '#f5f5f5', borderRadius: '8px', border: '1px solid #ddd' }}>
+          <h3 style={{ marginTop: 0, marginBottom: '10px', fontSize: '16px' }}>Backend API Test Command</h3>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <input
+              type="text"
+              readOnly
+              value={(() => {
+                // Construct batch request body from available data
+                const batchParams = data.batchRequestParameters;
+                // Extract unique parameter values from results to show what was tested
+                const profitReqs = [...new Set(results.map(r => r.parameters.profitRequirement))];
+                const gridIntervals = [...new Set(results.map(r => r.parameters.gridIntervalPercent))];
+                const buyActivations = [...new Set(results.map(r => r.parameters.trailingBuyActivationPercent || r.parameters.trailingShortActivationPercent))];
+                const buyRebounds = [...new Set(results.map(r => r.parameters.trailingBuyReboundPercent || r.parameters.trailingShortPullbackPercent))];
+                const sellActivations = [...new Set(results.map(r => r.parameters.trailingSellActivationPercent || r.parameters.trailingCoverActivationPercent))];
+                const sellPullbacks = [...new Set(results.map(r => r.parameters.trailingSellPullbackPercent || r.parameters.trailingCoverReboundPercent))];
+
+                const requestBody = {
+                  symbols: data.validSymbols,
+                  parameterRanges: {
+                    startDate: batchParams.startDate || '2021-09-01',
+                    endDate: batchParams.endDate || '2025-10-16',
+                    profitRequirement: profitReqs,
+                    gridIntervalPercent: gridIntervals,
+                    trailingBuyActivationPercent: buyActivations,
+                    trailingBuyReboundPercent: buyRebounds,
+                    trailingSellActivationPercent: sellActivations,
+                    trailingSellPullbackPercent: sellPullbacks,
+                    enableBetaScaling: batchParams.enableBetaScaling,
+                    enableDynamicGrid: batchParams.enableDynamicGrid,
+                    normalizeToReference: batchParams.normalizeToReference,
+                    enableConsecutiveIncrementalBuyGrid: batchParams.enableConsecutiveIncrementalBuyGrid,
+                    enableConsecutiveIncrementalSellProfit: batchParams.enableConsecutiveIncrementalSellProfit
+                  }
+                };
+
+                const jsonBody = JSON.stringify(requestBody, null, 2);
+                return `curl -X POST http://localhost:3001/api/backtest/batch -H "Content-Type: application/json" -d '${jsonBody.replace(/\n/g, ' ')}'`;
+              })()}
+              style={{
+                flex: 1,
+                padding: '8px 12px',
+                fontSize: '13px',
+                fontFamily: 'monospace',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                backgroundColor: 'white'
+              }}
+              onClick={(e) => e.target.select()}
+            />
+            <button
+              onClick={() => {
+                const batchParams = data.batchRequestParameters;
+                const profitReqs = [...new Set(results.map(r => r.parameters.profitRequirement))];
+                const gridIntervals = [...new Set(results.map(r => r.parameters.gridIntervalPercent))];
+                const buyActivations = [...new Set(results.map(r => r.parameters.trailingBuyActivationPercent || r.parameters.trailingShortActivationPercent))];
+                const buyRebounds = [...new Set(results.map(r => r.parameters.trailingBuyReboundPercent || r.parameters.trailingShortPullbackPercent))];
+                const sellActivations = [...new Set(results.map(r => r.parameters.trailingSellActivationPercent || r.parameters.trailingCoverActivationPercent))];
+                const sellPullbacks = [...new Set(results.map(r => r.parameters.trailingSellPullbackPercent || r.parameters.trailingCoverReboundPercent))];
+
+                const requestBody = {
+                  symbols: data.validSymbols,
+                  parameterRanges: {
+                    startDate: batchParams.startDate || '2021-09-01',
+                    endDate: batchParams.endDate || '2025-10-16',
+                    profitRequirement: profitReqs,
+                    gridIntervalPercent: gridIntervals,
+                    trailingBuyActivationPercent: buyActivations,
+                    trailingBuyReboundPercent: buyRebounds,
+                    trailingSellActivationPercent: sellActivations,
+                    trailingSellPullbackPercent: sellPullbacks,
+                    enableBetaScaling: batchParams.enableBetaScaling,
+                    enableDynamicGrid: batchParams.enableDynamicGrid,
+                    normalizeToReference: batchParams.normalizeToReference,
+                    enableConsecutiveIncrementalBuyGrid: batchParams.enableConsecutiveIncrementalBuyGrid,
+                    enableConsecutiveIncrementalSellProfit: batchParams.enableConsecutiveIncrementalSellProfit
+                  }
+                };
+
+                const jsonBody = JSON.stringify(requestBody, null, 2);
+                const curlCommand = `curl -X POST http://localhost:3001/api/backtest/batch -H "Content-Type: application/json" -d '${jsonBody.replace(/\n/g, ' ')}'`;
+                navigator.clipboard.writeText(curlCommand);
+                alert('Curl command copied to clipboard!');
+              }}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#4CAF50',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              Copy Command
+            </button>
+          </div>
+          <p style={{ marginTop: '8px', marginBottom: 0, fontSize: '12px', color: '#666' }}>
+            Use this curl command to reproduce the batch test from terminal
+          </p>
+        </div>
+      )}
 
       {/* Stock Validation Errors */}
       {data.invalidSymbols && data.invalidSymbols.length > 0 && (

@@ -477,7 +477,7 @@ class URLParameterManager {
    * @private
    */
   _encodeBatchParameters(params, parameters) {
-    // Basic parameters - prioritize parameterRanges.symbols over top-level symbols
+    // Basic parameters - prioritize parameterRanges values over top-level values
     const symbols = parameters.parameterRanges?.symbols || parameters.symbols;
     if (symbols) {
       if (Array.isArray(symbols)) {
@@ -486,8 +486,13 @@ class URLParameterManager {
         params.set('symbols', symbols);
       }
     }
-    if (parameters.startDate) params.set('startDate', parameters.startDate);
-    if (parameters.endDate) params.set('endDate', parameters.endDate);
+
+    // Check both top-level and parameterRanges for dates
+    const startDate = parameters.startDate || parameters.parameterRanges?.startDate;
+    const endDate = parameters.endDate || parameters.parameterRanges?.endDate;
+    if (startDate) params.set('startDate', startDate);
+    if (endDate) params.set('endDate', endDate);
+
     if (parameters.strategyMode) params.set('strategyMode', parameters.strategyMode);
 
     // Investment parameters
