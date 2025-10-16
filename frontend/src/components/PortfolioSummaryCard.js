@@ -2,7 +2,7 @@ import React from 'react';
 import { DollarSign, TrendingUp, TrendingDown, Target, BarChart3, AlertTriangle, Activity } from 'lucide-react';
 import './PortfolioSummaryCard.css';
 
-const PortfolioSummaryCard = ({ summary }) => {
+const PortfolioSummaryCard = ({ summary, comparison }) => {
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -44,6 +44,16 @@ const PortfolioSummaryCard = ({ summary }) => {
           value={formatCurrency(summary.finalPortfolioValue)}
           icon={<BarChart3 size={24} />}
         />
+
+        {comparison && (
+          <MetricBox
+            label="vs Buy & Hold"
+            value={formatCurrency(comparison.outperformanceAmount)}
+            subValue={`${formatPercent(comparison.outperformancePercent)} ${comparison.outperformanceAmount >= 0 ? 'outperformance' : 'underperformance'}`}
+            change={comparison.outperformancePercent}
+            icon={comparison.outperformanceAmount >= 0 ? <TrendingUp size={24} /> : <TrendingDown size={24} />}
+          />
+        )}
 
         <MetricBox
           label="Total Return"

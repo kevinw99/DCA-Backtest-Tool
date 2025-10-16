@@ -2418,3 +2418,179 @@
 .help-text strong {
   color: #333;
 }
+
+/* ===== BUY & HOLD COMPARISON STYLES ===== */
+
+/* Buy & Hold Comparison Section */
+.buy-hold-comparison {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  margin: 24px 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.buy-hold-comparison h3 {
+  margin: 0 0 24px 0;
+  font-size: 1.25rem;
+  color: #1f2937;
+}
+
+/* Comparison Summary Cards */
+.comparison-summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.strategy-card {
+  flex: 1;
+  max-width: 300px;
+  padding: 24px;
+  border-radius: 8px;
+  text-align: center;
+  border: 2px solid;
+}
+
+.strategy-card.dca-card {
+  border-color: #6366f1;
+  background: #f0f0ff;
+}
+
+.strategy-card.bh-card {
+  border-color: #10b981;
+  background: #f0fdf4;
+}
+
+.strategy-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.strategy-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.vs-divider {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #9ca3af;
+}
+
+/* Outperformance Badge */
+.outperformance-badge {
+  padding: 16px 24px;
+  border-radius: 8px;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.outperformance-badge.positive {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+.outperformance-badge.negative {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+}
+
+.badge-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  opacity: 0.9;
+  margin-bottom: 4px;
+}
+
+.badge-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+/* Comparison Table */
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 16px;
+}
+
+.comparison-table th {
+  background: #f9fafb;
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.comparison-table td {
+  padding: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.comparison-table td.positive {
+  color: #059669;
+  font-weight: 600;
+}
+
+.comparison-table td.negative {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.comparison-table td.advantage-dca {
+  color: #6366f1;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.875rem;
+}
+
+.comparison-table td.advantage-bh {
+  color: #10b981;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.875rem;
+}
+
+/* Chart Styling */
+.dca-vs-buyandhold-chart {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  margin: 24px 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.dca-vs-buyandhold-chart h3 {
+  margin: 0 0 16px 0;
+  font-size: 1.125rem;
+  color: #1f2937;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .comparison-summary {
+    flex-direction: column;
+  }
+
+  .strategy-card {
+    max-width: 100%;
+  }
+
+  .comparison-table {
+    font-size: 0.875rem;
+  }
+
+  .comparison-table th,
+  .comparison-table td {
+    padding: 8px;
+  }
+}

@@ -6,6 +6,9 @@ import PortfolioCompositionChart from './PortfolioCompositionChart';
 import MultiStockPriceChart from './MultiStockPriceChart';
 import RejectedOrdersTable from './RejectedOrdersTable';
 import PortfolioCurrentHoldings from './PortfolioCurrentHoldings';
+import DailyTradesView from './DailyTradesView';
+import PortfolioBuyAndHoldComparison from './PortfolioBuyAndHoldComparison';
+import DCAVsBuyAndHoldChart from './DCAVsBuyAndHoldChart';
 import './PortfolioResults.css';
 
 const PortfolioResults = ({ data }) => {
@@ -25,12 +28,44 @@ const PortfolioResults = ({ data }) => {
     capitalDeploymentTimeSeries,
     rejectedOrders,
     portfolioRunId,
-    parameters
+    parameters,
+    buyAndHoldSummary,
+    comparison
   } = data;
 
   return (
     <div className="portfolio-results">
-      <PortfolioSummaryCard summary={portfolioSummary} />
+      <PortfolioSummaryCard summary={portfolioSummary} comparison={comparison} />
+
+      {comparison && buyAndHoldSummary && (
+        <>
+          <section className="buy-hold-comparison-section">
+            <div className="section-header">
+              <h3>📊 DCA vs Buy & Hold Comparison</h3>
+              <p className="section-description">
+                Compare the active DCA strategy against a passive Buy & Hold approach with equal capital allocation
+              </p>
+            </div>
+            <PortfolioBuyAndHoldComparison
+              comparison={comparison}
+              buyAndHoldSummary={buyAndHoldSummary}
+            />
+          </section>
+
+          <section className="charts-section">
+            <div className="section-header">
+              <h3>📈 Portfolio Value: DCA vs Buy & Hold</h3>
+              <p className="section-description">
+                Visualize how the two strategies compare over time
+              </p>
+            </div>
+            <DCAVsBuyAndHoldChart
+              dcaTimeSeries={capitalUtilizationTimeSeries}
+              buyAndHoldTimeSeries={buyAndHoldSummary.dailyValues}
+            />
+          </section>
+        </>
+      )}
 
       <section className="charts-section">
         <div className="section-header">
@@ -86,6 +121,21 @@ const PortfolioResults = ({ data }) => {
         />
       </section>
 
+      <section className="daily-trades-section">
+        <div className="section-header">
+          <h3>📅 Daily Trading Activity</h3>
+          <p className="section-description">
+            View all trades aggregated by date with cash position tracking (click rows to expand and see transaction details)
+          </p>
+        </div>
+        <DailyTradesView
+          stockResults={stockResults}
+          portfolioSummary={portfolioSummary}
+          portfolioRunId={portfolioRunId}
+          parameters={parameters}
+        />
+      </section>
+
       <section className="rejected-orders-section">
         <div className="section-header">
           <h3>⚠️ Rejected Orders Analysis</h3>
@@ -107,7 +157,7 @@ const PortfolioResults = ({ data }) => {
               value={(() => {
                 // Generate curl command for testing the backend API
                 const jsonBody = JSON.stringify(parameters, null, 2);
-                return `curl -X POST http://localhost:3001/api/backtest/portfolio -H "Content-Type: application/json" -d '${jsonBody.replace(/\n/g, ' ')}'`;
+                return `curl -X POST http://localhost:3001/api/portfolio-backtest -H "Content-Type: application/json" -d '${jsonBody.replace(/\n/g, ' ')}'`;
               })()}
               style={{
                 flex: 1,
@@ -123,7 +173,7 @@ const PortfolioResults = ({ data }) => {
             <button
               onClick={() => {
                 const jsonBody = JSON.stringify(parameters, null, 2);
-                const curlCommand = `curl -X POST http://localhost:3001/api/backtest/portfolio -H "Content-Type: application/json" -d '${jsonBody.replace(/\n/g, ' ')}'`;
+                const curlCommand = `curl -X POST http://localhost:3001/api/portfolio-backtest -H "Content-Type: application/json" -d '${jsonBody.replace(/\n/g, ' ')}'`;
                 navigator.clipboard.writeText(curlCommand);
                 alert('Curl command copied to clipboard!');
               }}

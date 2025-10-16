@@ -150,7 +150,10 @@ class StockState {
     });
 
     this.lotsHeld = this.lots.length;
-    this.capitalDeployed += transaction.value;
+
+    // Calculate value if not provided (avoid NaN from undefined)
+    const transactionValue = transaction.value !== undefined ? transaction.value : (transaction.price * transaction.shares);
+    this.capitalDeployed += transactionValue;
 
     // Track maximum capital deployed
     if (this.capitalDeployed > this.maxCapitalDeployed) {
@@ -182,8 +185,13 @@ class StockState {
     }
 
     this.lotsHeld = this.lots.length;
-    this.capitalDeployed -= transaction.lotsCost;
-    this.realizedPNL += transaction.realizedPNLFromTrade;
+
+    // Calculate lotsCost if not provided (avoid NaN from undefined)
+    const lotsCost = transaction.lotsCost !== undefined ? transaction.lotsCost : 0;
+    this.capitalDeployed -= lotsCost;
+
+    const realizedPNL = transaction.realizedPNLFromTrade !== undefined ? transaction.realizedPNLFromTrade : 0;
+    this.realizedPNL += realizedPNL;
 
     // Update average cost
     const totalShares = this.lots.reduce((sum, lot) => sum + lot.shares, 0);
@@ -226,31 +234,35 @@ async function runPortfolioBacktest(config) {
   const executorDayIndices = new Map();  // Track each executor's current day index
 
   for (const stockConfig of config.stocks) {
+    // Handle both string symbols and object configs
+    const symbol = typeof stockConfig === 'string' ? stockConfig : stockConfig.symbol;
+    const stockParams = typeof stockConfig === 'string' ? {} : stockConfig.params || {};
+
     const params = {
       ...config.defaultParams,
-      ...stockConfig.params,
+      ...stockParams,
       maxLots: config.maxLotsPerStock,  // Add maxLots constraint from portfolio config
       lotSizeUsd: config.lotSizeUsd     // Ensure lot size is passed
     };
 
     // Get price data as array for this stock
-    const dateMap = priceDataMap.get(stockConfig.symbol);
+    const dateMap = priceDataMap.get(symbol);
     const pricesArray = Array.from(dateMap.values());
 
     // Create DCA executor for this stock
     const executor = createDCAExecutor(
-      stockConfig.symbol,
+      symbol,
       params,
       pricesArray,
       false,  // verbose
       null    // adaptiveStrategy
     );
 
-    executors.set(stockConfig.symbol, executor);
-    executorDayIndices.set(stockConfig.symbol, 0);  // Start at day 0
+    executors.set(symbol, executor);
+    executorDayIndices.set(symbol, 0);  // Start at day 0
 
     // Still create stock state for portfolio tracking
-    portfolio.stocks.set(stockConfig.symbol, new StockState(stockConfig.symbol, params));
+    portfolio.stocks.set(symbol, new StockState(symbol, params));
   }
 
   // 4. Get all unique dates (union of all stock dates)
@@ -353,7 +365,23 @@ async function runPortfolioBacktest(config) {
 
   // 6. Calculate final metrics
   const portfolioMetricsService = require('./portfolioMetricsService');
-  return portfolioMetricsService.calculatePortfolioMetrics(portfolio, config, priceDataMap);
+  const results = portfolioMetricsService.calculatePortfolioMetrics(portfolio, config, priceDataMap);
+
+  // 7. Calculate Buy & Hold comparison
+  const portfolioBuyAndHoldService = require('./portfolioBuyAndHoldService');
+  const buyAndHoldResults = portfolioBuyAndHoldService.calculatePortfolioBuyAndHold(
+    priceDataMap,
+    config,
+    { portfolioSummary: results.portfolioSummary, stockResults: results.stockResults }
+  );
+
+  // Add Buy & Hold results to response
+  if (buyAndHoldResults) {
+    results.buyAndHoldSummary = buyAndHoldResults.buyAndHoldSummary;
+    results.comparison = buyAndHoldResults.comparison;
+  }
+
+  return results;
 }
 
 /**
@@ -363,9 +391,12 @@ async function loadAllPriceData(stocks, startDate, endDate) {
   const priceDataMap = new Map();
 
   const pricePromises = stocks.map(async (stockConfig) => {
-    const stock = await database.getStock(stockConfig.symbol);
+    // Handle both string symbols and object configs
+    const symbol = typeof stockConfig === 'string' ? stockConfig : stockConfig.symbol;
+
+    const stock = await database.getStock(symbol);
     if (!stock) {
-      throw new Error(`Stock ${stockConfig.symbol} not found in database`);
+      throw new Error(`Stock ${symbol} not found in database`);
     }
 
     const prices = await database.getPricesWithIndicators(stock.id, startDate, endDate);
@@ -376,7 +407,7 @@ async function loadAllPriceData(stocks, startDate, endDate) {
       dateMap.set(priceData.date, priceData);
     }
 
-    return { symbol: stockConfig.symbol, dateMap };
+    return { symbol, dateMap };
   });
 
   const results = await Promise.all(pricePromises);
