@@ -105,7 +105,7 @@ const BacktestChart = ({ data, backtestResults }) => {
         transaction: transaction,
         // Separate markers for different buy types
         regularBuyMarker: (transaction?.type === 'BUY' && !transaction?.ocoOrderDetail) ? parseFloat(day.adjusted_close || day.price || 0) : null,
-        ocoTrailingBuyMarker: (transaction?.type === 'OCO_TRAILING_BUY' || (transaction?.type === 'BUY' && transaction?.ocoOrderDetail?.type === 'TRAILING_BUY')) ? parseFloat(day.adjusted_close || day.price || 0) : null,
+        ocoTrailingBuyMarker: (transaction?.type === 'OCO_TRAILING_BUY' || transaction?.type === 'TRAILING_STOP_LIMIT_BUY' || (transaction?.type === 'BUY' && transaction?.ocoOrderDetail?.type === 'TRAILING_BUY')) ? parseFloat(day.adjusted_close || day.price || 0) : null,
         ocoLimitBuyMarker: (transaction?.type === 'OCO_LIMIT_BUY' || (transaction?.type === 'BUY' && transaction?.ocoOrderDetail?.type === 'LIMIT_BUY')) ? parseFloat(day.adjusted_close || day.price || 0) : null,
         sellMarker: transaction?.type === 'SELL' ? parseFloat(day.adjusted_close || day.price || 0) : null,
 
@@ -180,6 +180,7 @@ const BacktestChart = ({ data, backtestResults }) => {
           {data.transaction && (
             <p className={`tooltip-transaction ${data.transaction.type.toLowerCase()}`}>
               {data.transaction.type === 'OCO_TRAILING_BUY' ? 'OCO Trailing Buy' :
+               data.transaction.type === 'TRAILING_STOP_LIMIT_BUY' ? 'Trailing Stop Limit Buy' :
                data.transaction.type === 'OCO_LIMIT_BUY' ? 'OCO Limit Buy' :
                data.transaction.type === 'BUY' ? 'Regular Buy' :
                data.transaction.type}: {formatCurrency(parseFloat(data.transaction.price) || 0)}

@@ -1,53 +1,23 @@
-Please use this url to test
-http://localhost:3000/backtest/long/APP/results?startDate=2021-09-01&endDate=2025-10-14&lotSizeUsd=10000&max
-Lots=10&maxLotsToSell=1&gridIntervalPercent=10&profitRequirement=10&trailingBuyActivationPercent=5&trailingB
-uyReboundPercent=5&trailingSellActivationPercent=20&trailingSellPullbackPercent=10&beta=2.592&coefficient=1&
-enableBetaScaling=false&isManualBetaOverride=false&enableDynamicGrid=false&normalizeToReference=true&enableC
-onsecutiveIncrementalBuyGrid=true&enableConsecutiveIncrementalSellProfit=true&enableScenarioDetection=false&
-enableAverageBasedGrid=false&enableAverageBasedSell=false&dynamicGridMultiplier=1&gridConsecutiveIncrement=5
- , you should get Total Return
-$1,154,291.86
-|
-+1648.99%
-|
-Avg Capital:
-$48,015.49
-|
-CAGR:
-100.36%  . 2. another test: http://localhost:3000/backtest/long/TSLA/results?startDate=2021-09-01&endDate=20
-25-10-14&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=10&profitRequirement=10&trailingBuy
-ActivationPercent=10&trailingBuyReboundPercent=5&trailingSellActivationPercent=20&trailingSellPullbackPercen
-t=10&beta=2.592&coefficient=1&enableBetaScaling=false&isManualBetaOverride=false&enableDynamicGrid=false&nor
-malizeToReference=true&enableConsecutiveIncrementalBuyGrid=true&enableConsecutiveIncrementalSellProfit=false
-&enableScenarioDetection=false&enableAverageBasedGrid=false&enableAverageBasedSell=false&dynamicGridMultipli
-er=1&gridConsecutiveIncrement=5 Total Return
-$69,148.32
-|
-+115.25%
-|
-Avg Capital:
-$42,735.21
-|
-CAGR:
-20.46%
+When I run portfolio backtest config page, the url already has all the parameters, then if I change the paramter
+value, does it change the url accordingly?
+take one step back, i think this pattern is flawed.
+
+for each stcok, should list the top 3 or 4 config that give the best result, and then each config with future
+ trades listed, so user can see how each stock is managed, and pick the most palatable future trade.
 
 
 
 
-3 " Selling Logic Documented: backend/SELLING_LOGIC.md
+for the batch mode run, I need to see future trades for each stock on the result page, so I can manage a real stock
+ portfolio. Please add this feature. This is simply to aggregate the future trades for each stock single run.
 
-   The consecutive high-profit sells you observed are achieved through LIFO (Last In, First Out) selling:
-   - During DCA accumulation (falling prices): Buy progressively cheaper lots
-  " my question is not on LIFO, but a. why it did not sell earlier even though profit requirement is met? e.g. when
-  price was at 2024/11/27, it could've been sold for a large profit as well. b. why it continue to sell each day? i
-  .e. I am asking what trailing stop sell order is activated at when, and how it trigger the execution.
+Please develop a new spec:
+for portfolio backtest, I want to have a view to show daily trade acrross all stocks, so I can see how the
+portfolio is managed on a daily basis. Please add this feature. So merge the " Stock Performance Breakdown" by date
+ rather than by stock. Also please add a column to show cash available after each day's trade. You only need to
+ list the day where there is trade, not all days.
 
-4. Can you give me an URL that can reproduce the above test? I want to run it myself to see the details. Again,
-running one stock in a large 500k portfolio is not the same as running a single stock backtest. If you see this
-result in portfolio backtest, then I want to see the same result in single stock backtest. Plkease give me the URL
-can do that!
 
-returns should be
 
 This chart shows the each stock value, not the deployed captial, deployed capital max is 100k, and should be
 staircase that increase when buy, and decrease when sell. Can you overlay capital deployment to this chart, use the

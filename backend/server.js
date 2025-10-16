@@ -1403,7 +1403,24 @@ app.post('/api/portfolio-backtest', async (req, res) => {
       lotSizeUsd,
       maxLotsPerStock = 10,
       defaultParams,
-      stocks
+      stocks,
+      // Extract ALL DCA parameters that might be at top level
+      gridIntervalPercent,
+      profitRequirement,
+      trailingBuyActivationPercent,
+      trailingBuyReboundPercent,
+      trailingSellActivationPercent,
+      trailingSellPullbackPercent,
+      enableDynamicGrid,
+      normalizeToReference,
+      dynamicGridMultiplier,
+      enableConsecutiveIncrementalSellProfit,
+      enableConsecutiveIncrementalBuyGrid,
+      gridConsecutiveIncrement,
+      enableAdaptiveTrailingBuy,
+      enableAdaptiveTrailingSell,
+      trailingStopOrderType,
+      maxLotsToSell
     } = req.body;
 
     // Validation
@@ -1439,11 +1456,38 @@ app.post('/api/portfolio-backtest', async (req, res) => {
       });
     }
 
+    // Build defaultParams from top-level parameters if not provided
+    // Only include defined parameters (skip undefined ones)
+    const finalDefaultParams = defaultParams || Object.fromEntries(
+      Object.entries({
+        gridIntervalPercent,
+        profitRequirement,
+        trailingBuyActivationPercent,
+        trailingBuyReboundPercent,
+        trailingSellActivationPercent,
+        trailingSellPullbackPercent,
+        enableDynamicGrid,
+        normalizeToReference,
+        dynamicGridMultiplier,
+        enableConsecutiveIncrementalSellProfit,
+        enableConsecutiveIncrementalBuyGrid,
+        gridConsecutiveIncrement,
+        enableAdaptiveTrailingBuy,
+        enableAdaptiveTrailingSell,
+        trailingStopOrderType,
+        maxLotsToSell
+      }).filter(([_, value]) => value !== undefined)
+    );
+
+    // Handle both string arrays and object arrays for stocks
+    const stockSymbols = stocks.map(s => typeof s === 'string' ? s : s.symbol);
+
     console.log(`📊 Portfolio backtest requested:`);
     console.log(`   Capital: $${totalCapital.toLocaleString()}`);
     console.log(`   Lot Size: $${lotSizeUsd.toLocaleString()}`);
-    console.log(`   Stocks: ${stocks.length} (${stocks.map(s => s.symbol).join(', ')})`);
+    console.log(`   Stocks: ${stocks.length} (${stockSymbols.join(', ')})`);
     console.log(`   Period: ${startDate} to ${endDate}`);
+    console.log(`   finalDefaultParams:`, JSON.stringify(finalDefaultParams, null, 2));
 
     const portfolioBacktestService = require('./services/portfolioBacktestService');
 
@@ -1453,7 +1497,7 @@ app.post('/api/portfolio-backtest', async (req, res) => {
       endDate,
       lotSizeUsd,
       maxLotsPerStock,
-      defaultParams,
+      defaultParams: finalDefaultParams,
       stocks
     };
 
@@ -1502,7 +1546,7 @@ function convertPortfolioTransactionsToDCAFormat(transactions, priceData) {
   for (const tx of transactions) {
     const currentPrice = priceMap.get(tx.date) || tx.price;
 
-    if (tx.type === 'BUY') {
+    if (tx.type && tx.type.includes('BUY')) {
       // Add lot to holdings
       lots.push({ price: tx.price, shares: tx.shares, date: tx.date });
 
@@ -1531,7 +1575,7 @@ function convertPortfolioTransactionsToDCAFormat(transactions, priceData) {
         trailingStopDetail: null
       });
 
-    } else if (tx.type === 'SELL') {
+    } else if (tx.type && tx.type.includes('SELL')) {
       // Calculate P&L before removing lots
       const soldValue = tx.value || (tx.price * tx.shares);
       const soldCost = tx.lotsCost || 0;
@@ -1676,6 +1720,46 @@ app.get('/api/portfolio-backtest/:runId/stock/:symbol/results', async (req, res)
       }
     };
 
+    // Calculate Buy & Hold comparison for this stock
+    const { calculateBuyAndHold } = require('./services/dcaBacktestService');
+    const initialCapital = portfolioResults.parameters.lotSizeUsd * portfolioResults.parameters.maxLotsPerStock;
+    const avgCapitalForComparison = stockData.maxCapitalDeployed || initialCapital;
+
+    // Transform priceData to use adjusted_close (calculateBuyAndHold expects this property)
+    const pricesForBuyAndHold = stockData.priceData.map(p => ({
+      ...p,
+      adjusted_close: p.adjusted_close || p.close
+    }));
+
+    const buyAndHoldResults = calculateBuyAndHold(
+      pricesForBuyAndHold,
+      initialCapital,
+      avgCapitalForComparison
+    );
+
+    // Calculate outperformance metrics
+    const dcaFinalValue = stockData.totalPNL + (stockData.maxCapitalDeployed || initialCapital);
+    const outperformance = dcaFinalValue - buyAndHoldResults.finalValue;
+    const outperformancePercent = stockData.stockReturnPercent - buyAndHoldResults.totalReturnPercent;
+
+    // Add Buy & Hold results to response
+    dcaFormatResult.buyAndHoldResults = buyAndHoldResults;
+    dcaFormatResult.outperformance = outperformance;
+    dcaFormatResult.outperformancePercent = outperformancePercent;
+
+    // Build standalone test URL with same parameters (without portfolio capital constraints)
+    const standaloneParams = new URLSearchParams({
+      startDate: portfolioResults.parameters.startDate,
+      endDate: portfolioResults.parameters.endDate,
+      lotSizeUsd: portfolioResults.parameters.lotSizeUsd.toString(),
+      maxLots: portfolioResults.parameters.maxLotsPerStock.toString(),
+      ...Object.fromEntries(
+        Object.entries(portfolioResults.parameters.defaultParams).map(([k, v]) => [k, v.toString()])
+      )
+    });
+
+    const standaloneTestUrl = `/backtest/long/${symbol}/results?${standaloneParams.toString()}`;
+
     console.log(`✅ Retrieved ${symbol} from portfolio run ${runId}`);
 
     res.json({
@@ -1684,7 +1768,9 @@ app.get('/api/portfolio-backtest/:runId/stock/:symbol/results', async (req, res)
       metadata: {
         source: 'portfolio',
         portfolioRunId: runId,
-        portfolioCapital: portfolioResults.portfolioSummary.totalCapital
+        portfolioCapital: portfolioResults.portfolioSummary.totalCapital,
+        standaloneTestUrl: standaloneTestUrl,
+        standaloneTestNote: 'Test this stock with the same parameters but without portfolio capital constraints'
       }
     });
 

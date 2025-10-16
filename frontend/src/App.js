@@ -17,6 +17,7 @@ function AppContent() {
   const [backtestData, setBacktestData] = useState(null);
   const [batchData, setBatchData] = useState(null);
   const [chartData, setChartData] = useState(null);
+  const [metadata, setMetadata] = useState(null); // Store metadata (e.g., standaloneTestUrl)
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('parameters');
@@ -118,10 +119,12 @@ function AppContent() {
       setBatchData(null);
       setBacktestData(null);
       setChartData(null);
+      setMetadata(null);
     } else {
       setBacktestData(null);
       setBatchData(null);
       setChartData(null);
+      setMetadata(null);
     }
 
     try {
@@ -194,6 +197,9 @@ function AppContent() {
 
           // The endpoint returns data in DCA format, so we can use it directly
           setBacktestData(portfolioResult.data);
+
+          // Store metadata (includes standaloneTestUrl)
+          setMetadata(portfolioResult.metadata);
 
           // Fetch chart data for the stock
           const chartResponse = await fetch(
@@ -288,10 +294,12 @@ function AppContent() {
       setBatchData(null);
       setBacktestData(null);
       setChartData(null);
+      setMetadata(null);
     } else {
       setBacktestData(null);
       setBatchData(null);
       setChartData(null);
+      setMetadata(null);
     }
 
     try {
@@ -467,7 +475,7 @@ function AppContent() {
 
         {activeTab === 'chart' && chartData && backtestData && testMode === 'single' && (
           <div className="tab-content">
-            <BacktestResults data={backtestData} chartData={chartData} />
+            <BacktestResults data={backtestData} chartData={chartData} metadata={metadata} />
           </div>
         )}
 
@@ -508,7 +516,7 @@ function AppContent() {
 
         {activeTab === 'results' && testMode === 'single' && backtestData && (
           <div className="tab-content">
-            <BacktestResults data={backtestData} chartData={chartData} />
+            <BacktestResults data={backtestData} chartData={chartData} metadata={metadata} />
           </div>
         )}
 

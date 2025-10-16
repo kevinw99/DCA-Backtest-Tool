@@ -74,9 +74,10 @@ export const getStocksWithDefaults = () => {
  */
 export const getAllAvailableStocks = () => {
   return [
-    'AAPL', 'AMSC', 'AMZN', 'API', 'BABA', 'FIGR', 'JD', 'KNDI',
-    'LMND', 'META', 'MSFT', 'NIO', 'NVDA', 'PLTR', 'SHOP', 'TDOC',
-    'TSLA', 'U'
+    'TSLA', 'APP', 'HOOD', 'SEZL', 'HIMS', 'SOFI', 'AMD', 'RXRX',
+    'CRCL', 'CRWV', 'FIGR', 'NBIS', 'AMSC', 'COIN', 'HYLN', 'SNDK',
+    'WDC', 'CRDO', 'IDCC', 'SOUN', 'BITF', 'CIFR', 'ONDS', 'NVDA',
+    'PLTR', 'ALAB', 'QBTS', 'AVGO', 'ORCL', 'IREN', 'FIG', 'OPEN', 'RDDT'
   ];
 };
 

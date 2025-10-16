@@ -584,9 +584,30 @@ function buildCompositionTimeSeries(portfolio, capitalUtilizationTimeSeries, pri
         continue;
       }
 
-      // Find the price at this date
-      const priceAtDate = stockDateMap.get(snapshot.date);
+      // Find the price at this date, or use the most recent price before this date
+      let priceAtDate = stockDateMap.get(snapshot.date);
 
+      // If price not found for this exact date (weekend/holiday), find the most recent price
+      if (!priceAtDate) {
+        // Get all dates from the price map and sort them
+        const availableDates = Array.from(stockDateMap.keys()).sort();
+
+        // Find the most recent date that's before or equal to snapshot.date
+        let mostRecentDate = null;
+        for (const date of availableDates) {
+          if (date <= snapshot.date) {
+            mostRecentDate = date;
+          } else {
+            break;  // Dates are sorted, so we can stop
+          }
+        }
+
+        if (mostRecentDate) {
+          priceAtDate = stockDateMap.get(mostRecentDate);
+        }
+      }
+
+      // If still no price found, set to 0 (this shouldn't happen in normal cases)
       if (!priceAtDate) {
         composition[symbol] = 0;
         continue;

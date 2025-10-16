@@ -76,7 +76,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
     // Initialize from localStorage just like other parameters, with fallback defaults
     const saved = localStorage.getItem('dca-batch-parameters');
     const defaultParams = {
-      symbols: ['TSLA'],
+      symbols: ['TSLA', 'APP', 'HOOD', 'SEZL', 'HIMS', 'SOFI', 'AMD', 'RXRX', 'CRCL', 'CRWV', 'FIGR', 'NBIS', 'AMSC', 'COIN', 'HYLN', 'SNDK', 'WDC', 'CRDO', 'IDCC', 'SOUN', 'BITF', 'CIFR', 'ONDS', 'NVDA', 'PLTR', 'ALAB', 'QBTS', 'AVGO', 'ORCL', 'IREN', 'FIG', 'OPEN', 'RDDT'],
       coefficients: [1.0],
       enableBetaScaling: false,
       maxLotsToSell: [1],
@@ -135,8 +135,10 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
 
   const [availableSymbols, setAvailableSymbols] = useState(() => {
     const saved = localStorage.getItem('dca-available-symbols');
-    const defaultSymbols = ['TSLA', 'NVDA', 'AAPL', 'MSFT', 'AMZN', 'PLTR', 'U', 'META',
-      'SHOP', 'TDOC', 'JD', 'BABA', 'LMND', 'NIO', 'KNDI', 'API'];
+    const defaultSymbols = ['TSLA', 'APP', 'HOOD', 'SEZL', 'HIMS', 'SOFI', 'AMD', 'RXRX',
+      'CRCL', 'CRWV', 'FIGR', 'NBIS', 'AMSC', 'COIN', 'HYLN', 'SNDK',
+      'WDC', 'CRDO', 'IDCC', 'SOUN', 'BITF', 'CIFR', 'ONDS', 'NVDA',
+      'PLTR', 'ALAB', 'QBTS', 'AVGO', 'ORCL', 'IREN', 'FIG', 'OPEN', 'RDDT'];
     const symbols = saved ? JSON.parse(saved) : defaultSymbols;
     // Sort alphabetically
     return symbols.sort();

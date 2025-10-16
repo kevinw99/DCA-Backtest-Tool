@@ -41,6 +41,17 @@ const PortfolioCompositionChart = ({ compositionTimeSeries }) => {
     if (!compositionTimeSeries || compositionTimeSeries.length === 0) return [];
 
     const firstEntry = compositionTimeSeries[0];
+
+    // DEBUG: Log the last 5 entries to see what values are at the end
+    console.log('🔍 COMPOSITION CHART DEBUG - Last 5 entries:');
+    const lastFive = compositionTimeSeries.slice(-5);
+    lastFive.forEach((entry, idx) => {
+      console.log(`  [${compositionTimeSeries.length - 5 + idx}] ${entry.date}:`, {
+        ...entry,
+        date: undefined  // Don't log date twice
+      });
+    });
+
     return Object.keys(firstEntry).filter(
       key => key !== 'date' && key !== 'cash' && key !== 'total'
     );

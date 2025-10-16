@@ -24,7 +24,7 @@ import {
   calculateCapitalDeployed
 } from '../utils/chartCalculations';
 
-const BacktestResults = ({ data, chartData: priceData }) => {
+const BacktestResults = ({ data, chartData: priceData, metadata }) => {
   const [visibleIndicators, setVisibleIndicators] = useState({
     ma20: true,
     ma50: true,
@@ -675,6 +675,52 @@ const BacktestResults = ({ data, chartData: priceData }) => {
         <BarChart3 size={24} />
         Backtest Results for {summary.symbol}
       </h2>
+
+      {/* Portfolio Context Banner */}
+      {metadata && metadata.source === 'portfolio' && metadata.standaloneTestUrl && (
+        <div style={{
+          marginBottom: '20px',
+          padding: '15px',
+          backgroundColor: '#e3f2fd',
+          borderRadius: '8px',
+          border: '2px solid #2196F3'
+        }}>
+          <h3 style={{ marginTop: 0, marginBottom: '10px', fontSize: '16px', color: '#1976D2' }}>
+            📊 Portfolio Drill-Down Results
+          </h3>
+          <p style={{ marginBottom: '10px', fontSize: '14px', color: '#555' }}>
+            These results show how <strong>{summary.symbol}</strong> performed within the portfolio backtest
+            (Portfolio Capital: {formatCurrency(metadata.portfolioCapital || 0)})
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#1976D2' }}>
+              Run Standalone Test:
+            </span>
+            <a
+              href={metadata.standaloneTestUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#2196F3',
+                color: 'white',
+                textDecoration: 'none',
+                borderRadius: '4px',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}
+            >
+              🔗 Test {summary.symbol} Without Portfolio Constraints
+            </a>
+          </div>
+          <p style={{ marginTop: '8px', marginBottom: 0, fontSize: '12px', color: '#666', fontStyle: 'italic' }}>
+            {metadata.standaloneTestNote || 'Test this stock with the same parameters but without portfolio capital constraints'}
+          </p>
+        </div>
+      )}
 
       {/* Backtest Parameters Section */}
       {priceData?.backtestParameters && (
