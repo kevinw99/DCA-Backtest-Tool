@@ -66,6 +66,16 @@ const StockPerformanceTable = ({ stocks, portfolioRunId, parameters }) => {
     if (parameters.lotSizeUsd) params.append('lotSizeUsd', parameters.lotSizeUsd);
     if (parameters.maxLotsPerStock) params.append('maxLots', parameters.maxLotsPerStock);
 
+    // Add portfolio-level boolean flags from defaultParams
+    if (parameters.defaultParams) {
+      if (parameters.defaultParams.enableConsecutiveIncrementalBuyGrid !== undefined) {
+        params.append('enableConsecutiveIncrementalBuyGrid', parameters.defaultParams.enableConsecutiveIncrementalBuyGrid);
+      }
+      if (parameters.defaultParams.enableConsecutiveIncrementalSellProfit !== undefined) {
+        params.append('enableConsecutiveIncrementalSellProfit', parameters.defaultParams.enableConsecutiveIncrementalSellProfit);
+      }
+    }
+
     // Add stock-specific parameters (if any)
     if (stock.params) {
       // List of parameters that are stored as decimals in backend but need to be whole numbers in URL
