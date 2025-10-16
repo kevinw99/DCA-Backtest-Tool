@@ -1690,8 +1690,12 @@ app.get('/api/portfolio-backtest/:runId/stock/:symbol/results', async (req, res)
 
       // Metrics
       summary: {
+        symbol: stockData.symbol,
+        startDate: portfolioResults.parameters.startDate,
+        endDate: portfolioResults.parameters.endDate,
         totalReturn: stockData.totalPNL,
         totalReturnPercent: stockData.stockReturnPercent,
+        totalCost: stockData.maxCapitalDeployed,
         realizedPNL: stockData.realizedPNL,
         unrealizedPNL: stockData.unrealizedPNL,
         totalBuys: stockData.totalBuys,
@@ -1700,7 +1704,11 @@ app.get('/api/portfolio-backtest/:runId/stock/:symbol/results', async (req, res)
         cagr: stockData.cagr,
         sharpeRatio: stockData.sharpeRatio,
         maxDrawdown: stockData.maxDrawdown,
-        maxDrawdownPercent: stockData.maxDrawdownPercent
+        maxDrawdownPercent: stockData.maxDrawdownPercent,
+        performanceMetrics: {
+          avgDeployedCapital: stockData.avgCapitalDeployed || stockData.maxCapitalDeployed,
+          maxCapitalDeployed: stockData.maxCapitalDeployed
+        }
       },
 
       // Price data for charting
@@ -1748,14 +1756,34 @@ app.get('/api/portfolio-backtest/:runId/stock/:symbol/results', async (req, res)
     dcaFormatResult.outperformancePercent = outperformancePercent;
 
     // Build standalone test URL with same parameters (without portfolio capital constraints)
+    // Convert decimal percentage parameters to whole numbers for URL (0.1 → 10)
+    const percentageParams = [
+      'gridIntervalPercent',
+      'profitRequirement',
+      'trailingBuyActivationPercent',
+      'trailingBuyReboundPercent',
+      'trailingSellActivationPercent',
+      'trailingSellPullbackPercent',
+      'stopLossPercent',
+      'gridConsecutiveIncrement'
+    ];
+
+    const urlParams = {};
+    for (const [key, value] of Object.entries(portfolioResults.parameters.defaultParams)) {
+      // Convert decimal percentages to whole numbers for URL
+      if (percentageParams.includes(key) && typeof value === 'number') {
+        urlParams[key] = (value * 100).toString();
+      } else {
+        urlParams[key] = value.toString();
+      }
+    }
+
     const standaloneParams = new URLSearchParams({
       startDate: portfolioResults.parameters.startDate,
       endDate: portfolioResults.parameters.endDate,
       lotSizeUsd: portfolioResults.parameters.lotSizeUsd.toString(),
       maxLots: portfolioResults.parameters.maxLotsPerStock.toString(),
-      ...Object.fromEntries(
-        Object.entries(portfolioResults.parameters.defaultParams).map(([k, v]) => [k, v.toString()])
-      )
+      ...urlParams
     });
 
     const standaloneTestUrl = `/backtest/long/${symbol}/results?${standaloneParams.toString()}`;

@@ -5,6 +5,19 @@ take one step back, i think this pattern is flawed.
 for each stcok, should list the top 3 or 4 config that give the best result, and then each config with future
  trades listed, so user can see how each stock is managed, and pick the most palatable future trade.
 
+http://localhost:3000/portfolio-backtest?stocks=TSLA%2CMETA%2CMSFT%2CMETA%2CAAPL%2CAMZN%2CNVDA&totalCapital=500000
+&lotSize=10000&maxLots=10&startDate=2021-09-01&endDate=2025-10-12&gridInterval=10&profitReq=10&stopLoss=30&trailingBuy=false&trailingSell=false&trailingBuyActivation=10&trailingBuyRebound=5&trailingSellActivation=20&trailingSellPullback=10&consecutiveBuyGrid=true&gridConsecutiveIncrement=10&consecutiveSellProfit=false
+
+
+http://localhost:3000/portfolio-backtest?stocks=TSLA%2CMETA%2CMSFT%2CMETA%2CAAPL%2CAMZN%2CNVDA&totalCapital=500000
+&lotSize=10000&maxLots=10&startDate=2021-09-01&endDate=2025-10-12&gridInterval=10&profitReq=10&stopLoss=30
+&trailingBuy=false&trailingSell=false&trailingBuyActivation=10&trailingBuyRebound=5&trailingSellActivation=20&trailingSellPullback=10&consecutiveBuyGrid=true&gridConsecutiveIncrement=10&consecutiveSellProfit=false
+
+http://localhost:3000/portfolio-backtest?stocks=TSLA%2CMETA%2CMSFT%2CMETA%2CAAPL%2CAMZN%2CNVDA&totalCapital=500000&lotSize=10000&maxLots=10&startDate=2021-09-01&endDate=2025-10-12&gridInterval=10&profitReq=10&stopLoss=30&trailingBuy=false&trailingSell=false&trailingBuyActivation=10&trailingBuyRebound=5&trailingSellActivation=20&trailingSellPullback=10&consecutiveBuyGrid=true&gridConsecutiveIncrement=0&consecutiveSellProfit=false
+
+
+http://localhost:3000/backtest/long/NVDA/results?startDate=2021-09-01&endDate=2025-10-12&lotSizeUsd=10000&maxLots=10&gridIntervalPercent=10&profitRequirement=10&stopLossPercent=30&enableTrailingBuy=false&enableTrailingSell=false&trailingBuyActivationPercent=10&trailingBuyReboundPercent=5&trailingSellActivationPercent=20&trailingSellPullbackPercent=10&enableConsecutiveIncrementalBuyGrid=true&gridConsecutiveIncrement=10&enableConsecutiveIncrementalSellProfit=false
+
 
 
 
