@@ -1,0 +1,416 @@
+/* Daily Trades View - Main Container */
+.daily-trades-view {
+  margin-top: 20px;
+}
+
+.daily-trades-view.empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: #666;
+}
+
+.empty-state {
+  padding: 40px;
+  background: #f9f9f9;
+  border-radius: 8px;
+  border: 1px dashed #ccc;
+}
+
+.empty-state p {
+  margin: 10px 0;
+  font-size: 16px;
+}
+
+.empty-state .filter-hint {
+  font-size: 14px;
+  color: #999;
+}
+
+/* Controls Section */
+.daily-trades-controls {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.sort-toggle-btn {
+  padding: 8px 16px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.sort-toggle-btn:hover {
+  background: #45a049;
+}
+
+.filter-type-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-type-toggle label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.filter-select {
+  padding: 6px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+}
+
+.trades-count-info {
+  margin-left: auto;
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+/* Table Container */
+.daily-trades-table-wrapper {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  background: white;
+}
+
+/* Main Table */
+.daily-trades-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.daily-trades-table thead {
+  background: #f5f5f5;
+  border-bottom: 2px solid #ddd;
+}
+
+.daily-trades-table th {
+  padding: 12px 10px;
+  text-align: left;
+  font-weight: 600;
+  color: #333;
+  white-space: nowrap;
+}
+
+.daily-trades-table th.expand-col {
+  width: 40px;
+}
+
+.daily-trades-table th.date-col {
+  min-width: 120px;
+}
+
+.daily-trades-table th.trades-col,
+.daily-trades-table th.buys-col,
+.daily-trades-table th.sells-col {
+  text-align: center;
+  width: 70px;
+}
+
+.daily-trades-table th.net-flow-col,
+.daily-trades-table th.pnl-col,
+.daily-trades-table th.cash-before-col,
+.daily-trades-table th.cash-after-col {
+  text-align: right;
+  min-width: 110px;
+}
+
+/* Table Rows */
+.daily-trade-row {
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border-bottom: 1px solid #eee;
+}
+
+.daily-trade-row:hover {
+  background-color: #f9f9f9;
+}
+
+.daily-trade-row.expanded {
+  background-color: #e8f4f8;
+  border-bottom: none;
+}
+
+.daily-trade-row td {
+  padding: 10px;
+}
+
+/* Row Cells */
+.expand-icon {
+  text-align: center;
+  color: #666;
+}
+
+.date-cell {
+  font-weight: 500;
+  color: #333;
+}
+
+.trades-count,
+.buys-count,
+.sells-count {
+  text-align: center;
+  font-weight: 500;
+}
+
+.buys-count {
+  color: #3b82f6;
+}
+
+.sells-count {
+  color: #f59e0b;
+}
+
+.net-flow,
+.daily-pnl,
+.cash-before,
+.cash-after {
+  text-align: right;
+  font-weight: 500;
+}
+
+.net-flow.positive,
+.daily-pnl.positive {
+  color: #10b981;
+}
+
+.net-flow.negative,
+.daily-pnl.negative {
+  color: #ef4444;
+}
+
+.cash-after {
+  background-color: #fafafa;
+  font-weight: 600;
+}
+
+/* Detail Row */
+.daily-trade-detail-row {
+  border-bottom: 1px solid #ddd;
+}
+
+.daily-trade-detail-row td {
+  padding: 0;
+  background: #f9f9f9;
+}
+
+/* Detail View */
+.daily-trade-details {
+  padding: 20px;
+  background: #f9f9f9;
+}
+
+.daily-trade-details h4 {
+  margin: 0 0 15px 0;
+  font-size: 16px;
+  color: #333;
+}
+
+/* Transaction Detail Table */
+.transaction-detail-table-wrapper {
+  overflow-x: auto;
+  margin-bottom: 15px;
+}
+
+.transaction-detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid #ddd;
+}
+
+.transaction-detail-table thead {
+  background: #f0f0f0;
+}
+
+.transaction-detail-table th {
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 13px;
+  color: #555;
+  border-bottom: 1px solid #ddd;
+}
+
+.transaction-detail-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 13px;
+}
+
+.transaction-detail-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.transaction-detail-table tbody tr:hover {
+  background-color: #fafafa;
+}
+
+.transaction-detail-table .stock-symbol {
+  font-weight: 600;
+  color: #333;
+}
+
+.transaction-detail-table .transaction-type {
+  font-weight: 500;
+}
+
+.transaction-detail-table .buy-type {
+  color: #3b82f6;
+}
+
+.transaction-detail-table .sell-type {
+  color: #f59e0b;
+}
+
+.transaction-detail-table .price,
+.transaction-detail-table .quantity,
+.transaction-detail-table .value {
+  text-align: right;
+}
+
+.transaction-detail-table .pnl {
+  text-align: right;
+  font-weight: 500;
+}
+
+.transaction-detail-table .pnl.positive {
+  color: #10b981;
+}
+
+.transaction-detail-table .pnl.negative {
+  color: #ef4444;
+}
+
+/* Daily Summary */
+.daily-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  padding: 15px;
+  background: white;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.summary-item .label {
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+}
+
+.summary-item .value {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.summary-item .value.positive {
+  color: #10b981;
+}
+
+.summary-item .value.negative {
+  color: #ef4444;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .daily-trades-table th.cash-before-col {
+    display: none;
+  }
+
+  .daily-trades-table td.cash-before {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .daily-trades-controls {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .trades-count-info {
+    margin-left: 0;
+  }
+
+  .daily-trades-table {
+    font-size: 12px;
+  }
+
+  .daily-trades-table th.pnl-col,
+  .daily-trades-table th.cash-before-col {
+    display: none;
+  }
+
+  .daily-trades-table td.daily-pnl,
+  .daily-trades-table td.cash-before {
+    display: none;
+  }
+
+  .daily-trade-details {
+    padding: 15px 10px;
+  }
+
+  .transaction-detail-table {
+    font-size: 12px;
+  }
+
+  .daily-summary {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .daily-trades-table th.buys-col,
+  .daily-trades-table th.sells-col,
+  .daily-trades-table th.net-flow-col {
+    font-size: 11px;
+    padding: 8px 5px;
+  }
+
+  .daily-trades-table td {
+    padding: 8px 5px;
+  }
+
+  .transaction-detail-table th,
+  .transaction-detail-table td {
+    padding: 6px 8px;
+  }
+}
+
+/* Accessibility */
+.daily-trades-table tr:focus,
+.daily-trade-row:focus {
+  outline: 2px solid #4CAF50;
+  outline-offset: -2px;
+}
+
+.sort-toggle-btn:focus,
+.filter-select:focus {
+  outline: 2px solid #4CAF50;
+  outline-offset: 2px;
+}
