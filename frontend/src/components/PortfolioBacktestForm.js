@@ -409,8 +409,11 @@ const PortfolioBacktestForm = ({ parameters, onParametersChange, onSubmit, loadi
               <input
                 id="gridConsecutiveIncrement"
                 type="number"
-                value={parameters.defaultParams.gridConsecutiveIncrement || 5}
-                onChange={(e) => handleDefaultParamChange('gridConsecutiveIncrement', parseFloat(e.target.value) || 0)}
+                value={parameters.defaultParams.gridConsecutiveIncrement ?? 5}
+                onChange={(e) => {
+                  const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                  handleDefaultParamChange('gridConsecutiveIncrement', isNaN(val) ? 0 : val);
+                }}
                 step="0.1"
                 min="0"
                 max="100"
