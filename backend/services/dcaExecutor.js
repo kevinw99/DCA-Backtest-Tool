@@ -1935,7 +1935,7 @@ function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false
         },
         transactions: enhancedTransactions,
         lots: lots,
-        transactionLog: verbose ? transactionLog : [],
+        transactionLog: transactionLog,  // Always return transaction log (verbose controls extra detail only)
         dailyPortfolioValues,
         profileSwitches,
         questionableEvents,

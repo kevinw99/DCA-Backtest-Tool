@@ -575,7 +575,7 @@ class URLParameterManager {
       mode: 'single',
       // Basic parameters
       symbol: params.symbol || '',
-      startDate: params.startDate || '',
+      startDate: params.startDate || '2021-09-01',
       endDate: params.endDate || '',
       strategyMode: params.strategyMode || 'long',
 
@@ -587,7 +587,7 @@ class URLParameterManager {
       // Strategy parameters - parse as percentages without applying Beta scaling
       // Beta scaling will be handled by the backend when enableBetaScaling=true
       gridIntervalPercent: this._parsePercentageAsDecimal(params.gridIntervalPercent, 10),
-      profitRequirement: this._parsePercentageAsDecimal(params.profitRequirement, 5),
+      profitRequirement: this._parsePercentageAsDecimal(params.profitRequirement, 10),
       trailingBuyActivationPercent: this._parsePercentageAsDecimal(params.trailingBuyActivationPercent, 10),
       trailingBuyReboundPercent: this._parsePercentageAsDecimal(params.trailingBuyReboundPercent, 5),
       trailingSellActivationPercent: this._parsePercentageAsDecimal(params.trailingSellActivationPercent, 20),
@@ -616,21 +616,21 @@ class URLParameterManager {
       decoded.cascadeStopLossPercent = this._parsePercentageAsDecimal(params.cascadeStopLossPercent, 35);
     }
 
-    // Grid & Incremental Options boolean flags
+    // Grid & Incremental Options boolean flags - all default to false
     if (params.enableDynamicGrid !== undefined) {
-      decoded.enableDynamicGrid = this._parseBoolean(params.enableDynamicGrid, true);
+      decoded.enableDynamicGrid = this._parseBoolean(params.enableDynamicGrid, false);
     }
     if (params.normalizeToReference !== undefined) {
-      decoded.normalizeToReference = this._parseBoolean(params.normalizeToReference, true);
+      decoded.normalizeToReference = this._parseBoolean(params.normalizeToReference, false);
     }
     if (params.enableConsecutiveIncrementalBuyGrid !== undefined) {
       decoded.enableConsecutiveIncrementalBuyGrid = this._parseBoolean(params.enableConsecutiveIncrementalBuyGrid, false);
     }
     if (params.enableConsecutiveIncrementalSellProfit !== undefined) {
-      decoded.enableConsecutiveIncrementalSellProfit = this._parseBoolean(params.enableConsecutiveIncrementalSellProfit, true);
+      decoded.enableConsecutiveIncrementalSellProfit = this._parseBoolean(params.enableConsecutiveIncrementalSellProfit, false);
     }
     if (params.enableScenarioDetection !== undefined) {
-      decoded.enableScenarioDetection = this._parseBoolean(params.enableScenarioDetection, true);
+      decoded.enableScenarioDetection = this._parseBoolean(params.enableScenarioDetection, false);
     }
 
     // Spec 23: Average-based features
@@ -655,7 +655,7 @@ class URLParameterManager {
     }
 
     // Trailing stop order type
-    decoded.trailingStopOrderType = params.trailingStopOrderType || 'limit';
+    decoded.trailingStopOrderType = params.trailingStopOrderType || 'market';
 
     return decoded;
   }
@@ -710,7 +710,7 @@ class URLParameterManager {
     }
 
     // Trailing stop order type (non-varying parameter for batch)
-    decoded.trailingStopOrderType = params.trailingStopOrderType || 'limit';
+    decoded.trailingStopOrderType = params.trailingStopOrderType || 'market';
 
     return decoded;
   }

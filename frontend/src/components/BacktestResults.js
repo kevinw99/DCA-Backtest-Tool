@@ -424,13 +424,8 @@ const BacktestResults = ({ data, chartData: priceData, metadata }) => {
       details.push(`Stop: $${trailingDetail.stopPrice.toFixed(2)}`);
     }
 
-    return (
-      <div className="trailing-stop-details-multiline">
-        {details.map((detail, index) => (
-          <div key={index} className="trailing-stop-detail-line">{detail}</div>
-        ))}
-      </div>
-    );
+    // Return plain text string with separator instead of JSX
+    return details.join(' | ');
   };
 
   const formatTrailingStopSellDetails = (trailingDetail) => {
@@ -458,13 +453,8 @@ const BacktestResults = ({ data, chartData: priceData, metadata }) => {
       details.push(`Limit: $${trailingDetail.limitPrice.toFixed(2)}`);
     }
 
-    return (
-      <div className="trailing-stop-details-multiline">
-        {details.map((detail, index) => (
-          <div key={index} className="trailing-stop-detail-line">{detail}</div>
-        ))}
-      </div>
-    );
+    // Return plain text string with separator instead of JSX
+    return details.join(' | ');
   };
 
   const prepareChartData = () => {
@@ -675,6 +665,57 @@ const BacktestResults = ({ data, chartData: priceData, metadata }) => {
         <BarChart3 size={24} />
         Backtest Results for {summary.symbol}
       </h2>
+
+      {/* API Test Command */}
+      {priceData?.backtestParameters && (
+        <div className="api-url-section" style={{ marginTop: '20px', padding: '15px', backgroundColor: '#f5f5f5', borderRadius: '8px', border: '1px solid #ddd' }}>
+          <h3 style={{ marginTop: 0, marginBottom: '10px', fontSize: '16px' }}>Backend API Test Command</h3>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <input
+              type="text"
+              readOnly
+              value={(() => {
+                // Generate curl command for testing the backend API
+                // The backend expects POST with JSON body (not GET with query params)
+                const jsonBody = JSON.stringify(priceData.backtestParameters, null, 2);
+                return `curl -X POST http://localhost:3001/api/backtest/dca -H "Content-Type: application/json" -d '${jsonBody.replace(/\n/g, ' ')}'`;
+              })()}
+              style={{
+                flex: 1,
+                padding: '8px 12px',
+                fontSize: '13px',
+                fontFamily: 'monospace',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                backgroundColor: 'white'
+              }}
+              onClick={(e) => e.target.select()}
+            />
+            <button
+              onClick={() => {
+                const jsonBody = JSON.stringify(priceData.backtestParameters, null, 2);
+                const curlCommand = `curl -X POST http://localhost:3001/api/backtest/dca -H "Content-Type: application/json" -d '${jsonBody.replace(/\n/g, ' ')}'`;
+                navigator.clipboard.writeText(curlCommand);
+                alert('Curl command copied to clipboard!');
+              }}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#4CAF50',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              Copy Command
+            </button>
+          </div>
+          <p style={{ marginTop: '8px', marginBottom: 0, fontSize: '12px', color: '#666' }}>
+            Use this curl command to test the backend API directly from terminal
+          </p>
+        </div>
+      )}
 
       {/* Portfolio Context Banner */}
       {metadata && metadata.source === 'portfolio' && metadata.standaloneTestUrl && (
@@ -1756,57 +1797,6 @@ const BacktestResults = ({ data, chartData: priceData, metadata }) => {
       {/* Scenario Analysis */}
       {priceData?.scenarioAnalysis && (
         <ScenarioAnalysis scenarioAnalysis={priceData.scenarioAnalysis} />
-      )}
-
-      {/* API Test Command */}
-      {priceData?.backtestParameters && (
-        <div className="api-url-section" style={{ marginTop: '20px', padding: '15px', backgroundColor: '#f5f5f5', borderRadius: '8px', border: '1px solid #ddd' }}>
-          <h3 style={{ marginTop: 0, marginBottom: '10px', fontSize: '16px' }}>Backend API Test Command</h3>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <input
-              type="text"
-              readOnly
-              value={(() => {
-                // Generate curl command for testing the backend API
-                // The backend expects POST with JSON body (not GET with query params)
-                const jsonBody = JSON.stringify(priceData.backtestParameters, null, 2);
-                return `curl -X POST http://localhost:3001/api/backtest/dca -H "Content-Type: application/json" -d '${jsonBody.replace(/\n/g, ' ')}'`;
-              })()}
-              style={{
-                flex: 1,
-                padding: '8px 12px',
-                fontSize: '13px',
-                fontFamily: 'monospace',
-                border: '1px solid #ccc',
-                borderRadius: '4px',
-                backgroundColor: 'white'
-              }}
-              onClick={(e) => e.target.select()}
-            />
-            <button
-              onClick={() => {
-                const jsonBody = JSON.stringify(priceData.backtestParameters, null, 2);
-                const curlCommand = `curl -X POST http://localhost:3001/api/backtest/dca -H "Content-Type: application/json" -d '${jsonBody.replace(/\n/g, ' ')}'`;
-                navigator.clipboard.writeText(curlCommand);
-                alert('Curl command copied to clipboard!');
-              }}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: '#4CAF50',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '14px'
-              }}
-            >
-              Copy Command
-            </button>
-          </div>
-          <p style={{ marginTop: '8px', marginBottom: 0, fontSize: '12px', color: '#666' }}>
-            Use this curl command to test the backend API directly from terminal
-          </p>
-        </div>
       )}
 
       {/* Strategy Summary */}
