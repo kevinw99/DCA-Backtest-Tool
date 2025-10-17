@@ -7,7 +7,7 @@ import { formatCurrency, formatPercent, formatParameterPercent, formatPerformanc
  * FutureTradeCard Component (Spec 33)
  * Displays future trade information for a single stock in batch results
  */
-const FutureTradeCard = ({ symbol, futureTrades, parameters, isSelected }) => {
+const FutureTradeCard = ({ symbol, futureTrades, parameters, isSelected, onRunSingleBacktest }) => {
   const [isExpanded, setIsExpanded] = useState(true);
 
   if (!futureTrades) {
@@ -43,6 +43,19 @@ const FutureTradeCard = ({ symbol, futureTrades, parameters, isSelected }) => {
           <span className={hasHoldings ? 'has-holdings' : 'no-holdings'}>
             {hasHoldings ? `Holdings: ${formatCurrency(avgCost)} avg` : 'No Holdings'}
           </span>
+          {onRunSingleBacktest && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent card collapse when clicking Run button
+                onRunSingleBacktest(parameters);
+              }}
+              className="run-single-button"
+              title="Run single backtest in new window"
+              style={{ marginLeft: '10px' }}
+            >
+              📊 Run
+            </button>
+          )}
           <span className="expand-icon">{isExpanded ? '▼' : '▶'}</span>
         </div>
       </div>
@@ -760,15 +773,18 @@ const BatchResults = ({ data }) => {
         <div className="future-trades-section">
           <h3>🎯 Future Trades by Stock</h3>
           <div className="future-trades-grid">
-            {Object.entries(futureTradesBySymbol).map(([symbol, data]) => (
-              <FutureTradeCard
-                key={symbol}
-                symbol={symbol}
-                futureTrades={data.futureTrades}
-                parameters={data.parameters}
-                isSelected={selectedStock === symbol}
-              />
-            ))}
+            {Object.entries(futureTradesBySymbol)
+              .sort(([symbolA], [symbolB]) => symbolA.localeCompare(symbolB)) // Sort alphabetically by symbol
+              .map(([symbol, data]) => (
+                <FutureTradeCard
+                  key={symbol}
+                  symbol={symbol}
+                  futureTrades={data.futureTrades}
+                  parameters={data.parameters}
+                  isSelected={selectedStock === symbol}
+                  onRunSingleBacktest={runSingleBacktest}
+                />
+              ))}
           </div>
         </div>
       )}

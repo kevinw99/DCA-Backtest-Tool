@@ -236,6 +236,69 @@ class Database {
     });
   }
 
+  /**
+   * Get daily prices with optional current intraday price appended
+   * If endDate is today and market is open, fetches current price and appends it
+   * @param {number} stockId - Stock ID
+   * @param {string} symbol - Stock symbol (required for fetching current price)
+   * @param {string} startDate - Start date (YYYY-MM-DD)
+   * @param {string} endDate - End date (YYYY-MM-DD)
+   * @param {object} options - { appendCurrentPrice: boolean }
+   * @returns {Promise<Array>} Array of price records
+   */
+  async getDailyPricesWithCurrent(stockId, symbol, startDate = null, endDate = null, options = {}) {
+    const { appendCurrentPrice = true } = options;
+
+    // Get historical prices from database
+    const historicalPrices = await this.getDailyPrices(stockId, startDate, endDate);
+
+    // Check if we should fetch current intraday price
+    if (!appendCurrentPrice) {
+      return historicalPrices;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+
+    // Only fetch current price if endDate is today (or null, which means up to today)
+    const shouldFetchCurrent = (!endDate || endDate === today);
+
+    if (!shouldFetchCurrent) {
+      return historicalPrices;
+    }
+
+    try {
+      // Import currentPriceService (lazy load to avoid circular dependency)
+      const currentPriceService = require('./services/currentPriceService');
+
+      // Fetch current intraday price
+      const currentPriceBar = await currentPriceService.fetchCurrentPrice(symbol);
+
+      if (currentPriceBar) {
+        // Check if today's data already exists in historical prices
+        const todayExists = historicalPrices.some(p => p.date === today);
+
+        if (todayExists) {
+          // Replace stale database entry with live current price
+          console.log(`📊 Replacing stale database price for ${symbol} on ${today} with current price`);
+          const updatedPrices = historicalPrices.map(p =>
+            p.date === today ? currentPriceBar : p
+          );
+          return updatedPrices;
+        } else {
+          // Append current price as new entry for today
+          console.log(`📊 Appending current price for ${symbol} on ${today}`);
+          return [...historicalPrices, currentPriceBar];
+        }
+      }
+    } catch (error) {
+      console.warn(`⚠️  Failed to fetch current price for ${symbol}:`, error.message);
+      console.warn(`   Falling back to historical data only`);
+    }
+
+    // Fallback: return historical prices only
+    return historicalPrices;
+  }
+
   async insertDailyPrices(stockId, pricesData) {
     return new Promise((resolve, reject) => {
       const stmt = this.db.prepare(`

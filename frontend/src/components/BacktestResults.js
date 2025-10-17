@@ -1631,7 +1631,16 @@ const BacktestResults = ({ data, chartData: priceData, metadata }) => {
         const futureTrades = calculateFutureTrades();
         if (!futureTrades) return null;
 
-        const { currentPrice, avgCost, hasHoldings, isShortStrategy, buyActivation, sellActivation, recentPeak, recentBottom, lastTransactionDate } = futureTrades;
+        const { currentPrice, avgCost, hasHoldings, isShortStrategy, buyActivation, sellActivation } = futureTrades;
+        const currentPriceDate = priceData?.dailyPrices?.[priceData.dailyPrices.length - 1]?.date || 'N/A';
+
+        // Helper function to calculate distance between current price and target price
+        const calculateDistance = (targetPrice) => {
+          if (!targetPrice || !currentPrice) return null;
+          const diff = targetPrice - currentPrice;
+          const pct = (diff / currentPrice) * 100;
+          return { diff, pct };
+        };
 
         return (
           <div className="holdings-section future-trades-section">
@@ -1640,123 +1649,188 @@ const BacktestResults = ({ data, chartData: priceData, metadata }) => {
               Future Trade
             </h3>
 
-            <div className="future-trades-content">
-              <div className="current-state">
-                <div className="current-price">
-                  <strong>Current Price:</strong> {formatCurrency(currentPrice)}
+            <div className="future-trade-card">
+              <div className="card-header" style={{ cursor: 'default' }}>
+                <h4>{summary.symbol}</h4>
+                <div className="header-info">
+                  <span>Current: {formatCurrency(currentPrice)} as of {currentPriceDate}</span>
+                  <span className={hasHoldings ? 'has-holdings' : 'no-holdings'}>
+                    {hasHoldings ? `Holdings: ${formatCurrency(avgCost)} avg` : 'No Holdings'}
+                  </span>
                 </div>
-                {hasHoldings && (
-                  <div className="avg-cost">
-                    <strong>Average Cost:</strong> {formatCurrency(avgCost)}
-                  </div>
-                )}
               </div>
 
-              <div className="trade-directions">
-                {/* Downward Direction (Buy/Short) */}
-                <div className="trade-direction buy-direction">
-                  <div className="direction-header">
-                    <TrendingDown size={18} />
-                    <span className="direction-title">{buyActivation.description}</span>
-                  </div>
-                  <div className="direction-details">
+              <div className="card-body">
+                <div className="current-price-section">
+                  <div><span className="label">Current Price:</span> <span className="value">{formatCurrency(currentPrice)}</span></div>
+                  {hasHoldings && <div><span className="label">Avg Cost:</span> <span className="value">{formatCurrency(avgCost)}</span></div>}
+                </div>
+                <div className="trade-directions">
+                  {/* BUY Direction */}
+                  <div className={`buy-section ${buyActivation.isActive ? 'is-active' : 'is-pending'}`}>
+                    <h5>
+                      <TrendingDown size={16} />
+                      {buyActivation.description}
+                      <span className="status-badge">
+                        {buyActivation.isActive ? 'ACTIVE TRACKING' : 'PENDING'}
+                      </span>
+                    </h5>
                     {buyActivation.isActive ? (
-                      // Active trailing stop buy - show current stop details
                       <>
-                        <div className="activation-info">
-                          <span className="label">Stop Price:</span>
-                          <span className="value">{formatCurrency(buyActivation.stopPrice)}</span>
-                          <span className="percent">
-                            ({formatParameterPercent(buyActivation.reboundPercent)} rebound from ${formatCurrency(buyActivation.lowestPrice)} bottom)
-                          </span>
+                        <div className="active-stop">
+                          <div>
+                            <span className="label">Stop Price:</span>
+                            <span className="value">{formatCurrency(buyActivation.stopPrice)}</span>
+                            {(() => {
+                              const dist = calculateDistance(buyActivation.stopPrice);
+                              return dist && <span className="distance">{dist.pct >= 0 ? '↑' : '↓'} {formatCurrency(Math.abs(dist.diff))} ({formatParameterPercent(Math.abs(dist.pct / 100))})</span>;
+                            })()}
+                          </div>
+                          <div className="detail">
+                            {formatParameterPercent(buyActivation.reboundPercent)} rebound
+                            from {formatCurrency(buyActivation.lowestPrice)}
+                          </div>
+                        </div>
+                        <div>
+                          <span className="label">Lowest Price:</span>
+                          <span className="value">{formatCurrency(buyActivation.lowestPrice)}</span>
+                          {(() => {
+                            const dist = calculateDistance(buyActivation.lowestPrice);
+                            return dist && <span className="distance">{dist.pct >= 0 ? '↑' : '↓'} {formatCurrency(Math.abs(dist.diff))} ({formatParameterPercent(Math.abs(dist.pct / 100))})</span>;
+                          })()}
                         </div>
                       </>
                     ) : (
-                      // No active stop - show theoretical activation
                       <>
-                        <div className="activation-info">
+                        <div>
                           <span className="label">Activates at:</span>
                           <span className="value">{formatCurrency(buyActivation.activationPrice)}</span>
-                          <span className="percent">
-                            ({formatParameterPercent(buyActivation.activationPercent)} drop from {formatCurrency(buyActivation.referencePrice)} recent peak)
-                          </span>
+                          {(() => {
+                            const dist = calculateDistance(buyActivation.activationPrice);
+                            return dist && <span className="distance">{dist.pct >= 0 ? '↑' : '↓'} {formatCurrency(Math.abs(dist.diff))} ({formatParameterPercent(Math.abs(dist.pct / 100))})</span>;
+                          })()}
                         </div>
-                        <div className="execution-info">
+                        <div className="detail">
+                          {formatParameterPercent(buyActivation.activationPercent)} drop
+                          from {formatCurrency(buyActivation.referencePrice)}
+                        </div>
+                        <div>
+                          <span className="label">Reference Price:</span>
+                          <span className="value">{formatCurrency(buyActivation.referencePrice)}</span>
+                          {(() => {
+                            const dist = calculateDistance(buyActivation.referencePrice);
+                            return dist && <span className="distance">{dist.pct >= 0 ? '↑' : '↓'} {formatCurrency(Math.abs(dist.diff))} ({formatParameterPercent(Math.abs(dist.pct / 100))})</span>;
+                          })()}
+                        </div>
+                        <div>
                           <span className="label">Executes on:</span>
                           <span className="value">
-                            {formatParameterPercent(buyActivation.reboundPercent)} rebound after activation
+                            {formatParameterPercent(buyActivation.reboundPercent)} rebound
                           </span>
                         </div>
                       </>
                     )}
                   </div>
-                </div>
 
-                {/* Upward Direction (Sell/Cover) */}
-                {sellActivation ? (
-                  <div className="trade-direction sell-direction">
-                    <div className="direction-header">
-                      <TrendingUp size={18} />
-                      <span className="direction-title">{sellActivation.description}</span>
-                    </div>
-                    <div className="direction-details">
+                  {/* SELL Direction */}
+                  {sellActivation ? (
+                    <div className={`sell-section ${sellActivation.isActive ? 'is-active' : 'is-pending'}`}>
+                      <h5>
+                        <TrendingUp size={16} />
+                        {sellActivation.description}
+                        <span className="status-badge">
+                          {sellActivation.isActive ? 'ACTIVE TRACKING' : 'PENDING'}
+                        </span>
+                      </h5>
                       {sellActivation.isActive ? (
-                        // Active trailing stop - show current stop details
                         <>
-                          <div className="activation-info">
-                            <span className="label">Stop Price:</span>
-                            <span className="value">{formatCurrency(sellActivation.stopPrice)}</span>
-                            <span className="percent">
-                              ({formatParameterPercent(sellActivation.pullbackPercent)} pullback from ${formatCurrency(sellActivation.lastUpdatePrice)} peak)
-                            </span>
+                          <div className="active-stop">
+                            <div>
+                              <span className="label">Stop Price:</span>
+                              <span className="value">{formatCurrency(sellActivation.stopPrice)}</span>
+                              {(() => {
+                                const dist = calculateDistance(sellActivation.stopPrice);
+                                return dist && <span className="distance">{dist.pct >= 0 ? '↑' : '↓'} {formatCurrency(Math.abs(dist.diff))} ({formatParameterPercent(Math.abs(dist.pct / 100))})</span>;
+                              })()}
+                            </div>
+                            <div className="detail">
+                              {formatParameterPercent(sellActivation.pullbackPercent)} pullback
+                              from {formatCurrency(sellActivation.lastUpdatePrice)}
+                            </div>
                           </div>
                           {sellActivation.limitPrice && (
-                            <div className="execution-info">
+                            <div>
                               <span className="label">Limit Price:</span>
                               <span className="value">{formatCurrency(sellActivation.limitPrice)}</span>
+                              {(() => {
+                                const dist = calculateDistance(sellActivation.limitPrice);
+                                return dist && <span className="distance">{dist.pct >= 0 ? '↑' : '↓'} {formatCurrency(Math.abs(dist.diff))} ({formatParameterPercent(Math.abs(dist.pct / 100))})</span>;
+                              })()}
                             </div>
                           )}
-                          <div className="profit-requirement">
+                          <div>
+                            <span className="label">Last Update Price:</span>
+                            <span className="value">{formatCurrency(sellActivation.lastUpdatePrice)}</span>
+                            {(() => {
+                              const dist = calculateDistance(sellActivation.lastUpdatePrice);
+                              return dist && <span className="distance">{dist.pct >= 0 ? '↑' : '↓'} {formatCurrency(Math.abs(dist.diff))} ({formatParameterPercent(Math.abs(dist.pct / 100))})</span>;
+                            })()}
+                          </div>
+                          <div>
                             <span className="label">Profit target:</span>
                             <span className="value">{formatCurrency(sellActivation.profitRequirement)}</span>
+                            {(() => {
+                              const dist = calculateDistance(sellActivation.profitRequirement);
+                              return dist && <span className="distance">{dist.pct >= 0 ? '↑' : '↓'} {formatCurrency(Math.abs(dist.diff))} ({formatParameterPercent(Math.abs(dist.pct / 100))})</span>;
+                            })()}
                           </div>
                         </>
                       ) : (
-                        // No active stop - show theoretical activation and initial stop price
                         <>
-                          <div className="activation-info">
-                            <span className="label">Activates on:</span>
+                          <div>
+                            <span className="label">Activates at:</span>
+                            <span className="value">{formatCurrency(sellActivation.activationPrice)}</span>
+                            {(() => {
+                              const dist = calculateDistance(sellActivation.activationPrice);
+                              return dist && <span className="distance">{dist.pct >= 0 ? '↑' : '↑'} {formatCurrency(Math.abs(dist.diff))} ({formatParameterPercent(Math.abs(dist.pct / 100))})</span>;
+                            })()}
+                          </div>
+                          <div className="detail">
+                            {formatParameterPercent(sellActivation.activationPercent)} rise
+                            from {formatCurrency(sellActivation.referencePrice)}
+                          </div>
+                          <div>
+                            <span className="label">Reference Price:</span>
+                            <span className="value">{formatCurrency(sellActivation.referencePrice)}</span>
+                            {(() => {
+                              const dist = calculateDistance(sellActivation.referencePrice);
+                              return dist && <span className="distance">{dist.pct >= 0 ? '↑' : '↓'} {formatCurrency(Math.abs(dist.diff))} ({formatParameterPercent(Math.abs(dist.pct / 100))})</span>;
+                            })()}
+                          </div>
+                          <div>
+                            <span className="label">Then trails:</span>
                             <span className="value">
-                              {formatParameterPercent(sellActivation.activationPercent)} rise from {formatCurrency(sellActivation.referencePrice)} recent bottom
+                              {formatParameterPercent(sellActivation.pullbackPercent)} pullback
                             </span>
                           </div>
-                          <div className="execution-info">
-                            <span className="label">Then trails price:</span>
-                            <span className="value">
-                              {formatParameterPercent(sellActivation.pullbackPercent)} pullback from peak
-                            </span>
-                          </div>
-                          <div className="profit-requirement">
+                          <div>
                             <span className="label">Profit target:</span>
                             <span className="value">{formatCurrency(sellActivation.profitRequirement)}</span>
+                            {(() => {
+                              const dist = calculateDistance(sellActivation.profitRequirement);
+                              return dist && <span className="distance">{dist.pct >= 0 ? '↑' : '↓'} {formatCurrency(Math.abs(dist.diff))} ({formatParameterPercent(Math.abs(dist.pct / 100))})</span>;
+                            })()}
                           </div>
                         </>
                       )}
                     </div>
-                  </div>
-                ) : (
-                  <div className="trade-direction sell-direction disabled">
-                    <div className="direction-header">
-                      <TrendingUp size={18} />
-                      <span className="direction-title">Next {isShortStrategy ? 'COVER' : 'SELL'}</span>
+                  ) : (
+                    <div className="sell-section disabled">
+                      <h5>Next {isShortStrategy ? 'COVER' : 'SELL'}</h5>
+                      <p>No holdings to sell</p>
                     </div>
-                    <div className="direction-details">
-                      <div className="no-holdings-message">
-                        Cannot activate (no holdings to sell)
-                      </div>
-                    </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
           </div>

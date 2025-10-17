@@ -670,7 +670,7 @@ class URLParameterManager {
       // Basic parameters (use defaults if missing from URL)
       symbols: params.symbols ? params.symbols.split(',').map(s => s.trim()) : ['TSLA'],
       startDate: params.startDate || '2021-09-01',
-      endDate: params.endDate || '2025-09-01',
+      endDate: params.endDate || new Date().toISOString().split('T')[0], // Default to today's date
       strategyMode: params.strategyMode || 'long',
 
       // Investment parameters

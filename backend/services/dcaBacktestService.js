@@ -774,7 +774,44 @@ async function runDCABacktest(params, dayCallback = null) {
     }
 
     // 3. Get Combined Price and Technical Indicator Data
-    let pricesWithIndicators = await database.getPricesWithIndicators(stock.id, startDate, endDate);
+    // Note: getPricesWithIndicators doesn't support current price appending yet
+    // For now, we'll fetch daily prices with current price, then join with indicators manually
+    const dailyPrices = await database.getDailyPricesWithCurrent(stock.id, symbol, startDate, endDate);
+
+    // Join with technical indicators manually
+    let pricesWithIndicators = dailyPrices;
+
+    // Try to get technical indicators for the date range
+    // Note: Tech indicators won't exist for current day's live price
+    try {
+      const indicators = await database.getTechnicalIndicators(stock.id, startDate, endDate);
+      const indicatorMap = new Map(indicators.map(ind => [ind.date, ind]));
+
+      pricesWithIndicators = dailyPrices.map(price => {
+        const indicator = indicatorMap.get(price.date) || {};
+        return {
+          ...price,
+          ma_5: indicator.ma_5 || null,
+          ma_10: indicator.ma_10 || null,
+          ma_20: indicator.ma_20 || null,
+          ma_50: indicator.ma_50 || null,
+          ma_200: indicator.ma_200 || null,
+          rsi_14: indicator.rsi_14 || null,
+          volatility_20: indicator.volatility_20 || null,
+          weekly_trend: indicator.weekly_trend || null,
+          avg_volume_20: indicator.avg_volume_20 || null,
+          volume_ratio: indicator.volume_ratio || null,
+          price_vs_ma20: indicator.price_vs_ma20 || null,
+          price_vs_ma200: indicator.price_vs_ma200 || null,
+          ma50_vs_ma200: indicator.ma50_vs_ma200 || null,
+          support_50: indicator.support_50 || null,
+          resistance_50: indicator.resistance_50 || null
+        };
+      });
+    } catch (error) {
+      // If technical indicators aren't available, proceed with just price data
+      console.warn(`⚠️  Technical indicators not available: ${error.message}`);
+    }
 
     // If no data found for the exact date range, try with latest available data
     if (pricesWithIndicators.length === 0) {
@@ -783,7 +820,33 @@ async function runDCABacktest(params, dayCallback = null) {
       if (latestPriceDate) {
         // Adjust end date to latest available data
         console.warn(`⚠️  No data found until ${endDate} for ${symbol}, using latest available data (${latestPriceDate})`);
-        pricesWithIndicators = await database.getPricesWithIndicators(stock.id, startDate, latestPriceDate);
+
+        // Use new method with current price support
+        const fallbackPrices = await database.getDailyPricesWithCurrent(stock.id, symbol, startDate, latestPriceDate);
+        const fallbackIndicators = await database.getTechnicalIndicators(stock.id, startDate, latestPriceDate);
+        const fallbackIndicatorMap = new Map(fallbackIndicators.map(ind => [ind.date, ind]));
+
+        pricesWithIndicators = fallbackPrices.map(price => {
+          const indicator = fallbackIndicatorMap.get(price.date) || {};
+          return {
+            ...price,
+            ma_5: indicator.ma_5 || null,
+            ma_10: indicator.ma_10 || null,
+            ma_20: indicator.ma_20 || null,
+            ma_50: indicator.ma_50 || null,
+            ma_200: indicator.ma_200 || null,
+            rsi_14: indicator.rsi_14 || null,
+            volatility_20: indicator.volatility_20 || null,
+            weekly_trend: indicator.weekly_trend || null,
+            avg_volume_20: indicator.avg_volume_20 || null,
+            volume_ratio: indicator.volume_ratio || null,
+            price_vs_ma20: indicator.price_vs_ma20 || null,
+            price_vs_ma200: indicator.price_vs_ma200 || null,
+            ma50_vs_ma200: indicator.ma50_vs_ma200 || null,
+            support_50: indicator.support_50 || null,
+            resistance_50: indicator.resistance_50 || null
+          };
+        });
       }
 
       // If still no data, the stock truly has no price data in the database
