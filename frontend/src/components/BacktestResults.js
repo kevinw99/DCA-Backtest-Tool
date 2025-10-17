@@ -1291,24 +1291,28 @@ const BacktestResults = ({ data, chartData: priceData, metadata }) => {
 
         {enhancedTransactions && enhancedTransactions.length > 0 ? (
           <div className="enhanced-transactions-table">
-            <div className="table-header">
-              <div>Date</div>
-              <div>Type</div>
-              <div>Price</div>
-              <div>Trailing Stop Buy</div>
-              <div>Trailing Stop Sell</div>
-              <div>Shares</div>
-              <div>Grid Size</div>
-              <div>Profit Req</div>
-              <div>Value</div>
-              <div>Lots</div>
-              <div>Avg Cost</div>
-              <div>Holdings Value</div>
-              <div>Unrealized P&L</div>
-              <div>Realized P&L</div>
-              <div>Total P&L</div>
-              <div>Total P&L %</div>
-            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Price</th>
+                  <th>Trailing Stop Buy</th>
+                  <th>Trailing Stop Sell</th>
+                  <th>Shares</th>
+                  <th>Grid Size</th>
+                  <th>Profit Req</th>
+                  <th>Value</th>
+                  <th>Lots</th>
+                  <th>Avg Cost</th>
+                  <th>Holdings Value</th>
+                  <th>Unrealized P&L</th>
+                  <th>Realized P&L</th>
+                  <th>Total P&L</th>
+                  <th>Total P&L %</th>
+                </tr>
+              </thead>
+              <tbody>
 
             {(() => {
               // Debug: Log transaction filtering
@@ -1358,33 +1362,33 @@ const BacktestResults = ({ data, chartData: priceData, metadata }) => {
               };
 
               return filteredTxs.map((transaction, index) => (
-                <div key={index} className={`table-row ${transaction.type.toLowerCase().replace('_', '-')}`}>
-                  <div>{formatDate(transaction.date, 'long')}</div>
-                  <div className={`transaction-type ${transaction.type.toLowerCase()}`}>
+                <tr key={index} className={`table-row ${transaction.type.toLowerCase().replace('_', '-')}`}>
+                  <td>{formatDate(transaction.date, 'long')}</td>
+                  <td className={`transaction-type ${transaction.type.toLowerCase()}`}>
                     {getTransactionIcon(transaction.type)}
-                  </div>
-                  <div>{formatCurrency(transaction.price)}</div>
-                  <div className="trailing-stop-buy-details">
+                  </td>
+                  <td>{formatCurrency(transaction.price)}</td>
+                  <td className="trailing-stop-buy-details">
                     {transaction.type === 'TRAILING_STOP_LIMIT_BUY' ? formatTrailingStopBuyDetails(transaction.trailingStopDetail) :
                      transaction.type === 'ABORTED_BUY' ? <span style={{color: '#90EE90', fontSize: '0.85em'}}>{transaction.abortReason}</span> : ''}
-                  </div>
-                  <div className="trailing-stop-sell-details">
+                  </td>
+                  <td className="trailing-stop-sell-details">
                     {transaction.type === 'SELL' ? formatTrailingStopSellDetails(transaction.trailingStopDetail) :
                      transaction.type === 'ABORTED_SELL' ? <span style={{color: '#FFB6C1', fontSize: '0.85em'}}>{transaction.abortReason}</span> : ''}
-                  </div>
-                  <div>{transaction.shares !== undefined ? transaction.shares.toFixed(4) : 'N/A'}</div>
-                  <div>
+                  </td>
+                  <td>{transaction.shares !== undefined ? transaction.shares.toFixed(4) : 'N/A'}</td>
+                  <td>
                     {(transaction.type === 'TRAILING_STOP_LIMIT_BUY' || transaction.type === 'ABORTED_BUY') && transaction.buyGridSize !== undefined
                       ? `${(transaction.buyGridSize * 100).toFixed(1)}%`
                       : '-'}
-                  </div>
-                  <div>
+                  </td>
+                  <td>
                     {(transaction.type === 'SELL' || transaction.type === 'ABORTED_SELL') && transaction.lotProfitRequirement !== undefined
                       ? `${(transaction.lotProfitRequirement * 100).toFixed(1)}%`
                       : '-'}
-                  </div>
-                  <div>{formatCurrency(transaction.value)}</div>
-                  <div className="lots-column">
+                  </td>
+                  <td>{formatCurrency(transaction.value)}</td>
+                  <td className="lots-column">
                     {(() => {
                       // Handle both long and short selling display
                       if ((transaction.type === 'SELL' || transaction.type === 'COVER') && (transaction.lotsDetails || transaction.shortsDetails)) {
@@ -1398,9 +1402,9 @@ const BacktestResults = ({ data, chartData: priceData, metadata }) => {
                       }
                     })()
                     }
-                  </div>
-                  <div>{transaction.averageCost ? formatCurrency(transaction.averageCost) : 'N/A'}</div>
-                  <div>
+                  </td>
+                  <td>{transaction.averageCost ? formatCurrency(transaction.averageCost) : 'N/A'}</td>
+                  <td>
                     {(() => {
                       // Calculate holdings value by summing each lot's current value
                       const currentPrice = parseFloat(priceData?.dailyPrices?.find(d => d.date === transaction.date)?.adjusted_close ||
@@ -1423,22 +1427,22 @@ const BacktestResults = ({ data, chartData: priceData, metadata }) => {
                       }
                       return formatCurrency(0);
                     })()}
-                  </div>
-                  <div className={getMetricClass(transaction.unrealizedPNL)}>
+                  </td>
+                  <td className={getMetricClass(transaction.unrealizedPNL)}>
                     {formatCurrency(transaction.unrealizedPNL)}
-                  </div>
-                  <div className={getMetricClass(transaction.realizedPNL)}>
+                  </td>
+                  <td className={getMetricClass(transaction.realizedPNL)}>
                     {formatCurrency(transaction.realizedPNL)}
                     {transaction.realizedPNLFromTrade !== 0 && (
                       <small className={getMetricClass(transaction.realizedPNLFromTrade)}>
                         {transaction.realizedPNLFromTrade >= 0 ? ' (+' : ' ('}{formatCurrency(Math.abs(transaction.realizedPNLFromTrade))})
                       </small>
                     )}
-                  </div>
-                  <div className={getMetricClass(transaction.totalPNL)}>
+                  </td>
+                  <td className={getMetricClass(transaction.totalPNL)}>
                     {formatCurrency(transaction.totalPNL)}
-                  </div>
-                  <div className={getMetricClass(transaction.totalPNL)}>
+                  </td>
+                  <td className={getMetricClass(transaction.totalPNL)}>
                     {(() => {
                       // Calculate total P/L percentage based on total capital deployed
                       const lotSizeUsd = priceData?.backtestParameters?.lotSizeUsd || 10000;
@@ -1452,10 +1456,12 @@ const BacktestResults = ({ data, chartData: priceData, metadata }) => {
                       }
                       return 'N/A';
                     })()}
-                  </div>
-                </div>
+                  </td>
+                </tr>
               ));
             })()}
+              </tbody>
+            </table>
           </div>
         ) : transactions && transactions.length > 0 ? (
           // Fallback to original transaction table if enhanced data not available
