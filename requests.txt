@@ -24,6 +24,39 @@ could be different.
  as used in the portfolio backtest for that stock, so user can see how the individual stock backtest result looks
  like.
 
+add these to spec 36:
+4. backtestDefaults.json should only include params that are differnet from general default params. so params for a
+
+stock can be incomplete, but when merged with general default params, it should be complete. loading and persisting
+ backtestDefaults.json should handle this logic. do not persist params that are same as general default params!
+ 5. remove current stock-specific parameters that are the same as general default params from backtestDefaults
+ .json, only keep those that are different from general default params.
+ again don't make code change, only write the specs.
+
+ devleop a new spec:
+for all backtest, set the current date as the end date for backtest (which I think is already done). Use current
+price during trading hours
+as the close price for current day and run test. If you need to make a new call to get current price, please do so.
+
+
+  Buy #2 at $19.75:
+  - ✓ EXEC CHECK Lot #1 @ $24.44: spacing=19.20%, required=10.52%, consec=1, passes=true
+  - Spacing from last buy: 19.20%
+  - Required: 10.52%  (should be 10% + 1×5% = 15%)
+  - WHY IS IT 10.52% INSTEAD OF 15%?
+
+  Buy #3 at $17.23:
+  - ✓ EXEC CHECK Lot #2 @ $19.75: spacing=12.73%, required=11.50%, consec=2, passes=true
+  - Spacing from last buy (#2): 12.73%
+  - Required: 11.50% (should be 10% + 2×5% = 20%)
+  - WHY IS IT 11.50% INSTEAD OF 20%?
+
+  The required grid size is WRONG! It's checking spacing against ALL lots, not just the last buy! Look -
+  for buy #3, it shows:
+  - Lot #1: required=10.83%
+  - Lot #2: required=11.50%
+
+
 
 
 http://localhost:3000/portfolio-backtest?stocks=TSLA%2CMETA%2CMSFT%2CMETA%2CAAPL%2CAMZN%2CNVDA&totalCapital=500000

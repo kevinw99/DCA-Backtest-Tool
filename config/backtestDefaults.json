@@ -97,7 +97,7 @@
       "gridConsecutiveIncrement": 5,
       "enableConsecutiveIncrementalSellProfit": false,
       "enableScenarioDetection": false,
-      "normalizeToReference": true
+      "normalizeToReference": false
     },
     "adaptiveStrategy": {
       "enableAdaptiveStrategy": false,
@@ -151,7 +151,7 @@
       "gridConsecutiveIncrement": 5,
       "enableConsecutiveIncrementalSellProfit": false,
       "enableScenarioDetection": true,
-      "normalizeToReference": true
+      "normalizeToReference": false
     },
     "adaptiveStrategy": {
       "enableAdaptiveStrategy": true,
@@ -205,7 +205,7 @@
       "gridConsecutiveIncrement": 5,
       "enableConsecutiveIncrementalSellProfit": false,
       "enableScenarioDetection": false,
-      "normalizeToReference": true
+      "normalizeToReference": false
     },
     "adaptiveStrategy": {
       "enableAdaptiveStrategy": false,
@@ -259,7 +259,7 @@
       "gridConsecutiveIncrement": 5,
       "enableConsecutiveIncrementalSellProfit": true,
       "enableScenarioDetection": false,
-      "normalizeToReference": true
+      "normalizeToReference": false
     },
     "adaptiveStrategy": {
       "enableAdaptiveStrategy": false,
@@ -366,7 +366,7 @@
       "enableConsecutiveIncrementalBuyGrid": true,
       "enableConsecutiveIncrementalSellProfit": true,
       "enableScenarioDetection": false,
-      "normalizeToReference": true,
+      "normalizeToReference": false,
       "gridConsecutiveIncrement": 5
     },
     "adaptiveStrategy": {
@@ -420,7 +420,7 @@
       "enableConsecutiveIncrementalBuyGrid": true,
       "enableConsecutiveIncrementalSellProfit": true,
       "enableScenarioDetection": false,
-      "normalizeToReference": true,
+      "normalizeToReference": false,
       "gridConsecutiveIncrement": 5
     },
     "adaptiveStrategy": {

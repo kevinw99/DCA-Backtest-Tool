@@ -1769,12 +1769,25 @@ app.get('/api/portfolio-backtest/:runId/stock/:symbol/results', async (req, res)
     ];
 
     const urlParams = {};
-    for (const [key, value] of Object.entries(portfolioResults.parameters.defaultParams)) {
+
+    // Get the actual params used for this specific stock (which may override defaultParams)
+    const stockParams = stockData.params || portfolioResults.parameters.defaultParams;
+
+    // Iterate through stock-specific parameters first, then fill in from defaultParams
+    const allParams = { ...portfolioResults.parameters.defaultParams, ...stockParams };
+
+    for (const [key, value] of Object.entries(allParams)) {
+      if (value === undefined || value === null) continue;
+
       // Convert decimal percentages to whole numbers for URL
       if (percentageParams.includes(key) && typeof value === 'number') {
         urlParams[key] = (value * 100).toString();
-      } else {
+      } else if (typeof value === 'boolean') {
         urlParams[key] = value.toString();
+      } else if (typeof value === 'number') {
+        urlParams[key] = value.toString();
+      } else if (typeof value === 'string') {
+        urlParams[key] = value;
       }
     }
 

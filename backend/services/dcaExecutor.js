@@ -307,7 +307,7 @@ function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false
     trailingBuyReboundPercent = 0.05,
     trailingSellActivationPercent = 0.2,
     trailingSellPullbackPercent = 0.1,
-    enableDynamicGrid = true,
+    enableDynamicGrid = false,
     normalizeToReference = true,
     dynamicGridMultiplier = 1.0,
     enableConsecutiveIncrementalSellProfit = true,
@@ -691,32 +691,37 @@ function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false
                 const ref = referencePrice || midPrice; // Use midPrice if no reference yet
 
                 let gridSize;
+                const isLastBuy = (index === lots.length - 1);
+
                 if (enableDynamicGrid) {
                   gridSize = calculateDynamicGridSpacing(midPrice, ref, dynamicGridMultiplier, normalizeToReference);
+                  transactionLog.push(colorize(`    [DEBUG] DYNAMIC GRID BRANCH: lot#${index + 1}, gridSize=${(gridSize*100).toFixed(2)}%`, 'magenta'));
                 } else if (enableConsecutiveIncrementalBuyGrid) {
                   // For consecutive incremental buy grid:
-                  // - Check spacing from LAST buy (most recent) using direction-based grid size
+                  // - Check spacing from LAST buy using incremental spacing based on consecutive count
                   // - Check spacing from OTHER buys using base gridIntervalPercent
-                  const isLastBuy = (index === lots.length - 1);
 
-                  if (isLastBuy && lastBuyPrice !== null && currentPrice < lastBuyPrice) {
-                    // DOWNTREND: Use incremental grid spacing (Spec 17)
-                    // Use CURRENT count for validation (not predicted count)
+                  if (isLastBuy && consecutiveBuyCount > 0) {
+                    // For last buy, always use incremental grid spacing based on current consecutive count
+                    // We use consecutiveBuyCount (not -1) because this is the count BEFORE this new buy
+                    // At execution time, we need the spacing that SHOULD be required based on downtrend state
                     gridSize = gridIntervalPercent + (consecutiveBuyCount * gridConsecutiveIncrement);
+                    transactionLog.push(colorize(`    [DEBUG] CONSEC INCR BRANCH (LAST): lot#${index + 1}, isLast=${isLastBuy}, consec=${consecutiveBuyCount}, base=${(gridIntervalPercent*100).toFixed(0)}%, incr=${(gridConsecutiveIncrement*100).toFixed(0)}%, gridSize=${(gridSize*100).toFixed(2)}%`, 'magenta'));
                   } else {
-                    // UPTREND or no previous buy: Use base grid spacing
+                    // For other buys or first buy: Use base grid spacing
                     gridSize = gridIntervalPercent;
+                    transactionLog.push(colorize(`    [DEBUG] CONSEC INCR BRANCH (OTHER): lot#${index + 1}, isLast=${isLastBuy}, consec=${consecutiveBuyCount}, gridSize=${(gridSize*100).toFixed(2)}%`, 'magenta'));
                   }
                 } else {
                   gridSize = gridIntervalPercent; // Legacy fixed percentage
+                  transactionLog.push(colorize(`    [DEBUG] LEGACY BRANCH: lot#${index + 1}, gridSize=${(gridSize*100).toFixed(2)}%`, 'magenta'));
                 }
 
                 const spacing = Math.abs(currentPrice - lot.price) / lot.price;
                 const meetsSpacing = spacing >= gridSize;
 
-                if (verbose && enableConsecutiveIncrementalBuyGrid) {
-                  transactionLog.push(colorize(`    Lot #${index} at $${lot.price.toFixed(2)}: spacing=${(spacing*100).toFixed(1)}%, required=${(gridSize*100).toFixed(1)}%, isLast=${index === lots.length - 1}, passes=${meetsSpacing}`, 'cyan'));
-                }
+                // ALWAYS log spacing check at execution time for debugging
+                transactionLog.push(colorize(`    ✓ EXEC CHECK Lot #${index + 1} @ $${lot.price.toFixed(2)}: spacing=${(spacing*100).toFixed(2)}%, required=${(gridSize*100).toFixed(2)}%, consec=${consecutiveBuyCount}, passes=${meetsSpacing}`, meetsSpacing ? 'green' : 'yellow'));
 
                 return meetsSpacing;
               });
@@ -766,6 +771,93 @@ function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false
                 `  🚫 BLOCKED AT EXECUTION (Spec 26): Uptrend buy prevented (Position: ${positionStatus.toUpperCase()}, P/L: ${portfolioUnrealizedPNL >= 0 ? '+' : ''}$${portfolioUnrealizedPNL.toFixed(2)}) - ` +
                 `Trailing stop was set at $${trailingStopBuy.stopPrice.toFixed(2)} but execution at $${currentPrice.toFixed(2)} would be uptrend (last buy: $${lastBuyPrice.toFixed(2)}). ` +
                 `Only allow uptrend buys in WINNING position.`,
+                'yellow'
+              ));
+              // Cancel the trailing stop
+              trailingStopBuy = null;
+              return false;
+            }
+
+            // RE-VALIDATE grid spacing at execution time with CURRENT consecutive buy count
+            // The trailing stop may have been set days/weeks ago when consecutiveBuyCount was different
+            // We need to ensure the spacing requirement is still met based on the current count
+            let respectsGridSpacingAtExecution;
+            if (enableAverageBasedGrid) {
+              // Average-based grid spacing check
+              if (lots.length === 0) {
+                respectsGridSpacingAtExecution = true;
+              } else if (averageCost === 0) {
+                respectsGridSpacingAtExecution = true;
+              } else {
+                const spacing = Math.abs(currentPrice - averageCost) / averageCost;
+                let gridSize;
+                if (enableDynamicGrid) {
+                  const midPrice = (currentPrice + averageCost) / 2;
+                  const ref = referencePrice || midPrice;
+                  gridSize = calculateDynamicGridSpacing(midPrice, ref, dynamicGridMultiplier, normalizeToReference);
+                } else if (enableConsecutiveIncrementalBuyGrid) {
+                  // Use CURRENT count for validation (count BEFORE this buy executes)
+                  gridSize = gridIntervalPercent + (consecutiveBuyCount * gridConsecutiveIncrement);
+                } else {
+                  gridSize = gridIntervalPercent;
+                }
+                respectsGridSpacingAtExecution = spacing >= gridSize;
+
+                if (!respectsGridSpacingAtExecution && verbose) {
+                  transactionLog.push(colorize(
+                    `  🚫 EXECUTION BLOCKED: Grid spacing violation at execution - ` +
+                    `Avg Cost: $${averageCost.toFixed(2)}, Spacing: ${(spacing * 100).toFixed(2)}%, Required: ${(gridSize * 100).toFixed(2)}% (Consecutive Count: ${consecutiveBuyCount})`,
+                    'yellow'
+                  ));
+                }
+              }
+            } else {
+              // Lot-based grid spacing check
+              respectsGridSpacingAtExecution = lots.every((lot, index) => {
+                const isLastBuy = (index === lots.length - 1);
+                let gridSize;
+
+                if (enableDynamicGrid) {
+                  const midPrice = (currentPrice + lot.price) / 2;
+                  const ref = referencePrice || midPrice;
+                  gridSize = calculateDynamicGridSpacing(midPrice, ref, dynamicGridMultiplier, normalizeToReference);
+                } else if (enableConsecutiveIncrementalBuyGrid && isLastBuy && consecutiveBuyCount > 0) {
+                  // For consecutive incremental buy grid, always check against the last buy with incremental spacing
+                  // We use consecutiveBuyCount (not consecutiveBuyCount - 1) because this is the count BEFORE the new buy
+                  // At execution time, we need the spacing that SHOULD be required based on current state
+                  gridSize = gridIntervalPercent + (consecutiveBuyCount * gridConsecutiveIncrement);
+
+                  if (verbose) {
+                    transactionLog.push(colorize(
+                      `  📏 EXECUTION VALIDATION: Checking lot #${index + 1} @ $${lot.price.toFixed(2)} - ` +
+                      `Current Price: $${currentPrice.toFixed(2)}, Consecutive Count: ${consecutiveBuyCount}, Required Grid: ${(gridSize * 100).toFixed(2)}%`,
+                      'cyan'
+                    ));
+                  }
+                } else {
+                  gridSize = gridIntervalPercent;
+                }
+
+                const spacing = Math.abs(currentPrice - lot.price) / lot.price;
+                const meetsSpacing = spacing >= gridSize;
+
+                if (!meetsSpacing && verbose) {
+                  transactionLog.push(colorize(
+                    `  🚫 EXECUTION BLOCKED: Lot #${index + 1} @ $${lot.price.toFixed(2)} spacing violation - ` +
+                    `Spacing: ${(spacing * 100).toFixed(2)}%, Required: ${(gridSize * 100).toFixed(2)}% (Consecutive Count: ${consecutiveBuyCount})`,
+                    'yellow'
+                  ));
+                }
+
+                return meetsSpacing;
+              });
+            }
+
+            // If grid spacing check fails at execution time, cancel the trailing stop
+            if (!respectsGridSpacingAtExecution) {
+              transactionLog.push(colorize(
+                `  🚫 BLOCKED AT EXECUTION: Grid spacing validation failed - ` +
+                `Trailing stop was set at $${trailingStopBuy.stopPrice.toFixed(2)} but execution at $${currentPrice.toFixed(2)} violates spacing requirement (Consecutive Buy Count: ${consecutiveBuyCount})`,
                 'yellow'
               ));
               // Cancel the trailing stop
