@@ -6,7 +6,25 @@ for each stcok, should list the top 3 or 4 config that give the best result, and
  trades listed, so user can see how each stock is managed, and pick the most palatable future trade.
 
  consecutiveBuyGrid should be set based on p/l, if p/l < 0, then true, otherwise false.
- 
+
+ Test 7 magnificant with full utilization
+
+ develop a new spec:
+ 1. protfolio backtest config page should be similar to single stock backtest config page, with all parameters
+ listed,
+  including beta scaling etc.,
+  the only difference is stocks list instead of single stock symbol.
+  2. protfolio backtest should be able to handle stock-specific default parameters, e.g, if stock is in the defaults
+json file, then use those default parameters for that stock, otherwise use general default parameters.
+Specifically, it should also handle beta scaling parameters for each stock if enabled, since each stock's beta
+could be different.
+
+ 3. in the result page, for each stock, make sure the link to run single stock backtest is  the same
+ parameters
+ as used in the portfolio backtest for that stock, so user can see how the individual stock backtest result looks
+ like.
+
+
 
 http://localhost:3000/portfolio-backtest?stocks=TSLA%2CMETA%2CMSFT%2CMETA%2CAAPL%2CAMZN%2CNVDA&totalCapital=500000
 &lotSize=10000&maxLots=10&startDate=2021-09-01&endDate=2025-10-12&gridInterval=10&profitReq=10&stopLoss=30&trailingBuy=false&trailingSell=false&trailingBuyActivation=10&trailingBuyRebound=5&trailingSellActivation=20&trailingSellPullback=10&consecutiveBuyGrid=true&gridConsecutiveIncrement=10&consecutiveSellProfit=false

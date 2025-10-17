@@ -701,7 +701,8 @@ function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false
 
                   if (isLastBuy && lastBuyPrice !== null && currentPrice < lastBuyPrice) {
                     // DOWNTREND: Use incremental grid spacing (Spec 17)
-                    gridSize = buyGridSize; // gridIntervalPercent + (consecutiveBuyCount * gridConsecutiveIncrement)
+                    // Use CURRENT count for validation (not predicted count)
+                    gridSize = gridIntervalPercent + (consecutiveBuyCount * gridConsecutiveIncrement);
                   } else {
                     // UPTREND or no previous buy: Use base grid spacing
                     gridSize = gridIntervalPercent;
