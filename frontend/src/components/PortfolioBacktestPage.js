@@ -47,8 +47,16 @@ const PortfolioBacktestPage = () => {
 
   // Parse URL parameters on mount
   useEffect(() => {
+    const configParam = searchParams.get('config');
     const stocksParam = searchParams.get('stocks');
 
+    // Priority 1: Config file (e.g., ?config=nasdaq100)
+    if (configParam) {
+      runConfigBacktest(configParam);
+      return;
+    }
+
+    // Priority 2: URL parameters (legacy)
     if (stocksParam) {
       const urlParams = {
         stocks: stocksParam.split(','),
@@ -111,6 +119,33 @@ const PortfolioBacktestPage = () => {
 
     setSearchParams(params, { replace: true });
   }, [parameters, setSearchParams]);
+
+  const runConfigBacktest = async (configName) => {
+    setLoading(true);
+    setError(null);
+    setActiveTab('results');
+
+    try {
+      console.log('📋 Running config-based portfolio backtest:', configName);
+
+      const response = await fetch(`http://localhost:3001/api/backtest/portfolio/config/${configName}`);
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.message || data.error || 'Config-based portfolio backtest failed');
+      }
+
+      console.log('✅ Config-based portfolio backtest completed:', data.data);
+      setResults(data.data);
+
+    } catch (err) {
+      console.error('❌ Config-based portfolio backtest error:', err);
+      setError(err.message);
+      setActiveTab('parameters');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const runBacktest = async (paramsToUse = parameters) => {
     setLoading(true);

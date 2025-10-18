@@ -1,5 +1,10 @@
 {
-  "global": {
+  "name": "Tech Portfolio Example",
+  "description": "Small tech portfolio for testing config-based backtests",
+  "totalCapitalUsd": 500000,
+  "startDate": "2023-01-01",
+  "endDate": "2025-10-17",
+  "globalDefaults": {
     "basic": {
       "lotSizeUsd": 10000,
       "strategyMode": "long"
@@ -53,72 +58,10 @@
       "confidenceThreshold": 0.7
     }
   },
-  "PLTR": {
-    "beta": {
-      "beta": 2.592,
-      "betaFactor": 2.592
-    },
-    "dynamicFeatures": {
-      "normalizeToReference": true
-    }
-  },
-  "AAPL": {
-    "basic": {
-      "lotSizeUsd": 15000
-    },
-    "longStrategy": {
-      "maxLots": 8,
-      "maxLotsToSell": 2,
-      "gridIntervalPercent": 15,
-      "profitRequirement": 15,
-      "trailingBuyActivationPercent": 15,
-      "trailingBuyReboundPercent": 7.5,
-      "trailingSellActivationPercent": 25,
-      "trailingSellPullbackPercent": 12.5
-    },
-    "shortStrategy": {
-      "gridIntervalPercent": 15,
-      "profitRequirement": 15
-    },
-    "beta": {
-      "beta": 1.5,
-      "betaFactor": 1.5
-    },
-    "dynamicFeatures": {
-      "enableScenarioDetection": true,
-      "normalizeToReference": true
-    },
-    "adaptiveStrategy": {
-      "enableAdaptiveStrategy": true
-    }
-  },
-  "TSLA": {
-    "beta": {
-      "beta": 2.592,
-      "betaFactor": 2.592
-    },
-    "dynamicFeatures": {
-      "enableConsecutiveIncrementalBuyGrid": true,
-      "normalizeToReference": true
-    }
-  },
-  "SHOP": {
-    "longStrategy": {
-      "profitRequirement": 5,
-      "trailingBuyActivationPercent": 5,
-      "trailingSellActivationPercent": 5,
-      "trailingSellPullbackPercent": 0
-    },
-    "shortStrategy": {
-      "profitRequirement": 5
-    },
-    "beta": {
-      "beta": 2.592,
-      "betaFactor": 2.592
-    },
-    "dynamicFeatures": {
-      "enableConsecutiveIncrementalSellProfit": true,
-      "normalizeToReference": true
-    }
-  }
+  "stocks": [
+    "AAPL",
+    "MSFT",
+    "NVDA"
+  ],
+  "stockSpecificOverrides": {}
 }

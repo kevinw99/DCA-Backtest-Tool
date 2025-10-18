@@ -1,13 +1,20 @@
-When I run portfolio backtest config page, the url already has all the parameters, then if I change the paramter
-value, does it change the url accordingly?
-take one step back, i think this pattern is flawed.
-
-for each stcok, should list the top 3 or 4 config that give the best result, and then each config with future
- trades listed, so user can see how each stock is managed, and pick the most palatable future trade.
 
  consecutiveBuyGrid should be set based on p/l, if p/l < 0, then true, otherwise false.
 
- Test 7 magnificant with full utilization
+develop a new spec:
+I like to run a portfolio backtest for Nasdaq 100 stocks.
+1. can you get the 100 stocks list for Nasdaq 100?
+2. write a script to generate the url to run portfolio backtest for these 100 stocks with total capital of 3,000,
+000  USD, lot size of 10000 USD, max lots of 10 per stock, start date of 2021-09-01, end date of current date,
+with global default
+parameters in the backtestDefaults.json file.
+note, current url is a get request, so the url could be very long, if it exceeds the limit, then you need to save
+the 100 stocks in a file .
+3. actaully how about develop a new feature take a test script file, which capture the the info in #2, and a simple
+ get url to run the portfolio backtest based on the test script file.
+
+
+
 
  develop a new spec:
  1. protfolio backtest config page should be similar to single stock backtest config page, with all parameters
@@ -39,22 +46,10 @@ price during trading hours
 as the close price for current day and run test. If you need to make a new call to get current price, please do so.
 
 
-  Buy #2 at $19.75:
-  - ✓ EXEC CHECK Lot #1 @ $24.44: spacing=19.20%, required=10.52%, consec=1, passes=true
-  - Spacing from last buy: 19.20%
-  - Required: 10.52%  (should be 10% + 1×5% = 15%)
-  - WHY IS IT 10.52% INSTEAD OF 15%?
-
-  Buy #3 at $17.23:
-  - ✓ EXEC CHECK Lot #2 @ $19.75: spacing=12.73%, required=11.50%, consec=2, passes=true
-  - Spacing from last buy (#2): 12.73%
-  - Required: 11.50% (should be 10% + 2×5% = 20%)
-  - WHY IS IT 11.50% INSTEAD OF 20%?
-
-  The required grid size is WRONG! It's checking spacing against ALL lots, not just the last buy! Look -
-  for buy #3, it shows:
-  - Lot #1: required=10.83%
-  - Lot #2: required=11.50%
+test if selling is any benefit?
+http://localhost:3000/backtest?mode=single&symbol=AMSC&startDate=2021-09-01&endDate=2025-10-17&strategyMode=long
+&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=10&profitRequirement=10000
+&trailingBuyActivationPercent=10&trailingBuyReboundPercent=5&trailingSellActivationPercent=20&trailingSellPullbackPercent=10&beta=1&coefficient=1&enableBetaScaling=false&isManualBetaOverride=false&enableDynamicGrid=false&normalizeToReference=true&enableConsecutiveIncrementalBuyGrid=false&enableConsecutiveIncrementalSellProfit=true&enableScenarioDetection=false&dynamicGridMultiplier=1&gridConsecutiveIncrement=5&trailingStopOrderType=market&source=batch
 
 
 

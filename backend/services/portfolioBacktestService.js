@@ -394,9 +394,55 @@ async function loadAllPriceData(stocks, startDate, endDate) {
     // Handle both string symbols and object configs
     const symbol = typeof stockConfig === 'string' ? stockConfig : stockConfig.symbol;
 
-    const stock = await database.getStock(symbol);
+    // 1. Get or create Stock ID (using existing pattern from dcaBacktestService)
+    let stock = await database.getStock(symbol);
     if (!stock) {
-      throw new Error(`Stock ${symbol} not found in database`);
+      console.log(`🆕 Creating new stock record for portfolio backtest: ${symbol}`);
+      try {
+        const stockDataService = require('./stockDataService');
+        const stockId = await database.createStock(symbol);
+        stock = await database.getStock(symbol);
+
+        // Fetch data for new stock
+        console.log(`📡 Fetching initial data for ${symbol}...`);
+        await stockDataService.updateStockData(stock.id, symbol, {
+          updatePrices: true,
+          updateFundamentals: true,
+          updateCorporateActions: true
+        });
+        await database.updateStockTimestamp(stock.id);
+      } catch (fetchError) {
+        throw new Error(`Stock symbol ${symbol} not found and could not fetch data: ${fetchError.message}`);
+      }
+    }
+
+    // 2. Check for data gaps and fetch missing data
+    const latestPriceDate = await database.getLastPriceDate(stock.id);
+    if (latestPriceDate) {
+      const latestDate = new Date(latestPriceDate);
+      const requestedEndDate = new Date(endDate);
+
+      if (latestDate < requestedEndDate) {
+        const nextDay = new Date(latestDate);
+        nextDay.setDate(nextDay.getDate() + 1);
+        const fromDate = nextDay.toISOString().split('T')[0];
+
+        console.log(`📡 Data gap detected for ${symbol}: database has ${latestPriceDate}, fetching until ${endDate}...`);
+
+        try {
+          const stockDataService = require('./stockDataService');
+          await stockDataService.updateStockData(stock.id, symbol, {
+            updatePrices: true,
+            fromDate: fromDate,
+            updateFundamentals: false,
+            updateCorporateActions: false
+          });
+          console.log(`✅ Gap filled for ${symbol}`);
+        } catch (fetchError) {
+          console.warn(`⚠️  Failed to fetch missing data for ${symbol}: ${fetchError.message}`);
+          console.warn(`   Proceeding with available data (until ${latestPriceDate})`);
+        }
+      }
     }
 
     const prices = await database.getPricesWithIndicators(stock.id, startDate, endDate);

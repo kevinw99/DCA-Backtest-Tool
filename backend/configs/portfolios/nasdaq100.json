@@ -1,5 +1,10 @@
 {
-  "global": {
+  "name": "Nasdaq 100",
+  "description": "Portfolio backtest for all Nasdaq 100 component stocks",
+  "totalCapitalUsd": 3000000,
+  "startDate": "2021-09-01",
+  "endDate": "2025-10-17",
+  "globalDefaults": {
     "basic": {
       "lotSizeUsd": 10000,
       "strategyMode": "long"
@@ -53,72 +58,99 @@
       "confidenceThreshold": 0.7
     }
   },
-  "PLTR": {
-    "beta": {
-      "beta": 2.592,
-      "betaFactor": 2.592
-    },
-    "dynamicFeatures": {
-      "normalizeToReference": true
-    }
-  },
-  "AAPL": {
-    "basic": {
-      "lotSizeUsd": 15000
-    },
-    "longStrategy": {
-      "maxLots": 8,
-      "maxLotsToSell": 2,
-      "gridIntervalPercent": 15,
-      "profitRequirement": 15,
-      "trailingBuyActivationPercent": 15,
-      "trailingBuyReboundPercent": 7.5,
-      "trailingSellActivationPercent": 25,
-      "trailingSellPullbackPercent": 12.5
-    },
-    "shortStrategy": {
-      "gridIntervalPercent": 15,
-      "profitRequirement": 15
-    },
-    "beta": {
-      "beta": 1.5,
-      "betaFactor": 1.5
-    },
-    "dynamicFeatures": {
-      "enableScenarioDetection": true,
-      "normalizeToReference": true
-    },
-    "adaptiveStrategy": {
-      "enableAdaptiveStrategy": true
-    }
-  },
-  "TSLA": {
-    "beta": {
-      "beta": 2.592,
-      "betaFactor": 2.592
-    },
-    "dynamicFeatures": {
-      "enableConsecutiveIncrementalBuyGrid": true,
-      "normalizeToReference": true
-    }
-  },
-  "SHOP": {
-    "longStrategy": {
-      "profitRequirement": 5,
-      "trailingBuyActivationPercent": 5,
-      "trailingSellActivationPercent": 5,
-      "trailingSellPullbackPercent": 0
-    },
-    "shortStrategy": {
-      "profitRequirement": 5
-    },
-    "beta": {
-      "beta": 2.592,
-      "betaFactor": 2.592
-    },
-    "dynamicFeatures": {
-      "enableConsecutiveIncrementalSellProfit": true,
-      "normalizeToReference": true
-    }
-  }
+  "stocks": [
+    "AAPL",
+    "ABNB",
+    "ADBE",
+    "ADI",
+    "ADP",
+    "ADSK",
+    "AMAT",
+    "AMGN",
+    "AMZN",
+    "APP",
+    "ARM",
+    "ASML",
+    "AZN",
+    "AXON",
+    "BKNG",
+    "BKR",
+    "BIIB",
+    "CCEP",
+    "CDNS",
+    "CDW",
+    "CEG",
+    "CHTR",
+    "CMCSA",
+    "COST",
+    "CPRT",
+    "CRWD",
+    "CSCO",
+    "CSGP",
+    "CSX",
+    "CTSH",
+    "DASH",
+    "DDOG",
+    "DXCM",
+    "EA",
+    "EXC",
+    "FANG",
+    "FAST",
+    "FTNT",
+    "GEHC",
+    "GILD",
+    "GFS",
+    "GOOG",
+    "GOOGL",
+    "HON",
+    "IDXX",
+    "INTC",
+    "INTU",
+    "ISRG",
+    "KDP",
+    "KHC",
+    "KLAC",
+    "LRCX",
+    "LULU",
+    "LIN",
+    "MCHP",
+    "MDLZ",
+    "MELI",
+    "META",
+    "MRVL",
+    "MSFT",
+    "MSTR",
+    "MU",
+    "NXPI",
+    "NVDA",
+    "ODFL",
+    "ON",
+    "ORLY",
+    "PANW",
+    "PAYX",
+    "PEP",
+    "PLTR",
+    "PYPL",
+    "QCOM",
+    "REGN",
+    "ROST",
+    "ROP",
+    "SBUX",
+    "SHOP",
+    "SNPS",
+    "TEAM",
+    "TMUS",
+    "TSLA",
+    "TTD",
+    "TTWO",
+    "TXN",
+    "TRI",
+    "VRTX",
+    "VRSK",
+    "WBD",
+    "WDAY",
+    "XEL",
+    "ZS"
+  ],
+  "stockSpecificOverrides": {}
 }

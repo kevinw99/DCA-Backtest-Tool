@@ -1529,6 +1529,111 @@ app.post('/api/portfolio-backtest', async (req, res) => {
   }
 });
 
+// Config-based portfolio backtest endpoints
+const portfolioConfigLoader = require('./services/portfolioConfigLoader');
+
+// POST endpoint - Run portfolio backtest from config file
+app.post('/api/backtest/portfolio/config', async (req, res) => {
+  try {
+    const { configFile } = req.body;
+
+    if (!configFile) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing configFile parameter',
+        message: 'Please provide a configFile name (e.g., "nasdaq100.json" or "nasdaq100")'
+      });
+    }
+
+    console.log(`📋 Portfolio config backtest requested: ${configFile}`);
+
+    // Load and validate config
+    const config = await portfolioConfigLoader.loadPortfolioConfig(configFile);
+
+    // Convert config to backtest parameters
+    const backtestParams = portfolioConfigLoader.configToBacktestParams(config);
+
+    // Run backtest using existing service
+    const portfolioBacktestService = require('./services/portfolioBacktestService');
+    const results = await portfolioBacktestService.runPortfolioBacktest(backtestParams);
+
+    console.log(`✅ Config-based portfolio backtest complete:`);
+    console.log(`   Portfolio: ${config.name}`);
+    console.log(`   Stocks: ${config.stocks.length}`);
+    console.log(`   Final Value: $${results.portfolioSummary.finalPortfolioValue.toLocaleString()}`);
+    console.log(`   Total Return: ${results.portfolioSummary.totalReturnPercent.toFixed(2)}%`);
+
+    // Cache results for drill-down
+    const portfolioResultsCache = require('./services/portfolioResultsCache');
+    portfolioResultsCache.set(results.portfolioRunId, results);
+
+    res.json({
+      success: true,
+      data: results,
+      meta: {
+        configFile: configFile,
+        portfolioName: config.name,
+        portfolioDescription: config.description
+      }
+    });
+
+  } catch (error) {
+    console.error('Config-based portfolio backtest error:', error);
+    res.status(400).json({
+      success: false,
+      error: 'Config-based portfolio backtest failed',
+      message: error.message
+    });
+  }
+});
+
+// GET endpoint - Run portfolio backtest from config name (simplified URL)
+app.get('/api/backtest/portfolio/config/:configName', async (req, res) => {
+  try {
+    const { configName } = req.params;
+
+    console.log(`📋 Portfolio config backtest requested (GET): ${configName}`);
+
+    // Load and validate config
+    const config = await portfolioConfigLoader.loadPortfolioConfig(configName);
+
+    // Convert config to backtest parameters
+    const backtestParams = portfolioConfigLoader.configToBacktestParams(config);
+
+    // Run backtest using existing service
+    const portfolioBacktestService = require('./services/portfolioBacktestService');
+    const results = await portfolioBacktestService.runPortfolioBacktest(backtestParams);
+
+    console.log(`✅ Config-based portfolio backtest complete:`);
+    console.log(`   Portfolio: ${config.name}`);
+    console.log(`   Stocks: ${config.stocks.length}`);
+    console.log(`   Final Value: $${results.portfolioSummary.finalPortfolioValue.toLocaleString()}`);
+    console.log(`   Total Return: ${results.portfolioSummary.totalReturnPercent.toFixed(2)}%`);
+
+    // Cache results for drill-down
+    const portfolioResultsCache = require('./services/portfolioResultsCache');
+    portfolioResultsCache.set(results.portfolioRunId, results);
+
+    res.json({
+      success: true,
+      data: results,
+      meta: {
+        configFile: `${configName}.json`,
+        portfolioName: config.name,
+        portfolioDescription: config.description
+      }
+    });
+
+  } catch (error) {
+    console.error('Config-based portfolio backtest error:', error);
+    res.status(400).json({
+      success: false,
+      error: 'Config-based portfolio backtest failed',
+      message: error.message
+    });
+  }
+});
+
 // Helper function to convert portfolio transactions to enhanced DCA format
 function convertPortfolioTransactionsToDCAFormat(transactions, priceData) {
   const enhancedTransactions = [];

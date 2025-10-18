@@ -1,0 +1,27 @@
+{
+  "name": "Test ADP Auto-Fetch",
+  "description": "Test portfolio to verify auto-fetching of missing stock (ADP)",
+  "totalCapitalUsd": 100000,
+  "startDate": "2024-01-01",
+  "endDate": "2025-10-17",
+  "globalDefaults": {
+    "basic": {
+      "lotSizeUsd": 10000,
+      "strategyMode": "long"
+    },
+    "longStrategy": {
+      "maxLots": 10,
+      "gridIntervalPercent": 10,
+      "profitRequirement": 10,
+      "stopLossPercent": 30,
+      "enableTrailingBuy": false,
+      "enableTrailingSell": false,
+      "trailingBuyActivationPercent": 10,
+      "trailingBuyReboundPercent": 5,
+      "trailingSellActivationPercent": 20,
+      "trailingSellPullbackPercent": 10
+    }
+  },
+  "stocks": ["ADP"],
+  "stockSpecificOverrides": {}
+}
