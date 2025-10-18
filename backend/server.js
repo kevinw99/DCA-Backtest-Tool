@@ -1744,7 +1744,7 @@ app.get('/api/portfolio-backtest/:runId/stock/:symbol/results', async (req, res)
       return res.status(404).json({
         success: false,
         error: 'Portfolio run not found',
-        message: 'This portfolio run may have expired or does not exist. Please re-run the portfolio backtest.'
+        message: 'This portfolio run does not exist. It may have been cleared when the server restarted. Please re-run the portfolio backtest.'
       });
     }
 

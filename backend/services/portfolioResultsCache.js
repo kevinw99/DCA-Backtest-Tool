@@ -4,19 +4,18 @@
  * Caches portfolio backtest results for quick retrieval when drilling
  * down into individual stock details.
  *
- * Cache TTL: 24 hours
+ * Cache TTL: No expiration (persists until server restart or explicit override)
  * Storage: In-memory Map (for production, consider Redis)
  */
 
 class PortfolioResultsCache {
   constructor() {
     this.cache = new Map();
-    this.maxAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+    // No expiration - portfolio runs persist indefinitely
+    this.maxAge = null;
 
-    // Run cleanup every hour
-    this.cleanupInterval = setInterval(() => {
-      this.cleanup();
-    }, 60 * 60 * 1000);
+    // Optional: Set max cache size to prevent memory issues
+    this.maxCacheSize = 1000; // Max 1000 portfolio runs
   }
 
   /**
@@ -39,7 +38,7 @@ class PortfolioResultsCache {
   /**
    * Retrieve portfolio results from cache
    * @param {string} runId - Unique portfolio run ID
-   * @returns {Object|null} Portfolio results or null if not found/expired
+   * @returns {Object|null} Portfolio results or null if not found
    */
   get(runId) {
     const entry = this.cache.get(runId);
@@ -49,15 +48,10 @@ class PortfolioResultsCache {
       return null;
     }
 
-    // Check if expired
+    // No expiration check - portfolio runs persist indefinitely
     const age = Date.now() - entry.timestamp;
-    if (age > this.maxAge) {
-      console.log(`⏰ Portfolio run expired: ${runId} (age: ${Math.round(age / 3600000)}h)`);
-      this.cache.delete(runId);
-      return null;
-    }
-
-    console.log(`✅ Retrieved portfolio run from cache: ${runId}`);
+    const ageHours = Math.round(age / 3600000);
+    console.log(`✅ Retrieved portfolio run from cache: ${runId} (age: ${ageHours}h)`);
     return entry.data;
   }
 
@@ -71,22 +65,24 @@ class PortfolioResultsCache {
   }
 
   /**
-   * Remove expired entries from cache
+   * Remove oldest entries if cache size exceeds limit
    */
   cleanup() {
-    const now = Date.now();
-    let removedCount = 0;
-
-    for (const [runId, entry] of this.cache.entries()) {
-      if (now - entry.timestamp > this.maxAge) {
-        this.cache.delete(runId);
-        removedCount++;
-      }
+    if (this.cache.size <= this.maxCacheSize) {
+      return;
     }
 
-    if (removedCount > 0) {
-      console.log(`🧹 Cleaned up ${removedCount} expired portfolio runs`);
+    // Remove oldest entries to stay within limit
+    const entries = Array.from(this.cache.entries());
+    entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+
+    const removeCount = this.cache.size - this.maxCacheSize;
+    for (let i = 0; i < removeCount; i++) {
+      const [runId] = entries[i];
+      this.cache.delete(runId);
     }
+
+    console.log(`🧹 Cleaned up ${removeCount} oldest portfolio runs (size limit: ${this.maxCacheSize})`);
   }
 
   /**
@@ -139,10 +135,9 @@ class PortfolioResultsCache {
   }
 
   /**
-   * Destroy cache and cleanup interval
+   * Destroy cache
    */
   destroy() {
-    clearInterval(this.cleanupInterval);
     this.clear();
   }
 }
