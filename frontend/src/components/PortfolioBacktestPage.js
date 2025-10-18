@@ -108,36 +108,6 @@ const PortfolioBacktestPage = () => {
     }
   }, [parameters, isConfigMode]);
 
-  // Update URL when parameters change (but not when in config mode)
-  useEffect(() => {
-    // Skip URL update if we're in config mode
-    if (isConfigMode) {
-      return;
-    }
-
-    const params = new URLSearchParams();
-    params.set('stocks', parameters.stocks.join(','));
-    params.set('totalCapital', parameters.totalCapital.toString());
-    params.set('lotSize', parameters.lotSizeUsd.toString());
-    params.set('maxLots', parameters.maxLotsPerStock.toString());
-    params.set('startDate', parameters.startDate);
-    params.set('endDate', parameters.endDate);
-    params.set('gridInterval', parameters.defaultParams.gridIntervalPercent.toString());
-    params.set('profitReq', parameters.defaultParams.profitRequirement.toString());
-    params.set('stopLoss', (parameters.defaultParams.stopLossPercent || 30).toString());
-    params.set('trailingBuy', parameters.defaultParams.enableTrailingBuy ? 'true' : 'false');
-    params.set('trailingSell', parameters.defaultParams.enableTrailingSell ? 'true' : 'false');
-    params.set('trailingBuyActivation', (parameters.defaultParams.trailingBuyActivationPercent || 10).toString());
-    params.set('trailingBuyRebound', (parameters.defaultParams.trailingBuyReboundPercent || 5).toString());
-    params.set('trailingSellActivation', (parameters.defaultParams.trailingSellActivationPercent || 20).toString());
-    params.set('trailingSellPullback', (parameters.defaultParams.trailingSellPullbackPercent || 10).toString());
-    params.set('consecutiveBuyGrid', parameters.defaultParams.enableConsecutiveIncrementalBuyGrid ? 'true' : 'false');
-    params.set('gridConsecutiveIncrement', (parameters.defaultParams.gridConsecutiveIncrement || 5).toString());
-    params.set('consecutiveSellProfit', parameters.defaultParams.enableConsecutiveIncrementalSellProfit ? 'true' : 'false');
-
-    setSearchParams(params, { replace: true });
-  }, [parameters, setSearchParams, isConfigMode]);
-
   const runConfigBacktest = async (configName) => {
     setLoading(true);
     setError(null);
@@ -231,11 +201,6 @@ const PortfolioBacktestPage = () => {
       console.log('✅ Portfolio backtest completed:', data.data);
       setResults(data.data);
       setActiveTab('results');
-
-      // Update URL to include run=true
-      const params = new URLSearchParams(searchParams);
-      params.set('run', 'true');
-      setSearchParams(params, { replace: true });
 
     } catch (err) {
       console.error('❌ Portfolio backtest error:', err);

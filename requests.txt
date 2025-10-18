@@ -14,12 +14,31 @@ the 100 stocks in a file .
  get url to run the portfolio backtest based on the test script file.
 
 
- develop a new spec:
- in portfolio backtest result page, Stock Performance Breakdown, add these columns:
- same stock B&H total P/L, return %, difference in total P/L between portfolio backtest vs B&H, difference in
- return % between portfolio backtest vs B&H. make them sortable like other existing columns.
+1. what is the behavior of beta scaling in portfolio backtest? the idea to support stock-specific beta scaling, so
+each stock can have different beta value, that is fetched from the provider. Can this be on demand so that if beta
+value is aviailable in db, then use it, otherwise fetch from provider? or it has be pre
+  so in the backtestDefaults.json file? please come up with a good design for best usability and performance.
 
- 
+2. The UI needs to reflect the design above. The current UI is not sufficient to support stock-specific beta scaling.
+3. when I enter "http://localhost:3000/portfolio-backtest", it automatically rewirtes to something like
+"http://localhost:3000/portfolio-backtest?stocks=TSLA%2CMETA%2CMSFT%2CMETA%2CAAPL%2CAMZN%2CNVDA&totalCapital=500000
+&lotSize=30000&maxLots=5&startDate=2021-09-01&endDate=2025-10-12&gridInterval=10&profitReq=10&stopLoss=30
+&trailingBuy=false&trailingSell=false&trailingBuyActivation=10&trailingBuyRebound=5&trailingSellActivation=20
+&trailingSellPullback=10&consecutiveBuyGrid=true&gridConsecutiveIncrement=2&consecutiveSellProfit=false", this is
+very differnet from the single stock config page "http://localhost:3000, where it does not rewrite the url but show
+ the last used config.
+Can we have the same behavior for portfolio backtest config page?
+
+4. from http://localhost:3000/, there is no direct link to portfolio backtest page, can you add one? should
+portfolio backtest page be treated like batch mode, so it can be added under the "Testing mode" section? currently
+it has "Testing Mode
+        Single Backtest
+        Test one parameter combination
+
+        Batch Optimization
+        Test multiple parameter combinations to find optimal settings"
+
+ plase develop a new spec, or should these be part of exsiting spec?36? or 39?
 
  1. protfolio backtest config page should be similar to single stock backtest config page, with all parameters
  listed,

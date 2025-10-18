@@ -2064,6 +2064,10 @@ app.post('/api/batch/refresh-data', async (req, res) => {
   }
 });
 
+// Beta API routes (Spec 42)
+const betaRoutes = require('./routes/betaRoutes');
+app.use('/api/beta', betaRoutes);
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);

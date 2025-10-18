@@ -151,6 +151,10 @@ class Database {
     this.addColumnIfNotExists('daily_prices', 'adjusted_close', 'REAL');
     this.addColumnIfNotExists('daily_prices', 'dividend_amount', 'REAL DEFAULT 0');
     this.addColumnIfNotExists('daily_prices', 'split_coefficient', 'REAL DEFAULT 1');
+
+    // Add new columns for enhanced beta tracking (Spec 42)
+    this.addColumnIfNotExists('stock_beta', 'provider_name', "VARCHAR(50) DEFAULT 'yahoo_finance'");
+    this.addColumnIfNotExists('stock_beta', 'metadata', 'TEXT');
   }
 
   addColumnIfNotExists(tableName, columnName, columnType) {
@@ -637,15 +641,17 @@ class Database {
   async insertBeta(stockId, betaData) {
     return new Promise((resolve, reject) => {
       this.db.run(
-        `INSERT OR REPLACE INTO stock_beta 
-         (stock_id, beta, source, last_updated, is_manual_override) 
-         VALUES (?, ?, ?, ?, ?)`,
+        `INSERT OR REPLACE INTO stock_beta
+         (stock_id, beta, source, last_updated, is_manual_override, provider_name, metadata)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [
           stockId,
           betaData.beta,
           betaData.source,
           betaData.lastUpdated || new Date().toISOString(),
-          betaData.isManualOverride || false
+          betaData.isManualOverride || false,
+          betaData.providerName || 'yahoo_finance',
+          betaData.metadata ? JSON.stringify(betaData.metadata) : null
         ],
         function(err) {
           if (err) reject(err);
@@ -658,14 +664,16 @@ class Database {
   async updateBeta(stockId, betaData) {
     return new Promise((resolve, reject) => {
       this.db.run(
-        `UPDATE stock_beta 
-         SET beta = ?, source = ?, last_updated = ?, is_manual_override = ?
+        `UPDATE stock_beta
+         SET beta = ?, source = ?, last_updated = ?, is_manual_override = ?, provider_name = ?, metadata = ?
          WHERE stock_id = ?`,
         [
           betaData.beta,
           betaData.source,
           betaData.lastUpdated || new Date().toISOString(),
           betaData.isManualOverride || false,
+          betaData.providerName || 'yahoo_finance',
+          betaData.metadata ? JSON.stringify(betaData.metadata) : null,
           stockId
         ],
         function(err) {

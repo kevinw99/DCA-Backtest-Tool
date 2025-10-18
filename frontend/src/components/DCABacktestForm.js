@@ -1,11 +1,13 @@
 /* eslint-disable jsx-a11y/label-has-associated-control */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, DollarSign, TrendingUp, Settings, Info, Zap, Target, ArrowUpDown } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Play, DollarSign, TrendingUp, Settings, Info, Zap, Target, ArrowUpDown, Layers } from 'lucide-react';
 import BetaControls from './BetaControls';
 import { getTickerDefaults, saveTickerDefaults, extractTickerSpecificParams } from '../utils/strategyDefaults';
 import URLParameterManager from '../utils/URLParameterManager';
 
 const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setAppTestMode }) => {
+  const navigate = useNavigate();
 
   const [strategyMode, setStrategyMode] = useState(() => {
     // Initialize strategy mode from localStorage or default to 'long'
@@ -1407,6 +1409,15 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
             <span>Batch Optimization</span>
             <p>Test multiple parameter combinations to find optimal settings</p>
           </label>
+          <button
+            type="button"
+            className="mode-option portfolio-link"
+            onClick={() => navigate('/portfolio-backtest')}
+          >
+            <Layers size={20} />
+            <span>Portfolio Backtest</span>
+            <p>Test strategy across multiple stocks with shared capital</p>
+          </button>
         </div>
       </div>
 

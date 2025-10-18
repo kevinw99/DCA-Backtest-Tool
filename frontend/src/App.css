@@ -1281,7 +1281,7 @@
 /* Mode Selection */
 .mode-selection {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 1rem;
   margin-bottom: 2rem;
 }
@@ -1324,6 +1324,24 @@
   margin: 0;
   font-size: 0.9rem;
   opacity: 0.8;
+}
+
+/* Portfolio Link Button */
+.mode-option.portfolio-link {
+  border-color: #48bb78;
+}
+
+.mode-option.portfolio-link:hover {
+  border-color: #38a169;
+  box-shadow: 0 4px 12px rgba(72, 187, 120, 0.15);
+  background: #f0fff4;
+}
+
+/* Responsive Design for 3-card layout */
+@media (max-width: 900px) {
+  .mode-selection {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Symbol Selection */
