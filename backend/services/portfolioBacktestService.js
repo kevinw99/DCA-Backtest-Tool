@@ -453,10 +453,8 @@ async function runPortfolioBacktest(config) {
     // Validate capital constraints after every date
     portfolio.validateCapitalConstraints();
 
-    // Snapshot portfolio state
-    if (i % 30 === 0 || i === allDates.length - 1) {  // Every 30 days or last day
-      portfolio.valuationHistory.push(createSnapshot(portfolio, date));
-    }
+    // Snapshot portfolio state - DAILY for accurate volatility calculation
+    portfolio.valuationHistory.push(createSnapshot(portfolio, date));
 
     // Progress logging
     if (i > 0 && i % 100 === 0) {
