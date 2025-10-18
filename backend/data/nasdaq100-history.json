@@ -1,0 +1,210 @@
+{
+  "index": "NASDAQ-100",
+  "lastUpdated": "2025-01-15",
+  "metadata": {
+    "source": "Nasdaq official press releases and financial news",
+    "coverage": "2021-12-20 to 2024-12-23",
+    "totalChanges": 50,
+    "notes": "Annual reconstitution typically occurs on 3rd Friday in December. Special additions can occur mid-year."
+  },
+  "changes": [
+    {
+      "symbol": "ABNB",
+      "addedDate": "2021-12-20",
+      "removedDate": null,
+      "notes": "Added during December 2021 annual reconstitution"
+    },
+    {
+      "symbol": "FTNT",
+      "addedDate": "2021-12-20",
+      "removedDate": null,
+      "notes": "Added during December 2021 annual reconstitution"
+    },
+    {
+      "symbol": "PANW",
+      "addedDate": "2021-12-20",
+      "removedDate": null,
+      "notes": "Added during December 2021 annual reconstitution"
+    },
+    {
+      "symbol": "LCID",
+      "addedDate": "2021-12-20",
+      "removedDate": "2023-12-18",
+      "notes": "Added December 2021, removed December 2023 annual reconstitution"
+    },
+    {
+      "symbol": "ZS",
+      "addedDate": "2021-12-20",
+      "removedDate": null,
+      "notes": "Added during December 2021 annual reconstitution"
+    },
+    {
+      "symbol": "DDOG",
+      "addedDate": "2021-12-20",
+      "removedDate": null,
+      "notes": "Added during December 2021 annual reconstitution"
+    },
+    {
+      "symbol": "CSGP",
+      "addedDate": "2022-12-19",
+      "removedDate": null,
+      "notes": "Added during December 2022 annual reconstitution"
+    },
+    {
+      "symbol": "RIVN",
+      "addedDate": "2022-12-19",
+      "removedDate": null,
+      "notes": "Added during December 2022 annual reconstitution"
+    },
+    {
+      "symbol": "WBD",
+      "addedDate": "2022-12-19",
+      "removedDate": null,
+      "notes": "Added during December 2022 annual reconstitution"
+    },
+    {
+      "symbol": "GFS",
+      "addedDate": "2022-12-19",
+      "removedDate": null,
+      "notes": "Added during December 2022 annual reconstitution"
+    },
+    {
+      "symbol": "BKR",
+      "addedDate": "2022-12-19",
+      "removedDate": null,
+      "notes": "Added during December 2022 annual reconstitution"
+    },
+    {
+      "symbol": "FANG",
+      "addedDate": "2022-12-19",
+      "removedDate": null,
+      "notes": "Added during December 2022 annual reconstitution"
+    },
+    {
+      "symbol": "SPLK",
+      "addedDate": "2023-12-18",
+      "removedDate": null,
+      "notes": "Removed December 2022, re-added December 2023 annual reconstitution"
+    },
+    {
+      "symbol": "CDW",
+      "addedDate": "2023-12-18",
+      "removedDate": null,
+      "notes": "Added during December 2023 annual reconstitution (was removed in 2021, re-added)"
+    },
+    {
+      "symbol": "CCEP",
+      "addedDate": "2023-12-18",
+      "removedDate": null,
+      "notes": "Added during December 2023 annual reconstitution"
+    },
+    {
+      "symbol": "DASH",
+      "addedDate": "2023-12-18",
+      "removedDate": null,
+      "notes": "Added during December 2023 annual reconstitution"
+    },
+    {
+      "symbol": "MDB",
+      "addedDate": "2023-12-18",
+      "removedDate": null,
+      "notes": "Added during December 2023 annual reconstitution"
+    },
+    {
+      "symbol": "ROP",
+      "addedDate": "2023-12-18",
+      "removedDate": null,
+      "notes": "Added during December 2023 annual reconstitution"
+    },
+    {
+      "symbol": "TTWO",
+      "addedDate": "2023-12-18",
+      "removedDate": null,
+      "notes": "Added during December 2023 annual reconstitution"
+    },
+    {
+      "symbol": "ALGN",
+      "addedDate": null,
+      "removedDate": "2023-12-18",
+      "notes": "Removed during December 2023 annual reconstitution"
+    },
+    {
+      "symbol": "EBAY",
+      "addedDate": null,
+      "removedDate": "2023-12-18",
+      "notes": "Removed during December 2023 annual reconstitution"
+    },
+    {
+      "symbol": "ENPH",
+      "addedDate": null,
+      "removedDate": "2023-12-18",
+      "notes": "Removed during December 2023 annual reconstitution"
+    },
+    {
+      "symbol": "JD",
+      "addedDate": null,
+      "removedDate": "2023-12-18",
+      "notes": "Removed during December 2023 annual reconstitution"
+    },
+    {
+      "symbol": "ZM",
+      "addedDate": null,
+      "removedDate": "2023-12-18",
+      "notes": "Removed during December 2023 annual reconstitution"
+    },
+    {
+      "symbol": "SGEN",
+      "addedDate": null,
+      "removedDate": "2023-12-18",
+      "notes": "Removed during December 2023 annual reconstitution due to Pfizer acquisition"
+    },
+    {
+      "symbol": "APP",
+      "addedDate": "2024-11-18",
+      "removedDate": null,
+      "notes": "Special addition November 2024, replaced Dollar Tree (DLTR). Stock up 600% in 2024."
+    },
+    {
+      "symbol": "DLTR",
+      "addedDate": null,
+      "removedDate": "2024-11-18",
+      "notes": "Removed November 2024, replaced by AppLovin (APP)"
+    },
+    {
+      "symbol": "PLTR",
+      "addedDate": "2024-12-23",
+      "removedDate": null,
+      "notes": "Added during December 2024 annual reconstitution, replaced Illumina"
+    },
+    {
+      "symbol": "MSTR",
+      "addedDate": "2024-12-23",
+      "removedDate": null,
+      "notes": "Added during December 2024 annual reconstitution, replaced Super Micro Computer"
+    },
+    {
+      "symbol": "AXON",
+      "addedDate": "2024-12-23",
+      "removedDate": null,
+      "notes": "Added during December 2024 annual reconstitution, replaced Moderna"
+    },
+    {
+      "symbol": "ILMN",
+      "addedDate": null,
+      "removedDate": "2024-12-23",
+      "notes": "Removed during December 2024 annual reconstitution, replaced by Palantir (PLTR)"
+    },
+    {
+      "symbol": "SMCI",
+      "addedDate": null,
+      "removedDate": "2024-12-23",
+      "notes": "Removed during December 2024 annual reconstitution, replaced by MicroStrategy (MSTR)"
+    },
+    {
+      "symbol": "MRNA",
+      "addedDate": null,
+      "removedDate": "2024-12-23",
+      "notes": "Removed during December 2024 annual reconstitution, replaced by Axon (AXON)"
+    }
+  ]
+}

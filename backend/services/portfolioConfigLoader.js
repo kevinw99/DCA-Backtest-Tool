@@ -116,7 +116,9 @@ function configToBacktestParams(config) {
     lotSizeUsd,
     maxLotsPerStock,
     defaultParams: flattenedDefaults,  // Use flattened parameters
-    stocks: stocksWithParams
+    stocks: stocksWithParams,
+    indexTracking: config.indexTracking || { enabled: false },
+    capitalOptimization: config.capitalOptimization || { enabled: false }
   };
 }
 
@@ -199,6 +201,16 @@ function validateConfig(config) {
 
   // Validate globalDefaults has required nested structure
   validateGlobalDefaults(config.globalDefaults);
+
+  // Validate indexTracking if present
+  if (config.indexTracking) {
+    validateIndexTracking(config.indexTracking);
+  }
+
+  // Validate capitalOptimization if present
+  if (config.capitalOptimization) {
+    validateCapitalOptimization(config.capitalOptimization);
+  }
 }
 
 /**
@@ -366,6 +378,66 @@ function deepMerge(target, source) {
  */
 function isObject(obj) {
   return obj !== null && typeof obj === 'object' && !Array.isArray(obj);
+}
+
+/**
+ * Validate indexTracking configuration
+ * @param {Object} indexTracking - Index tracking config
+ * @throws {Error} If invalid
+ */
+function validateIndexTracking(indexTracking) {
+  if (typeof indexTracking !== 'object' || indexTracking === null) {
+    throw new Error('Field "indexTracking" must be an object');
+  }
+
+  if (indexTracking.enabled !== undefined && typeof indexTracking.enabled !== 'boolean') {
+    throw new Error('Field "indexTracking.enabled" must be a boolean');
+  }
+
+  if (indexTracking.indexName && typeof indexTracking.indexName !== 'string') {
+    throw new Error('Field "indexTracking.indexName" must be a string');
+  }
+}
+
+/**
+ * Validate capitalOptimization configuration
+ * @param {Object} capitalOptimization - Capital optimization config
+ * @throws {Error} If invalid
+ */
+function validateCapitalOptimization(capitalOptimization) {
+  if (typeof capitalOptimization !== 'object' || capitalOptimization === null) {
+    throw new Error('Field "capitalOptimization" must be an object');
+  }
+
+  if (capitalOptimization.enabled !== undefined && typeof capitalOptimization.enabled !== 'boolean') {
+    throw new Error('Field "capitalOptimization.enabled" must be a boolean');
+  }
+
+  if (capitalOptimization.strategies && !Array.isArray(capitalOptimization.strategies)) {
+    throw new Error('Field "capitalOptimization.strategies" must be an array');
+  }
+
+  // Validate adaptive lot sizing config if present
+  if (capitalOptimization.adaptiveLotSizing) {
+    const als = capitalOptimization.adaptiveLotSizing;
+    if (als.cashReserveThreshold !== undefined && (typeof als.cashReserveThreshold !== 'number' || als.cashReserveThreshold < 0)) {
+      throw new Error('Field "capitalOptimization.adaptiveLotSizing.cashReserveThreshold" must be a non-negative number');
+    }
+    if (als.maxLotSizeMultiplier !== undefined && (typeof als.maxLotSizeMultiplier !== 'number' || als.maxLotSizeMultiplier < 1)) {
+      throw new Error('Field "capitalOptimization.adaptiveLotSizing.maxLotSizeMultiplier" must be a number >= 1');
+    }
+  }
+
+  // Validate cash yield config if present
+  if (capitalOptimization.cashYield) {
+    const cy = capitalOptimization.cashYield;
+    if (cy.enabled !== undefined && typeof cy.enabled !== 'boolean') {
+      throw new Error('Field "capitalOptimization.cashYield.enabled" must be a boolean');
+    }
+    if (cy.annualYieldPercent !== undefined && (typeof cy.annualYieldPercent !== 'number' || cy.annualYieldPercent < 0 || cy.annualYieldPercent > 100)) {
+      throw new Error('Field "capitalOptimization.cashYield.annualYieldPercent" must be between 0 and 100');
+    }
+  }
 }
 
 /**

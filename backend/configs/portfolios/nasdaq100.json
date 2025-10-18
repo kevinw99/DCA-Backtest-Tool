@@ -61,6 +61,26 @@
       "confidenceThreshold": 0.7
     }
   },
+  "indexTracking": {
+    "enabled": true,
+    "indexName": "NASDAQ-100",
+    "enforceMembership": true,
+    "handleRemovals": "liquidate_positions"
+  },
+  "capitalOptimization": {
+    "enabled": true,
+    "strategies": ["adaptive_lot_sizing", "cash_yield"],
+    "adaptiveLotSizing": {
+      "cashReserveThreshold": 100000,
+      "maxLotSizeMultiplier": 2.0,
+      "increaseStepPercent": 20
+    },
+    "cashYield": {
+      "enabled": true,
+      "annualYieldPercent": 4.5,
+      "minCashToInvest": 50000
+    }
+  },
   "stocks": [
     "AAPL",
     "ABNB",
@@ -68,6 +88,7 @@
     "ADI",
     "ADP",
     "ADSK",
+    "ALGN",
     "AMAT",
     "AMGN",
     "AMZN",
@@ -94,8 +115,11 @@
     "CTSH",
     "DASH",
     "DDOG",
+    "DLTR",
     "DXCM",
     "EA",
+    "EBAY",
+    "ENPH",
     "EXC",
     "FANG",
     "FAST",
@@ -107,12 +131,15 @@
     "GOOGL",
     "HON",
     "IDXX",
+    "ILMN",
     "INTC",
     "INTU",
     "ISRG",
+    "JD",
     "KDP",
     "KHC",
     "KLAC",
+    "LCID",
     "LRCX",
     "LULU",
     "LIN",
@@ -120,6 +147,7 @@
     "MDLZ",
     "MELI",
     "META",
+    "MRNA",
     "MRVL",
     "MSFT",
     "MSTR",
@@ -136,11 +164,15 @@
     "PYPL",
     "QCOM",
     "REGN",
+    "RIVN",
     "ROST",
     "ROP",
     "SBUX",
+    "SGEN",
     "SHOP",
+    "SMCI",
     "SNPS",
+    "SPLK",
     "TEAM",
     "TMUS",
     "TSLA",
@@ -153,6 +185,7 @@
     "WBD",
     "WDAY",
     "XEL",
+    "ZM",
     "ZS"
   ],
   "stockSpecificOverrides": {}

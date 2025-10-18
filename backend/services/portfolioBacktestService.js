@@ -13,6 +13,8 @@ const dcaBacktestService = require('./dcaBacktestService');
 const dcaSignalEngine = require('./dcaSignalEngine');
 const { createDCAExecutor } = require('./dcaExecutor');
 const database = require('../database');
+const IndexTrackingService = require('./indexTrackingService');
+const CapitalOptimizerService = require('./capitalOptimizerService');
 
 /**
  * Portfolio State - Tracks shared capital pool and all stocks
@@ -222,6 +224,23 @@ async function runPortfolioBacktest(config) {
   console.log(`   Stocks: ${config.stocks.length}`);
   console.log(`   Date Range: ${config.startDate} to ${config.endDate}`);
 
+  // Extract new parameters
+  const indexTracking = config.indexTracking || { enabled: false };
+  const capitalOptimization = config.capitalOptimization || { enabled: false };
+
+  // Initialize index tracker if enabled
+  let indexTracker = null;
+  if (indexTracking.enabled) {
+    indexTracker = new IndexTrackingService();
+    await indexTracker.loadIndexHistory(indexTracking.indexName || 'NASDAQ-100');
+  }
+
+  // Initialize capital optimizer if enabled
+  let capitalOptimizer = null;
+  if (capitalOptimization.enabled) {
+    capitalOptimizer = new CapitalOptimizerService(capitalOptimization);
+  }
+
   // 1. Initialize portfolio state
   const portfolio = new PortfolioState(config);
 
@@ -238,6 +257,13 @@ async function runPortfolioBacktest(config) {
     const symbol = typeof stockConfig === 'string' ? stockConfig : stockConfig.symbol;
     const stockParams = typeof stockConfig === 'string' ? {} : stockConfig.params || {};
 
+    // Skip if this stock was excluded due to missing data
+    const dateMap = priceDataMap.get(symbol);
+    if (!dateMap || dateMap.size === 0) {
+      console.log(`⏩ Skipping ${symbol} - no price data available`);
+      continue;
+    }
+
     const params = {
       ...config.defaultParams,
       ...stockParams,
@@ -246,7 +272,6 @@ async function runPortfolioBacktest(config) {
     };
 
     // Get price data as array for this stock
-    const dateMap = priceDataMap.get(symbol);
     const pricesArray = Array.from(dateMap.values());
 
     // Create DCA executor for this stock
@@ -286,18 +311,77 @@ async function runPortfolioBacktest(config) {
 
       if (!dayData) continue;
 
+      // Check if stock was removed from index (liquidation required)
+      // IMPORTANT: Only applies when index tracking is explicitly enabled
+      if (indexTracker && indexTracking.enabled && indexTracking.handleRemovals === 'liquidate_positions') {
+        const previousDate = i > 0 ? allDates[i - 1] : null;
+        const wasInIndexYesterday = previousDate ? indexTracker.isInIndex(symbol, previousDate) : false;
+        const isInIndexToday = indexTracker.isInIndex(symbol, date);
+
+        // Stock was just removed from index - liquidate all positions
+        if (wasInIndexYesterday && !isInIndexToday && stock.lots.length > 0) {
+          console.log(`   🔴 INDEX REMOVAL: Liquidating all ${stock.lots.length} lots of ${symbol} on ${date} (removed from ${indexTracking.indexName})`);
+
+          // Force-sell all lots at market price
+          while (stock.lots.length > 0) {
+            const lot = stock.lots[0]; // Always take first lot
+            const sellValue = lot.shares * dayData.close;
+            const lotCost = lot.shares * lot.price;
+            const realizedPNL = sellValue - lotCost;
+
+            // Create liquidation transaction
+            const liquidationTx = {
+              date,
+              type: 'SELL_LIQUIDATION',
+              price: dayData.close,
+              shares: lot.shares,
+              value: sellValue,
+              lotsCost: lotCost,
+              lotsDetails: [lot],
+              realizedPNLFromTrade: realizedPNL,
+              reason: `Index removal: ${indexTracking.indexName}`
+            };
+
+            // Return capital to pool
+            portfolio.cashReserve += sellValue;
+            portfolio.deployedCapital -= lotCost;
+
+            // Update stock state
+            stock.addSell(liquidationTx);
+            transactionCount++;
+          }
+
+          console.log(`   ✅ Liquidation complete for ${symbol}: Realized P&L = $${stock.realizedPNL.toFixed(2)}`);
+        }
+      }
+
+      // Check if stock can be traded today (index tracking)
+      if (indexTracker && !indexTracker.isInIndex(symbol, date)) {
+        continue; // Skip this stock for today (already liquidated if needed)
+      }
+
       // Get the current day index for this executor
       const dayIndex = executorDayIndices.get(symbol);
 
+      // Get dynamic lot size from optimizer (if enabled)
+      const currentLotSize = capitalOptimizer
+        ? capitalOptimizer.getLotSize(symbol, portfolio.cashReserve, config.lotSizeUsd)
+        : config.lotSizeUsd;
+
+      // Log adaptive lot sizing events
+      if (capitalOptimizer && currentLotSize !== config.lotSizeUsd && (i % 200 === 0 || transactionCount < 10)) {
+        console.log(`   💰 Adaptive Lot Sizing: ${symbol} lot size adjusted to $${currentLotSize.toFixed(2)} (cash reserve: $${portfolio.cashReserve.toFixed(2)})`);
+      }
+
       // Determine if buy is enabled based on capital availability
-      const hasCapital = portfolio.cashReserve >= config.lotSizeUsd;
+      const hasCapital = portfolio.cashReserve >= currentLotSize;
 
       // Get transaction count before processing
       const stateBefore = executor.getState();
       const txCountBefore = stateBefore.enhancedTransactions.length;
 
       // Process one day using executor with correct day index
-      await executor.processDay(dayData, dayIndex, { buyEnabled: hasCapital });
+      await executor.processDay(dayData, dayIndex, { buyEnabled: hasCapital, lotSizeUsd: currentLotSize });
 
       // Increment day index for this executor
       executorDayIndices.set(symbol, dayIndex + 1);
@@ -324,7 +408,7 @@ async function runPortfolioBacktest(config) {
             transactionCount++;
           } else {
             // Rejected due to insufficient capital
-            logRejectedOrder(portfolio, stock, { triggered: true }, dayData, date);
+            logRejectedOrder(portfolio, stock, { triggered: true }, dayData, date, currentLotSize);
             rejectedCount++;
           }
         } else {
@@ -340,6 +424,20 @@ async function runPortfolioBacktest(config) {
 
       // Update market value
       stock.updateMarketValue(dayData.close);
+    }
+
+    // Track cash reserve and calculate cash yield (if enabled)
+    if (capitalOptimizer) {
+      capitalOptimizer.trackCashReserve(date, portfolio.cashReserve);
+
+      // Calculate daily cash yield and add to cash reserve
+      const yieldRevenue = capitalOptimizer.calculateDailyCashYield(portfolio.cashReserve);
+      if (yieldRevenue > 0) {
+        portfolio.cashReserve += yieldRevenue;
+        if (i % 200 === 0) {
+          console.log(`   💵 Cash Yield: +$${yieldRevenue.toFixed(2)} from $${(portfolio.cashReserve - yieldRevenue).toFixed(2)} reserve on ${date}`);
+        }
+      }
     }
 
     // Validate capital constraints after every date
@@ -379,6 +477,40 @@ async function runPortfolioBacktest(config) {
   if (buyAndHoldResults) {
     results.buyAndHoldSummary = buyAndHoldResults.buyAndHoldSummary;
     results.comparison = buyAndHoldResults.comparison;
+  }
+
+  // 8. Collect index tracking metrics
+  let indexTrackingMetrics = null;
+  if (indexTracker) {
+    const allChanges = indexTracker.getIndexChanges(config.startDate, config.endDate);
+    indexTrackingMetrics = {
+      enabled: true,
+      indexName: indexTracking.indexName || 'NASDAQ-100',
+      stocksAdded: allChanges.filter(c => c.type === 'addition').map(c => ({
+        symbol: c.symbol,
+        addedDate: c.date,
+        notes: c.notes
+      })),
+      stocksRemoved: allChanges.filter(c => c.type === 'removal').map(c => ({
+        symbol: c.symbol,
+        removedDate: c.date,
+        notes: c.notes
+      }))
+    };
+  }
+
+  // 9. Collect capital optimization metrics
+  let capitalOptimizationMetrics = null;
+  if (capitalOptimizer) {
+    capitalOptimizationMetrics = capitalOptimizer.getMetrics();
+  }
+
+  // 10. Add new metrics to results
+  if (indexTrackingMetrics) {
+    results.indexTracking = indexTrackingMetrics;
+  }
+  if (capitalOptimizationMetrics) {
+    results.capitalOptimization = capitalOptimizationMetrics;
   }
 
   return results;
@@ -447,19 +579,51 @@ async function loadAllPriceData(stocks, startDate, endDate) {
 
     const prices = await database.getPricesWithIndicators(stock.id, startDate, endDate);
 
+    // Validate price data has required fields
+    if (prices.length === 0) {
+      console.warn(`⚠️  No price data found for ${symbol} in date range ${startDate} to ${endDate}`);
+      console.warn(`   Skipping ${symbol} from portfolio backtest`);
+      return { symbol, dateMap: new Map(), skipped: true, reason: 'No price data available' };
+    }
+
+    // Check first few prices for required fields
+    const sampleSize = Math.min(5, prices.length);
+    for (let i = 0; i < sampleSize; i++) {
+      const price = prices[i];
+      if (!price.close || price.close === null || price.close === undefined) {
+        console.warn(`⚠️  Invalid price data for ${symbol}: missing 'close' field on ${price.date}`);
+        console.warn(`   Skipping ${symbol} from portfolio backtest`);
+        return { symbol, dateMap: new Map(), skipped: true, reason: 'Missing required price fields' };
+      }
+    }
+
     // Convert to Map(date -> data) for fast lookup
     const dateMap = new Map();
     for (const priceData of prices) {
       dateMap.set(priceData.date, priceData);
     }
 
-    return { symbol, dateMap };
+    console.log(`✅ Loaded ${prices.length} price records for ${symbol}`);
+    return { symbol, dateMap, skipped: false };
   });
 
   const results = await Promise.all(pricePromises);
 
-  for (const { symbol, dateMap } of results) {
+  const skippedStocks = [];
+  for (const { symbol, dateMap, skipped, reason } of results) {
+    if (skipped) {
+      skippedStocks.push({ symbol, reason });
+      continue;  // Skip this stock
+    }
     priceDataMap.set(symbol, dateMap);
+  }
+
+  if (skippedStocks.length > 0) {
+    console.warn(`\n⚠️  WARNING: ${skippedStocks.length} stock(s) skipped due to missing/invalid price data:`);
+    for (const { symbol, reason } of skippedStocks) {
+      console.warn(`   - ${symbol}: ${reason}`);
+    }
+    console.warn('');
   }
 
   return priceDataMap;
@@ -663,8 +827,9 @@ function executeBuy(stock, signal, dayData, date, lotSizeUsd) {
 /**
  * Log rejected buy order
  */
-function logRejectedOrder(portfolio, stock, signal, dayData, date) {
-  const shortfall = portfolio.config.lotSizeUsd - portfolio.cashReserve;
+function logRejectedOrder(portfolio, stock, signal, dayData, date, lotSize = null) {
+  const lotSizeUsd = lotSize || portfolio.config.lotSizeUsd;
+  const shortfall = lotSizeUsd - portfolio.cashReserve;
 
   // Identify which stocks are holding capital
   const competingStocks = [];
@@ -683,11 +848,11 @@ function logRejectedOrder(portfolio, stock, signal, dayData, date) {
     symbol: stock.symbol,
     orderType: 'BUY',
     price: dayData.close,
-    lotSize: portfolio.config.lotSizeUsd,
-    attemptedValue: portfolio.config.lotSizeUsd,  // NEW: For frontend compatibility
+    lotSize: lotSizeUsd,
+    attemptedValue: lotSizeUsd,  // NEW: For frontend compatibility
     reason: 'INSUFFICIENT_CAPITAL',
     availableCapital: portfolio.cashReserve,
-    requiredCapital: portfolio.config.lotSizeUsd,
+    requiredCapital: lotSizeUsd,
     shortfall,
     competingStocks: competingStocks.map(s => s.symbol),  // NEW: List of competing symbols
     portfolioState: {
@@ -699,7 +864,7 @@ function logRejectedOrder(portfolio, stock, signal, dayData, date) {
 
   portfolio.rejectedOrders.push(rejectedOrder);
   stock.rejectedBuys++;
-  stock.rejectedBuyValues += portfolio.config.lotSizeUsd;
+  stock.rejectedBuyValues += lotSizeUsd;
   stock.rejectedOrders.push(rejectedOrder);  // NEW: Also add to stock's rejected orders
 }
 
