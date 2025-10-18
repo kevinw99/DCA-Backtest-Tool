@@ -50,7 +50,11 @@ const PortfolioBacktestPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('parameters');
-  const [isConfigMode, setIsConfigMode] = useState(false); // Track if using config file
+  // Initialize isConfigMode by checking URL directly to avoid race condition
+  const [isConfigMode, setIsConfigMode] = useState(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return !!urlParams.get('config');
+  });
 
   // Parse URL parameters on mount
   useEffect(() => {
@@ -59,7 +63,6 @@ const PortfolioBacktestPage = () => {
 
     // Priority 1: Config file (e.g., ?config=nasdaq100)
     if (configParam) {
-      setIsConfigMode(true);
       runConfigBacktest(configParam);
       return;
     }
