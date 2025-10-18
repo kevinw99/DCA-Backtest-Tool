@@ -230,22 +230,27 @@ const MultiStockPriceChart = ({ stockResults }) => {
       </p>
 
       <div className="chart-controls">
-        <div className="stock-legend">
+        <div className="stock-legend inline">
           <h4>Stocks:</h4>
-          {stockSymbols.map((symbol, index) => (
-            <label key={symbol} className={!visibleStocks[symbol] ? 'disabled' : ''}>
-              <input
-                type="checkbox"
-                checked={visibleStocks[symbol]}
-                onChange={() => toggleStock(symbol)}
-              />
-              <span
-                className="legend-color"
-                style={{ backgroundColor: STOCK_COLORS[index % STOCK_COLORS.length] }}
-              ></span>
-              {symbol}
-            </label>
-          ))}
+          <div className="stock-list-inline">
+            {stockSymbols.map((symbol, index) => (
+              <React.Fragment key={symbol}>
+                <label className={!visibleStocks[symbol] ? 'disabled' : ''}>
+                  <input
+                    type="checkbox"
+                    checked={visibleStocks[symbol]}
+                    onChange={() => toggleStock(symbol)}
+                  />
+                  <span
+                    className="legend-color"
+                    style={{ backgroundColor: STOCK_COLORS[index % STOCK_COLORS.length] }}
+                  ></span>
+                  {symbol}
+                </label>
+                {index < stockSymbols.length - 1 && <span className="separator"> • </span>}
+              </React.Fragment>
+            ))}
+          </div>
         </div>
 
         <div className="transaction-legend">

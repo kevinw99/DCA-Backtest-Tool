@@ -16,7 +16,7 @@ import './DailyTradesView.css';
  */
 const DailyTradesView = ({ stockResults, portfolioSummary, portfolioRunId, parameters }) => {
   const [expandedDate, setExpandedDate] = useState(null);
-  const [sortOrder, setSortOrder] = useState('desc'); // 'asc' or 'desc'
+  const [sortOrder, setSortOrder] = useState('asc'); // 'asc' or 'desc' (default: oldest first)
   const [filterType, setFilterType] = useState('all'); // 'all', 'buys', 'sells'
 
   /**

@@ -47,6 +47,30 @@
   min-width: 250px;
 }
 
+/* Inline stock list layout */
+.stock-legend.inline {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.stock-legend.inline h4 {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.stock-list-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.stock-list-inline .separator {
+  color: #999;
+  font-weight: 600;
+}
+
 .stock-legend label,
 .transaction-legend label {
   display: flex;
@@ -58,6 +82,11 @@
   color: #2c3e50;
   transition: opacity 0.2s;
   margin-bottom: 0.5rem;
+}
+
+/* Inline labels have no bottom margin */
+.stock-list-inline label {
+  margin-bottom: 0;
 }
 
 .stock-legend label.disabled,

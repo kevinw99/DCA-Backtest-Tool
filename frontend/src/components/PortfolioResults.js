@@ -5,7 +5,6 @@ import CapitalUtilizationChart from './CapitalUtilizationChart';
 import PortfolioCompositionChart from './PortfolioCompositionChart';
 import MultiStockPriceChart from './MultiStockPriceChart';
 import RejectedOrdersTable from './RejectedOrdersTable';
-import PortfolioCurrentHoldings from './PortfolioCurrentHoldings';
 import DailyTradesView from './DailyTradesView';
 import PortfolioBuyAndHoldComparison from './PortfolioBuyAndHoldComparison';
 import DCAVsBuyAndHoldChart from './DCAVsBuyAndHoldChart';
@@ -147,21 +146,11 @@ const PortfolioResults = ({ data }) => {
         <CapitalUtilizationChart timeSeries={capitalUtilizationTimeSeries} />
       </section>
 
-      <section className="current-holdings-section">
-        <div className="section-header">
-          <h3>💼 Current Holdings</h3>
-          <p className="section-description">
-            Detailed breakdown of all current positions at the end of the backtest period
-          </p>
-        </div>
-        <PortfolioCurrentHoldings stockResults={stockResults} />
-      </section>
-
       <section className="stock-performance-section">
         <div className="section-header">
           <h3>🎯 Stock Performance Breakdown</h3>
           <p className="section-description">
-            Individual stock performance and contribution to portfolio returns (click rows to expand, or click "View" to see detailed results)
+            Individual stock performance and contribution to portfolio returns. Click rows to expand for current holdings and transaction details, or click "View" to see full results.
           </p>
         </div>
         <StockPerformanceTable

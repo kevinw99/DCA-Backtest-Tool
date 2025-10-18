@@ -220,6 +220,58 @@ const StockPerformanceTable = ({ stocks, portfolioRunId, parameters }) => {
   );
 };
 
+/**
+ * Extract current holdings (lots held) from stock data
+ * Reconstructs which lots are currently held based on transaction history
+ */
+const extractCurrentHoldings = (stock) => {
+  if (!stock.transactions || stock.transactions.length === 0) {
+    return [];
+  }
+
+  // Get the most recent transaction to find current price
+  const latestTransaction = stock.transactions[stock.transactions.length - 1];
+  const currentPrice = latestTransaction?.price || 0;
+
+  // Find all BUY transactions to reconstruct lots
+  const buyTransactions = stock.transactions.filter(tx => tx.type.includes('BUY'));
+  const sellTransactions = stock.transactions.filter(tx => tx.type.includes('SELL'));
+
+  const lots = [];
+
+  // For each BUY, check if it's still held (not fully sold)
+  buyTransactions.forEach(buyTx => {
+    let remainingShares = buyTx.shares || buyTx.quantity || 0;
+
+    // Check if this lot was sold
+    sellTransactions.forEach(sellTx => {
+      if (sellTx.lotsDetails) {
+        sellTx.lotsDetails.forEach(soldLot => {
+          if (soldLot.date === buyTx.date && Math.abs(soldLot.price - buyTx.price) < 0.01) {
+            remainingShares -= (soldLot.shares || soldLot.quantity || 0);
+          }
+        });
+      }
+    });
+
+    if (remainingShares > 0.01) {  // Still holding this lot
+      const currentValue = remainingShares * currentPrice;
+      const costBasis = remainingShares * buyTx.price;
+
+      lots.push({
+        purchaseDate: buyTx.date,
+        purchasePrice: buyTx.price,
+        shares: remainingShares,
+        currentPrice,
+        currentValue,
+        unrealizedPNL: currentValue - costBasis
+      });
+    }
+  });
+
+  return lots;
+};
+
 const StockDetailView = ({ stock }) => {
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('en-US', {
@@ -233,6 +285,9 @@ const StockDetailView = ({ stock }) => {
   // Filter out aborted transactions (they don't represent actual trades)
   const allTransactions = stock.transactions || [];
   const actualTransactions = allTransactions.filter(tx => !tx.type.includes('ABORTED'));
+
+  // Extract current holdings if stock is held
+  const currentHoldings = stock.lotsHeld > 0 ? extractCurrentHoldings(stock) : null;
 
   // Debug logging
   console.log(`🔍 ${stock.symbol} Transaction Filtering:`);
@@ -256,44 +311,87 @@ const StockDetailView = ({ stock }) => {
 
   return (
     <div className="stock-detail">
-      <h4>{stock.symbol} - Transaction History ({actualTransactions.length} transactions)</h4>
+      <h4>{stock.symbol} - Performance & Holdings</h4>
 
-      {actualTransactions.length > 0 ? (
-        <div className="transaction-table-wrapper">
-          <table className="transaction-table">
+      {/* NEW: Current Holdings Section */}
+      {currentHoldings && currentHoldings.length > 0 && (
+        <div className="current-holdings-section">
+          <h5>Current Holdings ({stock.lotsHeld} lots held)</h5>
+          <div className="holdings-summary">
+            <span>Total Market Value: {formatCurrency(stock.marketValue)}</span>
+            <span>Total Unrealized P&L: {formatCurrency(stock.unrealizedPNL)}</span>
+          </div>
+
+          <table className="holdings-table">
             <thead>
               <tr>
-                <th>Date</th>
-                <th>Type</th>
-                <th>Price</th>
-                <th>Quantity</th>
-                <th>Amount</th>
-                <th>P&L</th>
-                <th>Lots After</th>
+                <th>Purchase Date</th>
+                <th>Purchase Price</th>
+                <th>Shares</th>
+                <th>Current Price</th>
+                <th>Current Value</th>
+                <th>Unrealized P&L</th>
               </tr>
             </thead>
             <tbody>
-              {actualTransactions.map((tx, idx) => (
+              {currentHoldings.map((lot, idx) => (
                 <tr key={idx}>
-                  <td>{tx.date}</td>
-                  <td className={tx.type.includes('BUY') ? 'buy-type' : 'sell-type'}>
-                    {tx.type}
+                  <td>{lot.purchaseDate}</td>
+                  <td>${lot.purchasePrice.toFixed(2)}</td>
+                  <td>{lot.shares.toFixed(2)}</td>
+                  <td>${lot.currentPrice.toFixed(2)}</td>
+                  <td>{formatCurrency(lot.currentValue)}</td>
+                  <td className={lot.unrealizedPNL >= 0 ? 'positive' : 'negative'}>
+                    {formatCurrency(lot.unrealizedPNL)}
                   </td>
-                  <td>${tx.price?.toFixed(2) || 'N/A'}</td>
-                  <td>{(tx.quantity || tx.shares)?.toFixed(2) || 'N/A'}</td>
-                  <td>{formatCurrency(tx.amount || tx.value || 0)}</td>
-                  <td className={(tx.pnl || tx.realizedPNLFromTrade || 0) >= 0 ? 'positive' : 'negative'}>
-                    {(tx.pnl !== undefined || tx.realizedPNLFromTrade !== undefined) ? formatCurrency(tx.pnl || tx.realizedPNLFromTrade || 0) : '-'}
-                  </td>
-                  <td>{tx.lotsAfterTransaction?.length || 0}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      ) : (
-        <p className="no-transactions">No transactions recorded for this stock</p>
       )}
+
+      {/* Transaction History Section */}
+      <div className="transaction-history-section">
+        <h5>Transaction History ({actualTransactions.length} transactions)</h5>
+
+        {actualTransactions.length > 0 ? (
+          <div className="transaction-table-wrapper">
+            <table className="transaction-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Price</th>
+                  <th>Quantity</th>
+                  <th>Amount</th>
+                  <th>P&L</th>
+                  <th>Lots After</th>
+                </tr>
+              </thead>
+              <tbody>
+                {actualTransactions.map((tx, idx) => (
+                  <tr key={idx}>
+                    <td>{tx.date}</td>
+                    <td className={tx.type.includes('BUY') ? 'buy-type' : 'sell-type'}>
+                      {tx.type}
+                    </td>
+                    <td>${tx.price?.toFixed(2) || 'N/A'}</td>
+                    <td>{(tx.quantity || tx.shares)?.toFixed(2) || 'N/A'}</td>
+                    <td>{formatCurrency(tx.amount || tx.value || 0)}</td>
+                    <td className={(tx.pnl || tx.realizedPNLFromTrade || 0) >= 0 ? 'positive' : 'negative'}>
+                      {(tx.pnl !== undefined || tx.realizedPNLFromTrade !== undefined) ? formatCurrency(tx.pnl || tx.realizedPNLFromTrade || 0) : '-'}
+                    </td>
+                    <td>{tx.lotsAfterTransaction?.length || 0}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="no-transactions">No transactions recorded for this stock</p>
+        )}
+      </div>
     </div>
   );
 };
