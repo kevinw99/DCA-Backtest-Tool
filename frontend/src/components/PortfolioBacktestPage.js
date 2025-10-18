@@ -44,6 +44,7 @@ const PortfolioBacktestPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('parameters');
+  const [isConfigMode, setIsConfigMode] = useState(false); // Track if using config file
 
   // Parse URL parameters on mount
   useEffect(() => {
@@ -52,6 +53,7 @@ const PortfolioBacktestPage = () => {
 
     // Priority 1: Config file (e.g., ?config=nasdaq100)
     if (configParam) {
+      setIsConfigMode(true);
       runConfigBacktest(configParam);
       return;
     }
@@ -95,8 +97,13 @@ const PortfolioBacktestPage = () => {
     localStorage.setItem('portfolio-backtest-params', JSON.stringify(parameters));
   }, [parameters]);
 
-  // Update URL when parameters change (but not on initial load)
+  // Update URL when parameters change (but not when in config mode)
   useEffect(() => {
+    // Skip URL update if we're in config mode
+    if (isConfigMode) {
+      return;
+    }
+
     const params = new URLSearchParams();
     params.set('stocks', parameters.stocks.join(','));
     params.set('totalCapital', parameters.totalCapital.toString());
@@ -118,7 +125,7 @@ const PortfolioBacktestPage = () => {
     params.set('consecutiveSellProfit', parameters.defaultParams.enableConsecutiveIncrementalSellProfit ? 'true' : 'false');
 
     setSearchParams(params, { replace: true });
-  }, [parameters, setSearchParams]);
+  }, [parameters, setSearchParams, isConfigMode]);
 
   const runConfigBacktest = async (configName) => {
     setLoading(true);
