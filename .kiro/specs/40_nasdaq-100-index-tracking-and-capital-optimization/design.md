@@ -236,7 +236,13 @@ for (const dateObj of tradingDays) {
 - Manage multiple optimization strategies
 - Calculate dynamic lot sizes
 - Calculate cash yield revenue
+- Determine whether to defer selling based on cash abundance
 - Track optimization events
+
+**Supported Strategies:**
+1. **Adaptive Lot Sizing**: Increase lot sizes when excess cash is available
+2. **Cash Yield**: Apply money-market returns to idle cash reserves
+3. **Deferred Selling**: Skip profit-taking sells when cash reserve is abundant
 
 **API:**
 ```javascript
@@ -318,6 +324,26 @@ class CapitalOptimizerService {
   }
 
   /**
+   * Check if selling should be deferred due to cash abundance
+   * @param {number} cashReserve - Current cash reserve
+   * @returns {boolean} True if selling should be deferred
+   */
+  shouldDeferSelling(cashReserve) {
+    if (!this.strategies.includes('deferred_selling')) {
+      return false;
+    }
+
+    const config = this.config.deferredSelling;
+
+    if (!config || !config.enabled) {
+      return false;
+    }
+
+    // Defer selling if cash reserve exceeds abundance threshold
+    return cashReserve >= config.cashAbundanceThreshold;
+  }
+
+  /**
    * Get optimization metrics
    * @returns {Object} Metrics object
    */
@@ -353,7 +379,7 @@ module.exports = CapitalOptimizerService;
 
   "capitalOptimization": {
     "enabled": true,
-    "strategies": ["adaptive_lot_sizing", "cash_yield"],
+    "strategies": ["adaptive_lot_sizing", "cash_yield", "deferred_selling"],
     "adaptiveLotSizing": {
       "cashReserveThreshold": 100000,
       "maxLotSizeMultiplier": 2.0,
@@ -363,6 +389,10 @@ module.exports = CapitalOptimizerService;
       "enabled": true,
       "annualYieldPercent": 4.5,
       "minCashToInvest": 50000
+    },
+    "deferredSelling": {
+      "enabled": true,
+      "cashAbundanceThreshold": 500000
     }
   },
 
@@ -788,7 +818,14 @@ async function forceLiquidateStock(symbol, date, priceDataMap) {
 - API integration with index providers
 - Scheduled updates for latest changes
 
-### 2. Additional Optimization Strategies
+### 2. Additional Optimization Strategies (IMPLEMENTED)
+- **Strategy: Deferred Selling** - Skip profit-taking sell signals when cash is abundant (IMPLEMENTED)
+  - Rationale: If cash reserve is high, there's no need to sell profitable positions
+  - Let winning positions run longer instead of closing them prematurely
+  - Only sell when cash is needed for new positions
+  - Configuration: `cashAbundanceThreshold` (e.g., $500K) and `enabled` flag
+
+### 3. Future Optimization Strategies
 - Strategy B: Dynamic Grid Tightening
 - Strategy C: Opportunistic Stock Addition
 - Strategy E: Smart Rebalancing

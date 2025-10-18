@@ -14,9 +14,13 @@ the 100 stocks in a file .
  get url to run the portfolio backtest based on the test script file.
 
 
-
-
  develop a new spec:
+ in portfolio backtest result page, Stock Performance Breakdown, add these columns:
+ same stock B&H total P/L, return %, difference in total P/L between portfolio backtest vs B&H, difference in
+ return % between portfolio backtest vs B&H. make them sortable like other existing columns.
+
+ 
+
  1. protfolio backtest config page should be similar to single stock backtest config page, with all parameters
  listed,
   including beta scaling etc.,

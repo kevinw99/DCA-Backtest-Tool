@@ -5,6 +5,7 @@
  * Supports multiple strategies:
  * - Adaptive Lot Sizing: Increase lot sizes when excess cash is available
  * - Cash Yield: Apply money-market-like returns to idle cash reserves
+ * - Deferred Selling: Skip profit-taking sells when cash reserve is abundant
  */
 
 class CapitalOptimizerService {
@@ -18,7 +19,8 @@ class CapitalOptimizerService {
       adaptiveLotSizingEvents: 0,
       maxLotSizeReached: config.adaptiveLotSizing?.lotSizeUsd || 0,
       cashReserveHistory: [],
-      totalCashYieldDays: 0
+      totalCashYieldDays: 0,
+      deferredSellingEvents: 0
     };
 
     console.log(`💰 Capital Optimizer initialized with strategies: ${this.strategies.join(', ')}`);
@@ -108,6 +110,35 @@ class CapitalOptimizerService {
   }
 
   /**
+   * Check if selling should be deferred due to cash abundance
+   * @param {number} cashReserve - Current cash reserve
+   * @returns {boolean} True if selling should be deferred
+   */
+  shouldDeferSelling(cashReserve) {
+    // If deferred selling not enabled, return false
+    if (!this.strategies.includes('deferred_selling')) {
+      return false;
+    }
+
+    const config = this.config.deferredSelling;
+
+    // If not explicitly enabled, return false
+    if (!config || !config.enabled) {
+      return false;
+    }
+
+    // Defer selling if cash reserve exceeds abundance threshold
+    const shouldDefer = cashReserve >= config.cashAbundanceThreshold;
+
+    // Track metric when deferring
+    if (shouldDefer) {
+      this.metrics.deferredSellingEvents++;
+    }
+
+    return shouldDefer;
+  }
+
+  /**
    * Track daily cash reserve for historical analysis
    * @param {string} date - Date in YYYY-MM-DD format
    * @param {number} cashReserve - Cash reserve amount
@@ -153,6 +184,9 @@ class CapitalOptimizerService {
         maxLotSizeReached: this.metrics.maxLotSizeReached,
         averageLotSize: this.calculateAverageLotSize()
       },
+      deferredSelling: {
+        events: this.metrics.deferredSellingEvents
+      },
       cashReserveHistory: this.metrics.cashReserveHistory
     };
   }
@@ -182,7 +216,8 @@ class CapitalOptimizerService {
       adaptiveLotSizingEvents: 0,
       maxLotSizeReached: this.config.adaptiveLotSizing?.lotSizeUsd || 0,
       cashReserveHistory: [],
-      totalCashYieldDays: 0
+      totalCashYieldDays: 0,
+      deferredSellingEvents: 0
     };
   }
 }

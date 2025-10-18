@@ -69,7 +69,7 @@
   },
   "capitalOptimization": {
     "enabled": true,
-    "strategies": ["adaptive_lot_sizing", "cash_yield"],
+    "strategies": ["adaptive_lot_sizing", "cash_yield", "deferred_selling"],
     "adaptiveLotSizing": {
       "cashReserveThreshold": 100000,
       "maxLotSizeMultiplier": 2.0,
@@ -79,6 +79,10 @@
       "enabled": true,
       "annualYieldPercent": 4.5,
       "minCashToInvest": 50000
+    },
+    "deferredSelling": {
+      "enabled": true,
+      "cashAbundanceThreshold": 500000
     }
   },
   "stocks": [

@@ -376,12 +376,22 @@ async function runPortfolioBacktest(config) {
       // Determine if buy is enabled based on capital availability
       const hasCapital = portfolio.cashReserve >= currentLotSize;
 
+      // Determine if sell should be deferred based on cash abundance
+      const shouldDeferSell = capitalOptimizer
+        ? capitalOptimizer.shouldDeferSelling(portfolio.cashReserve)
+        : false;
+
       // Get transaction count before processing
       const stateBefore = executor.getState();
       const txCountBefore = stateBefore.enhancedTransactions.length;
 
       // Process one day using executor with correct day index
-      await executor.processDay(dayData, dayIndex, { buyEnabled: hasCapital, lotSizeUsd: currentLotSize });
+      // Note: sellEnabled=false means skip selling, true means allow selling
+      await executor.processDay(dayData, dayIndex, {
+        buyEnabled: hasCapital,
+        sellEnabled: !shouldDeferSell,  // Defer selling when cash is abundant
+        lotSizeUsd: currentLotSize
+      });
 
       // Increment day index for this executor
       executorDayIndices.set(symbol, dayIndex + 1);
