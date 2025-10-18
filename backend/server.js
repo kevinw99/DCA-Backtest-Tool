@@ -1430,7 +1430,12 @@ app.post('/api/portfolio-backtest', async (req, res) => {
       enableAdaptiveLotSizing,
       adaptiveLotCashThreshold,
       adaptiveLotMaxMultiplier,
-      adaptiveLotIncreaseStep
+      adaptiveLotIncreaseStep,
+      // Beta scaling parameters
+      _betaScaling,
+      enableBetaScaling,
+      coefficient,
+      beta
     } = req.body;
 
     // Validation
@@ -1561,6 +1566,13 @@ app.post('/api/portfolio-backtest', async (req, res) => {
 
     const portfolioBacktestService = require('./services/portfolioBacktestService');
 
+    // Handle beta scaling configuration
+    const betaScalingConfig = _betaScaling || {
+      enabled: enableBetaScaling || false,
+      coefficient: coefficient || 1.0,
+      beta: beta
+    };
+
     const config = {
       totalCapital,
       startDate,
@@ -1569,7 +1581,8 @@ app.post('/api/portfolio-backtest', async (req, res) => {
       maxLotsPerStock,
       defaultParams: finalDefaultParams,
       stocks,
-      capitalOptimization: capitalOptimizationConfig
+      capitalOptimization: capitalOptimizationConfig,
+      betaScaling: betaScalingConfig
     };
 
     const results = await portfolioBacktestService.runPortfolioBacktest(config);

@@ -42,29 +42,29 @@ export const LongStrategySection = ({
         {/* Grid Interval */}
         <ParameterInput
           label="Grid Interval (%)"
-          value={parameters.gridIntervalPct || 0}
-          onChange={(val) => handleChange('gridIntervalPct', val)}
+          value={parameters.gridIntervalPercent || 0}
+          onChange={(val) => handleChange('gridIntervalPercent', val)}
           type="number"
           step="0.1"
           min="0"
           max="100"
           betaAdjusted={betaAdjusted}
           helpText="Percentage drop to trigger buy orders"
-          error={getError('gridIntervalPct')}
+          error={getError('gridIntervalPercent')}
         />
 
         {/* Profit Requirement */}
         <ParameterInput
           label="Profit Requirement (%)"
-          value={parameters.profitRequirementPct || 0}
-          onChange={(val) => handleChange('profitRequirementPct', val)}
+          value={parameters.profitRequirement || 0}
+          onChange={(val) => handleChange('profitRequirement', val)}
           type="number"
           step="0.1"
           min="0"
           max="100"
           betaAdjusted={betaAdjusted}
           helpText="Percentage gain required to trigger sell"
-          error={getError('profitRequirementPct')}
+          error={getError('profitRequirement')}
         />
 
         {/* Trailing Stop Parameters - Conditional */}
@@ -73,53 +73,53 @@ export const LongStrategySection = ({
             {/* Trailing Buy Activation */}
             <ParameterInput
               label="Trailing Buy Activation (%)"
-              value={parameters.trailingBuyActivationPct || 0}
-              onChange={(val) => handleChange('trailingBuyActivationPct', val)}
+              value={parameters.trailingBuyActivationPercent || 0}
+              onChange={(val) => handleChange('trailingBuyActivationPercent', val)}
               type="number"
               step="0.1"
               min="0"
               max="100"
               helpText="Price drop to activate trailing buy"
-              error={getError('trailingBuyActivationPct')}
+              error={getError('trailingBuyActivationPercent')}
             />
 
             {/* Trailing Buy Rebound */}
             <ParameterInput
               label="Trailing Buy Rebound (%)"
-              value={parameters.trailingBuyReboundPct || 0}
-              onChange={(val) => handleChange('trailingBuyReboundPct', val)}
+              value={parameters.trailingBuyReboundPercent || 0}
+              onChange={(val) => handleChange('trailingBuyReboundPercent', val)}
               type="number"
               step="0.1"
               min="0"
               max="100"
               helpText="Price rebound from bottom to trigger buy"
-              error={getError('trailingBuyReboundPct')}
+              error={getError('trailingBuyReboundPercent')}
             />
 
             {/* Trailing Sell Activation */}
             <ParameterInput
               label="Trailing Sell Activation (%)"
-              value={parameters.trailingSellActivationPct || 0}
-              onChange={(val) => handleChange('trailingSellActivationPct', val)}
+              value={parameters.trailingSellActivationPercent || 0}
+              onChange={(val) => handleChange('trailingSellActivationPercent', val)}
               type="number"
               step="0.1"
               min="0"
               max="100"
               helpText="Price gain to activate trailing sell"
-              error={getError('trailingSellActivationPct')}
+              error={getError('trailingSellActivationPercent')}
             />
 
             {/* Trailing Sell Pullback */}
             <ParameterInput
               label="Trailing Sell Pullback (%)"
-              value={parameters.trailingSellPullbackPct || 0}
-              onChange={(val) => handleChange('trailingSellPullbackPct', val)}
+              value={parameters.trailingSellPullbackPercent || 0}
+              onChange={(val) => handleChange('trailingSellPullbackPercent', val)}
               type="number"
               step="0.1"
               min="0"
               max="100"
               helpText="Price pullback from peak to trigger sell"
-              error={getError('trailingSellPullbackPct')}
+              error={getError('trailingSellPullbackPercent')}
             />
           </>
         )}

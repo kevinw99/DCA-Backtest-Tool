@@ -92,6 +92,15 @@ const PortfolioBacktestPage = () => {
         }
       };
 
+      // Add beta scaling parameters if present in URL
+      if (searchParams.get('enableBetaScaling') === 'true') {
+        urlParams._betaScaling = {
+          enabled: true,
+          coefficient: parseFloat(searchParams.get('coefficient')) || 1.0,
+          beta: searchParams.get('beta') ? parseFloat(searchParams.get('beta')) : undefined
+        };
+      }
+
       setParameters(urlParams);
 
       // Auto-run if run=true
@@ -105,6 +114,50 @@ const PortfolioBacktestPage = () => {
   useEffect(() => {
     if (!isConfigMode) {
       localStorage.setItem('portfolio-backtest-params', JSON.stringify(parameters));
+    }
+  }, [parameters, isConfigMode]);
+
+  // Sync parameters to URL whenever they change (for shareable URLs)
+  useEffect(() => {
+    if (!isConfigMode) {
+      const params = new URLSearchParams();
+
+      // Basic portfolio parameters
+      params.set('stocks', parameters.stocks.join(','));
+      params.set('totalCapital', parameters.totalCapital);
+      params.set('lotSize', parameters.lotSizeUsd);
+      params.set('maxLots', parameters.maxLotsPerStock);
+      params.set('startDate', parameters.startDate);
+      params.set('endDate', parameters.endDate);
+
+      // Default strategy parameters
+      if (parameters.defaultParams) {
+        params.set('gridInterval', parameters.defaultParams.gridIntervalPercent);
+        params.set('profitReq', parameters.defaultParams.profitRequirement);
+        params.set('stopLoss', parameters.defaultParams.stopLossPercent || 30);
+        params.set('trailingBuy', parameters.defaultParams.enableTrailingBuy || false);
+        params.set('trailingSell', parameters.defaultParams.enableTrailingSell || false);
+        params.set('trailingBuyActivation', parameters.defaultParams.trailingBuyActivationPercent);
+        params.set('trailingBuyRebound', parameters.defaultParams.trailingBuyReboundPercent);
+        params.set('trailingSellActivation', parameters.defaultParams.trailingSellActivationPercent);
+        params.set('trailingSellPullback', parameters.defaultParams.trailingSellPullbackPercent);
+        params.set('consecutiveBuyGrid', parameters.defaultParams.enableConsecutiveIncrementalBuyGrid || false);
+        params.set('gridConsecutiveIncrement', parameters.defaultParams.gridConsecutiveIncrement || 5);
+        params.set('consecutiveSellProfit', parameters.defaultParams.enableConsecutiveIncrementalSellProfit || false);
+      }
+
+      // Beta scaling parameters (if present)
+      if (parameters._betaScaling?.enabled) {
+        params.set('enableBetaScaling', 'true');
+        params.set('coefficient', parameters._betaScaling.coefficient || 1.0);
+        if (parameters._betaScaling.beta) {
+          params.set('beta', parameters._betaScaling.beta);
+        }
+      }
+
+      // Update URL without navigation (use replaceState to not create history entries)
+      const newUrl = `${window.location.pathname}?${params.toString()}`;
+      window.history.replaceState({ parameters }, '', newUrl);
     }
   }, [parameters, isConfigMode]);
 

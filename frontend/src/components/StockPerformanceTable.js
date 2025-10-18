@@ -117,6 +117,15 @@ const StockPerformanceTable = ({ stocks, portfolioRunId, parameters, buyAndHoldS
       }
     }
 
+    // Add beta scaling parameters if enabled
+    if (parameters._betaScaling?.enabled) {
+      params.append('enableBetaScaling', 'true');
+      if (parameters._betaScaling.coefficient !== undefined) {
+        params.append('coefficient', parameters._betaScaling.coefficient);
+      }
+      // Beta value is fetched per stock, so don't append it here
+    }
+
     // Add stock-specific parameters (if any)
     if (stock.params) {
       // List of parameters that are stored as decimals in backend but need to be whole numbers in URL
@@ -162,6 +171,7 @@ const StockPerformanceTable = ({ stocks, portfolioRunId, parameters, buyAndHoldS
             <th onClick={() => handleSort('symbol')} className="sortable">
               Symbol <SortIcon field="symbol" />
             </th>
+            <th style={{ width: '100px' }}>Details</th>
             <th onClick={() => handleSort('lotsHeld')} className="sortable">
               Lots <SortIcon field="lotsHeld" />
             </th>
@@ -204,7 +214,6 @@ const StockPerformanceTable = ({ stocks, portfolioRunId, parameters, buyAndHoldS
             <th onClick={() => handleSort('rejectedBuys')} className="sortable">
               Rejected <SortIcon field="rejectedBuys" />
             </th>
-            <th>Details</th>
           </tr>
         </thead>
         <tbody>
@@ -218,6 +227,18 @@ const StockPerformanceTable = ({ stocks, portfolioRunId, parameters, buyAndHoldS
                   {expandedStock === stock.symbol ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                 </td>
                 <td className="stock-symbol">{stock.symbol}</td>
+                <td>
+                  {buildStockResultsUrl(stock) && (
+                    <button
+                      className="stock-link-btn"
+                      onClick={(e) => handleStockLinkClick(buildStockResultsUrl(stock), e)}
+                      title={`View detailed results for ${stock.symbol} (includes insufficient capital events)`}
+                    >
+                      <ExternalLink size={16} />
+                      View
+                    </button>
+                  )}
+                </td>
                 <td>{stock.lotsHeld}</td>
                 <td>{formatCurrency(stock.capitalDeployed)}</td>
                 <td>{formatCurrency(stock.marketValue)}</td>
@@ -245,18 +266,6 @@ const StockPerformanceTable = ({ stocks, portfolioRunId, parameters, buyAndHoldS
                 <td>{stock.totalSells}</td>
                 <td className={stock.rejectedBuys > 0 ? 'highlight' : ''}>
                   {stock.rejectedBuys}
-                </td>
-                <td>
-                  {buildStockResultsUrl(stock) && (
-                    <button
-                      className="stock-link-btn"
-                      onClick={(e) => handleStockLinkClick(buildStockResultsUrl(stock), e)}
-                      title={`View detailed results for ${stock.symbol} (includes insufficient capital events)`}
-                    >
-                      <ExternalLink size={16} />
-                      View
-                    </button>
-                  )}
                 </td>
               </tr>
 

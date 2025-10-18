@@ -54,10 +54,11 @@ class BetaService {
       const defaults = await this.loadDefaults();
       const upperSymbol = symbol.toUpperCase();
 
-      // Check stock-specific beta
+      // Check stock-specific beta ONLY
+      // Note: Global beta is NOT used here to allow database/provider values to take precedence
       if (defaults[upperSymbol]?.beta?.beta !== undefined) {
         const betaValue = defaults[upperSymbol].beta.beta;
-        console.log(`📄 File: Using beta ${betaValue} for ${symbol} from backtestDefaults.json`);
+        console.log(`📄 File: Using stock-specific beta ${betaValue} for ${symbol} from backtestDefaults.json`);
 
         return {
           beta: betaValue,
@@ -72,25 +73,8 @@ class BetaService {
         };
       }
 
-      // Check global beta
-      if (defaults.global?.beta?.beta !== undefined) {
-        const betaValue = defaults.global.beta.beta;
-        console.log(`📄 File: Using global beta ${betaValue} for ${symbol} from backtestDefaults.json`);
-
-        return {
-          beta: betaValue,
-          source: 'file',
-          lastUpdated: null,
-          isManualOverride: true,
-          providerName: 'backtestDefaults.json',
-          metadata: {
-            fromFile: true,
-            stockSpecific: false
-          }
-        };
-      }
-
-      // No file-based beta found
+      // No stock-specific beta found - return null to allow database/provider lookup
+      // Global beta will be used by betaDataService as a last resort fallback
       return null;
 
     } catch (error) {

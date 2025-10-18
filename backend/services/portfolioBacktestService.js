@@ -264,12 +264,32 @@ async function runPortfolioBacktest(config) {
       continue;
     }
 
-    const params = {
+    let params = {
       ...config.defaultParams,
       ...stockParams,
       maxLots: config.maxLotsPerStock,  // Add maxLots constraint from portfolio config
       lotSizeUsd: config.lotSizeUsd     // Ensure lot size is passed
     };
+
+    // Apply beta scaling if enabled
+    if (config.betaScaling?.enabled) {
+      const betaDataService = require('./betaDataService');
+      const parameterCorrelationService = require('./parameterCorrelationService');
+
+      try {
+        // Fetch beta for this symbol
+        const betaData = await betaDataService.fetchBeta(symbol);
+        const beta = betaData.beta;
+        const coefficient = config.betaScaling.coefficient || 1.0;
+
+        console.log(`📊 Applying beta scaling for ${symbol}: beta=${beta}, coefficient=${coefficient}`);
+
+        // Apply beta scaling to parameters
+        params = parameterCorrelationService.applyBetaAdjustment(params, beta, coefficient);
+      } catch (error) {
+        console.warn(`⚠️  Beta scaling failed for ${symbol}, using unadjusted parameters:`, error.message);
+      }
+    }
 
     // Get price data as array for this stock
     const pricesArray = Array.from(dateMap.values());

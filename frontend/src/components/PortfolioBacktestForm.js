@@ -65,15 +65,28 @@ const PortfolioBacktestForm = ({ parameters, onParametersChange, onSubmit, loadi
 
   /**
    * Handle defaultParams changes (grid interval, profit requirement, etc.)
+   * Accepts either (field, value) signature OR full updated parameters object
    */
-  const handleDefaultParamChange = (field, value) => {
-    onParametersChange({
-      ...parameters,
-      defaultParams: {
-        ...parameters.defaultParams,
-        [field]: value
-      }
-    });
+  const handleDefaultParamChange = (fieldOrParams, value) => {
+    // If first argument is an object, it's the full updated parameters from shared sections
+    if (typeof fieldOrParams === 'object' && fieldOrParams !== null) {
+      onParametersChange({
+        ...parameters,
+        defaultParams: {
+          ...parameters.defaultParams,
+          ...fieldOrParams  // Merge all updated fields
+        }
+      });
+    } else {
+      // Legacy (field, value) signature
+      onParametersChange({
+        ...parameters,
+        defaultParams: {
+          ...parameters.defaultParams,
+          [fieldOrParams]: value
+        }
+      });
+    }
   };
 
   /**
