@@ -15,6 +15,7 @@ import { LongStrategySection } from './backtest/sections/LongStrategySection';
 import { BetaControlsSection } from './backtest/sections/BetaControlsSection';
 import { DynamicFeaturesSection } from './backtest/sections/DynamicFeaturesSection';
 import { AdaptiveStrategySection } from './backtest/sections/AdaptiveStrategySection';
+import { CapitalOptimizationSection } from './backtest/sections/CapitalOptimizationSection';
 
 // Import custom hooks
 import { useBacktestValidation } from './backtest/hooks/useBacktestValidation';
@@ -28,9 +29,15 @@ import './PortfolioBacktestForm.css';
 import './backtest/BacktestForm.css';
 
 const PortfolioBacktestForm = ({ parameters, onParametersChange, onSubmit, loading }) => {
+  // Merge parameters for validation (validator expects flat structure)
+  const mergedParams = {
+    ...parameters,
+    ...parameters.defaultParams
+  };
+
   // Validation hook
   const { errors, warnings, isValid, hasError, getError } = useBacktestValidation(
-    parameters,
+    mergedParams,
     'portfolio'
   );
 
@@ -245,6 +252,14 @@ const PortfolioBacktestForm = ({ parameters, onParametersChange, onSubmit, loadi
 
       {/* Adaptive Strategy (NEW - Using Shared Component) */}
       <AdaptiveStrategySection
+        parameters={sectionParams}
+        onParametersChange={handleDefaultParamChange}
+        validationErrors={errors}
+      />
+
+      {/* Capital Optimization (NEW - Using Shared Component) */}
+      <CapitalOptimizationSection
+        totalCapital={parameters.totalCapital}
         parameters={sectionParams}
         onParametersChange={handleDefaultParamChange}
         validationErrors={errors}

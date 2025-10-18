@@ -1420,7 +1420,17 @@ app.post('/api/portfolio-backtest', async (req, res) => {
       enableAdaptiveTrailingBuy,
       enableAdaptiveTrailingSell,
       trailingStopOrderType,
-      maxLotsToSell
+      maxLotsToSell,
+      // Capital Optimization parameters
+      enableCashYield,
+      cashYieldAnnualPercent,
+      cashYieldMinCash,
+      enableDeferredSelling,
+      deferredSellingThreshold,
+      enableAdaptiveLotSizing,
+      adaptiveLotCashThreshold,
+      adaptiveLotMaxMultiplier,
+      adaptiveLotIncreaseStep
     } = req.body;
 
     // Validation
@@ -1479,6 +1489,53 @@ app.post('/api/portfolio-backtest', async (req, res) => {
       }).filter(([_, value]) => value !== undefined)
     );
 
+    // Build capital optimization config
+    // Check both top-level and defaultParams for capital optimization settings
+    const capitalOptimizationParams = {
+      enableCashYield,
+      cashYieldAnnualPercent,
+      cashYieldMinCash,
+      enableDeferredSelling,
+      deferredSellingThreshold,
+      enableAdaptiveLotSizing,
+      adaptiveLotCashThreshold,
+      adaptiveLotMaxMultiplier,
+      adaptiveLotIncreaseStep
+    };
+
+    // Also check defaultParams for capital optimization settings
+    const defaultParamsCapitalOpt = defaultParams || {};
+
+    const capitalOptimizationConfig = {
+      enabled:
+        capitalOptimizationParams.enableCashYield ||
+        capitalOptimizationParams.enableDeferredSelling ||
+        capitalOptimizationParams.enableAdaptiveLotSizing ||
+        defaultParamsCapitalOpt.enableCashYield ||
+        defaultParamsCapitalOpt.enableDeferredSelling ||
+        defaultParamsCapitalOpt.enableAdaptiveLotSizing ||
+        false,
+      strategies: [
+        ...(capitalOptimizationParams.enableAdaptiveLotSizing || defaultParamsCapitalOpt.enableAdaptiveLotSizing ? ['adaptive_lot_sizing'] : []),
+        ...(capitalOptimizationParams.enableCashYield || defaultParamsCapitalOpt.enableCashYield ? ['cash_yield'] : []),
+        ...(capitalOptimizationParams.enableDeferredSelling || defaultParamsCapitalOpt.enableDeferredSelling ? ['deferred_selling'] : [])
+      ],
+      adaptiveLotSizing: {
+        cashReserveThreshold: capitalOptimizationParams.adaptiveLotCashThreshold || defaultParamsCapitalOpt.adaptiveLotCashThreshold || totalCapital * 0.2,
+        maxLotSizeMultiplier: capitalOptimizationParams.adaptiveLotMaxMultiplier || defaultParamsCapitalOpt.adaptiveLotMaxMultiplier || 2.0,
+        increaseStepPercent: capitalOptimizationParams.adaptiveLotIncreaseStep || defaultParamsCapitalOpt.adaptiveLotIncreaseStep || 20
+      },
+      cashYield: {
+        enabled: capitalOptimizationParams.enableCashYield || defaultParamsCapitalOpt.enableCashYield || false,
+        annualYieldPercent: capitalOptimizationParams.cashYieldAnnualPercent || defaultParamsCapitalOpt.cashYieldAnnualPercent || 4.5,
+        minCashToInvest: capitalOptimizationParams.cashYieldMinCash || defaultParamsCapitalOpt.cashYieldMinCash || Math.max(10000, totalCapital * 0.1)
+      },
+      deferredSelling: {
+        enabled: capitalOptimizationParams.enableDeferredSelling || defaultParamsCapitalOpt.enableDeferredSelling || false,
+        cashAbundanceThreshold: capitalOptimizationParams.deferredSellingThreshold || defaultParamsCapitalOpt.deferredSellingThreshold || totalCapital * 0.3
+      }
+    };
+
     // Handle both string arrays and object arrays for stocks
     const stockSymbols = stocks.map(s => typeof s === 'string' ? s : s.symbol);
 
@@ -1488,6 +1545,19 @@ app.post('/api/portfolio-backtest', async (req, res) => {
     console.log(`   Stocks: ${stocks.length} (${stockSymbols.join(', ')})`);
     console.log(`   Period: ${startDate} to ${endDate}`);
     console.log(`   finalDefaultParams:`, JSON.stringify(finalDefaultParams, null, 2));
+    if (capitalOptimizationConfig.enabled) {
+      console.log(`   💰 Capital Optimization: ENABLED`);
+      console.log(`      Strategies: ${capitalOptimizationConfig.strategies.join(', ')}`);
+      if (capitalOptimizationConfig.strategies.includes('cash_yield')) {
+        console.log(`      Cash Yield: ${capitalOptimizationConfig.cashYield.annualYieldPercent}% annual`);
+      }
+      if (capitalOptimizationConfig.strategies.includes('deferred_selling')) {
+        console.log(`      Deferred Selling: Skip sells when cash > $${capitalOptimizationConfig.deferredSelling.cashAbundanceThreshold.toLocaleString()}`);
+      }
+      if (capitalOptimizationConfig.strategies.includes('adaptive_lot_sizing')) {
+        console.log(`      Adaptive Lot Sizing: ${capitalOptimizationConfig.adaptiveLotSizing.maxLotSizeMultiplier}x when cash > $${capitalOptimizationConfig.adaptiveLotSizing.cashReserveThreshold.toLocaleString()}`);
+      }
+    }
 
     const portfolioBacktestService = require('./services/portfolioBacktestService');
 
@@ -1498,7 +1568,8 @@ app.post('/api/portfolio-backtest', async (req, res) => {
       lotSizeUsd,
       maxLotsPerStock,
       defaultParams: finalDefaultParams,
-      stocks
+      stocks,
+      capitalOptimization: capitalOptimizationConfig
     };
 
     const results = await portfolioBacktestService.runPortfolioBacktest(config);
