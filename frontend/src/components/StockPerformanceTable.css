@@ -25,6 +25,31 @@
   letter-spacing: 0.5px;
 }
 
+/* Buy & Hold comparison column styling */
+.stock-performance-table th.bh-column {
+  background: #e8f5e9;
+  border-left: 2px solid #4caf50;
+  color: #2e7d32;
+}
+
+.stock-performance-table th.diff-column {
+  background: #fff3e0;
+  border-left: 2px solid #ff9800;
+  color: #e65100;
+}
+
+.stock-performance-table td.bh-column {
+  background: #f1f8f4;
+  border-left: 2px solid #4caf50;
+  font-weight: 500;
+}
+
+.stock-performance-table td.diff-column {
+  background: #fff8f0;
+  border-left: 2px solid #ff9800;
+  font-weight: 600;
+}
+
 .stock-performance-table th.sortable {
   cursor: pointer;
   user-select: none;

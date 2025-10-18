@@ -157,6 +157,7 @@ const PortfolioResults = ({ data }) => {
           stocks={stockResults}
           portfolioRunId={portfolioRunId}
           parameters={parameters}
+          buyAndHoldSummary={buyAndHoldSummary}
         />
       </section>
 

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { ChevronRight, ChevronDown, ExternalLink } from 'lucide-react';
 import './StockPerformanceTable.css';
 
-const StockPerformanceTable = ({ stocks, portfolioRunId, parameters }) => {
+const StockPerformanceTable = ({ stocks, portfolioRunId, parameters, buyAndHoldSummary }) => {
   const [expandedStock, setExpandedStock] = useState(null);
   const [sortField, setSortField] = useState('totalPNL');
   const [sortDirection, setSortDirection] = useState('desc');
@@ -21,10 +21,47 @@ const StockPerformanceTable = ({ stocks, portfolioRunId, parameters }) => {
     return value.toFixed(decimals);
   };
 
-  const sortedStocks = useMemo(() => {
+  // Merge Buy & Hold data with stock results
+  const stocksWithBH = useMemo(() => {
     if (!stocks) return [];
 
-    return [...stocks].sort((a, b) => {
+    // If no B&H data available, return stocks as-is
+    if (!buyAndHoldSummary || !buyAndHoldSummary.stockPositions) {
+      return stocks;
+    }
+
+    // Merge B&H data into each stock
+    return stocks.map(stock => {
+      const bhStock = buyAndHoldSummary.stockPositions.find(bh => bh && bh.symbol === stock.symbol);
+
+      if (!bhStock) {
+        return {
+          ...stock,
+          bhTotalPNL: null,
+          bhReturnPercent: null,
+          diffPNL: null,
+          diffReturnPercent: null
+        };
+      }
+
+      // Calculate differences
+      const diffPNL = stock.totalPNL - bhStock.totalReturn;
+      const diffReturnPercent = stock.stockReturnPercent - bhStock.totalReturnPercent;
+
+      return {
+        ...stock,
+        bhTotalPNL: bhStock.totalReturn,
+        bhReturnPercent: bhStock.totalReturnPercent,
+        diffPNL,
+        diffReturnPercent
+      };
+    });
+  }, [stocks, buyAndHoldSummary]);
+
+  const sortedStocks = useMemo(() => {
+    if (!stocksWithBH) return [];
+
+    return [...stocksWithBH].sort((a, b) => {
       const aVal = a[sortField] || 0;
       const bVal = b[sortField] || 0;
 
@@ -34,7 +71,7 @@ const StockPerformanceTable = ({ stocks, portfolioRunId, parameters }) => {
         return aVal < bVal ? 1 : -1;
       }
     });
-  }, [stocks, sortField, sortDirection]);
+  }, [stocksWithBH, sortField, sortDirection]);
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -138,7 +175,19 @@ const StockPerformanceTable = ({ stocks, portfolioRunId, parameters }) => {
               Total P&L <SortIcon field="totalPNL" />
             </th>
             <th onClick={() => handleSort('stockReturnPercent')} className="sortable">
-              Return % <SortIcon field="stockReturnPercent" />
+              DCA Return % <SortIcon field="stockReturnPercent" />
+            </th>
+            <th onClick={() => handleSort('bhTotalPNL')} className="sortable bh-column">
+              B&H P&L <SortIcon field="bhTotalPNL" />
+            </th>
+            <th onClick={() => handleSort('bhReturnPercent')} className="sortable bh-column">
+              B&H Return % <SortIcon field="bhReturnPercent" />
+            </th>
+            <th onClick={() => handleSort('diffPNL')} className="sortable diff-column">
+              Δ P&L <SortIcon field="diffPNL" />
+            </th>
+            <th onClick={() => handleSort('diffReturnPercent')} className="sortable diff-column">
+              Δ Return % <SortIcon field="diffReturnPercent" />
             </th>
             <th onClick={() => handleSort('cagr')} className="sortable">
               CAGR <SortIcon field="cagr" />
@@ -178,6 +227,18 @@ const StockPerformanceTable = ({ stocks, portfolioRunId, parameters }) => {
                 <td className={stock.stockReturnPercent >= 0 ? 'positive' : 'negative'}>
                   {safeToFixed(stock.stockReturnPercent, 2)}%
                 </td>
+                <td className={`bh-column ${stock.bhTotalPNL !== null && stock.bhTotalPNL >= 0 ? 'positive' : stock.bhTotalPNL !== null ? 'negative' : ''}`}>
+                  {stock.bhTotalPNL !== null ? formatCurrency(stock.bhTotalPNL) : '-'}
+                </td>
+                <td className={`bh-column ${stock.bhReturnPercent !== null && stock.bhReturnPercent >= 0 ? 'positive' : stock.bhReturnPercent !== null ? 'negative' : ''}`}>
+                  {stock.bhReturnPercent !== null ? `${safeToFixed(stock.bhReturnPercent, 2)}%` : '-'}
+                </td>
+                <td className={`diff-column ${stock.diffPNL !== null && stock.diffPNL >= 0 ? 'positive' : stock.diffPNL !== null ? 'negative' : ''}`}>
+                  {stock.diffPNL !== null ? formatCurrency(stock.diffPNL) : '-'}
+                </td>
+                <td className={`diff-column ${stock.diffReturnPercent !== null && stock.diffReturnPercent >= 0 ? 'positive' : stock.diffReturnPercent !== null ? 'negative' : ''}`}>
+                  {stock.diffReturnPercent !== null ? `${safeToFixed(stock.diffReturnPercent, 2)}%` : '-'}
+                </td>
                 <td>{safeToFixed(stock.cagr, 2)}%</td>
                 <td>{safeToFixed(stock.contributionToPortfolioReturn, 2)}%</td>
                 <td>{stock.totalBuys}</td>
@@ -201,7 +262,7 @@ const StockPerformanceTable = ({ stocks, portfolioRunId, parameters }) => {
 
               {expandedStock === stock.symbol && (
                 <tr className="stock-detail-row">
-                  <td colSpan="13">
+                  <td colSpan="17">
                     <StockDetailView stock={stock} />
                   </td>
                 </tr>
