@@ -9,10 +9,16 @@ const PortfolioBacktestPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [parameters, setParameters] = useState(() => {
-    // Try to load from localStorage first
-    const saved = localStorage.getItem('portfolio-backtest-params');
-    if (saved) {
-      return JSON.parse(saved);
+    // If using config mode, don't load from localStorage - use defaults
+    const urlParams = new URLSearchParams(window.location.search);
+    const configParam = urlParams.get('config');
+
+    // Only load from localStorage if NOT using config mode
+    if (!configParam) {
+      const saved = localStorage.getItem('portfolio-backtest-params');
+      if (saved) {
+        return JSON.parse(saved);
+      }
     }
 
     // Default parameters - use 10 stocks with stock-specific defaults
@@ -92,10 +98,12 @@ const PortfolioBacktestPage = () => {
     }
   }, []); // Only run on mount
 
-  // Save parameters to localStorage whenever they change
+  // Save parameters to localStorage whenever they change (but not in config mode)
   useEffect(() => {
-    localStorage.setItem('portfolio-backtest-params', JSON.stringify(parameters));
-  }, [parameters]);
+    if (!isConfigMode) {
+      localStorage.setItem('portfolio-backtest-params', JSON.stringify(parameters));
+    }
+  }, [parameters, isConfigMode]);
 
   // Update URL when parameters change (but not when in config mode)
   useEffect(() => {
