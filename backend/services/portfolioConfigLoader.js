@@ -92,13 +92,15 @@ function configToBacktestParams(config) {
   const lotSizeUsd = globalDefaults.basic?.lotSizeUsd || globalDefaults.lotSizeUsd || 10000;
   const maxLotsPerStock = globalDefaults.longStrategy?.maxLots || globalDefaults.maxLots || 10;
 
+  // Flatten nested config structure to flat DCA parameters expected by executor
+  const flattenedDefaults = flattenConfigToParams(globalDefaults);
+
   // Build stocks array with merged parameters
   const stocksWithParams = stocks.map(symbol => {
     const stockOverrides = stockSpecificOverrides[symbol] || {};
 
-    // Merge global defaults with stock-specific overrides
-    // Deep merge for nested structures (basic, longStrategy, etc.)
-    const mergedParams = deepMerge(globalDefaults, stockOverrides);
+    // Merge flattened global defaults with stock-specific overrides
+    const mergedParams = { ...flattenedDefaults, ...flattenConfigToParams(stockOverrides) };
 
     return {
       symbol,
@@ -113,7 +115,7 @@ function configToBacktestParams(config) {
     endDate: endDate === 'current' ? getCurrentDate() : endDate,
     lotSizeUsd,
     maxLotsPerStock,
-    defaultParams: globalDefaults,
+    defaultParams: flattenedDefaults,  // Use flattened parameters
     stocks: stocksWithParams
   };
 }
@@ -285,6 +287,54 @@ function sanitizeConfigName(configName) {
   }
 
   return sanitized;
+}
+
+/**
+ * Flatten nested config structure to flat DCA parameters
+ * Converts {basic: {}, longStrategy: {}, ...} to flat {param1: val1, param2: val2, ...}
+ * @param {Object} nestedConfig - Nested config object
+ * @returns {Object} Flattened parameters for DCA executor
+ */
+function flattenConfigToParams(nestedConfig) {
+  const flattened = {};
+
+  // Extract from all nested sections
+  const sections = ['basic', 'longStrategy', 'shortStrategy', 'beta', 'dynamicFeatures', 'adaptiveStrategy'];
+
+  for (const section of sections) {
+    if (nestedConfig[section] && typeof nestedConfig[section] === 'object') {
+      Object.assign(flattened, nestedConfig[section]);
+    }
+  }
+
+  // Also include any top-level parameters (for backward compatibility with flat configs)
+  for (const key in nestedConfig) {
+    if (nestedConfig.hasOwnProperty(key) && !sections.includes(key)) {
+      flattened[key] = nestedConfig[key];
+    }
+  }
+
+  // Convert percentage values from whole numbers to decimals (if needed)
+  // The DCA executor expects decimal format (e.g., 0.10 for 10%)
+  const percentageFields = [
+    'gridIntervalPercent',
+    'profitRequirement',
+    'stopLossPercent',
+    'trailingBuyActivationPercent',
+    'trailingBuyReboundPercent',
+    'trailingSellActivationPercent',
+    'trailingSellPullbackPercent',
+    'gridConsecutiveIncrement'
+  ];
+
+  for (const field of percentageFields) {
+    if (flattened[field] !== undefined && flattened[field] > 1) {
+      // Convert from whole number (10) to decimal (0.10)
+      flattened[field] = flattened[field] / 100;
+    }
+  }
+
+  return flattened;
 }
 
 /**
