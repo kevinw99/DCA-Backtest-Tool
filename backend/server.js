@@ -7,8 +7,13 @@ const validation = require('./middleware/validation');
 const sessionManager = require('./utils/sessionManager');
 const sseHelpers = require('./utils/sseHelpers');
 const ConfigService = require('./services/configService');
+const betaService = require('./services/betaService');
+const BetaScalingService = require('./services/betaScaling');
 
 const app = express();
+
+// Initialize Beta Scaling Service (Spec 43: Centralized Beta Scaling)
+const betaScalingService = new BetaScalingService(betaService);
 const PORT = process.env.PORT || 3001;
 
 // Middleware
@@ -695,80 +700,52 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
       enableAdaptiveTrailingSell
     } = params;
 
-    // Process Beta-adjusted parameters if Beta scaling is enabled
+    // Process Beta-adjusted parameters using centralized BetaScalingService (Spec 43)
     let finalParams = { ...params };
     let betaInfo = null;
 
-    if (enableBetaScaling && beta) {
-      try {
-        const parameterCorrelationService = require('./services/parameterCorrelationService');
-
-        // Use coefficient from request, default to 1.0 if not provided
-        const coefficientValue = coefficient !== undefined ? coefficient : 1.0;
-        // ✅ CP-2 FIX (VIOLATION-5): Frontend now sends decimals (0.10 for 10%)
-        // No need to divide by 100 - parameters are already decimals from frontend
-        const betaResult = parameterCorrelationService.calculateBetaAdjustedParameters(beta, coefficient, {
-          profitRequirement: profitRequirement,
-          gridIntervalPercent: gridIntervalPercent,
-          trailingBuyActivationPercent: trailingBuyActivationPercent,
-          trailingBuyReboundPercent: trailingBuyReboundPercent,
-          trailingSellActivationPercent: trailingSellActivationPercent,
-          trailingSellPullbackPercent: trailingSellPullbackPercent
-        });
-
-        // ✅ VIOLATION-5 FIX: Beta service returns decimals, dcaBacktestService expects decimals
-        // No need to multiply by 100 - keep as decimals throughout
-        finalParams = {
-          ...finalParams,
-          profitRequirement: betaResult.adjustedParameters.profitRequirement,
-          gridIntervalPercent: betaResult.adjustedParameters.gridIntervalPercent,
-          trailingBuyActivationPercent: betaResult.adjustedParameters.trailingBuyActivationPercent,
-          trailingBuyReboundPercent: betaResult.adjustedParameters.trailingBuyReboundPercent,
-          trailingSellActivationPercent: betaResult.adjustedParameters.trailingSellActivationPercent,
-          trailingSellPullbackPercent: betaResult.adjustedParameters.trailingSellPullbackPercent
-        };
-
-        betaInfo = {
-          beta: betaResult.beta,
-          coefficient: betaResult.coefficient,
-          betaFactor: betaResult.betaFactor,
-          baseParameters: {
-            profitRequirement: profitRequirement,
-            gridIntervalPercent: gridIntervalPercent,
-            trailingBuyActivationPercent: trailingBuyActivationPercent,
-            trailingBuyReboundPercent: trailingBuyReboundPercent,
-            trailingSellActivationPercent: trailingSellActivationPercent,
-            trailingSellPullbackPercent: trailingSellPullbackPercent
-          },
-          adjustedParameters: {
-            profitRequirement: finalParams.profitRequirement,
-            gridIntervalPercent: finalParams.gridIntervalPercent,
-            trailingBuyActivationPercent: finalParams.trailingBuyActivationPercent,
-            trailingBuyReboundPercent: finalParams.trailingBuyReboundPercent,
-            trailingSellActivationPercent: finalParams.trailingSellActivationPercent,
-            trailingSellPullbackPercent: finalParams.trailingSellPullbackPercent
-          },
-          warnings: betaResult.warnings,
-          isValid: betaResult.isValid,
-          isManualOverride: isManualBetaOverride || false
-        };
-
-        console.log(`🧮 Beta scaling applied: Beta=${beta}, Warnings=${betaResult.warnings.length}`);
-        if (betaResult.warnings.length > 0) {
-          console.log('⚠️  Beta warnings:', betaResult.warnings);
-        }
-
-      } catch (error) {
-        console.error('Error applying Beta scaling:', error);
-        // Continue with original parameters if Beta scaling fails
-        betaInfo = {
-          error: `Beta scaling failed: ${error.message}`,
-          beta: beta,
-          coefficient: 1.0,
-          betaFactor: beta, // When scaling fails, beta_factor = beta * 1.0 = beta
-          fallbackToOriginal: true
-        };
+    // Apply beta scaling if enabled
+    const scalingResult = await betaScalingService.applyBetaScaling(
+      params,  // Base parameters
+      symbol,  // Stock symbol for beta resolution
+      {
+        enableBetaScaling,
+        coefficient: coefficient !== undefined ? coefficient : 1.0,
+        beta,  // Manual beta override (optional)
+        isManualBetaOverride
       }
+    );
+
+    if (scalingResult.success) {
+      // Use adjusted parameters
+      finalParams = { ...params, ...scalingResult.adjustedParameters };
+
+      // Set beta info for response
+      if (enableBetaScaling && scalingResult.betaInfo) {
+        betaInfo = {
+          ...scalingResult.betaInfo,
+          baseParameters: scalingResult.baseParameters,
+          adjustedParameters: scalingResult.adjustedParameters,
+          warnings: scalingResult.warnings,
+          isValid: scalingResult.isValid
+        };
+
+        console.log(`🧮 Beta scaling applied: Beta=${betaInfo.beta}, Factor=${betaInfo.betaFactor.toFixed(2)}, Warnings=${betaInfo.warnings.length}`);
+        if (betaInfo.warnings.length > 0) {
+          console.log('⚠️  Beta warnings:', betaInfo.warnings);
+        }
+      }
+    } else {
+      // Scaling failed - use base parameters and log error
+      console.error('❌ Beta scaling failed:', scalingResult.errors);
+      betaInfo = {
+        error: scalingResult.errors.join('; '),
+        beta: beta || 1.0,
+        coefficient: coefficient || 1.0,
+        betaFactor: (beta || 1.0) * (coefficient || 1.0),
+        fallbackToOriginal: true,
+        warnings: scalingResult.warnings
+      };
     }
 
     // Note: No longer saving to backtestDefaults.json on every request to avoid polluting config file
@@ -1347,39 +1324,48 @@ app.post('/api/backtest/beta-parameters', async (req, res) => {
 
     console.log(`🧮 Calculating Beta parameters for ${symbol} with coefficient ${coefficient}`);
 
-    // Fetch Beta for the symbol
-    const betaDataService = require('./services/betaDataService');
-    const betaData = await betaDataService.fetchBeta(symbol);
-    const beta = betaData.beta;
+    // Calculate Beta-adjusted parameters using centralized BetaScalingService (Spec 43)
+    const scalingResult = await betaScalingService.applyBetaScaling(
+      baseParameters,
+      symbol,
+      {
+        enableBetaScaling: true,
+        coefficient
+      }
+    );
 
-    // Calculate Beta-adjusted parameters
-    const parameterCorrelationService = require('./services/parameterCorrelationService');
-    const result = parameterCorrelationService.calculateBetaAdjustedParameters(beta, coefficient, baseParameters);
+    if (!scalingResult.success) {
+      return res.status(500).json({
+        error: 'Beta scaling failed',
+        message: scalingResult.errors.join('; '),
+        warnings: scalingResult.warnings
+      });
+    }
 
-    console.log(`✅ Beta parameters calculated: Beta=${beta}, Coefficient=${coefficient}, β-factor=${result.betaFactor.toFixed(3)}`);
+    console.log(`✅ Beta parameters calculated: Beta=${scalingResult.betaInfo.beta}, Coefficient=${coefficient}, β-factor=${scalingResult.betaInfo.betaFactor.toFixed(3)}`);
 
     res.json({
       success: true,
       data: {
         symbol: symbol.toUpperCase(),
-        beta: result.beta,
-        coefficient: result.coefficient,
-        betaFactor: result.betaFactor,
-        userParameters: result.userParameters,
+        beta: scalingResult.betaInfo.beta,
+        coefficient: scalingResult.betaInfo.coefficient,
+        betaFactor: scalingResult.betaInfo.betaFactor,
+        userParameters: scalingResult.baseParameters,
         adjustedParameters: {
-          // Convert to percentages for frontend
-          profitRequirement: result.adjustedParameters.profitRequirement * 100,
-          gridIntervalPercent: result.adjustedParameters.gridIntervalPercent * 100,
-          trailingBuyActivationPercent: result.adjustedParameters.trailingBuyActivationPercent * 100,
-          trailingBuyReboundPercent: result.adjustedParameters.trailingBuyReboundPercent * 100,
-          trailingSellActivationPercent: result.adjustedParameters.trailingSellActivationPercent * 100,
-          trailingSellPullbackPercent: result.adjustedParameters.trailingSellPullbackPercent * 100
+          // Convert to percentages for frontend (if needed - check if frontend expects decimals or percentages)
+          profitRequirement: scalingResult.adjustedParameters.profitRequirement * 100,
+          gridIntervalPercent: scalingResult.adjustedParameters.gridIntervalPercent * 100,
+          trailingBuyActivationPercent: scalingResult.adjustedParameters.trailingBuyActivationPercent * 100,
+          trailingBuyReboundPercent: scalingResult.adjustedParameters.trailingBuyReboundPercent * 100,
+          trailingSellActivationPercent: scalingResult.adjustedParameters.trailingSellActivationPercent * 100,
+          trailingSellPullbackPercent: scalingResult.adjustedParameters.trailingSellPullbackPercent * 100
         },
-        warnings: result.warnings,
-        isValid: result.isValid,
+        warnings: scalingResult.warnings,
+        isValid: scalingResult.isValid,
         calculation: {
-          formula: `Beta (${beta}) × Coefficient (${coefficient}) = β-factor (${result.betaFactor.toFixed(3)})`,
-          example: `Profit Requirement = 5% × ${result.betaFactor.toFixed(3)} = ${(result.adjustedParameters.profitRequirement * 100).toFixed(2)}%`
+          formula: `Beta (${scalingResult.betaInfo.beta}) × Coefficient (${coefficient}) = β-factor (${scalingResult.betaInfo.betaFactor.toFixed(3)})`,
+          example: `Profit Requirement = ${(scalingResult.baseParameters.profitRequirement * 100).toFixed(0)}% × ${scalingResult.betaInfo.betaFactor.toFixed(3)} = ${(scalingResult.adjustedParameters.profitRequirement * 100).toFixed(2)}%`
         }
       }
     });

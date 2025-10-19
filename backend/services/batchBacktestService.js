@@ -71,22 +71,12 @@ async function generateParameterCombinations(paramRanges) {
 
   // If Beta scaling is enabled, generate combinations with coefficients
   if (enableBetaScaling && coefficients.length > 0) {
-    console.log('✅ Using Beta scaling path');
-    const parameterCorrelationService = require('./parameterCorrelationService');
-    const betaDataService = require('./betaDataService');
+    console.log('✅ Using Beta scaling path (Spec 43: Centralized Beta Scaling)');
+    const BetaScalingService = require('./betaScaling');
+    const betaService = require('./betaService');
+    const betaScalingService = new BetaScalingService(betaService);
 
     for (const symbol of symbols) {
-      // Fetch real Beta for this symbol
-      let beta;
-      try {
-        const betaData = await betaDataService.fetchBeta(symbol);
-        beta = betaData.beta;
-        console.log(`📊 Using Beta ${beta} for ${symbol} in batch testing`);
-      } catch (error) {
-        console.warn(`Failed to fetch Beta for ${symbol}, using default 1.0:`, error.message);
-        beta = 1.0;
-      }
-
       for (const coefficient of coefficients) {
         for (const lotsToSell of maxLotsToSell) {
           for (const profit of profitRequirement) {
@@ -97,7 +87,7 @@ async function generateParameterCombinations(paramRanges) {
                     for (const sellPullback of trailingSellPullbackPercent) {
                       for (const gridMult of dynamicGridMultiplier) {
                         try {
-                          // Calculate Beta-adjusted parameters using parameterCorrelationService
+                          // Apply beta scaling using centralized BetaScalingService (Spec 43)
                           // Frontend now sends decimals per spec (CP-2 fix), use directly
                           // Reference: VIOLATION-2, ISSUE-3 fix
                           const baseParams = {
@@ -106,14 +96,28 @@ async function generateParameterCombinations(paramRanges) {
                             trailingBuyActivationPercent: buyActivation,
                             trailingBuyReboundPercent: buyRebound,
                             trailingSellActivationPercent: sellActivation,
-                            trailingSellPullbackPercent: sellPullback
+                            trailingSellPullbackPercent: sellPullback,
+                            dynamicGridMultiplier: gridMult
                           };
 
-                          const betaResult = parameterCorrelationService.calculateBetaAdjustedParameters(
-                            beta,
-                            coefficient,
-                            baseParams
+                          const scalingResult = await betaScalingService.applyBetaScaling(
+                            baseParams,
+                            symbol,
+                            {
+                              enableBetaScaling: true,
+                              coefficient: coefficient
+                            }
                           );
+
+                          if (!scalingResult.success) {
+                            console.error(`❌ Beta scaling failed for ${symbol}, coefficient ${coefficient}:`, scalingResult.errors);
+                            continue; // Skip this combination
+                          }
+
+                          // Log beta info (throttled - only first combination per symbol)
+                          if (coefficient === coefficients[0] && lotsToSell === maxLotsToSell[0] && profit === profitRequirement[0]) {
+                            console.log(`📊 Beta scaling applied for ${symbol}: Beta=${scalingResult.betaInfo.beta}, Factor=${scalingResult.betaInfo.betaFactor.toFixed(2)}`);
+                          }
 
                           combinations.push({
                             symbol,
@@ -122,18 +126,18 @@ async function generateParameterCombinations(paramRanges) {
                             lotSizeUsd,
                             maxLots,
                             maxLotsToSell: lotsToSell,
-                            // Use Beta-adjusted parameters
-                            profitRequirement: betaResult.adjustedParameters.profitRequirement,
-                            gridIntervalPercent: betaResult.adjustedParameters.gridIntervalPercent,
-                            trailingBuyActivationPercent: betaResult.adjustedParameters.trailingBuyActivationPercent,
-                            trailingBuyReboundPercent: betaResult.adjustedParameters.trailingBuyReboundPercent,
-                            trailingSellActivationPercent: betaResult.adjustedParameters.trailingSellActivationPercent,
-                            trailingSellPullbackPercent: betaResult.adjustedParameters.trailingSellPullbackPercent,
-                            dynamicGridMultiplier: gridMult,
+                            // Use Beta-adjusted parameters from centralized service
+                            profitRequirement: scalingResult.adjustedParameters.profitRequirement,
+                            gridIntervalPercent: scalingResult.adjustedParameters.gridIntervalPercent,
+                            trailingBuyActivationPercent: scalingResult.adjustedParameters.trailingBuyActivationPercent,
+                            trailingBuyReboundPercent: scalingResult.adjustedParameters.trailingBuyReboundPercent,
+                            trailingSellActivationPercent: scalingResult.adjustedParameters.trailingSellActivationPercent,
+                            trailingSellPullbackPercent: scalingResult.adjustedParameters.trailingSellPullbackPercent,
+                            dynamicGridMultiplier: scalingResult.adjustedParameters.dynamicGridMultiplier,
                             // Include Beta, coefficient, and beta_factor information for display
-                            beta: beta,
-                            coefficient: coefficient,
-                            betaFactor: betaResult.betaFactor,
+                            beta: scalingResult.betaInfo.beta,
+                            coefficient: scalingResult.betaInfo.coefficient,
+                            betaFactor: scalingResult.betaInfo.betaFactor,
                             enableBetaScaling: true,
                             enableDynamicGrid,
                             normalizeToReference,
@@ -143,17 +147,21 @@ async function generateParameterCombinations(paramRanges) {
                             enableAdaptiveTrailingBuy,
                             enableAdaptiveTrailingSell,
                             betaInfo: {
-                              beta: betaResult.beta,
-                              coefficient: betaResult.coefficient,
-                              betaFactor: betaResult.betaFactor,
-                              baseParameters: betaResult.userParameters,
-                              adjustedParameters: betaResult.adjustedParameters,
-                              warnings: betaResult.warnings,
-                              isValid: betaResult.isValid
+                              beta: scalingResult.betaInfo.beta,
+                              coefficient: scalingResult.betaInfo.coefficient,
+                              betaFactor: scalingResult.betaInfo.betaFactor,
+                              source: scalingResult.betaInfo.source,
+                              isManualOverride: scalingResult.betaInfo.isManualOverride,
+                              symbol: scalingResult.betaInfo.symbol,
+                              updatedAt: scalingResult.betaInfo.updatedAt,
+                              baseParameters: scalingResult.baseParameters,
+                              adjustedParameters: scalingResult.adjustedParameters,
+                              warnings: scalingResult.warnings,
+                              isValid: scalingResult.isValid
                             }
                           });
                         } catch (error) {
-                          console.error(`Error calculating Beta parameters for Beta=${beta}, Coefficient=${coefficient}, Symbol=${symbol}:`, error);
+                          console.error(`Error calculating Beta parameters for Coefficient=${coefficient}, Symbol=${symbol}:`, error);
                           // Skip this combination if Beta calculation fails
                         }
                       }

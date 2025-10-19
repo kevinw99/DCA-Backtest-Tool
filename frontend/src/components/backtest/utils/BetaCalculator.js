@@ -1,45 +1,27 @@
 /**
- * BetaCalculator - Beta scaling calculations for backtest parameters
+ * BetaCalculator - Beta scaling utilities for UI display and validation
  *
- * Handles beta-adjusted parameter calculations for both single stock and portfolio modes.
- * Integrates with backend API for beta data fetching.
+ * NOTE (Spec 43): All beta scaling CALCULATIONS are now handled by the backend
+ * BetaScalingService. This file only contains UI helpers and validation functions.
+ *
+ * Backend handles:
+ * - Beta value fetching (BetaService)
+ * - Parameter scaling calculations (BetaScalingService)
+ * - Configuration validation (BetaScalingService)
+ *
+ * Frontend keeps:
+ * - Display helpers (getStockBeta for UI hints)
+ * - Validation functions (isValidBeta, isValidCoefficient)
+ * - Recommended values (getRecommendedCoefficient)
+ * - Beta factor display calculation (calculateBetaFactor)
  */
 
 import backtestDefaults from '../../../config/backtestDefaults.json';
 
 export const BetaCalculator = {
   /**
-   * Apply beta scaling to a single value
-   *
-   * Formula: adjustedValue = baseValue × beta × coefficient
-   *
-   * @param {number} value - Base value
-   * @param {number} beta - Stock beta value
-   * @param {number} coefficient - User-selected coefficient multiplier
-   * @returns {number} Beta-adjusted value
-   */
-  applyBetaScaling(value, beta, coefficient) {
-    if (!value || !beta || !coefficient) return value;
-    return value * beta * coefficient;
-  },
-
-  /**
-   * Restore base value from beta-adjusted value
-   *
-   * Formula: baseValue = adjustedValue / (beta × coefficient)
-   *
-   * @param {number} adjustedValue - Beta-adjusted value
-   * @param {number} beta - Stock beta value
-   * @param {number} coefficient - User-selected coefficient multiplier
-   * @returns {number} Base value
-   */
-  restoreBaseValue(adjustedValue, beta, coefficient) {
-    if (!adjustedValue || !beta || !coefficient) return adjustedValue;
-    return adjustedValue / (beta * coefficient);
-  },
-
-  /**
    * Get beta value for a stock from backtestDefaults.json
+   * Used for UI display/hints only - backend fetches actual beta for calculations
    *
    * @param {string} symbol - Stock symbol
    * @returns {number} Beta value (defaults to 1.0 if not found)
@@ -56,88 +38,56 @@ export const BetaCalculator = {
   },
 
   /**
-   * Calculate adjusted parameters for a single stock
+   * Calculate beta factor (beta × coefficient)
+   * Used for UI display only - not for actual parameter scaling
    *
-   * @param {Object} baseParams - Base parameter values
-   * @param {string} symbol - Stock symbol
+   * @param {number} beta - Stock beta value
    * @param {number} coefficient - Coefficient multiplier
-   * @param {number} manualBeta - Manual beta override (optional)
-   * @returns {Object} Beta-adjusted parameters
+   * @returns {number} Beta factor
    */
-  calculateAdjustedParameters(baseParams, symbol, coefficient, manualBeta = null) {
-    const beta = manualBeta || this.getStockBeta(symbol);
-    const betaFactor = beta * coefficient;
-
-    const adjusted = { ...baseParams };
-
-    // Parameters to scale
-    const scalableParams = [
-      'gridIntervalPercent',
-      'profitRequirement',
-      'trailingBuyActivationPercent',
-      'trailingBuyReboundPercent',
-      'trailingSellActivationPercent',
-      'trailingSellPullbackPercent',
-      'gridConsecutiveIncrement',
-      'dynamicGridMultiplier',
-      // Short strategy parameters
-      'trailingShortActivationPercent',
-      'trailingShortPullbackPercent',
-      'trailingCoverActivationPercent',
-      'trailingCoverReboundPercent'
-    ];
-
-    for (const param of scalableParams) {
-      if (baseParams[param] !== undefined && baseParams[param] !== null) {
-        adjusted[param] = this.applyBetaScaling(baseParams[param], beta, coefficient);
-
-        // Round to reasonable precision
-        adjusted[param] = Math.round(adjusted[param] * 100) / 100;
-
-        // Cap at reasonable max (100% for percentages)
-        if (param.includes('Percent') || param.includes('Requirement') || param.includes('Interval')) {
-          adjusted[param] = Math.min(adjusted[param], 100);
-        }
-      }
-    }
-
-    // Add beta metadata
-    adjusted._betaMeta = {
-      beta,
-      coefficient,
-      betaFactor,
-      isBetaAdjusted: true
-    };
-
-    return adjusted;
+  calculateBetaFactor(beta, coefficient) {
+    return beta * coefficient;
   },
 
   /**
-   * Calculate adjusted parameters for portfolio (multiple stocks)
+   * Validate beta value
    *
-   * Each stock gets its own beta value from backtestDefaults.json
-   *
-   * @param {Object} baseParams - Base parameter values
-   * @param {Array} symbols - Array of stock symbols
-   * @param {number} coefficient - Coefficient multiplier
-   * @returns {Object} Map of symbol -> adjusted parameters
+   * @param {number} beta - Beta value to validate
+   * @returns {boolean} True if valid
    */
-  calculatePortfolioBetaScaling(baseParams, symbols, coefficient) {
-    const portfolioAdjusted = {};
+  isValidBeta(beta) {
+    return typeof beta === 'number' && beta > 0 && beta < 10;
+  },
 
-    for (const symbol of symbols) {
-      portfolioAdjusted[symbol] = this.calculateAdjustedParameters(
-        baseParams,
-        symbol,
-        coefficient
-      );
-    }
+  /**
+   * Validate coefficient value
+   *
+   * @param {number} coefficient - Coefficient to validate
+   * @returns {boolean} True if valid
+   */
+  isValidCoefficient(coefficient) {
+    return typeof coefficient === 'number' && coefficient >= 0.25 && coefficient <= 3.0;
+  },
 
-    return portfolioAdjusted;
+  /**
+   * Get recommended coefficient for a beta value
+   *
+   * For high beta stocks (>2.0), recommend lower coefficient to avoid extreme values
+   *
+   * @param {number} beta - Stock beta value
+   * @returns {number} Recommended coefficient
+   */
+  getRecommendedCoefficient(beta) {
+    if (beta > 2.5) return 0.5;
+    if (beta > 2.0) return 0.75;
+    if (beta > 1.5) return 1.0;
+    if (beta < 0.8) return 1.5;
+    return 1.0;
   },
 
   /**
    * Fetch beta data from backend API
+   * Backend API now uses BetaScalingService for all calculations
    *
    * @param {string} symbol - Stock symbol
    * @param {Object} baseParams - Base parameters to adjust
@@ -146,7 +96,7 @@ export const BetaCalculator = {
    */
   async fetchBetaFromAPI(symbol, baseParams, coefficient) {
     try {
-      const response = await fetch('/api/beta/calculate-adjusted-parameters', {
+      const response = await fetch('/api/backtest/beta-parameters', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -200,84 +150,6 @@ export const BetaCalculator = {
     }
 
     throw lastError;
-  },
-
-  /**
-   * Calculate beta factor (beta × coefficient)
-   *
-   * @param {number} beta - Stock beta value
-   * @param {number} coefficient - Coefficient multiplier
-   * @returns {number} Beta factor
-   */
-  calculateBetaFactor(beta, coefficient) {
-    return beta * coefficient;
-  },
-
-  /**
-   * Check if parameters are beta-adjusted
-   *
-   * @param {Object} parameters - Parameters to check
-   * @returns {boolean} True if beta-adjusted
-   */
-  isBetaAdjusted(parameters) {
-    return parameters._betaMeta?.isBetaAdjusted === true;
-  },
-
-  /**
-   * Get beta metadata from parameters
-   *
-   * @param {Object} parameters - Parameters with beta metadata
-   * @returns {Object|null} Beta metadata or null
-   */
-  getBetaMeta(parameters) {
-    return parameters._betaMeta || null;
-  },
-
-  /**
-   * Remove beta metadata from parameters (for API submission)
-   *
-   * @param {Object} parameters - Parameters with beta metadata
-   * @returns {Object} Parameters without beta metadata
-   */
-  removeBetaMeta(parameters) {
-    const { _betaMeta, ...cleanParams } = parameters;
-    return cleanParams;
-  },
-
-  /**
-   * Validate beta value
-   *
-   * @param {number} beta - Beta value to validate
-   * @returns {boolean} True if valid
-   */
-  isValidBeta(beta) {
-    return typeof beta === 'number' && beta > 0 && beta < 10;
-  },
-
-  /**
-   * Validate coefficient value
-   *
-   * @param {number} coefficient - Coefficient to validate
-   * @returns {boolean} True if valid
-   */
-  isValidCoefficient(coefficient) {
-    return typeof coefficient === 'number' && coefficient >= 0.25 && coefficient <= 3.0;
-  },
-
-  /**
-   * Get recommended coefficient for a beta value
-   *
-   * For high beta stocks (>2.0), recommend lower coefficient to avoid extreme values
-   *
-   * @param {number} beta - Stock beta value
-   * @returns {number} Recommended coefficient
-   */
-  getRecommendedCoefficient(beta) {
-    if (beta > 2.5) return 0.5;
-    if (beta > 2.0) return 0.75;
-    if (beta > 1.5) return 1.0;
-    if (beta < 0.8) return 1.5;
-    return 1.0;
   },
 
   /**

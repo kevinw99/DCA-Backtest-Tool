@@ -1,52 +1,53 @@
 /**
- * useBetaScaling - Custom hook for beta scaling state management
+ * useBetaScaling - Custom hook for beta scaling configuration management
  *
- * Manages beta scaling state, calculations, and API integration for both
- * single stock and portfolio modes.
+ * NOTE (Spec 43): This hook now ONLY manages beta scaling configuration state.
+ * All calculations are handled by the backend BetaScalingService.
+ *
+ * Backend handles:
+ * - Beta value fetching (BetaService)
+ * - Parameter scaling calculations (BetaScalingService)
+ * - Configuration validation (BetaScalingService)
+ *
+ * This hook provides:
+ * - State management for UI controls (enable toggle, coefficient slider, manual beta)
+ * - betaConfig object for API requests
+ * - No calculation logic - backend does all the work
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import { BetaCalculator } from '../utils/BetaCalculator';
+import { useState, useCallback } from 'react';
 
 /**
- * Custom hook for beta scaling
+ * Custom hook for beta scaling configuration
  *
- * @param {string|Array} symbol - Stock symbol (string) or symbols (array for portfolio)
- * @param {Object} initialParameters - Initial base parameters
- * @param {string} mode - 'single' or 'portfolio'
- * @returns {Object} Beta scaling state and functions
+ * @param {string|Array} symbol - Stock symbol (not used for calculations, kept for compatibility)
+ * @returns {Object} Beta scaling configuration state and functions
  */
-export function useBetaScaling(symbol, initialParameters, mode = 'single') {
-  const [enableBetaScaling, setEnableBetaScaling] = useState(false);
-  const [betaData, setBetaData] = useState({
-    beta: 1.0,
-    betaFactor: 1.0,
+export function useBetaScaling(symbol) {
+  const [betaConfig, setBetaConfig] = useState({
+    enableBetaScaling: false,
     coefficient: 1.0,
+    beta: null,  // Manual beta override (null = let backend fetch)
     isManualBetaOverride: false
   });
-  const [baseParameters, setBaseParameters] = useState(initialParameters);
-  const [adjustedParameters, setAdjustedParameters] = useState(initialParameters);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  // Portfolio-specific: map of symbol -> adjusted params
-  const [portfolioAdjusted, setPortfolioAdjusted] = useState({});
 
   /**
    * Toggle beta scaling on/off
    */
   const toggleBetaScaling = useCallback(() => {
-    setEnableBetaScaling(prev => !prev);
+    setBetaConfig(prev => ({
+      ...prev,
+      enableBetaScaling: !prev.enableBetaScaling
+    }));
   }, []);
 
   /**
-   * Update coefficient and recalculate adjusted parameters
+   * Update coefficient value
    */
   const updateCoefficient = useCallback((newCoefficient) => {
-    setBetaData(prev => ({
+    setBetaConfig(prev => ({
       ...prev,
-      coefficient: newCoefficient,
-      betaFactor: prev.beta * newCoefficient
+      coefficient: newCoefficient
     }));
   }, []);
 
@@ -54,180 +55,85 @@ export function useBetaScaling(symbol, initialParameters, mode = 'single') {
    * Update beta value (manual override)
    */
   const updateBeta = useCallback((newBeta) => {
-    setBetaData(prev => ({
+    setBetaConfig(prev => ({
       ...prev,
       beta: newBeta,
-      betaFactor: newBeta * prev.coefficient,
       isManualBetaOverride: true
     }));
   }, []);
 
   /**
-   * Calculate adjusted parameters (single stock mode)
+   * Clear manual beta override (let backend fetch beta)
    */
-  const calculateAdjustedSingle = useCallback(async () => {
-    if (mode !== 'single' || !symbol) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Try to fetch from API first
-      const apiResponse = await BetaCalculator.fetchBetaWithRetry(
-        symbol,
-        baseParameters,
-        betaData.coefficient
-      );
-
-      // Update beta data from API
-      setBetaData(prev => ({
-        ...prev,
-        beta: apiResponse.beta,
-        betaFactor: apiResponse.betaFactor,
-        isManualBetaOverride: false
-      }));
-
-      // Use API-calculated adjusted parameters
-      setAdjustedParameters(apiResponse.adjustedParameters);
-    } catch (apiError) {
-      console.warn('API fetch failed, using local calculation:', apiError);
-
-      // Fallback to local calculation using backtestDefaults.json
-      const beta = betaData.isManualBetaOverride
-        ? betaData.beta
-        : BetaCalculator.getStockBeta(symbol);
-
-      const localAdjusted = BetaCalculator.calculateAdjustedParameters(
-        baseParameters,
-        symbol,
-        betaData.coefficient,
-        betaData.isManualBetaOverride ? betaData.beta : null
-      );
-
-      setBetaData(prev => ({
-        ...prev,
-        beta,
-        betaFactor: beta * prev.coefficient
-      }));
-
-      setAdjustedParameters(localAdjusted);
-    } finally {
-      setLoading(false);
-    }
-  }, [symbol, baseParameters, betaData.coefficient, betaData.beta, betaData.isManualBetaOverride, mode]);
+  const clearManualBeta = useCallback(() => {
+    setBetaConfig(prev => ({
+      ...prev,
+      beta: null,
+      isManualBetaOverride: false
+    }));
+  }, []);
 
   /**
-   * Calculate adjusted parameters (portfolio mode)
+   * Enable beta scaling
    */
-  const calculateAdjustedPortfolio = useCallback(() => {
-    if (mode !== 'portfolio' || !Array.isArray(symbol)) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Use local calculation for portfolio (each stock gets its own beta from backtestDefaults.json)
-      const portfolioResults = BetaCalculator.calculatePortfolioBetaScaling(
-        baseParameters,
-        symbol,
-        betaData.coefficient
-      );
-
-      setPortfolioAdjusted(portfolioResults);
-
-      // For portfolio, adjustedParameters is the average or representative set
-      // In practice, each stock will use its own adjusted params
-      setAdjustedParameters(baseParameters); // Keep base params as reference
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [symbol, baseParameters, betaData.coefficient, mode]);
+  const enableBetaScaling = useCallback(() => {
+    setBetaConfig(prev => ({
+      ...prev,
+      enableBetaScaling: true
+    }));
+  }, []);
 
   /**
-   * Calculate adjusted parameters (mode-aware)
+   * Disable beta scaling
    */
-  const calculateAdjusted = useCallback(() => {
-    if (mode === 'single') {
-      return calculateAdjustedSingle();
-    } else {
-      return calculateAdjustedPortfolio();
-    }
-  }, [mode, calculateAdjustedSingle, calculateAdjustedPortfolio]);
-
-  /**
-   * Update base parameters (when user changes a base value)
-   */
-  const updateBaseParameters = useCallback((newBaseParams) => {
-    setBaseParameters(newBaseParams);
+  const disableBetaScaling = useCallback(() => {
+    setBetaConfig(prev => ({
+      ...prev,
+      enableBetaScaling: false
+    }));
   }, []);
 
   /**
    * Reset beta scaling to defaults
    */
   const resetBetaScaling = useCallback(() => {
-    setEnableBetaScaling(false);
-    setBetaData({
-      beta: 1.0,
-      betaFactor: 1.0,
+    setBetaConfig({
+      enableBetaScaling: false,
       coefficient: 1.0,
+      beta: null,
       isManualBetaOverride: false
     });
-    setAdjustedParameters(baseParameters);
-    setPortfolioAdjusted({});
-    setError(null);
-  }, [baseParameters]);
+  }, []);
 
   /**
-   * Get adjusted parameters for a specific symbol (portfolio mode)
+   * Update entire beta config at once
    */
-  const getAdjustedForSymbol = useCallback((stockSymbol) => {
-    if (mode !== 'portfolio') return adjustedParameters;
-    return portfolioAdjusted[stockSymbol] || baseParameters;
-  }, [mode, portfolioAdjusted, adjustedParameters, baseParameters]);
-
-  // Auto-calculate when beta scaling is enabled and coefficient changes
-  useEffect(() => {
-    if (enableBetaScaling) {
-      calculateAdjusted();
-    } else {
-      // When disabled, use base parameters
-      setAdjustedParameters(baseParameters);
-      setPortfolioAdjusted({});
-    }
-  }, [enableBetaScaling, betaData.coefficient, betaData.beta, baseParameters, calculateAdjusted]);
-
-  // Load initial beta value from backtestDefaults.json
-  useEffect(() => {
-    if (mode === 'single' && symbol && !betaData.isManualBetaOverride) {
-      const beta = BetaCalculator.getStockBeta(symbol);
-      setBetaData(prev => ({
-        ...prev,
-        beta,
-        betaFactor: beta * prev.coefficient
-      }));
-    }
-  }, [symbol, mode, betaData.isManualBetaOverride]);
+  const updateBetaConfig = useCallback((newConfig) => {
+    setBetaConfig(prev => ({
+      ...prev,
+      ...newConfig
+    }));
+  }, []);
 
   return {
-    // State
-    enableBetaScaling,
-    betaData,
-    baseParameters,
-    adjustedParameters,
-    portfolioAdjusted,
-    loading,
-    error,
+    // Configuration state (for API requests)
+    betaConfig,
 
-    // Functions
+    // Individual config values (for UI bindings)
+    enableBetaScaling: betaConfig.enableBetaScaling,
+    coefficient: betaConfig.coefficient,
+    beta: betaConfig.beta,
+    isManualBetaOverride: betaConfig.isManualBetaOverride,
+
+    // State update functions
     toggleBetaScaling,
     updateCoefficient,
     updateBeta,
-    calculateAdjusted,
-    updateBaseParameters,
+    clearManualBeta,
+    enableBetaScaling: enableBetaScaling,  // Function
+    disableBetaScaling,
     resetBetaScaling,
-    getAdjustedForSymbol
+    updateBetaConfig
   };
 }
 

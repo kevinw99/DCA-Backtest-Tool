@@ -271,23 +271,39 @@ async function runPortfolioBacktest(config) {
       lotSizeUsd: config.lotSizeUsd     // Ensure lot size is passed
     };
 
-    // Apply beta scaling if enabled
+    // Apply beta scaling if enabled (Spec 43: Centralized Beta Scaling)
     if (config.betaScaling?.enabled) {
-      const betaDataService = require('./betaDataService');
-      const parameterCorrelationService = require('./parameterCorrelationService');
+      const BetaScalingService = require('./betaScaling');
+      const betaService = require('./betaService');
+      const betaScalingService = new BetaScalingService(betaService);
 
       try {
-        // Fetch beta for this symbol
-        const betaData = await betaDataService.fetchBeta(symbol);
-        const beta = betaData.beta;
         const coefficient = config.betaScaling.coefficient || 1.0;
 
-        console.log(`📊 Applying beta scaling for ${symbol}: beta=${beta}, coefficient=${coefficient}`);
+        // Apply beta scaling using centralized service
+        const scalingResult = await betaScalingService.applyBetaScaling(
+          params,
+          symbol,
+          {
+            enableBetaScaling: true,
+            coefficient: coefficient
+          }
+        );
 
-        // Apply beta scaling to parameters
-        params = parameterCorrelationService.applyBetaAdjustment(params, beta, coefficient);
+        if (scalingResult.success) {
+          console.log(`📊 Beta scaling applied for ${symbol}: beta=${scalingResult.betaInfo.beta}, factor=${scalingResult.betaInfo.betaFactor.toFixed(2)}`);
+
+          // Use adjusted parameters from centralized service
+          params = { ...params, ...scalingResult.adjustedParameters };
+
+          // Store betaInfo for this stock (can be used in results)
+          params._betaInfo = scalingResult.betaInfo;
+        } else {
+          console.error(`❌ Beta scaling failed for ${symbol}:`, scalingResult.errors);
+          console.warn(`⚠️  Using unadjusted parameters for ${symbol}`);
+        }
       } catch (error) {
-        console.warn(`⚠️  Beta scaling failed for ${symbol}, using unadjusted parameters:`, error.message);
+        console.warn(`⚠️  Beta scaling error for ${symbol}, using unadjusted parameters:`, error.message);
       }
     }
 
