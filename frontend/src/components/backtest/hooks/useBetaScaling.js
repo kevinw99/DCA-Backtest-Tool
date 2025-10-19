@@ -141,7 +141,6 @@ export function useBetaScaling(symbol) {
     updateCoefficient,
     updateBeta,
     clearManualBeta,
-    enableBetaScaling: enableBetaScaling,  // Function
     disableBetaScaling,
     resetBetaScaling,
     updateBetaConfig
