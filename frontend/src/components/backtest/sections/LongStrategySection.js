@@ -17,7 +17,9 @@ export const LongStrategySection = ({
   validationErrors = [],
   showTrailingStops = true,
   showOrderType = true,
-  className = ''
+  className = '',
+  displayAdjustedParameters, // Scaled parameter values
+  betaScalingInfo // { enabled, betaSymbol, beta, betaFactor, mode }
 }) => {
   const handleChange = (field, value) => {
     onParametersChange({
@@ -31,11 +33,16 @@ export const LongStrategySection = ({
     return error ? error.message : null;
   };
 
+  const getAdjustedValue = (field) => {
+    return displayAdjustedParameters ? displayAdjustedParameters[field] : undefined;
+  };
+
   return (
     <section className={`backtest-section long-strategy ${className}`}>
       <SectionHeader
         icon={TrendingUp}
         title="Long Strategy Parameters"
+        subtitle={betaScalingInfo ? `Beta scaling enabled - showing example scaled values for ${betaScalingInfo.betaSymbol} (β: ${betaScalingInfo.beta.toFixed(2)})` : undefined}
       />
 
       <div className="parameter-grid">
@@ -51,6 +58,8 @@ export const LongStrategySection = ({
           betaAdjusted={betaAdjusted}
           helpText="Percentage drop to trigger buy orders"
           error={getError('gridIntervalPercent')}
+          adjustedValue={getAdjustedValue('gridIntervalPercent')}
+          betaScalingInfo={betaScalingInfo}
         />
 
         {/* Profit Requirement */}
@@ -65,6 +74,8 @@ export const LongStrategySection = ({
           betaAdjusted={betaAdjusted}
           helpText="Percentage gain required to trigger sell"
           error={getError('profitRequirement')}
+          adjustedValue={getAdjustedValue('profitRequirement')}
+          betaScalingInfo={betaScalingInfo}
         />
 
         {/* Trailing Stop Parameters - Conditional */}
@@ -81,6 +92,8 @@ export const LongStrategySection = ({
               max="100"
               helpText="Price drop to activate trailing buy"
               error={getError('trailingBuyActivationPercent')}
+              adjustedValue={getAdjustedValue('trailingBuyActivationPercent')}
+              betaScalingInfo={betaScalingInfo}
             />
 
             {/* Trailing Buy Rebound */}
@@ -94,6 +107,8 @@ export const LongStrategySection = ({
               max="100"
               helpText="Price rebound from bottom to trigger buy"
               error={getError('trailingBuyReboundPercent')}
+              adjustedValue={getAdjustedValue('trailingBuyReboundPercent')}
+              betaScalingInfo={betaScalingInfo}
             />
 
             {/* Trailing Sell Activation */}
@@ -107,6 +122,8 @@ export const LongStrategySection = ({
               max="100"
               helpText="Price gain to activate trailing sell"
               error={getError('trailingSellActivationPercent')}
+              adjustedValue={getAdjustedValue('trailingSellActivationPercent')}
+              betaScalingInfo={betaScalingInfo}
             />
 
             {/* Trailing Sell Pullback */}
@@ -120,6 +137,8 @@ export const LongStrategySection = ({
               max="100"
               helpText="Price pullback from peak to trigger sell"
               error={getError('trailingSellPullbackPercent')}
+              adjustedValue={getAdjustedValue('trailingSellPullbackPercent')}
+              betaScalingInfo={betaScalingInfo}
             />
           </>
         )}

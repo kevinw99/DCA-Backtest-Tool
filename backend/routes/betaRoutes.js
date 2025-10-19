@@ -71,6 +71,85 @@ router.get('/:symbol', async (req, res) => {
 });
 
 /**
+ * POST /api/beta/batch/refresh
+ * Force refresh beta values for multiple stocks from provider
+ *
+ * Request body: { symbols: ["TSLA", "META", "AAPL"] }
+ */
+router.post('/batch/refresh', async (req, res) => {
+  try {
+    const { symbols } = req.body;
+
+    // Validate symbols array
+    if (!Array.isArray(symbols) || symbols.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Request body must contain "symbols" array with at least one symbol'
+      });
+    }
+
+    // Validate symbol count (max 50 for performance)
+    if (symbols.length > 50) {
+      return res.status(400).json({
+        success: false,
+        error: 'Maximum 50 symbols allowed per batch request'
+      });
+    }
+
+    // Validate each symbol format
+    for (const symbol of symbols) {
+      if (!symbol || !/^[A-Z]{1,5}$/i.test(symbol)) {
+        return res.status(400).json({
+          success: false,
+          error: `Invalid symbol format: "${symbol}". Symbols must be 1-5 letters.`
+        });
+      }
+    }
+
+    console.log(`🔄 POST /api/beta/batch/refresh - Force refreshing ${symbols.length} symbols`);
+
+    // Refresh all betas in parallel
+    const { results, metadata } = await betaService.refreshBetaBatch(symbols);
+
+    // Transform to response format (matching individual refresh response)
+    const formattedData = {};
+    for (const [symbol, data] of Object.entries(results)) {
+      const age = data.lastUpdated
+        ? betaService.calculateAge(data.lastUpdated)
+        : null;
+
+      formattedData[symbol] = {
+        symbol: symbol,
+        beta: data.beta,
+        source: data.source,
+        lastUpdated: data.lastUpdated,
+        age: age,
+        providerName: data.providerName || data.source,
+        previousBeta: data.previousBeta,
+        changed: data.changed,
+        skipped: data.skipped || false,
+        failed: data.failed || false,
+        error: data.error,
+        reason: data.reason
+      };
+    }
+
+    res.json({
+      success: true,
+      data: formattedData,
+      metadata
+    });
+
+  } catch (error) {
+    console.error('Error in POST /api/beta/batch/refresh:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to refresh batch betas'
+    });
+  }
+});
+
+/**
  * POST /api/beta/batch
  * Get beta values for multiple stocks in parallel
  *

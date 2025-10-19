@@ -20,9 +20,12 @@ export const ParameterInput = ({
   disabled = false,
   required = false,
   className = '',
-  id
+  id,
+  adjustedValue, // Scaled value to display inline
+  betaScalingInfo // { betaSymbol, beta, betaFactor, mode }
 }) => {
   const inputId = id || `param-${label.replace(/\s+/g, '-').toLowerCase()}`;
+  const showAdjustedValue = adjustedValue !== undefined && adjustedValue !== null && betaScalingInfo;
 
   return (
     <div className={`parameter-input ${error ? 'error' : ''} ${className}`}>
@@ -32,22 +35,37 @@ export const ParameterInput = ({
         {betaAdjusted && <span className="beta-indicator" title="Beta-adjusted value"> β</span>}
         {helpText && <span className="help-text">{helpText}</span>}
       </label>
-      <input
-        id={inputId}
-        type={type}
-        value={value}
-        onChange={(e) => {
-          const val = type === 'number'
-            ? (e.target.value === '' ? '' : parseFloat(e.target.value))
-            : e.target.value;
-          onChange(val);
-        }}
-        min={min}
-        max={max}
-        step={step}
-        disabled={disabled}
-        className={error ? 'has-error' : ''}
-      />
+      <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+        <input
+          id={inputId}
+          type={type}
+          value={value}
+          onChange={(e) => {
+            const val = type === 'number'
+              ? (e.target.value === '' ? '' : parseFloat(e.target.value))
+              : e.target.value;
+            onChange(val);
+          }}
+          min={min}
+          max={max}
+          step={step}
+          disabled={disabled}
+          className={error ? 'has-error' : ''}
+          style={showAdjustedValue ? {flexShrink: 0, width: 'auto'} : {}}
+        />
+        {showAdjustedValue && (
+          <span className="adjusted-value-inline" style={{
+            color: '#0066cc',
+            fontSize: '0.9em',
+            whiteSpace: 'nowrap'
+          }}>
+            → <strong>{adjustedValue.toFixed(2)}%</strong>
+            <span style={{fontSize: '0.85em', color: '#666', marginLeft: '4px'}}>
+              (scaled for {betaScalingInfo.betaSymbol})
+            </span>
+          </span>
+        )}
+      </div>
       {error && <span className="error-message">{error}</span>}
     </div>
   );

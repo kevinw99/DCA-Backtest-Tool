@@ -46,7 +46,7 @@ export const ValidationHelper = {
     if (value === null || value === undefined) {
       return { field: 'gridIntervalPercent', message: 'Grid interval is required' };
     }
-    if (value <= 0 || value > 100) {
+    if (value < 0 || value > 100) {
       return { field: 'gridIntervalPercent', message: 'Grid interval must be between 0 and 100%' };
     }
     return null;
@@ -59,7 +59,7 @@ export const ValidationHelper = {
     if (value === null || value === undefined) {
       return { field: 'profitRequirement', message: 'Profit requirement is required' };
     }
-    if (value <= 0 || value > 100) {
+    if (value < 0 || value > 100) {
       return { field: 'profitRequirement', message: 'Profit requirement must be between 0 and 100%' };
     }
     return null;

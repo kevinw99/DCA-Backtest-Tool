@@ -20,6 +20,7 @@ import { CapitalOptimizationSection } from './backtest/sections/CapitalOptimizat
 // Import custom hooks
 import { useBacktestValidation } from './backtest/hooks/useBacktestValidation';
 import { useBetaScaling } from './backtest/hooks/useBetaScaling';
+import { useStockBetas } from './backtest/hooks/useStockBetas';
 
 // Import utilities
 import { ParameterHelper } from './backtest/utils/ParameterHelper';
@@ -52,6 +53,55 @@ const PortfolioBacktestForm = ({ parameters, onParametersChange, onSubmit, loadi
     updateCoefficient,
     updateBeta
   } = useBetaScaling(parameters.stocks || [], parameters.defaultParams, 'portfolio');
+
+  // Fetch betas for portfolio stocks
+  const portfolioBetas = useStockBetas(enableBetaScaling ? (parameters.stocks || []) : []);
+
+  // Calculate example adjusted parameters using first stock's beta for inline display
+  const getDisplayAdjustedParameters = () => {
+    if (!enableBetaScaling || !parameters.stocks || parameters.stocks.length === 0 || !parameters.defaultParams) {
+      return null;
+    }
+
+    const firstStock = parameters.stocks[0];
+    const firstStockBeta = portfolioBetas.betaData[firstStock];
+
+    if (!firstStockBeta) {
+      return null;
+    }
+
+    const betaFactor = firstStockBeta.beta * betaData.coefficient;
+    const scalableParams = [
+      'gridIntervalPercent',
+      'profitRequirement',
+      'trailingBuyActivationPercent',
+      'trailingBuyReboundPercent',
+      'trailingSellActivationPercent',
+      'trailingSellPullbackPercent',
+      'gridConsecutiveIncrement',
+      'dynamicGridMultiplier',
+      'trailingShortActivationPercent',
+      'trailingShortPullbackPercent',
+      'trailingCoverActivationPercent',
+      'trailingCoverReboundPercent'
+    ];
+
+    const exampleAdjusted = { ...parameters.defaultParams };
+    scalableParams.forEach(param => {
+      if (parameters.defaultParams[param] !== undefined && parameters.defaultParams[param] !== 0) {
+        exampleAdjusted[param] = parameters.defaultParams[param] * betaFactor;
+      }
+    });
+
+    return {
+      parameters: exampleAdjusted,
+      betaSymbol: firstStock,
+      beta: firstStockBeta.beta,
+      betaFactor: betaFactor
+    };
+  };
+
+  const displayAdjustedInfo = getDisplayAdjustedParameters();
 
   /**
    * Handle top-level field changes (totalCapital, stocks, etc.)
@@ -241,18 +291,28 @@ const PortfolioBacktestForm = ({ parameters, onParametersChange, onSubmit, loadi
           if (coefficient !== undefined) updateCoefficient(coefficient);
           if (beta !== undefined) updateBeta(beta);
         }}
+        baseParameters={sectionParams}
+        adjustedParameters={adjustedParameters}
         loading={betaLoading}
         error={betaError}
       />
 
       {/* Long Strategy Parameters (Using Shared Component) */}
       <LongStrategySection
-        parameters={enableBetaScaling ? adjustedParameters : sectionParams}
+        parameters={sectionParams}  // Always pass base parameters
         onParametersChange={handleDefaultParamChange}
-        betaAdjusted={enableBetaScaling}
+        betaAdjusted={false}  // Don't mark inputs as beta-adjusted (they show base values)
         validationErrors={errors}
         showTrailingStops={true}
         showOrderType={false}  // Portfolio mode doesn't need order type selection yet
+        displayAdjustedParameters={displayAdjustedInfo?.parameters}
+        betaScalingInfo={displayAdjustedInfo ? {
+          enabled: enableBetaScaling,
+          betaSymbol: displayAdjustedInfo.betaSymbol,
+          beta: displayAdjustedInfo.beta,
+          betaFactor: displayAdjustedInfo.betaFactor,
+          mode: 'portfolio'
+        } : null}
       />
 
       {/* Dynamic Features (NEW - Using Shared Component) */}

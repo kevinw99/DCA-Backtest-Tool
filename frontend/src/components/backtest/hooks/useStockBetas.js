@@ -116,11 +116,57 @@ export function useStockBetas(stocks = []) {
   }, []);
 
   /**
-   * Refresh all stocks
+   * Refresh all stocks (force refresh from provider)
    */
-  const refreshAll = useCallback(() => {
-    fetchBetas(stocks);
-  }, [stocks, fetchBetas]);
+  const refreshAll = useCallback(async () => {
+    if (!stocks || stocks.length === 0) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/beta/batch/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ symbols: stocks })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Transform refreshed data to betaData format
+        const updatedBetaData = {};
+        for (const [symbol, data] of Object.entries(result.data)) {
+          updatedBetaData[symbol] = {
+            beta: data.beta,
+            source: data.source,
+            updatedAt: data.lastUpdated,
+            age: data.age,
+            isStale: false,
+            providerName: data.providerName,
+            changed: data.changed,
+            skipped: data.skipped
+          };
+        }
+        setBetaData(updatedBetaData);
+
+        console.log(`✅ Refreshed all betas: ${result.metadata.refreshed} refreshed, ${result.metadata.skipped} skipped`);
+      } else {
+        throw new Error(result.error || 'Failed to refresh betas');
+      }
+    } catch (err) {
+      setError(err.message);
+      console.error('Error refreshing all betas:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [stocks]);
 
   /**
    * Fetch betas when stocks array changes

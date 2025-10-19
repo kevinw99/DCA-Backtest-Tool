@@ -416,7 +416,9 @@ except Exception as e:
     const { spawn } = require('child_process');
 
     return new Promise((resolve, reject) => {
-      const python = spawn('python3', ['-c', script]);
+      // Try 'python' first (Windows), fall back to 'python3' (Unix)
+      const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
+      const python = spawn(pythonCommand, ['-c', script]);
 
       let stdout = '';
       let stderr = '';

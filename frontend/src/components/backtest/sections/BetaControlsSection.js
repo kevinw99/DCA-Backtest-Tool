@@ -21,6 +21,8 @@ export const BetaControlsSection = ({
   onBetaScalingChange,
   betaData = { beta: null, betaFactor: null, coefficient: 1.0 },
   onBetaDataChange,
+  baseParameters = {},
+  adjustedParameters = {},
   loading = false,
   error = null,
   className = '',
@@ -31,6 +33,57 @@ export const BetaControlsSection = ({
 
   // Portfolio mode: Use hook to manage betas for multiple stocks
   const portfolioBetas = useStockBetas(mode === 'portfolio' && enableBetaScaling ? stocks : []);
+
+  // For portfolio mode: Get first stock's beta as example
+  const getExampleBeta = () => {
+    if (mode !== 'portfolio' || !stocks || stocks.length === 0) {
+      return null;
+    }
+    const firstStock = stocks[0];
+    const firstStockBeta = portfolioBetas.betaData[firstStock];
+    return firstStockBeta ? {
+      symbol: firstStock,
+      beta: firstStockBeta.beta,
+      betaFactor: firstStockBeta.beta * betaData.coefficient
+    } : null;
+  };
+
+  const exampleBeta = mode === 'portfolio' ? getExampleBeta() : null;
+
+  // Calculate example adjusted parameters for portfolio mode using first stock's beta
+  const getExampleAdjustedParameters = () => {
+    if (mode !== 'portfolio' || !exampleBeta || !baseParameters) {
+      return adjustedParameters; // Use provided adjustedParameters for single mode
+    }
+
+    // Apply beta scaling formula: scaledValue = baseValue × beta × coefficient
+    const betaFactor = exampleBeta.betaFactor;
+    const scalableParams = [
+      'gridIntervalPercent',
+      'profitRequirement',
+      'trailingBuyActivationPercent',
+      'trailingBuyReboundPercent',
+      'trailingSellActivationPercent',
+      'trailingSellPullbackPercent',
+      'gridConsecutiveIncrement',
+      'dynamicGridMultiplier',
+      'trailingShortActivationPercent',
+      'trailingShortPullbackPercent',
+      'trailingCoverActivationPercent',
+      'trailingCoverReboundPercent'
+    ];
+
+    const exampleAdjusted = { ...baseParameters };
+    scalableParams.forEach(param => {
+      if (baseParameters[param] !== undefined && baseParameters[param] !== 0) {
+        exampleAdjusted[param] = baseParameters[param] * betaFactor;
+      }
+    });
+
+    return exampleAdjusted;
+  };
+
+  const displayAdjustedParameters = getExampleAdjustedParameters();
 
   const handleCoefficientChange = (newCoefficient) => {
     const updatedBetaData = {
@@ -113,17 +166,22 @@ export const BetaControlsSection = ({
           )}
 
           {/* Beta Value Display (Read-Only) */}
-          {!loading && !error && betaData.beta !== null && (
+          {!loading && !error && (mode === 'single' ? betaData.beta !== null : exampleBeta !== null) && (
             <div className="beta-value-display">
-              <div className="display-label">Current Beta Value</div>
+              <div className="display-label">
+                {mode === 'portfolio' ? `Example Beta Value (${exampleBeta?.symbol || 'First Stock'})` : 'Current Beta Value'}
+              </div>
               <div className="beta-value">
-                {betaData.beta.toFixed(2)}
+                {mode === 'portfolio' ? exampleBeta?.beta.toFixed(2) : betaData.beta.toFixed(2)}
                 {betaData.isManual && <span className="manual-indicator"> (Manual)</span>}
               </div>
               <span className="help-text">
-                {betaData.beta < 1
+                {mode === 'portfolio' && (
+                  <>Each stock has its own beta value. This shows {exampleBeta?.symbol} as an example. </>
+                )}
+                {(mode === 'portfolio' ? exampleBeta?.beta : betaData.beta) < 1
                   ? 'Lower volatility than market'
-                  : betaData.beta > 1
+                  : (mode === 'portfolio' ? exampleBeta?.beta : betaData.beta) > 1
                   ? 'Higher volatility than market'
                   : 'Similar volatility to market'}
               </span>
@@ -145,14 +203,17 @@ export const BetaControlsSection = ({
           )}
 
           {/* Beta Factor Display */}
-          {!loading && !error && betaData.betaFactor !== null && (
+          {!loading && !error && (mode === 'single' ? betaData.betaFactor !== null : exampleBeta !== null) && (
             <div className="beta-factor-display">
-              <div className="display-label">Calculated Beta Factor</div>
+              <div className="display-label">
+                {mode === 'portfolio' ? `Example Beta Factor (${exampleBeta?.symbol || 'First Stock'})` : 'Calculated Beta Factor'}
+              </div>
               <div className="beta-factor">
-                {betaData.betaFactor.toFixed(2)}
+                {mode === 'portfolio' ? exampleBeta?.betaFactor.toFixed(3) : betaData.betaFactor.toFixed(2)}
               </div>
               <span className="help-text">
-                Beta ({betaData.beta.toFixed(2)}) × Coefficient ({betaData.coefficient.toFixed(2)})
+                Beta ({mode === 'portfolio' ? exampleBeta?.beta.toFixed(2) : betaData.beta.toFixed(2)}) × Coefficient ({betaData.coefficient.toFixed(2)})
+                {mode === 'portfolio' && <><br /><em>Note: Each stock will have a different beta factor based on its own beta value.</em></>}
               </span>
             </div>
           )}

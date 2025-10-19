@@ -74,6 +74,38 @@ Currently, beta scaling logic is scattered across both frontend and backend code
 - Frontend receives scaled parameters from backend
 - Display beta info to user (read-only)
 
+#### FR5.1: Portfolio Beta Display Behavior
+**Challenge**: In portfolio mode with multiple stocks, each stock has a different beta value. There is no single "Current Beta Value" to display.
+
+**Solution**: Display first stock's beta as an example with explanatory text:
+
+- **Beta Value Display**:
+  - Label: "Example Beta Value (TSLA)" (shows first stock symbol)
+  - Value: First stock's beta (e.g., 2.59)
+  - Help text: "Each stock has its own beta value. This shows TSLA as an example."
+
+- **Beta Factor Display**:
+  - Label: "Example Beta Factor (TSLA)"
+  - Value: First stock's betaFactor (beta × coefficient)
+  - Help text: "Beta (2.59) × Coefficient (1.00)"
+  - Note: "Each stock will have a different beta factor based on its own beta value."
+
+- **Parameter Adjustments Display**:
+  - Header: "Parameter Adjustments (based on β-factor: 2.592) (Example for TSLA)"
+  - Info note: "These adjustments show an example using TSLA's beta. Each stock in your portfolio will have different adjusted parameters based on its individual beta value."
+  - Shows base → adjusted format (e.g., "10.00% → 25.92%")
+
+**Implementation**:
+- `BetaControlsSection.js` uses `getExampleBeta()` helper to extract first stock's beta data
+- Conditional rendering based on `mode` prop ('single' vs 'portfolio')
+- `StockBetaTable` component shows all stocks' betas individually for detailed view
+
+**Rationale**:
+- Provides concrete example of how beta scaling works
+- Avoids confusion from showing generic "1.0" beta
+- Makes it clear that each stock is scaled independently
+- Maintains consistency with single stock mode's display pattern
+
 #### FR6: Backward Compatibility
 - Support existing URL parameters
 - Handle legacy requests with pre-scaled parameters

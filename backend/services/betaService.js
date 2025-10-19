@@ -180,6 +180,66 @@ class BetaService {
   }
 
   /**
+   * Refresh betas for multiple symbols (batch operation)
+   * Force fetches fresh data from provider for all symbols
+   * Skips file-based betas (cannot be refreshed)
+   *
+   * @param {string[]} symbols - Array of stock symbols
+   * @returns {Promise<Object>} Object keyed by symbol with refreshed beta data
+   */
+  async refreshBetaBatch(symbols) {
+    const results = {};
+    const metadata = {
+      totalRequested: symbols.length,
+      refreshed: 0,
+      skipped: 0,
+      failed: 0
+    };
+
+    // Refresh all betas in parallel
+    const promises = symbols.map(async (symbol) => {
+      try {
+        // Check if file override exists (cannot refresh)
+        const fileBeta = await this.getBetaFromFile(symbol);
+        if (fileBeta) {
+          results[symbol.toUpperCase()] = {
+            symbol: symbol.toUpperCase(),
+            beta: fileBeta.beta,
+            source: fileBeta.source,
+            lastUpdated: fileBeta.lastUpdated,
+            skipped: true,
+            reason: 'file-based beta cannot be refreshed',
+            providerName: 'backtestDefaults.json'
+          };
+          metadata.skipped++;
+          return;
+        }
+
+        // Refresh this stock
+        const refreshedData = await this.refreshBeta(symbol);
+        results[symbol.toUpperCase()] = refreshedData;
+        metadata.refreshed++;
+
+      } catch (error) {
+        console.error(`Error refreshing beta for ${symbol}:`, error);
+        results[symbol.toUpperCase()] = {
+          symbol: symbol.toUpperCase(),
+          beta: 1.0,
+          source: 'default',
+          lastUpdated: new Date().toISOString(),
+          failed: true,
+          error: error.message
+        };
+        metadata.failed++;
+      }
+    });
+
+    await Promise.all(promises);
+
+    return { results, metadata };
+  }
+
+  /**
    * Calculate age of beta data in seconds
    * @param {string} lastUpdated - ISO timestamp
    * @returns {number} Age in seconds
