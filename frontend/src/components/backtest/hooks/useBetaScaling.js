@@ -125,6 +125,17 @@ export function useBetaScaling(symbol) {
     beta: betaConfig.beta,
     isManualBetaOverride: betaConfig.isManualBetaOverride,
 
+    // Backwards compatibility (no longer computed here - backend handles it)
+    adjustedParameters: {}, // Empty object for backwards compatibility
+    betaData: {
+      beta: betaConfig.beta || 1.0,
+      coefficient: betaConfig.coefficient,
+      betaFactor: (betaConfig.beta || 1.0) * betaConfig.coefficient,
+      isManualBetaOverride: betaConfig.isManualBetaOverride
+    },
+    loading: false,
+    error: null,
+
     // State update functions
     toggleBetaScaling,
     updateCoefficient,
