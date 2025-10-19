@@ -41,7 +41,23 @@ const PortfolioBacktestPage = () => {
         trailingSellPullbackPercent: 10,
         enableConsecutiveIncrementalBuyGrid: false,
         gridConsecutiveIncrement: 5,
-        enableConsecutiveIncrementalSellProfit: false
+        enableConsecutiveIncrementalSellProfit: false,
+        // Capital Optimization Parameters
+        enableCashYield: false,
+        cashYieldAnnualPercent: 4.5,
+        cashYieldMinCash: 50000,
+        enableDeferredSelling: false,
+        deferredSellingThreshold: 150000,
+        enableAdaptiveLotSizing: false,
+        adaptiveLotCashThreshold: 100000,
+        adaptiveLotMaxMultiplier: 2.0,
+        adaptiveLotIncreaseStep: 20
+      },
+      // Beta Scaling Parameters
+      _betaScaling: {
+        enabled: false,
+        coefficient: 1.0,
+        beta: undefined
       }
     };
   });
@@ -88,7 +104,17 @@ const PortfolioBacktestPage = () => {
           trailingSellPullbackPercent: parseFloat(searchParams.get('trailingSellPullback')) || 10,
           enableConsecutiveIncrementalBuyGrid: searchParams.get('consecutiveBuyGrid') === 'true',
           gridConsecutiveIncrement: parseFloat(searchParams.get('gridConsecutiveIncrement')) || 5,
-          enableConsecutiveIncrementalSellProfit: searchParams.get('consecutiveSellProfit') === 'true'
+          enableConsecutiveIncrementalSellProfit: searchParams.get('consecutiveSellProfit') === 'true',
+          // Capital Optimization Parameters
+          enableCashYield: searchParams.get('enableCashYield') === 'true',
+          cashYieldAnnualPercent: parseFloat(searchParams.get('cashYieldAnnualPercent')) || 4.5,
+          cashYieldMinCash: parseFloat(searchParams.get('cashYieldMinCash')) || 50000,
+          enableDeferredSelling: searchParams.get('enableDeferredSelling') === 'true',
+          deferredSellingThreshold: parseFloat(searchParams.get('deferredSellingThreshold')) || 150000,
+          enableAdaptiveLotSizing: searchParams.get('enableAdaptiveLotSizing') === 'true',
+          adaptiveLotCashThreshold: parseFloat(searchParams.get('adaptiveLotCashThreshold')) || 100000,
+          adaptiveLotMaxMultiplier: parseFloat(searchParams.get('adaptiveLotMaxMultiplier')) || 2.0,
+          adaptiveLotIncreaseStep: parseFloat(searchParams.get('adaptiveLotIncreaseStep')) || 20
         }
       };
 
@@ -144,6 +170,17 @@ const PortfolioBacktestPage = () => {
         params.set('consecutiveBuyGrid', parameters.defaultParams.enableConsecutiveIncrementalBuyGrid || false);
         params.set('gridConsecutiveIncrement', parameters.defaultParams.gridConsecutiveIncrement || 5);
         params.set('consecutiveSellProfit', parameters.defaultParams.enableConsecutiveIncrementalSellProfit || false);
+
+        // Capital Optimization Parameters
+        params.set('enableCashYield', parameters.defaultParams.enableCashYield || false);
+        params.set('cashYieldAnnualPercent', parameters.defaultParams.cashYieldAnnualPercent || 4.5);
+        params.set('cashYieldMinCash', parameters.defaultParams.cashYieldMinCash || 50000);
+        params.set('enableDeferredSelling', parameters.defaultParams.enableDeferredSelling || false);
+        params.set('deferredSellingThreshold', parameters.defaultParams.deferredSellingThreshold || 150000);
+        params.set('enableAdaptiveLotSizing', parameters.defaultParams.enableAdaptiveLotSizing || false);
+        params.set('adaptiveLotCashThreshold', parameters.defaultParams.adaptiveLotCashThreshold || 100000);
+        params.set('adaptiveLotMaxMultiplier', parameters.defaultParams.adaptiveLotMaxMultiplier || 2.0);
+        params.set('adaptiveLotIncreaseStep', parameters.defaultParams.adaptiveLotIncreaseStep || 20);
       }
 
       // Beta scaling parameters (if present)

@@ -4,7 +4,7 @@
  * Uses shared components from backtest/ directory to achieve 100% parameter coverage
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Play, RefreshCw, TrendingUp } from 'lucide-react';
 import StockSelector from './StockSelector';
 
@@ -102,6 +102,29 @@ const PortfolioBacktestForm = ({ parameters, onParametersChange, onSubmit, loadi
   };
 
   const displayAdjustedInfo = getDisplayAdjustedParameters();
+
+  /**
+   * Sync beta scaling state with parameters._betaScaling
+   */
+  useEffect(() => {
+    // Only update if beta scaling state has changed
+    const currentBetaConfig = parameters._betaScaling || {};
+    const hasChanges =
+      currentBetaConfig.enabled !== enableBetaScaling ||
+      currentBetaConfig.coefficient !== betaData.coefficient ||
+      currentBetaConfig.beta !== betaData.beta;
+
+    if (hasChanges) {
+      onParametersChange({
+        ...parameters,
+        _betaScaling: {
+          enabled: enableBetaScaling,
+          coefficient: betaData.coefficient,
+          beta: betaData.beta
+        }
+      });
+    }
+  }, [enableBetaScaling, betaData.coefficient, betaData.beta]);
 
   /**
    * Handle top-level field changes (totalCapital, stocks, etc.)
