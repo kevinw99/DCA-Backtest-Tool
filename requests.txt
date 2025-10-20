@@ -1,17 +1,77 @@
 
  consecutiveBuyGrid should be set based on p/l, if p/l < 0, then true, otherwise false.
 
-develop a new spec:
-I like to run a portfolio backtest for Nasdaq 100 stocks.
-1. can you get the 100 stocks list for Nasdaq 100?
-2. write a script to generate the url to run portfolio backtest for these 100 stocks with total capital of 3,000,
-000  USD, lot size of 10000 USD, max lots of 10 per stock, start date of 2021-09-01, end date of current date,
-with global default
-parameters in the backtestDefaults.json file.
-note, current url is a get request, so the url could be very long, if it exceeds the limit, then you need to save
-the 100 stocks in a file .
-3. actaully how about develop a new feature take a test script file, which capture the the info in #2, and a simple
- get url to run the portfolio backtest based on the test script file.
+Have you implement any thing about spec 40 " Implement dynamic capital allocation strategies to utilize idle cash"
+one more way is not to sell when there is idle cash.
+
+,"Recommendation: Click "Refresh All" to update META, MSFT, NVDA, AMZN with fresh values from Yahoo Finance." it does not
+  do that.
+
+  what about coefficient? what is the priority?
+
+  1. portfolio backtest request url seems correct to have beta param
+
+curl -X POST http://localhost:3001/api/portfolio-backtest -H "Content-Type: application/json" -d '{   "totalCapital": 500000,   "startDate": "2021-09-01",   "endDate": "2025-10-12",   "lotSizeUsd": 30000,   "maxLotsPerStock": 5,   "defaultParams": {     "gridIntervalPercent": 0.1,     "profitRequirement": 0.1,     "stopLossPercent": 0.3,     "enableTrailingBuy": false,     "enableTrailingSell": false,     "trailingBuyActivationPercent": 0.1,     "trailingBuyReboundPercent": 0.05,     "trailingSellActivationPercent": 0.2,     "trailingSellPullbackPercent": 0.1,     "enableConsecutiveIncrementalBuyGrid": true,     "gridConsecutiveIncrement": 0.05,     "enableConsecutiveIncrementalSellProfit": false   },   "stocks": [     {       "symbol": "TSLA",       "params": {         "gridIntervalPercent": 0.1,         "profitRequirement": 0.1,         "stopLossPercent": 0.3,         "enableTrailingBuy": false,         "enableTrailingSell": false,         "trailingBuyActivationPercent": 0.1,         "trailingBuyReboundPercent": 0.05,         "trailingSellActivationPercent": 0.2,         "trailingSellPullbackPercent": 0.1       }     },     {       "symbol": "META",       "params": {         "gridIntervalPercent": 0.1,         "profitRequirement": 0.1,         "stopLossPercent": 0.3,         "enableTrailingBuy": false,         "enableTrailingSell": false,         "trailingBuyActivationPercent": 0.1,         "trailingBuyReboundPercent": 0.05,         "trailingSellActivationPercent": 0.2,         "trailingSellPullbackPercent": 0.1       }     },     {       "symbol": "MSFT",       "params": {         "gridIntervalPercent": 0.1,         "profitRequirement": 0.1,         "stopLossPercent": 0.3,         "enableTrailingBuy": false,         "enableTrailingSell": false,         "trailingBuyActivationPercent": 0.1,         "trailingBuyReboundPercent": 0.05,         "trailingSellActivationPercent": 0.2,         "trailingSellPullbackPercent": 0.1       }     },     {       "symbol": "META",       "params": {         "gridIntervalPercent": 0.1,         "profitRequirement": 0.1,         "stopLossPercent": 0.3,         "enableTrailingBuy": false,         "enableTrailingSell": false,         "trailingBuyActivationPercent": 0.1,         "trailingBuyReboundPercent": 0.05,         "trailingSellActivationPercent": 0.2,         "trailingSellPullbackPercent": 0.1       }     },     {       "symbol": "AAPL",       "params": {         "gridIntervalPercent": 0.15,         "profitRequirement": 0.15,         "stopLossPercent": 0.3,         "enableTrailingBuy": false,         "enableTrailingSell": false,         "trailingBuyActivationPercent": 0.15,         "trailingBuyReboundPercent": 0.075,         "trailingSellActivationPercent": 0.25,         "trailingSellPullbackPercent": 0.125       }     },     {       "symbol": "AMZN",       "params": {         "gridIntervalPercent": 0.1,         "profitRequirement": 0.1,         "stopLossPercent": 0.3,         "enableTrailingBuy": false,         "enableTrailingSell": false,         "trailingBuyActivationPercent": 0.1,         "trailingBuyReboundPercent": 0.05,         "trailingSellActivationPercent": 0.2,         "trailingSellPullbackPercent": 0.1       }     },     {       "symbol": "NVDA",       "params": {         "gridIntervalPercent": 0.1,         "profitRequirement": 0.1,         "stopLossPercent": 0.3,         "enableTrailingBuy": false,         "enableTrailingSell": false,         "trailingBuyActivationPercent": 0.1,         "trailingBuyReboundPercent": 0.05,         "trailingSellActivationPercent": 0.2,         "trailingSellPullbackPercent": 0.1       }     }   ],   "capitalOptimization": {     "enabled": false,     "strategies": [],     "adaptiveLotSizing": {       "cashReserveThreshold": 100000,       "maxLotSizeMultiplier": 2,       "increaseStepPercent": 20     },     "cashYield": {       "enabled": false,       "annualYieldPercent": 4.5,       "minCashToInvest": 50000     },     "deferredSelling": {       "enabled": false,       "cashAbundanceThreshold": 150000     }   },   "betaScaling": {     "enabled": true,     "coefficient": 0.5   } }'
+
+2. however, single stock backtest url seems missing beta param. Let's review how single stock backtest  handle beta
+ scaling. The front end is supposed to scale the parameters, so the vaule is already scaled when sending to backend, so no need to have beta param in the url. Is that correct?
+ Here the URL params value is not scaled.
+http://localhost:3000/backtest/long/NVDA/results?portfolioRunId=1760844381492-0k5u3paef&startDate=2021-09-01&endDate=2025-10-12&lotSizeUsd=30000&maxLots=5&enableTrailingBuy=false&enableTrailingSell=false&enableConsecutiveIncrementalBuyGrid=true&enableConsecutiveIncrementalSellProfit=false&gridIntervalPercent=10&profitRequirement=10&stopLossPercent=0.3&enableTrailingBuy=false&enableTrailingSell=false&trailingBuyActivationPercent=10&trailingBuyReboundPercent=5&trailingSellActivationPercent=20&trailingSellPullbackPercent=10&enableConsecutiveIncrementalBuyGrid=true&gridConsecutiveIncrement=5&enableConsecutiveIncrementalSellProfit=false&maxLots=5&lotSizeUsd=30000
+
+same for the curl
+curl -X POST http://localhost:3001/api/backtest/dca -H "Content-Type: application/json" -d '{   "portfolioRunId": "1760844381492-0k5u3paef",   "startDate": "2021-09-01",   "endDate": "2025-10-12",   "lotSizeUsd": 30000,   "maxLots": 5,   "enableTrailingBuy": false,   "enableTrailingSell": false,   "enableConsecutiveIncrementalBuyGrid": true,   "enableConsecutiveIncrementalSellProfit": false,   "gridIntervalPercent": 0.1,   "profitRequirement": 0.1,   "stopLossPercent": 0.3,   "trailingBuyActivationPercent": 0.1,   "trailingBuyReboundPercent": 0.05,   "trailingSellActivationPercent": 0.2,   "trailingSellPullbackPercent": 0.1,   "gridConsecutiveIncrement": 0.05,   "symbol": "NVDA",   "strategyMode": "long" }'
+
+3. The stanalone single stock backtest url seems also not scaled:
+http://localhost:3000/backtest/long/NVDA/results?startDate=2021-09-01&endDate=2025-10-12&lotSizeUsd=30000&maxLots=5&gridIntervalPercent=10&profitRequirement=10&stopLossPercent=30&enableTrailingBuy=false&enableTrailingSell=false&trailingBuyActivationPercent=10&trailingBuyReboundPercent=5&trailingSellActivationPercent=20&trailingSellPullbackPercent=10&enableConsecutiveIncrementalBuyGrid=true&gridConsecutiveIncrement=5&enableConsecutiveIncrementalSellProfit=false
+
+
+
+1 No i don't see any beta scaling related parameters, any evidence beta scaling is used the test. Where should I
+look for that?
+on single stock backtest result page. It shows"Backtest Parameters
+                                               Symbol
+                                               NVDA
+                                               Date Range
+                                               2021-09-01 to 2025-10-12
+                                               Lot Size (USD)
+                                               $30,000.00
+                                               Max Lots
+                                               5
+                                               Max Lots to Sell
+                                               Grid Interval
+                                               +10.00%
+                                               Profit Requirement
+                                               +10.00%
+                                               Trailing Buy Activation
+                                               +10.00%
+                                               Trailing Buy Rebound
+                                               +5.00%
+                                               Trailing Sell Activation
+                                               +20.00%
+                                               Trailing Sell Pullback
+                                               +10.00%
+                                               Dynamic Grid
+                                               Enabled
+                                               Normalize to Reference
+                                               Yes
+                                               Grid Multiplier
+                                               1.0
+                                               Consecutive Incremental Buy Grid
+                                               Enabled
+                                               Grid Consecutive Increment
+                                               +5.00%
+                                               Consecutive Incremental Sell Profit
+                                               Disabled", but not showing beta scaling related parameters. can you add them?
+
+
+           http://localhost:3000/backtest/long/NVDA/results?startDate=2021-09-01&endDate=2025-10-12&lotSizeUsd=30000&maxLots=5&gridIntervalPercent=10&profitRequirement=10&stopLossPercent=30&enableTrailingBuy=false&enableTrailingSell=false&trailingBuyActivationPercent=10&trailingBuyReboundPercent=5&trailingSellActivationPercent=20&trailingSellPullbackPercent=10&enableConsecutiveIncrementalBuyGrid=true&gridConsecutiveIncrement=5&enableConsecutiveIncrementalSellProfit=false
+
+           curl -X POST http://localhost:3001/api/backtest/dca -H "Content-Type: application/json" -d '{   "startDate": "2021-09-01",   "endDate": "2025-10-12",   "lotSizeUsd": 30000,   "maxLots": 5,   "gridIntervalPercent": 0.1,   "profitRequirement": 0.1,   "stopLossPercent": 30,   "enableTrailingBuy": false,   "enableTrailingSell": false,   "trailingBuyActivationPercent": 0.1,   "trailingBuyReboundPercent": 0.05,   "trailingSellActivationPercent": 0.2,   "trailingSellPullbackPercent": 0.1,   "enableConsecutiveIncrementalBuyGrid": true,   "gridConsecutiveIncrement": 0.05,   "enableConsecutiveIncrementalSellProfit": false,   "symbol": "NVDA",   "strategyMode": "long" }'
+
+           2. why it still shows "Dynamic Grid
+                                  Enabled
+                                  Normalize to Reference
+                                  Yes" default should be false for both.
 
 
 1. what is the behavior of beta scaling in portfolio backtest? the idea to support stock-specific beta scaling, so

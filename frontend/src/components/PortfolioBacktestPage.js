@@ -218,31 +218,45 @@ const PortfolioBacktestPage = () => {
 
       console.log('📋 Stocks with specific parameters:', stocksWithParams);
 
+      // Build request body
+      const requestBody = {
+        totalCapital: paramsToUse.totalCapital,
+        startDate: paramsToUse.startDate,
+        endDate: paramsToUse.endDate,
+        lotSizeUsd: paramsToUse.lotSizeUsd,
+        maxLotsPerStock: paramsToUse.maxLotsPerStock,
+        defaultParams: {
+          gridIntervalPercent: paramsToUse.defaultParams.gridIntervalPercent / 100,
+          profitRequirement: paramsToUse.defaultParams.profitRequirement / 100,
+          stopLossPercent: (paramsToUse.defaultParams.stopLossPercent || 30) / 100,
+          enableTrailingBuy: paramsToUse.defaultParams.enableTrailingBuy || false,
+          enableTrailingSell: paramsToUse.defaultParams.enableTrailingSell || false,
+          trailingBuyActivationPercent: (paramsToUse.defaultParams.trailingBuyActivationPercent || 10) / 100,
+          trailingBuyReboundPercent: (paramsToUse.defaultParams.trailingBuyReboundPercent || 5) / 100,
+          trailingSellActivationPercent: (paramsToUse.defaultParams.trailingSellActivationPercent || 20) / 100,
+          trailingSellPullbackPercent: (paramsToUse.defaultParams.trailingSellPullbackPercent || 10) / 100,
+          enableConsecutiveIncrementalBuyGrid: paramsToUse.defaultParams.enableConsecutiveIncrementalBuyGrid || false,
+          gridConsecutiveIncrement: (paramsToUse.defaultParams.gridConsecutiveIncrement || 5) / 100,
+          enableConsecutiveIncrementalSellProfit: paramsToUse.defaultParams.enableConsecutiveIncrementalSellProfit || false
+        },
+        stocks: stocksWithParams // Send stocks with their specific parameters
+      };
+
+      // Add beta scaling parameters if enabled
+      if (paramsToUse._betaScaling?.enabled) {
+        requestBody._betaScaling = {
+          enabled: true,
+          coefficient: paramsToUse._betaScaling.coefficient || 1.0,
+          beta: paramsToUse._betaScaling.beta
+        };
+      }
+
+      console.log('📤 Sending request with beta scaling:', requestBody._betaScaling);
+
       const response = await fetch('http://localhost:3001/api/portfolio-backtest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          totalCapital: paramsToUse.totalCapital,
-          startDate: paramsToUse.startDate,
-          endDate: paramsToUse.endDate,
-          lotSizeUsd: paramsToUse.lotSizeUsd,
-          maxLotsPerStock: paramsToUse.maxLotsPerStock,
-          defaultParams: {
-            gridIntervalPercent: paramsToUse.defaultParams.gridIntervalPercent / 100,
-            profitRequirement: paramsToUse.defaultParams.profitRequirement / 100,
-            stopLossPercent: (paramsToUse.defaultParams.stopLossPercent || 30) / 100,
-            enableTrailingBuy: paramsToUse.defaultParams.enableTrailingBuy || false,
-            enableTrailingSell: paramsToUse.defaultParams.enableTrailingSell || false,
-            trailingBuyActivationPercent: (paramsToUse.defaultParams.trailingBuyActivationPercent || 10) / 100,
-            trailingBuyReboundPercent: (paramsToUse.defaultParams.trailingBuyReboundPercent || 5) / 100,
-            trailingSellActivationPercent: (paramsToUse.defaultParams.trailingSellActivationPercent || 20) / 100,
-            trailingSellPullbackPercent: (paramsToUse.defaultParams.trailingSellPullbackPercent || 10) / 100,
-            enableConsecutiveIncrementalBuyGrid: paramsToUse.defaultParams.enableConsecutiveIncrementalBuyGrid || false,
-            gridConsecutiveIncrement: (paramsToUse.defaultParams.gridConsecutiveIncrement || 5) / 100,
-            enableConsecutiveIncrementalSellProfit: paramsToUse.defaultParams.enableConsecutiveIncrementalSellProfit || false
-          },
-          stocks: stocksWithParams // Send stocks with their specific parameters
-        })
+        body: JSON.stringify(requestBody)
       });
 
       const data = await response.json();
@@ -267,8 +281,16 @@ const PortfolioBacktestPage = () => {
     setParameters(newParams);
   };
 
-  const handleSubmit = () => {
-    runBacktest(parameters);
+  const handleSubmit = (submitParams) => {
+    // Use submitParams if provided (includes _betaScaling from form), otherwise use current parameters
+    const paramsToUse = submitParams || parameters;
+
+    // Update state with the submitted parameters (including _betaScaling)
+    if (submitParams) {
+      setParameters(submitParams);
+    }
+
+    runBacktest(paramsToUse);
   };
 
   return (

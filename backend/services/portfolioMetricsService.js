@@ -27,10 +27,19 @@ function calculatePortfolioMetrics(portfolio, config, priceDataMap) {
   const rejectedOrders = portfolio.rejectedOrders;
   const capitalFlow = calculateCapitalFlow(portfolio);
 
+  // Transform parameters for frontend compatibility
+  const frontendParameters = {
+    ...config,
+    // Transform betaScaling to _betaScaling for frontend
+    _betaScaling: config.betaScaling
+  };
+  // Remove the backend-style betaScaling key
+  delete frontendParameters.betaScaling;
+
   return {
     success: true,
     portfolioRunId,  // NEW
-    parameters: config,  // NEW: Include parameters for URL generation
+    parameters: frontendParameters,  // NEW: Include parameters for URL generation (frontend format)
     portfolioSummary,
     stockResults,
     capitalUtilizationTimeSeries,

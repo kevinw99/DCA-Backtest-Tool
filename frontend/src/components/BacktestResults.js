@@ -930,13 +930,13 @@ const BacktestResults = ({ data, chartData: priceData, metadata }) => {
             {/* Dynamic Grid Parameters */}
             <div className="parameter-card">
               <span className="parameter-label">Dynamic Grid</span>
-              <span className="parameter-value">{priceData.backtestParameters.enableDynamicGrid !== false ? 'Enabled' : 'Disabled'}</span>
+              <span className="parameter-value">{priceData.backtestParameters.enableDynamicGrid === true ? 'Enabled' : 'Disabled'}</span>
             </div>
-            {priceData.backtestParameters.enableDynamicGrid !== false && (
+            {priceData.backtestParameters.enableDynamicGrid === true && (
               <>
                 <div className="parameter-card">
                   <span className="parameter-label">Normalize to Reference</span>
-                  <span className="parameter-value">{priceData.backtestParameters.normalizeToReference !== false ? 'Yes' : 'No'}</span>
+                  <span className="parameter-value">{priceData.backtestParameters.normalizeToReference === true ? 'Yes' : 'No'}</span>
                 </div>
                 <div className="parameter-card">
                   <span className="parameter-label">Grid Multiplier</span>
@@ -958,7 +958,7 @@ const BacktestResults = ({ data, chartData: priceData, metadata }) => {
             )}
             <div className="parameter-card">
               <span className="parameter-label">Consecutive Incremental Sell Profit</span>
-              <span className="parameter-value">{priceData.backtestParameters.enableConsecutiveIncrementalSellProfit !== false ? 'Enabled' : 'Disabled'}</span>
+              <span className="parameter-value">{priceData.backtestParameters.enableConsecutiveIncrementalSellProfit === true ? 'Enabled' : 'Disabled'}</span>
             </div>
 
             {/* Beta Scaling Information */}

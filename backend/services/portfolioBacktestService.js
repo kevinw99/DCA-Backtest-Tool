@@ -284,10 +284,38 @@ async function runPortfolioBacktest(config) {
 
         console.log(`📊 Applying beta scaling for ${symbol}: beta=${beta}, coefficient=${coefficient}`);
 
-        // Apply beta scaling to parameters
-        params = parameterCorrelationService.applyBetaAdjustment(params, beta, coefficient);
+        // Calculate beta-adjusted parameters
+        const betaResult = parameterCorrelationService.calculateBetaAdjustedParameters(
+          beta,
+          coefficient,
+          params  // Pass current params as base
+        );
+
+        // Log warnings if any
+        if (betaResult.warnings && betaResult.warnings.length > 0) {
+          console.warn(`⚠️  Beta scaling warnings for ${symbol}:`, betaResult.warnings);
+        }
+
+        // Merge adjusted parameters back, preserving non-scalable params
+        params = {
+          ...params,  // Keep all other params (maxLots, lotSizeUsd, etc.)
+          ...betaResult.adjustedParameters,  // Apply scaled parameters
+          // Store beta info for transparency
+          _betaScaling: {
+            beta,
+            coefficient,
+            betaFactor: betaResult.betaFactor
+          }
+        };
+
+        console.log(`✅ Beta-adjusted params for ${symbol}:`, {
+          gridInterval: params.gridIntervalPercent,
+          profitReq: params.profitRequirement,
+          betaFactor: betaResult.betaFactor
+        });
       } catch (error) {
-        console.warn(`⚠️  Beta scaling failed for ${symbol}, using unadjusted parameters:`, error.message);
+        console.error(`❌ Beta scaling ERROR for ${symbol}:`, error.message);
+        console.warn(`   Using unadjusted parameters`);
       }
     }
 
