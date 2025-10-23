@@ -180,6 +180,18 @@ const PortfolioBacktestForm = ({ parameters, onParametersChange, onSubmit, loadi
     // Extract top-level fields vs defaultParams fields
     const { totalCapital, lotSizeUsd, maxLotsPerStock, stocks, startDate, endDate, ...defaultFields } = newParams;
 
+    // Remove top-level fields from defaultParams to prevent conflicts
+    // (In case old localStorage data has them in the wrong place)
+    const {
+      totalCapital: _removeTC,
+      lotSizeUsd: _removeLot,
+      maxLotsPerStock: _removeMax,
+      stocks: _removeStocks,
+      startDate: _removeStart,
+      endDate: _removeEnd,
+      ...cleanedDefaultParams
+    } = parameters.defaultParams || {};
+
     onParametersChange({
       ...parameters,
       ...(totalCapital !== undefined && { totalCapital }),
@@ -189,7 +201,7 @@ const PortfolioBacktestForm = ({ parameters, onParametersChange, onSubmit, loadi
       ...(startDate !== undefined && { startDate }),
       ...(endDate !== undefined && { endDate }),
       defaultParams: {
-        ...parameters.defaultParams,
+        ...cleanedDefaultParams,
         ...defaultFields
       }
     });
