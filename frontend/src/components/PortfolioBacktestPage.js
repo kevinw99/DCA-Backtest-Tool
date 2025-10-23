@@ -42,6 +42,10 @@ const PortfolioBacktestPage = () => {
         enableConsecutiveIncrementalBuyGrid: false,
         gridConsecutiveIncrement: 5,
         enableConsecutiveIncrementalSellProfit: false,
+        // Dynamic Grid Parameters (explicit false to override backend defaults)
+        enableDynamicGrid: false,
+        normalizeToReference: false,
+        dynamicGridMultiplier: 1.0,
         // Capital Optimization Parameters
         enableCashYield: false,
         cashYieldAnnualPercent: 4.5,
@@ -105,6 +109,10 @@ const PortfolioBacktestPage = () => {
           enableConsecutiveIncrementalBuyGrid: searchParams.get('consecutiveBuyGrid') === 'true',
           gridConsecutiveIncrement: parseFloat(searchParams.get('gridConsecutiveIncrement')) || 5,
           enableConsecutiveIncrementalSellProfit: searchParams.get('consecutiveSellProfit') === 'true',
+          // Dynamic Grid Parameters
+          enableDynamicGrid: searchParams.get('enableDynamicGrid') === 'true',
+          normalizeToReference: searchParams.get('normalizeToReference') === 'true',
+          dynamicGridMultiplier: searchParams.get('dynamicGridMultiplier') ? parseFloat(searchParams.get('dynamicGridMultiplier')) : undefined,
           // Capital Optimization Parameters
           enableCashYield: searchParams.get('enableCashYield') === 'true',
           cashYieldAnnualPercent: parseFloat(searchParams.get('cashYieldAnnualPercent')) || 4.5,
@@ -170,6 +178,13 @@ const PortfolioBacktestPage = () => {
         params.set('consecutiveBuyGrid', parameters.defaultParams.enableConsecutiveIncrementalBuyGrid || false);
         params.set('gridConsecutiveIncrement', parameters.defaultParams.gridConsecutiveIncrement || 5);
         params.set('consecutiveSellProfit', parameters.defaultParams.enableConsecutiveIncrementalSellProfit || false);
+
+        // Dynamic Grid Parameters (always include to override backend defaults)
+        params.set('enableDynamicGrid', parameters.defaultParams.enableDynamicGrid !== undefined ? parameters.defaultParams.enableDynamicGrid : false);
+        params.set('normalizeToReference', parameters.defaultParams.normalizeToReference !== undefined ? parameters.defaultParams.normalizeToReference : false);
+        if (parameters.defaultParams.dynamicGridMultiplier !== undefined) {
+          params.set('dynamicGridMultiplier', parameters.defaultParams.dynamicGridMultiplier);
+        }
 
         // Capital Optimization Parameters
         params.set('enableCashYield', parameters.defaultParams.enableCashYield || false);
@@ -276,7 +291,11 @@ const PortfolioBacktestPage = () => {
             trailingSellPullbackPercent: (paramsToUse.defaultParams.trailingSellPullbackPercent || 10) / 100,
             enableConsecutiveIncrementalBuyGrid: paramsToUse.defaultParams.enableConsecutiveIncrementalBuyGrid || false,
             gridConsecutiveIncrement: (paramsToUse.defaultParams.gridConsecutiveIncrement || 5) / 100,
-            enableConsecutiveIncrementalSellProfit: paramsToUse.defaultParams.enableConsecutiveIncrementalSellProfit || false
+            enableConsecutiveIncrementalSellProfit: paramsToUse.defaultParams.enableConsecutiveIncrementalSellProfit || false,
+            // Dynamic Grid Parameters - always send to override backend defaults
+            enableDynamicGrid: paramsToUse.defaultParams.enableDynamicGrid !== undefined ? paramsToUse.defaultParams.enableDynamicGrid : false,
+            normalizeToReference: paramsToUse.defaultParams.normalizeToReference !== undefined ? paramsToUse.defaultParams.normalizeToReference : false,
+            dynamicGridMultiplier: paramsToUse.defaultParams.dynamicGridMultiplier || 1.0
           },
           stocks: stocksWithParams // Send stocks with their specific parameters
         })

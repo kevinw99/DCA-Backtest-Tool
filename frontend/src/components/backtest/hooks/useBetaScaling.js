@@ -21,14 +21,30 @@ import { useState, useCallback } from 'react';
  * Custom hook for beta scaling configuration
  *
  * @param {string|Array} symbol - Stock symbol (not used for calculations, kept for compatibility)
+ * @param {Object} defaultParams - Default parameters (may contain beta scaling config)
+ * @param {string} mode - 'single', 'batch', or 'portfolio'
+ * @param {Object} initialBetaScaling - Initial beta scaling config from URL/parameters
  * @returns {Object} Beta scaling configuration state and functions
  */
-export function useBetaScaling(symbol) {
-  const [betaConfig, setBetaConfig] = useState({
-    enableBetaScaling: false,
-    coefficient: 1.0,
-    beta: null,  // Manual beta override (null = let backend fetch)
-    isManualBetaOverride: false
+export function useBetaScaling(symbol, defaultParams = {}, mode = 'single', initialBetaScaling = null) {
+  const [betaConfig, setBetaConfig] = useState(() => {
+    // Initialize from URL/parameters if provided
+    if (initialBetaScaling && initialBetaScaling.enabled) {
+      return {
+        enableBetaScaling: true,
+        coefficient: initialBetaScaling.coefficient || 1.0,
+        beta: initialBetaScaling.beta || null,
+        isManualBetaOverride: initialBetaScaling.beta ? true : false
+      };
+    }
+
+    // Default initial state
+    return {
+      enableBetaScaling: false,
+      coefficient: 1.0,
+      beta: null,  // Manual beta override (null = let backend fetch)
+      isManualBetaOverride: false
+    };
   });
 
   /**

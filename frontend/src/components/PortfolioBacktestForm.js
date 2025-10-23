@@ -42,7 +42,7 @@ const PortfolioBacktestForm = ({ parameters, onParametersChange, onSubmit, loadi
     'portfolio'
   );
 
-  // Beta scaling hook
+  // Beta scaling hook - pass initial config from parameters._betaScaling
   const {
     enableBetaScaling,
     betaData,
@@ -52,7 +52,7 @@ const PortfolioBacktestForm = ({ parameters, onParametersChange, onSubmit, loadi
     toggleBetaScaling,
     updateCoefficient,
     updateBeta
-  } = useBetaScaling(parameters.stocks || [], parameters.defaultParams, 'portfolio');
+  } = useBetaScaling(parameters.stocks || [], parameters.defaultParams, 'portfolio', parameters._betaScaling);
 
   // Fetch betas for portfolio stocks
   const portfolioBetas = useStockBetas(enableBetaScaling ? (parameters.stocks || []) : []);
