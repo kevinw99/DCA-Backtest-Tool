@@ -409,9 +409,6 @@ async function runPortfolioBacktest(config) {
         console.log(`   💰 Adaptive Lot Sizing: ${symbol} lot size adjusted to $${currentLotSize.toFixed(2)} (cash reserve: $${portfolio.cashReserve.toFixed(2)})`);
       }
 
-      // Determine if buy is enabled based on capital availability
-      const hasCapital = portfolio.cashReserve >= currentLotSize;
-
       // Determine if sell should be deferred based on cash abundance
       const shouldDeferSell = capitalOptimizer
         ? capitalOptimizer.shouldDeferSelling(portfolio.cashReserve)
@@ -422,12 +419,16 @@ async function runPortfolioBacktest(config) {
       const txCountBefore = stateBefore.enhancedTransactions.length;
 
       // Process one day using executor with correct day index
+      // IMPORTANT: Always enable buying to detect buy signals, then check capital after
       // Note: sellEnabled=false means skip selling, true means allow selling
       await executor.processDay(dayData, dayIndex, {
-        buyEnabled: hasCapital,
+        buyEnabled: true,  // Always allow buy signal detection
         sellEnabled: !shouldDeferSell,  // Defer selling when cash is abundant
         lotSizeUsd: currentLotSize
       });
+
+      // Check capital availability AFTER buy signal is evaluated
+      const hasCapital = portfolio.cashReserve >= currentLotSize;
 
       // Increment day index for this executor
       executorDayIndices.set(symbol, dayIndex + 1);
