@@ -1190,6 +1190,14 @@ app.post('/api/backtest/batch', validation.validateBatchBacktestParams, async (r
       options.parameterRanges.symbols = options.symbols;
     }
 
+    // If startDate/endDate are at top level, merge them into parameterRanges
+    if (options.startDate && !options.parameterRanges.startDate) {
+      options.parameterRanges.startDate = options.startDate;
+    }
+    if (options.endDate && !options.parameterRanges.endDate) {
+      options.parameterRanges.endDate = options.endDate;
+    }
+
     // ASYNC MODE: Create session and run backtest in background
     if (isAsync || isAsync === 'true') {
       const sessionId = sessionManager.createSession();
@@ -1267,6 +1275,14 @@ app.post('/api/backtest/short-batch', validation.validateBatchBacktestParams, as
     // If symbols are at top level, merge them into parameterRanges
     if (options.symbols && !options.parameterRanges.symbols) {
       options.parameterRanges.symbols = options.symbols;
+    }
+
+    // If startDate/endDate are at top level, merge them into parameterRanges
+    if (options.startDate && !options.parameterRanges.startDate) {
+      options.parameterRanges.startDate = options.startDate;
+    }
+    if (options.endDate && !options.parameterRanges.endDate) {
+      options.parameterRanges.endDate = options.endDate;
     }
 
     // Set up progress tracking for long-running batch tests
