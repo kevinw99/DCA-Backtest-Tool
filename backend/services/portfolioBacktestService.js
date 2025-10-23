@@ -414,21 +414,37 @@ async function runPortfolioBacktest(config) {
         ? capitalOptimizer.shouldDeferSelling(portfolio.cashReserve)
         : false;
 
+      // Check capital availability BEFORE processing
+      const hasCapital = portfolio.cashReserve >= currentLotSize;
+
+      // If no capital, check if a buy signal would trigger (for rejected order tracking)
+      if (!hasCapital) {
+        const executorState = executor.getState();
+        const buySignal = dcaSignalEngine.evaluateBuySignal(
+          executorState,
+          params,
+          dayData.close
+        );
+
+        if (buySignal.triggered) {
+          console.log(`   ❌ BUY SIGNAL REJECTED for ${symbol} on ${date} - insufficient capital (need ${currentLotSize}, have ${portfolio.cashReserve})`);
+          logRejectedOrder(portfolio, stock, buySignal, dayData, date, currentLotSize);
+          rejectedCount++;
+        }
+      }
+
       // Get transaction count before processing
       const stateBefore = executor.getState();
       const txCountBefore = stateBefore.enhancedTransactions.length;
 
       // Process one day using executor with correct day index
-      // IMPORTANT: Always enable buying to detect buy signals, then check capital after
+      // Note: buyEnabled=false prevents execution when no capital (but updates state)
       // Note: sellEnabled=false means skip selling, true means allow selling
       await executor.processDay(dayData, dayIndex, {
-        buyEnabled: true,  // Always allow buy signal detection
+        buyEnabled: hasCapital,  // Only allow buy execution if capital available
         sellEnabled: !shouldDeferSell,  // Defer selling when cash is abundant
         lotSizeUsd: currentLotSize
       });
-
-      // Check capital availability AFTER buy signal is evaluated
-      const hasCapital = portfolio.cashReserve >= currentLotSize;
 
       // Increment day index for this executor
       executorDayIndices.set(symbol, dayIndex + 1);
@@ -437,27 +453,17 @@ async function runPortfolioBacktest(config) {
       const stateAfter = executor.getState();
       const txCountAfter = stateAfter.enhancedTransactions.length;
 
-      if (i % 100 === 0 && txCountAfter > 0) {
-        console.log(`📊 DEBUG Day ${i}: txCountBefore=${txCountBefore}, txCountAfter=${txCountAfter}, hasCapital=${hasCapital}`);
-      }
-
       // Check if a new transaction occurred
       if (txCountAfter > txCountBefore) {
         // Get the latest transaction
         const tx = stateAfter.enhancedTransactions[txCountAfter - 1];
 
         if (tx.type.includes('BUY')) {
-          if (hasCapital) {
-            // Execute buy: deduct from capital pool
-            portfolio.cashReserve -= tx.value;
-            portfolio.deployedCapital += tx.value;
-            stock.addBuy(tx);
-            transactionCount++;
-          } else {
-            // Rejected due to insufficient capital
-            logRejectedOrder(portfolio, stock, { triggered: true }, dayData, date, currentLotSize);
-            rejectedCount++;
-          }
+          // Buy was executed (only possible if hasCapital was true)
+          portfolio.cashReserve -= tx.value;
+          portfolio.deployedCapital += tx.value;
+          stock.addBuy(tx);
+          transactionCount++;
         } else {
           // SELL or other transaction types
           // Add full sell value to cash (includes both original cost and profit/loss)
