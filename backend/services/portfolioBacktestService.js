@@ -517,6 +517,39 @@ async function runPortfolioBacktest(config) {
   const portfolioMetricsService = require('./portfolioMetricsService');
   const results = portfolioMetricsService.calculatePortfolioMetrics(portfolio, config, priceDataMap);
 
+  // 6a. Add skipped stocks to results with error information
+  const skippedStocks = priceDataMap._skippedStocks || [];
+  if (skippedStocks.length > 0) {
+    // Add skipped stocks to stockResults with special error indicators
+    for (const { symbol, error } of skippedStocks) {
+      results.stockResults.push({
+        symbol,
+        skipped: true,
+        error,
+        // All metrics null/zero for skipped stocks
+        totalPNL: 0,
+        totalPNLPercent: 0,
+        contributionPercent: 0,
+        realizedPNL: 0,
+        unrealizedPNL: 0,
+        capitalDeployed: 0,
+        maxCapitalDeployed: 0,
+        marketValue: 0,
+        lotsHeld: 0,
+        totalBuys: 0,
+        totalSells: 0,
+        rejectedBuys: 0,
+        rejectedBuyValues: 0,
+        cagr: 0,
+        firstBuyDate: null,
+        lastBuyDate: null
+      });
+    }
+
+    // Include summary of skipped stocks in results
+    results.skippedStocks = skippedStocks;
+  }
+
   // 7. Calculate Buy & Hold comparison
   const portfolioBuyAndHoldService = require('./portfolioBuyAndHoldService');
   const buyAndHoldResults = portfolioBuyAndHoldService.calculatePortfolioBuyAndHold(
@@ -629,13 +662,75 @@ async function loadAllPriceData(stocks, startDate, endDate) {
       }
     }
 
-    const prices = await database.getPricesWithIndicators(stock.id, startDate, endDate);
+    let prices = await database.getPricesWithIndicators(stock.id, startDate, endDate);
 
     // Validate price data has required fields
     if (prices.length === 0) {
       console.warn(`⚠️  No price data found for ${symbol} in date range ${startDate} to ${endDate}`);
-      console.warn(`   Skipping ${symbol} from portfolio backtest`);
-      return { symbol, dateMap: new Map(), skipped: true, reason: 'No price data available' };
+
+      // Check if the stock exists but has no data at all (latestPriceDate is null)
+      if (latestPriceDate === null) {
+        console.log(`📡 Stock ${symbol} exists but has no price data. Attempting to fetch all historical data...`);
+
+        try {
+          const stockDataService = require('./stockDataService');
+          await stockDataService.updateStockData(stock.id, symbol, {
+            updatePrices: true,
+            updateFundamentals: false,
+            updateCorporateActions: false
+          });
+
+          // Retry loading prices after fetch
+          prices = await database.getPricesWithIndicators(stock.id, startDate, endDate);
+
+          if (prices.length > 0) {
+            console.log(`✅ Successfully fetched ${prices.length} price records for ${symbol}`);
+          } else {
+            console.warn(`❌ Failed to fetch price data for ${symbol} - no data available from provider`);
+            console.warn(`   Skipping ${symbol} from portfolio backtest`);
+            return {
+              symbol,
+              dateMap: new Map(),
+              skipped: true,
+              error: {
+                type: 'NO_DATA_AFTER_FETCH',
+                message: `No price data available from provider for ${symbol}`,
+                attempted: true,
+                fetchAttempted: true
+              }
+            };
+          }
+        } catch (fetchError) {
+          console.error(`❌ Error fetching data for ${symbol}:`, fetchError.message);
+          console.warn(`   Skipping ${symbol} from portfolio backtest`);
+          return {
+            symbol,
+            dateMap: new Map(),
+            skipped: true,
+            error: {
+              type: 'FETCH_ERROR',
+              message: `Failed to fetch price data: ${fetchError.message}`,
+              attempted: true,
+              fetchAttempted: true,
+              fetchError: fetchError.message
+            }
+          };
+        }
+      } else {
+        // Stock has some data but none in the requested date range
+        console.warn(`   Skipping ${symbol} from portfolio backtest`);
+        return {
+          symbol,
+          dateMap: new Map(),
+          skipped: true,
+          error: {
+            type: 'NO_DATA_IN_RANGE',
+            message: `No price data available in date range ${startDate} to ${endDate}`,
+            attempted: false,
+            latestAvailableDate: latestPriceDate
+          }
+        };
+      }
     }
 
     // Check first few prices for required fields
@@ -645,7 +740,17 @@ async function loadAllPriceData(stocks, startDate, endDate) {
       if (!price.close || price.close === null || price.close === undefined) {
         console.warn(`⚠️  Invalid price data for ${symbol}: missing 'close' field on ${price.date}`);
         console.warn(`   Skipping ${symbol} from portfolio backtest`);
-        return { symbol, dateMap: new Map(), skipped: true, reason: 'Missing required price fields' };
+        return {
+          symbol,
+          dateMap: new Map(),
+          skipped: true,
+          error: {
+            type: 'INVALID_DATA',
+            message: `Missing required price fields (close) on ${price.date}`,
+            attempted: false,
+            invalidDate: price.date
+          }
+        };
       }
     }
 
@@ -662,9 +767,10 @@ async function loadAllPriceData(stocks, startDate, endDate) {
   const results = await Promise.all(pricePromises);
 
   const skippedStocks = [];
-  for (const { symbol, dateMap, skipped, reason } of results) {
+  for (const result of results) {
+    const { symbol, dateMap, skipped, error } = result;
     if (skipped) {
-      skippedStocks.push({ symbol, reason });
+      skippedStocks.push({ symbol, error });
       continue;  // Skip this stock
     }
     priceDataMap.set(symbol, dateMap);
@@ -672,11 +778,17 @@ async function loadAllPriceData(stocks, startDate, endDate) {
 
   if (skippedStocks.length > 0) {
     console.warn(`\n⚠️  WARNING: ${skippedStocks.length} stock(s) skipped due to missing/invalid price data:`);
-    for (const { symbol, reason } of skippedStocks) {
-      console.warn(`   - ${symbol}: ${reason}`);
+    for (const { symbol, error } of skippedStocks) {
+      console.warn(`   - ${symbol}: ${error.message}`);
+      if (error.fetchAttempted) {
+        console.warn(`     Fetch attempted: Yes`);
+      }
     }
     console.warn('');
   }
+
+  // Store skipped stocks in priceDataMap metadata for later use
+  priceDataMap._skippedStocks = skippedStocks;
 
   return priceDataMap;
 }

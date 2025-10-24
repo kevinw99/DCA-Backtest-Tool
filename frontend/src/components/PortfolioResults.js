@@ -29,12 +29,47 @@ const PortfolioResults = ({ data }) => {
     portfolioRunId,
     parameters,
     buyAndHoldSummary,
-    comparison
+    comparison,
+    skippedStocks
   } = data;
+
+  // Count skipped stocks
+  const skippedCount = skippedStocks?.length || 0;
+  const hasSkippedStocks = skippedCount > 0;
 
   return (
     <div className="portfolio-results">
       <PortfolioSummaryCard summary={portfolioSummary} comparison={comparison} />
+
+      {/* Skipped Stocks Warning Banner */}
+      {hasSkippedStocks && (
+        <div className="skipped-stocks-banner">
+          <div className="banner-header">
+            <span className="banner-icon">⚠️</span>
+            <h3 className="banner-title">
+              {skippedCount} {skippedCount === 1 ? 'Stock' : 'Stocks'} Skipped Due to Errors
+            </h3>
+          </div>
+          <div className="banner-content">
+            <p className="banner-message">
+              The following {skippedCount === 1 ? 'stock was' : 'stocks were'} excluded from the portfolio backtest due to data issues:
+            </p>
+            <ul className="skipped-stocks-list">
+              {skippedStocks.map((skipped, idx) => (
+                <li key={idx} className="skipped-stock-item">
+                  <strong>{skipped.symbol}</strong>: {skipped.error?.message || 'Unknown error'}
+                  {skipped.error?.type && (
+                    <span className="error-type-badge">{skipped.error.type}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <p className="banner-action">
+              Click on the stock rows in the Stock Performance Breakdown below to view detailed error information and troubleshooting steps.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Backend API Test Command */}
       {parameters && (

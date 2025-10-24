@@ -62,6 +62,10 @@ const StockPerformanceTable = ({ stocks, portfolioRunId, parameters, buyAndHoldS
     if (!stocksWithBH) return [];
 
     return [...stocksWithBH].sort((a, b) => {
+      // Always sort skipped stocks to the end
+      if (a.skipped && !b.skipped) return 1;
+      if (!a.skipped && b.skipped) return -1;
+
       const aVal = a[sortField] || 0;
       const bVal = b[sortField] || 0;
 
@@ -220,15 +224,26 @@ const StockPerformanceTable = ({ stocks, portfolioRunId, parameters, buyAndHoldS
           {sortedStocks.map(stock => (
             <React.Fragment key={stock.symbol}>
               <tr
-                className={`stock-row ${expandedStock === stock.symbol ? 'expanded' : ''}`}
+                className={`stock-row ${expandedStock === stock.symbol ? 'expanded' : ''} ${stock.skipped ? 'stock-row-error' : ''}`}
                 onClick={(e) => handleToggleExpand(stock.symbol, e)}
               >
                 <td className="expand-icon">
                   {expandedStock === stock.symbol ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                 </td>
-                <td className="stock-symbol">{stock.symbol}</td>
+                <td className="stock-symbol">
+                  {stock.skipped && <span className="error-indicator" title="Stock has errors">⚠️ </span>}
+                  {stock.symbol}
+                </td>
                 <td>
-                  {buildStockResultsUrl(stock) && (
+                  {stock.skipped ? (
+                    <button
+                      className="stock-link-btn error-btn"
+                      disabled
+                      title="Cannot view details - stock has errors"
+                    >
+                      Error
+                    </button>
+                  ) : buildStockResultsUrl(stock) && (
                     <button
                       className="stock-link-btn"
                       onClick={(e) => handleStockLinkClick(buildStockResultsUrl(stock), e)}
@@ -239,40 +254,44 @@ const StockPerformanceTable = ({ stocks, portfolioRunId, parameters, buyAndHoldS
                     </button>
                   )}
                 </td>
-                <td>{stock.lotsHeld}</td>
-                <td>{formatCurrency(stock.capitalDeployed)}</td>
-                <td>{formatCurrency(stock.marketValue)}</td>
-                <td className={stock.totalPNL >= 0 ? 'positive' : 'negative'}>
-                  {formatCurrency(stock.totalPNL)}
+                <td>{stock.skipped ? '-' : stock.lotsHeld}</td>
+                <td>{stock.skipped ? '-' : formatCurrency(stock.capitalDeployed)}</td>
+                <td>{stock.skipped ? '-' : formatCurrency(stock.marketValue)}</td>
+                <td className={stock.skipped ? '' : (stock.totalPNL >= 0 ? 'positive' : 'negative')}>
+                  {stock.skipped ? '-' : formatCurrency(stock.totalPNL)}
                 </td>
-                <td className={stock.stockReturnPercent >= 0 ? 'positive' : 'negative'}>
-                  {safeToFixed(stock.stockReturnPercent, 2)}%
+                <td className={stock.skipped ? '' : (stock.stockReturnPercent >= 0 ? 'positive' : 'negative')}>
+                  {stock.skipped ? '-' : `${safeToFixed(stock.stockReturnPercent, 2)}%`}
                 </td>
-                <td className={`bh-column ${stock.bhTotalPNL !== null && stock.bhTotalPNL >= 0 ? 'positive' : stock.bhTotalPNL !== null ? 'negative' : ''}`}>
-                  {stock.bhTotalPNL !== null ? formatCurrency(stock.bhTotalPNL) : '-'}
+                <td className={`bh-column ${stock.skipped ? '' : (stock.bhTotalPNL !== null && stock.bhTotalPNL >= 0 ? 'positive' : stock.bhTotalPNL !== null ? 'negative' : '')}`}>
+                  {stock.skipped ? '-' : (stock.bhTotalPNL !== null ? formatCurrency(stock.bhTotalPNL) : '-')}
                 </td>
-                <td className={`bh-column ${stock.bhReturnPercent !== null && stock.bhReturnPercent >= 0 ? 'positive' : stock.bhReturnPercent !== null ? 'negative' : ''}`}>
-                  {stock.bhReturnPercent !== null ? `${safeToFixed(stock.bhReturnPercent, 2)}%` : '-'}
+                <td className={`bh-column ${stock.skipped ? '' : (stock.bhReturnPercent !== null && stock.bhReturnPercent >= 0 ? 'positive' : stock.bhReturnPercent !== null ? 'negative' : '')}`}>
+                  {stock.skipped ? '-' : (stock.bhReturnPercent !== null ? `${safeToFixed(stock.bhReturnPercent, 2)}%` : '-')}
                 </td>
-                <td className={`diff-column ${stock.diffPNL !== null && stock.diffPNL >= 0 ? 'positive' : stock.diffPNL !== null ? 'negative' : ''}`}>
-                  {stock.diffPNL !== null ? formatCurrency(stock.diffPNL) : '-'}
+                <td className={`diff-column ${stock.skipped ? '' : (stock.diffPNL !== null && stock.diffPNL >= 0 ? 'positive' : stock.diffPNL !== null ? 'negative' : '')}`}>
+                  {stock.skipped ? '-' : (stock.diffPNL !== null ? formatCurrency(stock.diffPNL) : '-')}
                 </td>
-                <td className={`diff-column ${stock.diffReturnPercent !== null && stock.diffReturnPercent >= 0 ? 'positive' : stock.diffReturnPercent !== null ? 'negative' : ''}`}>
-                  {stock.diffReturnPercent !== null ? `${safeToFixed(stock.diffReturnPercent, 2)}%` : '-'}
+                <td className={`diff-column ${stock.skipped ? '' : (stock.diffReturnPercent !== null && stock.diffReturnPercent >= 0 ? 'positive' : stock.diffReturnPercent !== null ? 'negative' : '')}`}>
+                  {stock.skipped ? '-' : (stock.diffReturnPercent !== null ? `${safeToFixed(stock.diffReturnPercent, 2)}%` : '-')}
                 </td>
-                <td>{safeToFixed(stock.cagr, 2)}%</td>
-                <td>{safeToFixed(stock.contributionToPortfolioReturn, 2)}%</td>
-                <td>{stock.totalBuys}</td>
-                <td>{stock.totalSells}</td>
+                <td>{stock.skipped ? '-' : `${safeToFixed(stock.cagr, 2)}%`}</td>
+                <td>{stock.skipped ? '-' : `${safeToFixed(stock.contributionToPortfolioReturn, 2)}%`}</td>
+                <td>{stock.skipped ? '-' : stock.totalBuys}</td>
+                <td>{stock.skipped ? '-' : stock.totalSells}</td>
                 <td className={stock.rejectedBuys > 0 ? 'highlight' : ''}>
-                  {stock.rejectedBuys}
+                  {stock.skipped ? '-' : stock.rejectedBuys}
                 </td>
               </tr>
 
               {expandedStock === stock.symbol && (
                 <tr className="stock-detail-row">
                   <td colSpan="17">
-                    <StockDetailView stock={stock} />
+                    {stock.skipped ? (
+                      <ErrorDetailView stock={stock} />
+                    ) : (
+                      <StockDetailView stock={stock} />
+                    )}
                   </td>
                 </tr>
               )}
@@ -286,6 +305,94 @@ const StockPerformanceTable = ({ stocks, portfolioRunId, parameters, buyAndHoldS
           <p>No stock data available</p>
         </div>
       )}
+    </div>
+  );
+};
+
+/**
+ * ErrorDetailView Component
+ * Displays error information for skipped stocks
+ */
+const ErrorDetailView = ({ stock }) => {
+  const error = stock.error || {};
+
+  const getErrorTypeLabel = (type) => {
+    switch (type) {
+      case 'NO_DATA_AFTER_FETCH':
+        return 'No Data Available';
+      case 'FETCH_FAILED':
+        return 'Data Fetch Failed';
+      case 'INVALID_SYMBOL':
+        return 'Invalid Symbol';
+      case 'VALIDATION_ERROR':
+        return 'Validation Error';
+      default:
+        return 'Unknown Error';
+    }
+  };
+
+  const getSuggestion = (type) => {
+    switch (type) {
+      case 'NO_DATA_AFTER_FETCH':
+        return 'The data provider does not have price data for this symbol. This could be due to: delisting, recent IPO, or the symbol not being traded on supported exchanges.';
+      case 'FETCH_FAILED':
+        return 'Failed to retrieve data from the provider. Check your internet connection or try again later.';
+      case 'INVALID_SYMBOL':
+        return 'The stock symbol appears to be invalid. Please verify the symbol is correct.';
+      case 'VALIDATION_ERROR':
+        return 'The stock data failed validation checks. Please contact support if this persists.';
+      default:
+        return 'An unexpected error occurred while processing this stock.';
+    }
+  };
+
+  return (
+    <div className="error-detail">
+      <div className="error-header">
+        <h4>{stock.symbol} - Error Details</h4>
+        <span className="error-badge">{getErrorTypeLabel(error.type)}</span>
+      </div>
+
+      <div className="error-content">
+        <div className="error-message-box">
+          <div className="error-message-label">Error Message:</div>
+          <div className="error-message-text">{error.message || 'No error message available'}</div>
+        </div>
+
+        <div className="error-info-grid">
+          <div className="error-info-item">
+            <span className="error-info-label">Error Type:</span>
+            <span className="error-info-value">{error.type || 'Unknown'}</span>
+          </div>
+          <div className="error-info-item">
+            <span className="error-info-label">Fetch Attempted:</span>
+            <span className="error-info-value">{error.fetchAttempted ? 'Yes' : 'No'}</span>
+          </div>
+          {error.attempted !== undefined && (
+            <div className="error-info-item">
+              <span className="error-info-label">Processing Attempted:</span>
+              <span className="error-info-value">{error.attempted ? 'Yes' : 'No'}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="error-suggestion-box">
+          <div className="error-suggestion-label">Suggestion:</div>
+          <div className="error-suggestion-text">{getSuggestion(error.type)}</div>
+        </div>
+
+        <div className="error-actions">
+          <p className="error-action-text">
+            To resolve this issue:
+          </p>
+          <ul className="error-action-list">
+            <li>Verify the stock symbol is correct and actively traded</li>
+            <li>Check that the selected date range includes trading days for this stock</li>
+            <li>If the symbol is correct, the stock may not have sufficient historical data</li>
+            <li>Try selecting a different date range or remove this stock from the portfolio</li>
+          </ul>
+        </div>
+      </div>
     </div>
   );
 };
