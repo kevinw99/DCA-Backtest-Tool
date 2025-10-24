@@ -1,3 +1,33 @@
+
+  The system logged warnings to the server console but continued with the remaining
+  5 stocks. This is why your portfolio backtest completed successfully even though
+  META and GOOG have no data!
+
+> 1. "The portfolio backtest service silently skips stocks with no price data:". it
+should make attemp to fetch db, only when that fail than log the error, also the
+error should surface on the  result page prominently , not just on console that goes
+ siilently. 2. on result page, it should list all stocks in "Stock Performance
+Breakdown
+Individual stock performance and contribution to portfolio returns. Click rows to
+expand for current holdings and transaction details, or click "View" to see full
+results.
+
+Details
+NVDA    View    6    $180,000    $1,214,974    $1,231,090    586.23%    $718,088
+718.09%    $513,002    -131.85%    38.80%    82.66%    13    7    0
+TSLA    View    5    $150,000    $272,992    $134,273    63.94%    $79,532    79.53%
+    $54,741    -15.59%    15.55%    9.02%    9    4    6
+AMZN    View    2    $60,000    $107,813    $63,498    70.55%    $22,472    22.47%
+  $41,026    48.08%    14.09%    4.26%    5    3    4
+AAPL    View    2    $60,000    $85,174    $31,111    51.85%    $68,978    68.98%
+ -$37,867    -17.13%    9.43%    2.09%    3    1    1
+MSFT    View    1    $30,000    $39,594    $29,431    49.05%    $75,849" , not just
+those stocks that has trades. Make sure all stocks has an entry, and can have 0
+data, or include the error in #1
+
+
+
+
 5. test in #2 and #3 does not have beta scaling enabled, right?  it should carry over the beta scaling settings from portfolio backtest config page.
 
 When beta scaling is enabled on portfolio backtest config page, after running the test and going back to config
