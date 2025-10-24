@@ -1,0 +1,173 @@
+/**
+ * Aligned Charts Container Styles
+ *
+ * Styles for the vertically stacked portfolio charts with shared x-axis
+ */
+
+.aligned-charts-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0; /* No gap - charts should visually align */
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
+}
+
+.aligned-chart-section {
+  margin-bottom: 40px; /* Spacing between chart sections */
+}
+
+.aligned-chart-section:last-child {
+  margin-bottom: 0;
+}
+
+.chart-header {
+  margin-bottom: 15px;
+}
+
+.chart-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: #2d3748;
+}
+
+.chart-description {
+  font-size: 14px;
+  color: #718096;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.chart-wrapper {
+  position: relative;
+}
+
+/* Ensure all Recharts containers have consistent width */
+.chart-wrapper .recharts-wrapper {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* Synchronized cursor styling */
+.recharts-tooltip-cursor {
+  stroke: rgba(0, 0, 0, 0.1);
+  stroke-width: 1px;
+}
+
+/* Legend styles for aligned charts */
+.aligned-chart-section .chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 15px;
+  padding: 12px;
+  background: #f7fafc;
+  border-radius: 6px;
+}
+
+.aligned-chart-section .chart-legend label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #2d3748;
+  user-select: none;
+}
+
+.aligned-chart-section .chart-legend label.disabled {
+  opacity: 0.4;
+}
+
+.aligned-chart-section .chart-legend .legend-color {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.aligned-chart-section .chart-legend input[type="checkbox"] {
+  cursor: pointer;
+}
+
+/* Transaction legend specific styles */
+.aligned-chart-section .transaction-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.aligned-chart-section .transaction-legend h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4a5568;
+  margin: 0;
+  width: 100%;
+}
+
+.aligned-chart-section .transaction-legend .tx-marker {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-left: 4px;
+}
+
+.aligned-chart-section .transaction-legend .tx-marker.buy {
+  background-color: #28a745;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px #28a745;
+}
+
+.aligned-chart-section .transaction-legend .tx-marker.sell {
+  background-color: #fff;
+  border: 2px solid #007bff;
+  box-shadow: 0 0 0 1px #007bff;
+}
+
+.aligned-chart-section .transaction-legend .tx-marker.rejected {
+  background-color: #ffc107;
+  border: 2px solid #ff9800;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .aligned-charts-container {
+    padding: 15px;
+  }
+
+  .chart-title {
+    font-size: 16px;
+  }
+
+  .chart-description {
+    font-size: 13px;
+  }
+
+  .aligned-chart-section .chart-legend {
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .aligned-chart-section .chart-legend label {
+    font-size: 12px;
+  }
+}
+
+/* Print-friendly styles */
+@media print {
+  .aligned-charts-container {
+    box-shadow: none;
+    page-break-inside: avoid;
+  }
+
+  .aligned-chart-section {
+    page-break-inside: avoid;
+  }
+}

@@ -1,16 +1,20 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import PortfolioSummaryCard from './PortfolioSummaryCard';
 import StockPerformanceTable from './StockPerformanceTable';
-import CapitalUtilizationChart from './CapitalUtilizationChart';
-import PortfolioCompositionChart from './PortfolioCompositionChart';
-import MultiStockPriceChart from './MultiStockPriceChart';
 import RejectedOrdersTable from './RejectedOrdersTable';
 import DailyTradesView from './DailyTradesView';
 import PortfolioBuyAndHoldComparison from './PortfolioBuyAndHoldComparison';
-import DCAVsBuyAndHoldChart from './DCAVsBuyAndHoldChart';
+import AlignedChartsContainer from './portfolio/AlignedChartsContainer';
+import { preprocessPortfolioChartData } from '../services/chartDataProcessor';
 import './PortfolioResults.css';
 
 const PortfolioResults = ({ data }) => {
+  // Preprocess chart data for aligned display (must be called before any returns)
+  const chartData = useMemo(
+    () => data ? preprocessPortfolioChartData(data) : null,
+    [data]
+  );
+
   if (!data) {
     return (
       <div className="portfolio-results empty">
@@ -122,63 +126,33 @@ const PortfolioResults = ({ data }) => {
       )}
 
       {comparison && buyAndHoldSummary && (
-        <>
-          <section className="buy-hold-comparison-section">
-            <div className="section-header">
-              <h3>📊 DCA vs Buy & Hold Comparison</h3>
-              <p className="section-description">
-                Compare the active DCA strategy against a passive Buy & Hold approach with equal capital allocation
-              </p>
-            </div>
-            <PortfolioBuyAndHoldComparison
-              comparison={comparison}
-              buyAndHoldSummary={buyAndHoldSummary}
-            />
-          </section>
-
-          <section className="charts-section">
-            <div className="section-header">
-              <h3>📈 Portfolio Value: DCA vs Buy & Hold</h3>
-              <p className="section-description">
-                Visualize how the two strategies compare over time
-              </p>
-            </div>
-            <DCAVsBuyAndHoldChart
-              dcaTimeSeries={capitalUtilizationTimeSeries}
-              buyAndHoldTimeSeries={buyAndHoldSummary.dailyValues}
-            />
-          </section>
-        </>
+        <section className="buy-hold-comparison-section">
+          <div className="section-header">
+            <h3>📊 DCA vs Buy & Hold Comparison</h3>
+            <p className="section-description">
+              Compare the active DCA strategy against a passive Buy & Hold approach with equal capital allocation
+            </p>
+          </div>
+          <PortfolioBuyAndHoldComparison
+            comparison={comparison}
+            buyAndHoldSummary={buyAndHoldSummary}
+          />
+        </section>
       )}
 
-      <section className="charts-section">
+      {/* Aligned Charts Section */}
+      <section className="charts-section aligned-charts-section">
         <div className="section-header">
-          <h3>📊 Portfolio Composition Over Time</h3>
+          <h3>📊 Portfolio Performance Charts</h3>
           <p className="section-description">
-            Visualize how your portfolio composition changes over time with each stock's market value
+            Interactive visualizations showing portfolio performance, composition, and capital utilization over time.
+            All charts share the same timeline for easy comparison.
           </p>
         </div>
-        <PortfolioCompositionChart compositionTimeSeries={portfolioCompositionTimeSeries} />
-      </section>
-
-      <section className="charts-section">
-        <div className="section-header">
-          <h3>📈 Multi-Stock Price Comparison</h3>
-          <p className="section-description">
-            Compare normalized price movements across all stocks with transaction markers
-          </p>
-        </div>
-        <MultiStockPriceChart stockResults={stockResults} />
-      </section>
-
-      <section className="charts-section">
-        <div className="section-header">
-          <h3>⚡ Capital Utilization Metrics</h3>
-          <p className="section-description">
-            Monitor deployed capital, cash reserve, and utilization percentage
-          </p>
-        </div>
-        <CapitalUtilizationChart timeSeries={capitalUtilizationTimeSeries} />
+        <AlignedChartsContainer
+          chartData={chartData}
+          stockResults={stockResults}
+        />
       </section>
 
       <section className="stock-performance-section">

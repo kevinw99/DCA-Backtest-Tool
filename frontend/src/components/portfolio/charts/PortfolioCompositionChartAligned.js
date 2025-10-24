@@ -1,71 +1,50 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import {
-  AreaChart,
-  Area,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend
-} from 'recharts';
-import './PortfolioCompositionChart.css';
+/**
+ * Portfolio Composition Chart (Aligned Version)
+ *
+ * Displays stacked area chart showing market value composition of portfolio
+ * with synchronized x-axis for alignment with other charts.
+ */
 
-// Color palette for stocks
-const STOCK_COLORS = [
-  '#007bff', // Blue
-  '#28a745', // Green
-  '#dc3545', // Red
-  '#ffc107', // Yellow
-  '#17a2b8', // Cyan
-  '#6610f2', // Purple
-  '#fd7e14', // Orange
-  '#20c997', // Teal
-  '#e83e8c', // Pink
-  '#6c757d', // Gray
-  '#343a40', // Dark gray
-  '#f8f9fa', // Light gray
-  '#495057', // Medium gray
-  '#00d4ff', // Light blue
-  '#ff6b6b', // Light red
-];
+import React, { useState, useMemo, useEffect } from 'react';
+import PropTypes from 'prop-types';
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer
+} from 'recharts';
+import {
+  SYNC_ID,
+  getChartMargin,
+  getXAxisConfig,
+  Y_AXIS_CONFIG,
+  GRID_CONFIG,
+  TOOLTIP_CONFIG,
+  formatCurrency,
+  formatDate,
+  STOCK_COLORS,
+  CHART_HEIGHTS
+} from '../../charts/SharedChartConfig';
 
 const CASH_COLOR = '#95d5b2'; // Light green for cash
-const TOTAL_COLOR = '#2d3748'; // Dark gray for total line
 
-const PortfolioCompositionChart = ({ compositionTimeSeries }) => {
+const PortfolioCompositionChartAligned = ({ data, isLastChart }) => {
   // Extract stock symbols from the data (exclude date, cash, total)
   const stockSymbols = useMemo(() => {
-    if (!compositionTimeSeries || compositionTimeSeries.length === 0) return [];
+    if (!data || data.length === 0) return [];
 
-    const firstEntry = compositionTimeSeries[0];
-
-    // DEBUG: Log the last 5 entries to see what values are at the end
-    console.log('🔍 COMPOSITION CHART DEBUG - Last 5 entries:');
-    const lastFive = compositionTimeSeries.slice(-5);
-    lastFive.forEach((entry, idx) => {
-      console.log(`  [${compositionTimeSeries.length - 5 + idx}] ${entry.date}:`, {
-        ...entry,
-        date: undefined  // Don't log date twice
-      });
-    });
-
+    const firstEntry = data[0];
     return Object.keys(firstEntry).filter(
       key => key !== 'date' && key !== 'cash' && key !== 'total'
     );
-  }, [compositionTimeSeries]);
+  }, [data]);
 
   // Initialize all stocks and cash as visible
   const [visibleSeries, setVisibleSeries] = useState({ cash: true });
 
-  // Update visible series when stock symbols change (data loads)
+  // Update visible series when stock symbols change
   useEffect(() => {
     setVisibleSeries(prev => {
       const updated = { ...prev, cash: true };
       stockSymbols.forEach(symbol => {
-        // Only add if not already present, preserving user toggles
         if (!(symbol in prev)) {
           updated[symbol] = true;
         } else {
@@ -80,41 +59,33 @@ const PortfolioCompositionChart = ({ compositionTimeSeries }) => {
     setVisibleSeries(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const formatCurrency = (value) => {
-    if (value >= 1000000) {
-      return `$${(value / 1000000).toFixed(1)}M`;
-    } else if (value >= 1000) {
-      return `$${(value / 1000).toFixed(0)}K`;
-    }
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value);
-  };
+  if (!data || data.length === 0) {
+    return <div className="chart-empty">No composition data available</div>;
+  }
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload || payload.length === 0) return null;
 
     // Find the total value for this data point
-    const dataPoint = compositionTimeSeries.find(d => d.date === label);
+    const dataPoint = data.find(d => d.date === label);
     const totalValue = dataPoint ? dataPoint.total : 0;
 
     return (
-      <div className="custom-tooltip portfolio-composition-tooltip">
-        <p className="tooltip-label">{label}</p>
-        <p className="tooltip-total">
-          <strong>Total Portfolio:</strong> {formatCurrency(totalValue)}
+      <div style={TOOLTIP_CONFIG.contentStyle}>
+        <p style={{ margin: '0 0 8px 0', fontWeight: 'bold', fontSize: '13px' }}>
+          {formatDate(label)}
         </p>
-        <div className="tooltip-breakdown">
+        <p style={{ margin: '4px 0 8px 0', fontWeight: 'bold' }}>
+          Total Portfolio: {formatCurrency(totalValue)}
+        </p>
+        <div>
           {payload
             .filter(entry => entry.value > 0)
             .sort((a, b) => b.value - a.value)
             .map((entry, index) => {
               const percentage = totalValue > 0 ? (entry.value / totalValue * 100).toFixed(1) : 0;
               return (
-                <p key={index} style={{ color: entry.fill || entry.color }}>
+                <p key={index} style={{ color: entry.fill || entry.color, margin: '4px 0' }}>
                   <strong>{entry.name}:</strong>{' '}
                   {formatCurrency(entry.value)} ({percentage}%)
                 </p>
@@ -125,14 +96,9 @@ const PortfolioCompositionChart = ({ compositionTimeSeries }) => {
     );
   };
 
-  if (!compositionTimeSeries || compositionTimeSeries.length === 0) {
-    return <div className="portfolio-composition-chart empty">No composition data available</div>;
-  }
-
   return (
-    <div className="portfolio-composition-chart">
-      <h3>Portfolio Composition Over Time</h3>
-
+    <div className="portfolio-composition-chart-aligned">
+      {/* Legend controls */}
       <div className="chart-legend">
         {stockSymbols.map((symbol, index) => (
           <label key={symbol} className={!visibleSeries[symbol] ? 'disabled' : ''}>
@@ -159,29 +125,17 @@ const PortfolioCompositionChart = ({ compositionTimeSeries }) => {
         </label>
       </div>
 
-      <ResponsiveContainer width="100%" height={450}>
+      <ResponsiveContainer width="100%" height={CHART_HEIGHTS.tall}>
         <AreaChart
-          data={compositionTimeSeries}
-          margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+          data={data}
+          syncId={SYNC_ID}
+          margin={getChartMargin(isLastChart)}
           stackOffset="none"
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-          <XAxis
-            dataKey="date"
-            stroke="#666"
-            tick={{ fontSize: 12 }}
-            tickFormatter={(value) => {
-              const date = new Date(value);
-              return `${date.getMonth() + 1}/${date.getDate()}`;
-            }}
-          />
-          <YAxis
-            stroke="#666"
-            tick={{ fontSize: 12 }}
-            tickFormatter={formatCurrency}
-            domain={[0, 'auto']}
-          />
-          <Tooltip content={<CustomTooltip />} />
+          <CartesianGrid {...GRID_CONFIG} />
+          <XAxis {...getXAxisConfig(isLastChart)} />
+          <YAxis {...Y_AXIS_CONFIG} tickFormatter={formatCurrency} domain={[0, 'auto']} />
+          <Tooltip content={<CustomTooltip />} {...TOOLTIP_CONFIG} />
 
           {/* Stacked areas for each stock */}
           {stockSymbols.map((symbol, index) => (
@@ -217,4 +171,9 @@ const PortfolioCompositionChart = ({ compositionTimeSeries }) => {
   );
 };
 
-export default PortfolioCompositionChart;
+PortfolioCompositionChartAligned.propTypes = {
+  data: PropTypes.arrayOf(PropTypes.object).isRequired,
+  isLastChart: PropTypes.bool.isRequired
+};
+
+export default PortfolioCompositionChartAligned;
