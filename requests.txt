@@ -1,3 +1,7 @@
+http://localhost:3000/portfolio-backtest?stocks=TSLA%2CNVDA%2CMSFT%2CAAPL%2CAMZN%2CGOOG%2CMETA&totalCapital=500000&lotSize=30000&maxLots=10&startDate=2021-09-01&endDate=2025-10-24&gridInterval=10&profitReq=10&stopLoss=30&trailingBuy=false&trailingSell=false&trailingBuyActivation=10&trailingBuyRebound=5&trailingSellActivation=20&trailingSellPullback=10&consecutiveBuyGrid=false&gridConsecutiveIncrement=5&consecutiveSellProfit=false&enableDynamicGrid=false&normalizeToReference=false&dynamicGridMultiplier=1&enableCashYield=false&cashYieldAnnualPercent=4.5&cashYieldMinCash=50000&enableDeferredSelling=true&deferredSellingThreshold=50000&enableAdaptiveLotSizing=false&adaptiveLotCashThreshold=100000&adaptiveLotMaxMultiplier=2&adaptiveLotIncreaseStep=20&enableBetaScaling=true&coefficient=0.5&beta=1
+
+
+
 5. test in #2 and #3 does not have beta scaling enabled, right?  it should carry over the beta scaling settings from portfolio backtest config page.
 
 When beta scaling is enabled on portfolio backtest config page, after running the test and going back to config
