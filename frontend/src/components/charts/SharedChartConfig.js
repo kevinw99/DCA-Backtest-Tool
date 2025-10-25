@@ -43,7 +43,9 @@ export function getXAxisConfig(showXAxis = true) {
       return `${date.getMonth() + 1}/${date.getDate()}`;
     },
     hide: false, // Always show x-axis on all charts
-    height: 50
+    height: 50,
+    type: 'category', // Use category type for consistent spacing
+    allowDataOverflow: false // Don't allow data outside domain
   };
 }
 

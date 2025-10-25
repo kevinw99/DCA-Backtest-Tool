@@ -103,6 +103,15 @@ export function preprocessPortfolioChartData(portfolioData) {
     buyAndHoldSummary?.dailyValues
   ].filter(Boolean);
 
+  // Also include dates from stock price data
+  if (stockResults && stockResults.length > 0) {
+    stockResults.forEach(stock => {
+      if (stock.priceData && stock.priceData.length > 0) {
+        allTimeSeries.push(stock.priceData);
+      }
+    });
+  }
+
   const masterDates = generateMasterDates(allTimeSeries);
 
   // Align DCA vs Buy & Hold data
