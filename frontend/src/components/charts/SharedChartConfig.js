@@ -8,32 +8,32 @@
 // Sync ID used across all charts to synchronize interactions
 export const SYNC_ID = 'portfolioChartsSync';
 
-// Common margins for charts
+// Common margins for charts - all charts now show x-axis
 const BASE_MARGIN = {
   top: 10,
   right: 30,
   left: 60,
-  bottom: 0 // Will be 50 for last chart only
+  bottom: 50 // All charts show x-axis now
 };
 
 /**
  * Get chart margin based on position
- * @param {boolean} isLastChart - Whether this is the last chart in the stack
+ * @param {boolean} isLastChart - Whether this is the last chart in the stack (no longer used)
  * @param {boolean} hasDualAxis - Whether chart has dual y-axes (adds right margin)
  */
-export function getChartMargin(isLastChart, hasDualAxis = false) {
+export function getChartMargin(isLastChart = false, hasDualAxis = false) {
   return {
     ...BASE_MARGIN,
     right: hasDualAxis ? 60 : 30,
-    bottom: isLastChart ? 50 : 0
+    bottom: 50 // All charts have bottom margin for x-axis
   };
 }
 
 /**
  * Common X-axis configuration
- * @param {boolean} showXAxis - Whether to display x-axis (only true for last chart)
+ * @param {boolean} showXAxis - Whether to display x-axis (always true now - all charts show dates)
  */
-export function getXAxisConfig(showXAxis) {
+export function getXAxisConfig(showXAxis = true) {
   return {
     dataKey: 'date',
     stroke: '#666',
@@ -42,8 +42,8 @@ export function getXAxisConfig(showXAxis) {
       const date = new Date(value);
       return `${date.getMonth() + 1}/${date.getDate()}`;
     },
-    hide: !showXAxis,
-    height: showXAxis ? 50 : 0
+    hide: false, // Always show x-axis on all charts
+    height: 50
   };
 }
 

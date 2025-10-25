@@ -7,7 +7,7 @@
 .aligned-charts-container {
   display: flex;
   flex-direction: column;
-  gap: 0; /* No gap - charts should visually align */
+  gap: 0;
   background: white;
   padding: 20px;
   border-radius: 8px;
@@ -16,7 +16,7 @@
 }
 
 .aligned-chart-section {
-  margin-bottom: 40px; /* Spacing between chart sections */
+  margin-bottom: 30px; /* Spacing between chart sections (reduced since all show x-axis now) */
 }
 
 .aligned-chart-section:last-child {
@@ -45,10 +45,19 @@
   position: relative;
 }
 
-/* Ensure all Recharts containers have consistent width */
+/* Ensure all Recharts containers have consistent width and alignment */
 .chart-wrapper .recharts-wrapper {
   margin-left: 0 !important;
   margin-right: 0 !important;
+}
+
+.chart-wrapper .recharts-surface {
+  overflow: visible;
+}
+
+/* Ensure consistent chart container sizing */
+.aligned-chart-section .recharts-responsive-container {
+  width: 100% !important;
 }
 
 /* Synchronized cursor styling */
