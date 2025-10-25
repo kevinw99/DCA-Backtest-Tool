@@ -32,9 +32,10 @@ export function getChartMargin(isLastChart = false, hasDualAxis = false) {
 /**
  * Common X-axis configuration
  * @param {boolean} showXAxis - Whether to display x-axis (always true now - all charts show dates)
+ * @param {Array} domain - Explicit domain to ensure all charts use same range
  */
-export function getXAxisConfig(showXAxis = true) {
-  return {
+export function getXAxisConfig(showXAxis = true, domain = null) {
+  const config = {
     dataKey: 'date',
     stroke: '#666',
     tick: { fontSize: 12 },
@@ -47,6 +48,13 @@ export function getXAxisConfig(showXAxis = true) {
     type: 'category', // Use category type for consistent spacing
     allowDataOverflow: false // Don't allow data outside domain
   };
+
+  // Add explicit domain if provided
+  if (domain && domain.length === 2) {
+    config.domain = domain;
+  }
+
+  return config;
 }
 
 /**

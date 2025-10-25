@@ -23,7 +23,7 @@ import {
   CHART_HEIGHTS
 } from '../../charts/SharedChartConfig';
 
-const CapitalUtilizationChartAligned = ({ data, isLastChart }) => {
+const CapitalUtilizationChartAligned = ({ data, isLastChart, sharedDomain }) => {
   const [visibleLines, setVisibleLines] = useState({
     deployedCapital: true,
     cashReserve: true,
@@ -101,7 +101,7 @@ const CapitalUtilizationChartAligned = ({ data, isLastChart }) => {
           margin={getChartMargin(isLastChart, true)} // hasDualAxis = true
         >
           <CartesianGrid {...GRID_CONFIG} />
-          <XAxis {...getXAxisConfig(isLastChart)} />
+          <XAxis {...getXAxisConfig(isLastChart, sharedDomain)} />
 
           {/* Left Y-axis for dollar amounts */}
           <YAxis

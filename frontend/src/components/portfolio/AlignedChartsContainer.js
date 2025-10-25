@@ -14,6 +14,11 @@ import CapitalUtilizationChartAligned from './charts/CapitalUtilizationChartAlig
 import './AlignedChartsContainer.css';
 
 const AlignedChartsContainer = ({ chartData, stockResults }) => {
+  // Extract shared x-axis domain from master dates
+  const sharedDomain = chartData.masterDates && chartData.masterDates.length > 0
+    ? [chartData.masterDates[0], chartData.masterDates[chartData.masterDates.length - 1]]
+    : ['auto', 'auto'];
+
   // Define charts in order of display
   const charts = [
     {
@@ -68,6 +73,7 @@ const AlignedChartsContainer = ({ chartData, stockResults }) => {
               <ChartComponent
                 {...chart.props}
                 isLastChart={isLastChart}
+                sharedDomain={sharedDomain}
               />
             </div>
           </section>
