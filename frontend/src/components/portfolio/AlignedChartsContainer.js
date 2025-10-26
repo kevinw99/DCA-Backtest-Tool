@@ -3,6 +3,9 @@
  *
  * Container component that displays multiple portfolio charts in a vertically
  * stacked layout with synchronized x-axes for date alignment.
+ *
+ * TODO(TD-001): X-axis alignment not working correctly - charts show different
+ * date ranges despite shared domain/ticks configuration. See TECH_DEBT.md for details.
  */
 
 import React from 'react';
