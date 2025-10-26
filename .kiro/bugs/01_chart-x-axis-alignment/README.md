@@ -13,6 +13,7 @@
 - [Affected Files](./affected-files.md) - Code locations and line numbers
 - [Related Commits](./commits.md) - Git history of attempts
 - [Effort Log](./effort-log.md) - Time spent and remaining work
+- [Screenshots](./screenshots/) - Visual evidence of the bug
 
 ## Summary
 Portfolio charts show different date ranges and tick marks on x-axes despite attempts to synchronize them using shared domain, ticks, and syncId. This makes it difficult for users to compare data across charts.

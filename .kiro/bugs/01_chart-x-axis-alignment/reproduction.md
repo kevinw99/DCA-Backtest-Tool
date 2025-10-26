@@ -82,6 +82,15 @@ Counts are equal, but frontend still renders different x-axis ranges (indicating
 
 ## Visual Evidence
 
+### Screenshots
+See [screenshots directory](./screenshots/) for visual evidence.
+
+**Recommended screenshots to capture:**
+1. Full page showing all 4 charts with misaligned x-axes
+2. Close-up of x-axis tick marks showing different positions
+3. Browser console showing sharedTicks and sharedDomain values
+4. Expected behavior (if available from another page for comparison)
+
 ### What You Should See (Expected)
 ```
 Chart 1: |----Jan----|----Apr----|----Jul----|----Oct----|
