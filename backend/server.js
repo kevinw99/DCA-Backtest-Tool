@@ -1450,6 +1450,7 @@ app.post('/api/portfolio-backtest', async (req, res) => {
       _betaScaling,
       enableBetaScaling,
       coefficient,
+      betaScalingCoefficient,  // Alternative name for coefficient
       beta,
       // Spec 45: Momentum-based trading
       momentumBasedBuy,
@@ -1590,7 +1591,7 @@ app.post('/api/portfolio-backtest', async (req, res) => {
     // Handle beta scaling configuration
     const betaScalingConfig = _betaScaling || {
       enabled: enableBetaScaling || false,
-      coefficient: coefficient || 1.0,
+      coefficient: coefficient || betaScalingCoefficient || 1.0,
       beta: beta
     };
 

@@ -276,6 +276,14 @@ async function runPortfolioBacktest(config) {
       lotSizeUsd: config.lotSizeUsd     // Ensure lot size is passed
     };
 
+    // DEBUG: Log params BEFORE beta scaling
+    console.log(`🔍 [DEBUG] Portfolio - ${symbol} - Params BEFORE beta scaling:`, {
+      gridIntervalPercent: params.gridIntervalPercent,
+      trailingSellActivationPercent: params.trailingSellActivationPercent,
+      profitRequirement: params.profitRequirement,
+      gridConsecutiveIncrement: params.gridConsecutiveIncrement
+    });
+
     // Apply beta scaling if enabled (Spec 43: Centralized Beta Scaling)
     if (config.betaScaling?.enabled) {
       const BetaScalingService = require('./betaScaling');
@@ -301,6 +309,14 @@ async function runPortfolioBacktest(config) {
           // Use adjusted parameters from centralized service
           params = { ...params, ...scalingResult.adjustedParameters };
 
+          // DEBUG: Log params AFTER beta scaling
+          console.log(`🔍 [DEBUG] Portfolio - ${symbol} - Params AFTER beta scaling:`, {
+            gridIntervalPercent: params.gridIntervalPercent,
+            trailingSellActivationPercent: params.trailingSellActivationPercent,
+            profitRequirement: params.profitRequirement,
+            gridConsecutiveIncrement: params.gridConsecutiveIncrement
+          });
+
           // Store betaInfo for this stock (can be used in results)
           params._betaInfo = scalingResult.betaInfo;
         } else {
@@ -311,6 +327,14 @@ async function runPortfolioBacktest(config) {
         console.warn(`⚠️  Beta scaling error for ${symbol}, using unadjusted parameters:`, error.message);
       }
     }
+
+    // DEBUG: Log final params before creating executor
+    console.log(`🔍 [DEBUG] Portfolio - ${symbol} - Final params before executor:`, {
+      gridIntervalPercent: params.gridIntervalPercent,
+      trailingSellActivationPercent: params.trailingSellActivationPercent,
+      profitRequirement: params.profitRequirement,
+      gridConsecutiveIncrement: params.gridConsecutiveIncrement
+    });
 
     // Get price data as array for this stock
     const pricesArray = Array.from(dateMap.values());

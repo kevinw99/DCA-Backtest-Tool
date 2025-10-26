@@ -314,6 +314,14 @@ function calculateAdaptiveBuyParameters(
  * @returns {Object} Executor with processDay(), getState(), getResults() methods
  */
 function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false, adaptiveStrategy = null) {
+  // DEBUG: Log raw params to detect parameter swap
+  console.log(`🔍 [DEBUG] dcaExecutor - ${symbol} - Raw params received:`, {
+    gridIntervalPercent: params.gridIntervalPercent,
+    trailingSellActivationPercent: params.trailingSellActivationPercent,
+    profitRequirement: params.profitRequirement,
+    gridConsecutiveIncrement: params.gridConsecutiveIncrement
+  });
+
   // Extract destructured parameters from params
   const {
     lotSizeUsd,
@@ -340,6 +348,14 @@ function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false
     momentumBasedBuy = false,
     momentumBasedSell = false
   } = params;
+
+  // DEBUG: Log destructured values
+  console.log(`🔍 [DEBUG] dcaExecutor - ${symbol} - After destructuring:`, {
+    gridIntervalPercent,
+    trailingSellActivationPercent,
+    profitRequirement,
+    gridConsecutiveIncrement
+  });
 
   // Clone params to track changes
   let currentParams = {
