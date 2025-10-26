@@ -52,7 +52,10 @@ async function generateParameterCombinations(paramRanges) {
     enableConsecutiveIncrementalSellProfit = true,
     // Spec 27: Directional strategy control flags
     enableAdaptiveTrailingBuy = false,
-    enableAdaptiveTrailingSell = false
+    enableAdaptiveTrailingSell = false,
+    // Spec 45: Momentum-based trading parameters
+    momentumBasedBuy = false,
+    momentumBasedSell = false
   } = paramRanges;
 
   console.log('🔍 DEBUG: Parameter combinations input:', {
@@ -146,6 +149,9 @@ async function generateParameterCombinations(paramRanges) {
                             // Spec 27: Directional strategy control flags
                             enableAdaptiveTrailingBuy,
                             enableAdaptiveTrailingSell,
+                            // Spec 45: Momentum-based trading parameters
+                            momentumBasedBuy,
+                            momentumBasedSell,
                             betaInfo: {
                               beta: scalingResult.betaInfo.beta,
                               coefficient: scalingResult.betaInfo.coefficient,
@@ -210,7 +216,10 @@ async function generateParameterCombinations(paramRanges) {
                         enableConsecutiveIncrementalSellProfit,
                         // Spec 27: Directional strategy control flags
                         enableAdaptiveTrailingBuy,
-                        enableAdaptiveTrailingSell
+                        enableAdaptiveTrailingSell,
+                        // Spec 45: Momentum-based trading parameters
+                        momentumBasedBuy,
+                        momentumBasedSell
                       });
                     }
                   }

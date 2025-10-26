@@ -182,6 +182,11 @@ function calculatePerStockMetrics(portfolio, config, priceDataMap) {
       rejectedBuys: stock.rejectedBuys,
       rejectedBuyValues: stock.rejectedBuyValues,
 
+      // Spec 45: Momentum-based trading statistics
+      momentumMode: stock.momentumMode || stock.params?.momentumMode || null,
+      buyBlockedByPnL: stock.buyBlockedByPnL || 0,
+      maxLotsReached: stock.maxLotsReached || null,
+
       // Portfolio contribution
       contributionToPortfolioReturn: contributionPercent,
       contributionToPortfolioValue: (stock.marketValue / portfolio.portfolioValue) * 100,

@@ -44,6 +44,24 @@ const MIN_ADAPTIVE_SELL_PULLBACK = 0.02;
 const MIN_ADAPTIVE_BUY_REBOUND = 0.05;
 
 /**
+ * Calculate total unrealized P/L for current position (Spec 45: Momentum-Based Trading)
+ *
+ * @param {Array} lots - Current position lots [{price, shares, date}]
+ * @param {number} currentPrice - Current market price
+ * @returns {number} Total unrealized P/L in USD
+ */
+function calculatePositionPnL(lots, currentPrice) {
+  if (!lots || lots.length === 0) {
+    return 0;
+  }
+
+  return lots.reduce((totalPnL, lot) => {
+    const pnl = (currentPrice - lot.price) * lot.shares;
+    return totalPnL + pnl;
+  }, 0);
+}
+
+/**
  * Calculate grid size for next buy based on consecutive buy count
  *
  * Formula: base_grid + (consecutive_count * increment)
@@ -318,7 +336,9 @@ function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false
     trailingStopOrderType = 'limit',
     enableAverageBasedGrid = false,
     enableAverageBasedSell = false,
-    enableDynamicProfile = false
+    enableDynamicProfile = false,
+    momentumBasedBuy = false,
+    momentumBasedSell = false
   } = params;
 
   // Clone params to track changes
@@ -391,6 +411,12 @@ function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false
     let lastPnLSign = null;              // Track P/L sign ('positive' | 'negative')
     let originalParams = null;           // Store original parameters
     const profileSwitches = [];          // Profile switch history
+
+    // Momentum-Based Trading State (Spec 45)
+    let positionPnL = 0;                 // Current unrealized P/L for momentum buy gating
+    let maxLotsReached = 0;              // Track maximum lots held simultaneously
+    let buyBlockedByPnL = 0;             // Count of buys blocked by P/L <= 0
+    const dailyPnL = [];                 // Track daily P/L history
 
     const recalculateAverageCost = () => {
       if (lots.length > 0) {
@@ -491,22 +517,32 @@ function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false
 
     // Check if trailing stop buy should be activated
     const checkTrailingStopBuyActivation = (currentPrice, currentDate) => {
-      // Calculate adaptive parameters for buy (Spec 25 + Spec 27)
-      const adaptiveBuyParams = calculateAdaptiveBuyParameters(
-        currentPrice,
-        lastBuyPrice,
-        params.trailingBuyActivationPercent,
-        params.trailingBuyReboundPercent,
-        lastBuyRebound,
-        consecutiveBuyCount,
-        enableConsecutiveIncrementalBuyGrid,
-        positionStatus,  // Spec 26: position-based buy gating
-        enableAdaptiveTrailingBuy  // Spec 27: directional control
-      );
+      // Spec 45: Momentum mode overrides activation to 0%
+      let effectiveActivation, effectiveRebound, adaptiveBuyParams;
 
-      // Use adaptive or standard parameters
-      const effectiveActivation = adaptiveBuyParams.activation;
-      const effectiveRebound = adaptiveBuyParams.rebound;
+      if (momentumBasedBuy) {
+        // MOMENTUM MODE: Immediate activation (0% threshold)
+        effectiveActivation = 0;
+        effectiveRebound = params.trailingBuyReboundPercent;
+        adaptiveBuyParams = { isAdaptive: false, activation: 0, rebound: effectiveRebound };
+      } else {
+        // TRADITIONAL MODE: Calculate adaptive parameters for buy (Spec 25 + Spec 27)
+        adaptiveBuyParams = calculateAdaptiveBuyParameters(
+          currentPrice,
+          lastBuyPrice,
+          params.trailingBuyActivationPercent,
+          params.trailingBuyReboundPercent,
+          lastBuyRebound,
+          consecutiveBuyCount,
+          enableConsecutiveIncrementalBuyGrid,
+          positionStatus,  // Spec 26: position-based buy gating
+          enableAdaptiveTrailingBuy  // Spec 27: directional control
+        );
+
+        // Use adaptive or standard parameters
+        effectiveActivation = adaptiveBuyParams.activation;
+        effectiveRebound = adaptiveBuyParams.rebound;
+      }
 
       // Log adaptive mode if active
       if (adaptiveBuyParams.isAdaptive && verbose) {
@@ -536,13 +572,23 @@ function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false
           'yellow'
         ));
       }
-      if (!trailingStopBuy && recentPeak && currentPrice <= recentPeak * (1 - effectiveActivation)) {
-        // Price dropped {effectiveActivation}% from recent peak - activate trailing stop buy
+      // Activation condition depends on mode
+      let shouldActivate = false;
+      if (momentumBasedBuy) {
+        // MOMENTUM MODE: Activate when recentBottom exists (any price movement tracked)
+        shouldActivate = !trailingStopBuy && recentBottom;
+      } else {
+        // TRADITIONAL MODE: Activate when price drops enough from peak
+        shouldActivate = !trailingStopBuy && recentPeak && currentPrice <= recentPeak * (1 - effectiveActivation);
+      }
+
+      if (shouldActivate) {
+        // Activate trailing stop buy
         trailingStopBuy = {
           stopPrice: currentPrice * (1 + effectiveRebound), // {effectiveRebound}% above current price
           triggeredAt: currentPrice,
           activatedDate: currentDate,
-          recentPeakReference: recentPeak,
+          recentPeakReference: recentPeak || currentPrice,
           lastUpdatePrice: currentPrice  // Track the actual bottom price (price when order was last updated)
         };
 
@@ -551,7 +597,8 @@ function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false
           lastBuyRebound = effectiveRebound;
         }
 
-        transactionLog.push(colorize(`  ACTION: TRAILING STOP BUY ACTIVATED - Stop: ${trailingStopBuy.stopPrice.toFixed(2)}, Triggered by ${(effectiveActivation*100).toFixed(1)}% drop from peak ${recentPeak.toFixed(2)}${adaptiveBuyParams.isAdaptive ? ' [ADAPTIVE]' : ''}`, 'blue'));
+        const modeLabel = momentumBasedBuy ? '[MOMENTUM]' : (adaptiveBuyParams.isAdaptive ? '[ADAPTIVE]' : '');
+        transactionLog.push(colorize(`  ACTION: TRAILING STOP BUY ACTIVATED ${modeLabel} - Stop: ${trailingStopBuy.stopPrice.toFixed(2)}, Triggered by ${(effectiveActivation*100).toFixed(1)}% threshold`, 'blue'));
       }
     };
 
@@ -625,8 +672,60 @@ function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false
             transactionLog.push(colorize(`  🔍 DEBUG: withinLimit check passed! lots.length: ${lots.length}, maxLots: ${maxLots}`, 'cyan'));
           }
 
+          // Spec 45: MOMENTUM MODE - Check position P/L
+          if (momentumBasedBuy) {
+            // Exception: First buy always allowed (no position yet)
+            if (lots.length > 0 && positionPnL <= 0) {
+              transactionLog.push(colorize(
+                `  ✗ MOMENTUM BUY BLOCKED: Position P/L $${positionPnL.toFixed(2)} ≤ 0 (need profit to buy more)`,
+                'yellow'
+              ));
+              buyBlockedByPnL++;
+              return false;  // Blocked - not profitable
+            } else if (lots.length > 0) {
+              transactionLog.push(colorize(
+                `  ✓ MOMENTUM BUY CHECK PASSED: Position P/L $${positionPnL.toFixed(2)} > 0`,
+                'green'
+              ));
+            } else {
+              transactionLog.push(colorize(
+                `  ✓ MOMENTUM BUY CHECK PASSED: First buy (no P/L requirement)`,
+                'green'
+              ));
+            }
+          }
+
+          // Position size check: maxLots vs Capital
+          let canBuy = false;
+          if (momentumBasedBuy) {
+            // MOMENTUM MODE: Check capital availability only
+            const deployedCapital = lots.reduce((sum, lot) =>
+              sum + (lot.price * lot.shares), 0
+            );
+            const totalCapital = maxLots * lotSizeUsd;
+            const availableCapital = totalCapital - deployedCapital;
+
+            if (availableCapital >= lotSizeUsd) {
+              canBuy = true;
+              if (verbose) {
+                transactionLog.push(colorize(
+                  `  ✓ MOMENTUM CAPITAL CHECK: $${availableCapital.toFixed(0)} available >= $${lotSizeUsd} needed`,
+                  'cyan'
+                ));
+              }
+            } else {
+              transactionLog.push(colorize(
+                `  ✗ MOMENTUM BUY BLOCKED: Insufficient capital ($${availableCapital.toFixed(0)} available, need $${lotSizeUsd})`,
+                'yellow'
+              ));
+            }
+          } else {
+            // TRADITIONAL MODE: Check maxLots
+            canBuy = lots.length < maxLots;
+          }
+
           // Trailing stop buy triggered - check if we can execute
-          if (lots.length < maxLots) {
+          if (canBuy) {
             // DEBUG: Log max lots check
             if (verbose) {
               transactionLog.push(colorize(`  🔍 DEBUG: Max lots check passed! Checking grid spacing...`, 'cyan'));
@@ -1056,23 +1155,34 @@ function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false
 
     // Check if trailing stop sell should be activated (when price rises from recent bottom)
     const checkTrailingStopSellActivation = (currentPrice, currentDate) => {
-      // Calculate adaptive sell parameters before activation check (Spec 25 + Spec 27)
-      const adaptiveSellParams = calculateAdaptiveSellParameters(
-        currentPrice,
-        lastSellPrice,
-        trailingSellActivationPercent,
-        trailingSellPullbackPercent,
-        lastSellPullback,
-        consecutiveSellCount,
-        enableConsecutiveIncrementalSellProfit,
-        positionStatus,  // Spec 26: position-based sell gating
-        enableAdaptiveTrailingSell  // Spec 27: directional control
-      );
+      // Spec 45: Momentum mode overrides activation to 0%
+      let effectiveActivation, effectivePullback, skipProfitRequirement, adaptiveSellParams;
 
-      // Use adaptive or standard parameters
-      const effectiveActivation = adaptiveSellParams.activation;
-      const effectivePullback = adaptiveSellParams.pullback;
-      const skipProfitRequirement = adaptiveSellParams.skipProfitRequirement;
+      if (momentumBasedSell) {
+        // MOMENTUM MODE: Immediate activation (0% threshold)
+        effectiveActivation = 0;
+        effectivePullback = params.trailingSellPullbackPercent;
+        skipProfitRequirement = false;  // Still require profit in momentum mode
+        adaptiveSellParams = { isAdaptive: false, activation: 0, pullback: effectivePullback };
+      } else {
+        // TRADITIONAL MODE: Calculate adaptive sell parameters (Spec 25 + Spec 27)
+        adaptiveSellParams = calculateAdaptiveSellParameters(
+          currentPrice,
+          lastSellPrice,
+          trailingSellActivationPercent,
+          trailingSellPullbackPercent,
+          lastSellPullback,
+          consecutiveSellCount,
+          enableConsecutiveIncrementalSellProfit,
+          positionStatus,  // Spec 26: position-based sell gating
+          enableAdaptiveTrailingSell  // Spec 27: directional control
+        );
+
+        // Use adaptive or standard parameters
+        effectiveActivation = adaptiveSellParams.activation;
+        effectivePullback = adaptiveSellParams.pullback;
+        skipProfitRequirement = adaptiveSellParams.skipProfitRequirement;
+      }
 
       // Log adaptive mode if active
       if (adaptiveSellParams.isAdaptive && verbose) {
@@ -1095,8 +1205,17 @@ function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false
         ));
       }
 
-      if (lots.length > 0 && currentPrice > averageCost && !activeStop && recentBottom && currentPrice >= recentBottom * (1 + effectiveActivation)) {
-        // Price rose {effectiveActivation}% from recent bottom - activate trailing stop sell
+      // Activation condition depends on mode
+      let shouldActivate = false;
+      if (momentumBasedSell) {
+        // MOMENTUM MODE: Activate when recentPeak exists (any price movement tracked)
+        shouldActivate = lots.length > 0 && !activeStop && recentPeak;
+      } else {
+        // TRADITIONAL MODE: Activate when price rises enough from bottom and above average cost
+        shouldActivate = lots.length > 0 && currentPrice > averageCost && !activeStop && recentBottom && currentPrice >= recentBottom * (1 + effectiveActivation);
+      }
+
+      if (shouldActivate) {
         // Calculate current unrealized P&L
         const totalSharesHeld = lots.reduce((sum, lot) => sum + lot.shares, 0);
         const totalCostOfHeldLots = lots.reduce((sum, lot) => sum + lot.price * lot.shares, 0);
@@ -1247,7 +1366,8 @@ function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false
             } else {
               orderTypeInfo = `Stop: ${stopPrice.toFixed(2)} (MARKET)`;
             }
-            transactionLog.push(colorize(`  ACTION: TRAILING STOP SELL ACTIVATED - ${orderTypeInfo}, Triggered by ${(trailingSellActivationPercent * 100).toFixed(1)}% rise from bottom ${recentBottom.toFixed(2)} (Unrealized P&L: ${unrealizedPNL.toFixed(2)})`, 'yellow'));
+            const modeLabel = momentumBasedSell ? '[MOMENTUM]' : (adaptiveSellParams.isAdaptive ? '[ADAPTIVE]' : '');
+            transactionLog.push(colorize(`  ACTION: TRAILING STOP SELL ACTIVATED ${modeLabel} - ${orderTypeInfo}, Triggered by ${(effectiveActivation * 100).toFixed(1)}% threshold (Unrealized P&L: ${unrealizedPNL.toFixed(2)})`, 'yellow'));
             if (enableConsecutiveIncrementalSellProfit && lotProfitRequirement !== params.profitRequirement) {
               transactionLog.push(colorize(`  📈 CONSECUTIVE SELL: Lot profit requirement ${(lotProfitRequirement * 100).toFixed(2)}% (base ${(params.profitRequirement * 100).toFixed(2)}%)`, 'cyan'));
             }
@@ -1497,6 +1617,15 @@ function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false
       const previousPositionStatus = positionStatus;
       positionStatus = positionCalc.status;
       portfolioUnrealizedPNL = positionCalc.pnl;
+
+      // Spec 45: Calculate position P/L for momentum buy gating
+      positionPnL = calculatePositionPnL(lots, currentPrice);
+      dailyPnL.push({ date: dayData.date, pnl: positionPnL });
+
+      // Track max lots reached
+      if (lots.length > maxLotsReached) {
+        maxLotsReached = lots.length;
+      }
 
       // Log position status changes (Spec 26: always visible)
       if (positionStatus !== previousPositionStatus) {
@@ -2026,7 +2155,14 @@ function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false
           sellTransactions: enhancedTransactions.filter(t => t.type.includes('SELL')).length,
           profileSwitchCount,
           daysInConservative,
-          daysInAggressive
+          daysInAggressive,
+          // Spec 45: Momentum mode statistics
+          momentumMode: {
+            buy: momentumBasedBuy,
+            sell: momentumBasedSell
+          },
+          maxLotsReached: maxLotsReached,
+          buyBlockedByPnL: buyBlockedByPnL
         },
         transactions: enhancedTransactions,
         lots: lots,
@@ -2040,7 +2176,15 @@ function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false
         maxConsecutiveBuyCount,
         totalGridSizeUsed,
         totalBuysCount,
-        currentProfile
+        currentProfile,
+        // Spec 45: Additional momentum tracking
+        dailyPnL: dailyPnL,
+        positionMetrics: dailyPnL.length > 0 ? {
+          avgPnL: dailyPnL.reduce((sum, d) => sum + d.pnl, 0) / dailyPnL.length,
+          maxPnL: Math.max(...dailyPnL.map(d => d.pnl)),
+          minPnL: Math.min(...dailyPnL.map(d => d.pnl)),
+          finalPnL: positionPnL
+        } : null
       };
     }
   };

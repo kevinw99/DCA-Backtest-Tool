@@ -603,8 +603,14 @@ async function runDCABacktest(params, dayCallback = null) {
     enableAverageBasedGrid = false, // Enable average-cost based grid spacing (Spec 23 Feature #1)
     enableAverageBasedSell = false, // Enable average-cost based sell profitability (Spec 23 Feature #2)
     enableDynamicProfile = false, // Enable dynamic profile switching based on P/L (Spec 24)
+    momentumBasedBuy = false, // Enable momentum-based buy (Spec 45)
+    momentumBasedSell = false, // Enable momentum-based sell (Spec 45)
     verbose = true
   } = params;
+
+  // DEBUG: Log momentum parameters
+  console.log('DEBUG params.momentumBasedBuy:', params.momentumBasedBuy, 'extracted:', momentumBasedBuy);
+  console.log('DEBUG params.momentumBasedSell:', params.momentumBasedSell, 'extracted:', momentumBasedSell);
 
   // Validate trailingStopOrderType
   if (!['limit', 'market'].includes(trailingStopOrderType)) {
@@ -884,6 +890,11 @@ async function runDCABacktest(params, dayCallback = null) {
     // Get final results from executor
     const executorResults = executor.getResults();
     const executorState = executor.getState();
+
+    // DEBUG: Check momentum statistics
+    console.log('DEBUG executorResults.summary.momentumMode:', executorResults.summary.momentumMode);
+    console.log('DEBUG executorResults.summary.maxLotsReached:', executorResults.summary.maxLotsReached);
+    console.log('DEBUG executorResults.summary.buyBlockedByPnL:', executorResults.summary.buyBlockedByPnL);
     
     // Extract state variables for compatibility with existing code
     const lots = executorState.lots;
@@ -1210,7 +1221,14 @@ async function runDCABacktest(params, dayCallback = null) {
           consecutiveDays: sw.consecutiveDays
         })),
         finalProfile: executorResults.currentProfile
-      }
+      },
+
+      // Spec 45: Momentum-Based Trading Metrics
+      momentumMode: executorResults.summary.momentumMode,
+      maxLotsReached: executorResults.summary.maxLotsReached,
+      buyBlockedByPnL: executorResults.summary.buyBlockedByPnL,
+      dailyPnL: executorResults.dailyPnL,
+      positionMetrics: executorResults.positionMetrics
     };
 
     // Run scenario detection if enabled

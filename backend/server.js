@@ -674,7 +674,12 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
     console.log('=====================================');
 
     // Merge request parameters with shared defaults
-    const params = backtestConfig.mergeWithDefaults(req.body);
+    const params = {
+      ...backtestConfig.mergeWithDefaults(req.body),
+      // Spec 45: Explicitly preserve momentum parameters from request
+      momentumBasedBuy: req.body.momentumBasedBuy ?? false,
+      momentumBasedSell: req.body.momentumBasedSell ?? false
+    };
 
     const {
       symbol,
@@ -904,6 +909,9 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
       // Spec 27: Directional strategy control flags
       enableAdaptiveTrailingBuy: finalParams.enableAdaptiveTrailingBuy,
       enableAdaptiveTrailingSell: finalParams.enableAdaptiveTrailingSell,
+      // Spec 45: Momentum-based trading
+      momentumBasedBuy: finalParams.momentumBasedBuy,
+      momentumBasedSell: finalParams.momentumBasedSell,
       verbose: false // Don't log to console for API calls
     });
 
@@ -994,7 +1002,12 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
         // Include Beta information if Beta scaling was used
         ...(betaInfo && { betaInfo: betaInfo }),
         // Include profile metrics if dynamic profile switching is enabled
-        ...(results.profileMetrics && { profileMetrics: results.profileMetrics })
+        ...(results.profileMetrics && { profileMetrics: results.profileMetrics }),
+        // Spec 45: Include momentum mode statistics
+        momentumMode: results.momentumMode,
+        maxLotsReached: results.maxLotsReached,
+        buyBlockedByPnL: results.buyBlockedByPnL,
+        positionMetrics: results.positionMetrics
       }
     });
 
@@ -1437,7 +1450,10 @@ app.post('/api/portfolio-backtest', async (req, res) => {
       _betaScaling,
       enableBetaScaling,
       coefficient,
-      beta
+      beta,
+      // Spec 45: Momentum-based trading
+      momentumBasedBuy,
+      momentumBasedSell
     } = req.body;
 
     // Validation
@@ -1492,7 +1508,10 @@ app.post('/api/portfolio-backtest', async (req, res) => {
         enableAdaptiveTrailingBuy,
         enableAdaptiveTrailingSell,
         trailingStopOrderType,
-        maxLotsToSell
+        maxLotsToSell,
+        // Spec 45: Momentum-based trading
+        momentumBasedBuy,
+        momentumBasedSell
       }).filter(([_, value]) => value !== undefined)
     );
 

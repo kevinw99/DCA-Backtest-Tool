@@ -524,7 +524,20 @@ async function runPortfolioBacktest(config) {
   console.log(`   Final Portfolio Value: $${portfolio.portfolioValue.toLocaleString()}`);
   console.log(`   Total Return: $${portfolio.totalPNL.toLocaleString()} (${((portfolio.totalPNL / portfolio.totalCapital) * 100).toFixed(2)}%)`);
 
-  // 6. Calculate final metrics
+  // 6. Extract executor statistics and store in StockState objects (Spec 45)
+  for (const [symbol, executor] of executors.entries()) {
+    const executorResults = executor.getResults();  // Use getResults() not getState()
+    const stock = portfolio.stocks.get(symbol);
+
+    if (stock && executorResults.summary) {
+      // Copy Spec 45 momentum statistics from executor to stock state
+      stock.momentumMode = executorResults.summary.momentumMode || null;
+      stock.buyBlockedByPnL = executorResults.summary.buyBlockedByPnL || 0;
+      stock.maxLotsReached = executorResults.summary.maxLotsReached || 0;
+    }
+  }
+
+  // 7. Calculate final metrics
   const portfolioMetricsService = require('./portfolioMetricsService');
   const results = portfolioMetricsService.calculatePortfolioMetrics(portfolio, config, priceDataMap);
 

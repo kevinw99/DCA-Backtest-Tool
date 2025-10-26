@@ -53,7 +53,10 @@ const PortfolioBacktestPage = () => {
         enableAdaptiveLotSizing: false,
         adaptiveLotCashThreshold: 100000,
         adaptiveLotMaxMultiplier: 2.0,
-        adaptiveLotIncreaseStep: 20
+        adaptiveLotIncreaseStep: 20,
+        // Spec 45: Momentum-based trading parameters
+        momentumBasedBuy: false,
+        momentumBasedSell: false
       },
       // Beta Scaling Parameters
       _betaScaling: {
@@ -118,7 +121,10 @@ const PortfolioBacktestPage = () => {
           enableAdaptiveLotSizing: searchParams.get('enableAdaptiveLotSizing') === 'true',
           adaptiveLotCashThreshold: parseFloat(searchParams.get('adaptiveLotCashThreshold')) || 100000,
           adaptiveLotMaxMultiplier: parseFloat(searchParams.get('adaptiveLotMaxMultiplier')) || 2.0,
-          adaptiveLotIncreaseStep: parseFloat(searchParams.get('adaptiveLotIncreaseStep')) || 20
+          adaptiveLotIncreaseStep: parseFloat(searchParams.get('adaptiveLotIncreaseStep')) || 20,
+          // Spec 45: Momentum-based trading parameters
+          momentumBasedBuy: searchParams.get('momentumBasedBuy') === 'true',
+          momentumBasedSell: searchParams.get('momentumBasedSell') === 'true'
         }
       };
 
@@ -190,6 +196,10 @@ const PortfolioBacktestPage = () => {
         params.set('adaptiveLotCashThreshold', parameters.defaultParams.adaptiveLotCashThreshold || 100000);
         params.set('adaptiveLotMaxMultiplier', parameters.defaultParams.adaptiveLotMaxMultiplier || 2.0);
         params.set('adaptiveLotIncreaseStep', parameters.defaultParams.adaptiveLotIncreaseStep || 20);
+
+        // Spec 45: Momentum-based trading parameters
+        params.set('momentumBasedBuy', parameters.defaultParams.momentumBasedBuy || false);
+        params.set('momentumBasedSell', parameters.defaultParams.momentumBasedSell || false);
       }
 
       // Beta scaling parameters (if present)

@@ -426,6 +426,10 @@ class URLParameterManager {
     if (parameters.trailingSellActivationPercent !== undefined) params.set('trailingSellActivationPercent', this._formatDecimalAsPercentage(parameters.trailingSellActivationPercent).toString());
     if (parameters.trailingSellPullbackPercent !== undefined) params.set('trailingSellPullbackPercent', this._formatDecimalAsPercentage(parameters.trailingSellPullbackPercent).toString());
 
+    // Spec 45: Momentum-based trading parameters
+    if (parameters.momentumBasedBuy !== undefined) params.set('momentumBasedBuy', parameters.momentumBasedBuy.toString());
+    if (parameters.momentumBasedSell !== undefined) params.set('momentumBasedSell', parameters.momentumBasedSell.toString());
+
     // Short selling parameters - only include for short strategy
     if (parameters.strategyMode === 'short' || parameters.strategyMode === 'SHORT_DCA') {
       if (parameters.maxShorts) params.set('maxShorts', parameters.maxShorts.toString());
@@ -646,6 +650,14 @@ class URLParameterManager {
       decoded.enableDynamicProfile = this._parseBoolean(params.enableDynamicProfile, false);
     }
 
+    // Spec 45: Momentum-based trading parameters
+    if (params.momentumBasedBuy !== undefined) {
+      decoded.momentumBasedBuy = this._parseBoolean(params.momentumBasedBuy, false);
+    }
+    if (params.momentumBasedSell !== undefined) {
+      decoded.momentumBasedSell = this._parseBoolean(params.momentumBasedSell, false);
+    }
+
     // Grid option numeric parameters
     if (params.dynamicGridMultiplier !== undefined) {
       decoded.dynamicGridMultiplier = this._parseNumber(params.dynamicGridMultiplier, 1.0);
@@ -849,7 +861,8 @@ class URLParameterManager {
       'enableDynamicGrid',
       'normalizeToReference', 'enableConsecutiveIncrementalSellProfit',
       'enableConsecutiveIncrementalBuyGrid',
-      'enableAverageBasedGrid', 'enableAverageBasedSell'
+      'enableAverageBasedGrid', 'enableAverageBasedSell',
+      'momentumBasedBuy', 'momentumBasedSell'
     ];
 
     const stringParams = ['symbol', 'startDate', 'endDate', 'strategyMode', 'source'];
