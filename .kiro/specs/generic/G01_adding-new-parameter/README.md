@@ -9,17 +9,17 @@ This comprehensive guide documents the complete process for adding new parameter
 This guide is organized into 8 sections:
 
 1. **[01-overview](./01-overview/)** - Overview, checklist, and architecture
-2. **[02-backend](./02-backend/)** - Backend implementation (executor, service, API)
-3. **[03-configuration](./03-configuration/)** - Configuration defaults and ticker-specific settings
-4. **[04-frontend](./04-frontend/)** - Frontend UI components and React state
-5. **[05-url](./05-url/)** - URL parameter encoding and decoding
-6. **[06-testing](./06-testing/)** - Comprehensive testing across all modes
-7. **[07-unified-handling](./07-unified-handling/)** - Unified parameter handling principles (CRITICAL!)
-8. **[08-parameter-relationships](./08-parameter-relationships/)** - Analyzing parameter interactions and conflicts (CRITICAL!)
+2. **[02-parameter-relationships](./02-parameter-relationships/)** - Analyzing parameter interactions and conflicts (CRITICAL - READ FIRST!)
+3. **[03-unified-handling](./03-unified-handling/)** - Unified parameter handling principles (CRITICAL - READ SECOND!)
+4. **[04-backend](./04-backend/)** - Backend implementation (executor, service, API)
+5. **[05-configuration](./05-configuration/)** - Configuration defaults and ticker-specific settings
+6. **[06-frontend](./06-frontend/)** - Frontend UI components and React state
+7. **[07-url](./07-url/)** - URL parameter encoding and decoding
+8. **[08-testing](./08-testing/)** - Comprehensive testing across all modes
 
-## Critical Principle: Unified Parameter Handling
+## Critical Principle: Parameter Relationships & Unified Handling
 
-**READ 07-unified-handling FIRST before implementing any new parameter!**
+**READ 02-parameter-relationships and 03-unified-handling FIRST before implementing any new parameter!**
 
 The most important principle when adding a new parameter:
 
@@ -121,7 +121,7 @@ Before writing any code, study the reference parameters:
 
 **CRITICAL STEP**: Before writing any code, analyze how your parameter interacts with existing parameters.
 
-1. **Read [08-parameter-relationships](./08-parameter-relationships/README.md)**
+1. **Read [02-parameter-relationships](./02-parameter-relationships/README.md)**
 2. **Create a relationship table** for your parameter showing:
    - What parameters are affected by your new parameter
    - What parameters contradict your new parameter
@@ -137,31 +137,31 @@ Use the complete checklist in [01-overview](./01-overview/README.md#complete-che
 
 ### Step 4: Implement Backend First
 
-1. Read [02-backend](./02-backend/README.md)
+1. Read [04-backend](./04-backend/README.md)
 2. Add parameter to executor → service → API (in that order)
 3. Test with curl before proceeding to frontend
 
-### Step 4: Add Configuration
+### Step 5: Add Configuration
 
-1. Read [03-configuration](./03-configuration/README.md)
+1. Read [05-configuration](./05-configuration/README.md)
 2. Add defaults to `backtestDefaults.json`
 3. Add ticker-specific defaults if needed
 
-### Step 5: Add Frontend UI
+### Step 6: Add Frontend UI
 
-1. Read [04-frontend](./04-frontend/README.md)
+1. Read [06-frontend](./06-frontend/README.md)
 2. Add UI controls to form
 3. Verify parameter appears in ALL mode forms (single, portfolio, batch)
 
-### Step 6: Add URL Support
+### Step 7: Add URL Support
 
-1. Read [05-url](./05-url/README.md)
+1. Read [07-url](./07-url/README.md)
 2. Add encoding and decoding to `URLParameterManager.js`
 3. Test round-trip URL parameter handling
 
-### Step 7: Test Comprehensively
+### Step 8: Test Comprehensively
 
-1. Read [06-testing](./06-testing/README.md)
+1. Read [08-testing](./08-testing/README.md)
 2. Test backend API directly (curl)
 3. Test frontend UI (manual)
 4. Test URL encoding/decoding
@@ -197,7 +197,7 @@ async function runDCABacktest({
 }
 ```
 
-**Read [07-unified-handling](./07-unified-handling/README.md) for detailed examples.**
+**Read [03-unified-handling](./03-unified-handling/README.md) for detailed examples.**
 
 ### Pitfall 2: Missing Modes
 
@@ -213,7 +213,7 @@ async function runDCABacktest({
 
 **Cause**: Missing from `URLParameterManager.js` encoding/decoding.
 
-**Fix**: See [05-url](./05-url/README.md) for proper URL handling.
+**Fix**: See [07-url](./07-url/README.md) for proper URL handling.
 
 ### Pitfall 4: Parameter Dropped at API Layer
 
@@ -221,7 +221,7 @@ async function runDCABacktest({
 
 **Cause**: Not included in `runDCABacktest()` call in `server.js`.
 
-**Fix**: See [02-backend](./02-backend/README.md#step-3-add-parameter-to-api-layer) for explicit parameter passing.
+**Fix**: See [04-backend](./04-backend/README.md#step-3-add-parameter-to-api-layer) for explicit parameter passing.
 
 ## File Locations Reference
 
@@ -261,7 +261,7 @@ When adding a parameter that should work in portfolio mode, you MUST update thes
 
 **Lesson from Spec 45**: This is easy to miss! Portfolio momentum controls weren't visible until URL handling was added.
 
-See [04-frontend](./04-frontend/README.md#portfolio-and-batch-mode-support) for details.
+See [06-frontend](./06-frontend/README.md#portfolio-and-batch-mode-support) for details.
 
 ## Real-World Examples
 
@@ -357,11 +357,12 @@ See [04-frontend](./04-frontend/README.md#portfolio-and-batch-mode-support) for 
 
 ## Next Steps
 
-1. **Read [07-unified-handling](./07-unified-handling/README.md)** - CRITICAL for understanding how to integrate parameters correctly
-2. **Study reference parameters** - See how existing parameters are integrated
-3. **Read [01-overview](./01-overview/README.md)** - Complete checklist and overview
-4. **Follow implementation guides** - 02-backend → 03-configuration → 04-frontend → 05-url → 06-testing
-5. **Test comprehensively** - Verify parameter works across ALL modes
+1. **Read [02-parameter-relationships](./02-parameter-relationships/README.md)** - CRITICAL for analyzing parameter interactions FIRST
+2. **Read [03-unified-handling](./03-unified-handling/README.md)** - CRITICAL for understanding how to integrate parameters correctly
+3. **Study reference parameters** - See how existing parameters are integrated
+4. **Read [01-overview](./01-overview/README.md)** - Complete checklist and overview
+5. **Follow implementation guides** - 04-backend → 05-configuration → 06-frontend → 07-url → 08-testing
+6. **Test comprehensively** - Verify parameter works across ALL modes
 
 ## Summary
 
