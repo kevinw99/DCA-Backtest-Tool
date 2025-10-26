@@ -101,7 +101,10 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
       trailingStopOrderType: 'limit',
       enableAverageBasedGrid: false,
       enableAverageBasedSell: false,
-      enableDynamicProfile: false
+      enableDynamicProfile: false,
+      // Spec 45: Momentum-based trading parameters
+      momentumBasedBuy: false,
+      momentumBasedSell: false
     };
 
     if (saved) {
@@ -787,7 +790,10 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
           enableConsecutiveIncrementalBuyGrid: batchParameters.enableConsecutiveIncrementalBuyGrid,
           enableConsecutiveIncrementalSellProfit: batchParameters.enableConsecutiveIncrementalSellProfit,
           enableScenarioDetection: batchParameters.enableScenarioDetection,
-          trailingStopOrderType: batchParameters.trailingStopOrderType
+          trailingStopOrderType: batchParameters.trailingStopOrderType,
+          // Spec 45: Momentum-based trading parameters
+          momentumBasedBuy: batchParameters.momentumBasedBuy,
+          momentumBasedSell: batchParameters.momentumBasedSell
         },
         sortBy: 'totalReturn'
       };
@@ -2101,6 +2107,35 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                   </label>
                   <span className="form-help">
                     Automatically adjust strategy based on position status: Conservative (buy: 20% drop, sell: easier) when LOSING, Aggressive (buy: immediate, sell: 20% from peak + 10% profit) when WINNING. Requires 3 consecutive days in same position status before switching.
+                  </span>
+                </div>
+
+                {/* Spec 45: Momentum-Based Trading */}
+                <div className="form-group checkbox-group">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={parameters.momentumBasedBuy ?? false}
+                      onChange={(e) => handleChange('momentumBasedBuy', e.target.checked)}
+                    />
+                    Enable Momentum-Based Buy (Spec 45)
+                  </label>
+                  <span className="form-help">
+                    Buy on strength: 0% activation (immediate consideration), P/L &gt; 0 required (except first buy), unlimited lots (capital-limited only). Overrides trailingBuyActivationPercent.
+                  </span>
+                </div>
+
+                <div className="form-group checkbox-group">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={parameters.momentumBasedSell ?? false}
+                      onChange={(e) => handleChange('momentumBasedSell', e.target.checked)}
+                    />
+                    Enable Momentum-Based Sell (Spec 45)
+                  </label>
+                  <span className="form-help">
+                    Sell on weakness: 0% activation (immediate consideration), fast exit on momentum reversal. Overrides trailingSellActivationPercent. Still requires profitRequirement.
                   </span>
                 </div>
 
