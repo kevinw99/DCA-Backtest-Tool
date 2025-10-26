@@ -4,8 +4,8 @@
  * Container component that displays multiple portfolio charts in a vertically
  * stacked layout with synchronized x-axes for date alignment.
  *
- * TODO(TD-001): X-axis alignment not working correctly - charts show different
- * date ranges despite shared domain/ticks configuration. See TECH_DEBT.md for details.
+ * BUG-01: X-axis alignment not working correctly - charts show different
+ * date ranges despite shared domain/ticks configuration. See .kiro/bugs/01_chart-x-axis-alignment/
  */
 
 import React from 'react';
