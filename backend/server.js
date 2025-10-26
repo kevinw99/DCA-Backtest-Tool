@@ -2154,6 +2154,22 @@ app.post('/api/batch/refresh-data', async (req, res) => {
 const betaRoutes = require('./routes/betaRoutes');
 app.use('/api/beta', betaRoutes);
 
+// Clear portfolio config cache endpoint
+app.post('/api/config/clear-cache', (req, res) => {
+  try {
+    portfolioConfigLoader.clearConfigCache();
+    res.json({
+      success: true,
+      message: 'Portfolio config cache cleared successfully'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
