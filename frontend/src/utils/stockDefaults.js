@@ -121,9 +121,7 @@ export const formatParametersForAPI = (params) => {
     trailingBuyActivationPercent: params.trailingBuyActivationPercent ? params.trailingBuyActivationPercent / 100 : undefined,
     trailingBuyReboundPercent: params.trailingBuyReboundPercent ? params.trailingBuyReboundPercent / 100 : undefined,
     trailingSellActivationPercent: params.trailingSellActivationPercent ? params.trailingSellActivationPercent / 100 : undefined,
-    trailingSellPullbackPercent: params.trailingSellPullbackPercent ? params.trailingSellPullbackPercent / 100 : undefined,
-    enableTrailingBuy: params.enableTrailingBuy || false,
-    enableTrailingSell: params.enableTrailingSell || false
+    trailingSellPullbackPercent: params.trailingSellPullbackPercent ? params.trailingSellPullbackPercent / 100 : undefined
   };
 };
 

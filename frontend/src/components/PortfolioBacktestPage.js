@@ -33,8 +33,6 @@ const PortfolioBacktestPage = () => {
         gridIntervalPercent: 10,
         profitRequirement: 10,
         stopLossPercent: 30,
-        enableTrailingBuy: false,
-        enableTrailingSell: false,
         trailingBuyActivationPercent: 10,
         trailingBuyReboundPercent: 5,
         trailingSellActivationPercent: 20,
@@ -100,8 +98,6 @@ const PortfolioBacktestPage = () => {
           gridIntervalPercent: parseFloat(searchParams.get('gridInterval')) || 10,
           profitRequirement: parseFloat(searchParams.get('profitReq')) || 10,
           stopLossPercent: parseFloat(searchParams.get('stopLoss')) || 30,
-          enableTrailingBuy: searchParams.get('trailingBuy') === 'true',
-          enableTrailingSell: searchParams.get('trailingSell') === 'true',
           trailingBuyActivationPercent: parseFloat(searchParams.get('trailingBuyActivation')) || 10,
           trailingBuyReboundPercent: parseFloat(searchParams.get('trailingBuyRebound')) || 5,
           trailingSellActivationPercent: parseFloat(searchParams.get('trailingSellActivation')) || 20,
@@ -169,8 +165,6 @@ const PortfolioBacktestPage = () => {
         params.set('gridInterval', parameters.defaultParams.gridIntervalPercent);
         params.set('profitReq', parameters.defaultParams.profitRequirement);
         params.set('stopLoss', parameters.defaultParams.stopLossPercent || 30);
-        params.set('trailingBuy', parameters.defaultParams.enableTrailingBuy || false);
-        params.set('trailingSell', parameters.defaultParams.enableTrailingSell || false);
         params.set('trailingBuyActivation', parameters.defaultParams.trailingBuyActivationPercent);
         params.set('trailingBuyRebound', parameters.defaultParams.trailingBuyReboundPercent);
         params.set('trailingSellActivation', parameters.defaultParams.trailingSellActivationPercent);
@@ -258,8 +252,6 @@ const PortfolioBacktestPage = () => {
             gridIntervalPercent: (stockParams.longStrategy.gridIntervalPercent || paramsToUse.defaultParams.gridIntervalPercent) / 100,
             profitRequirement: (stockParams.longStrategy.profitRequirement || paramsToUse.defaultParams.profitRequirement) / 100,
             stopLossPercent: (paramsToUse.defaultParams.stopLossPercent || 30) / 100,
-            enableTrailingBuy: paramsToUse.defaultParams.enableTrailingBuy || false,
-            enableTrailingSell: paramsToUse.defaultParams.enableTrailingSell || false,
             trailingBuyActivationPercent: (stockParams.longStrategy.trailingBuyActivationPercent || paramsToUse.defaultParams.trailingBuyActivationPercent || 10) / 100,
             trailingBuyReboundPercent: (stockParams.longStrategy.trailingBuyReboundPercent || paramsToUse.defaultParams.trailingBuyReboundPercent || 5) / 100,
             trailingSellActivationPercent: (stockParams.longStrategy.trailingSellActivationPercent || paramsToUse.defaultParams.trailingSellActivationPercent || 20) / 100,
@@ -283,8 +275,6 @@ const PortfolioBacktestPage = () => {
             gridIntervalPercent: paramsToUse.defaultParams.gridIntervalPercent / 100,
             profitRequirement: paramsToUse.defaultParams.profitRequirement / 100,
             stopLossPercent: (paramsToUse.defaultParams.stopLossPercent || 30) / 100,
-            enableTrailingBuy: paramsToUse.defaultParams.enableTrailingBuy || false,
-            enableTrailingSell: paramsToUse.defaultParams.enableTrailingSell || false,
             trailingBuyActivationPercent: (paramsToUse.defaultParams.trailingBuyActivationPercent || 10) / 100,
             trailingBuyReboundPercent: (paramsToUse.defaultParams.trailingBuyReboundPercent || 5) / 100,
             trailingSellActivationPercent: (paramsToUse.defaultParams.trailingSellActivationPercent || 20) / 100,
@@ -297,7 +287,19 @@ const PortfolioBacktestPage = () => {
             normalizeToReference: paramsToUse.defaultParams.normalizeToReference !== undefined ? paramsToUse.defaultParams.normalizeToReference : false,
             dynamicGridMultiplier: paramsToUse.defaultParams.dynamicGridMultiplier || 1.0
           },
-          stocks: stocksWithParams // Send stocks with their specific parameters
+          stocks: stocksWithParams, // Send stocks with their specific parameters
+          // Capital Optimization Parameters (top-level as expected by backend)
+          enableCashYield: paramsToUse.defaultParams.enableCashYield || false,
+          cashYieldAnnualPercent: paramsToUse.defaultParams.cashYieldAnnualPercent || 4.5,
+          cashYieldMinCash: paramsToUse.defaultParams.cashYieldMinCash || 50000,
+          enableDeferredSelling: paramsToUse.defaultParams.enableDeferredSelling || false,
+          deferredSellingThreshold: paramsToUse.defaultParams.deferredSellingThreshold || 150000,
+          enableAdaptiveLotSizing: paramsToUse.defaultParams.enableAdaptiveLotSizing || false,
+          adaptiveLotCashThreshold: paramsToUse.defaultParams.adaptiveLotCashThreshold || 100000,
+          adaptiveLotMaxMultiplier: paramsToUse.defaultParams.adaptiveLotMaxMultiplier || 2.0,
+          adaptiveLotIncreaseStep: paramsToUse.defaultParams.adaptiveLotIncreaseStep || 20,
+          // Beta Scaling Parameters
+          ...(paramsToUse._betaScaling && { _betaScaling: paramsToUse._betaScaling })
         })
       });
 

@@ -144,26 +144,6 @@ export const LongStrategySection = ({
         )}
       </div>
 
-      {/* Trailing Stop Toggles */}
-      <div className="checkbox-grid">
-        <label>
-          <input
-            type="checkbox"
-            checked={parameters.enableTrailingBuy || false}
-            onChange={(e) => handleChange('enableTrailingBuy', e.target.checked)}
-          />
-          Enable Trailing Buy
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={parameters.enableTrailingSell || false}
-            onChange={(e) => handleChange('enableTrailingSell', e.target.checked)}
-          />
-          Enable Trailing Sell
-        </label>
-      </div>
-
       {/* Order Type Toggle */}
       {showOrderType && (
         <div className="order-type-toggle">

@@ -254,8 +254,6 @@ class AdaptiveStrategyService {
       lotSizeUsd: this.baselineParameters.lotSizeUsd * rules.lotSizeMultiplier,
 
       // Trailing Stop Parameters
-      enableTrailingBuy: rules.enableTrailingBuy,
-      enableTrailingSell: rules.enableTrailingSell,
       trailingBuyActivationPercent: this.applyBounds(
         (this.baselineParameters.trailingBuyActivationPercent || 0.1) * rules.trailingBuyActivationMultiplier,
         0.01, 1.0
@@ -341,8 +339,6 @@ class AdaptiveStrategyService {
         lotSizeMultiplier: 1.0,
 
         // Trailing Stop Adjustments
-        enableTrailingBuy: true,
-        enableTrailingSell: true,
         trailingBuyActivationMultiplier: 1.0,
         trailingBuyReboundMultiplier: 1.0,
         trailingSellActivationMultiplier: 1.0,
@@ -376,8 +372,6 @@ class AdaptiveStrategyService {
         lotSizeMultiplier: 0.7,
 
         // Trailing Stop Adjustments - AGGRESSIVE SELLING
-        enableTrailingBuy: false,        // Buying disabled anyway
-        enableTrailingSell: true,
         trailingBuyActivationMultiplier: 2.0,
         trailingBuyReboundMultiplier: 1.5,
         trailingSellActivationMultiplier: 0.7,  // Activate earlier
@@ -412,8 +406,6 @@ class AdaptiveStrategyService {
         lotSizeMultiplier: 1.1,
 
         // Trailing Stop Adjustments - AGGRESSIVE BUYING
-        enableTrailingBuy: true,
-        enableTrailingSell: false,       // Selling disabled anyway
         trailingBuyActivationMultiplier: 0.5,   // Activate earlier
         trailingBuyReboundMultiplier: 0.7,      // Lower rebound
         trailingSellActivationMultiplier: 1.5,
@@ -448,8 +440,6 @@ class AdaptiveStrategyService {
         lotSizeMultiplier: 0.9,
 
         // Trailing Stop Adjustments - SLIGHTLY CONSERVATIVE
-        enableTrailingBuy: true,
-        enableTrailingSell: true,
         trailingBuyActivationMultiplier: 1.1,
         trailingBuyReboundMultiplier: 1.1,
         trailingSellActivationMultiplier: 1.1,
@@ -496,8 +486,6 @@ class AdaptiveStrategyService {
       'maxLots',
       'maxLotsToSell',
       'lotSizeUsd',
-      'enableTrailingBuy',
-      'enableTrailingSell',
       'trailingBuyActivationPercent',
       'trailingBuyReboundPercent',
       'trailingSellActivationPercent',

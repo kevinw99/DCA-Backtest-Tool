@@ -23,7 +23,7 @@ import {
   CHART_HEIGHTS
 } from '../../charts/SharedChartConfig';
 
-const MultiStockPriceChartAligned = ({ data, stockResults, isLastChart, sharedDomain }) => {
+const MultiStockPriceChartAligned = ({ data, stockResults, isLastChart, sharedDomain, sharedTicks }) => {
   // Extract stock symbols
   const stockSymbols = useMemo(() => {
     if (!stockResults) return [];
@@ -232,7 +232,7 @@ const MultiStockPriceChartAligned = ({ data, stockResults, isLastChart, sharedDo
           margin={getChartMargin(isLastChart)}
         >
           <CartesianGrid {...GRID_CONFIG} />
-          <XAxis {...getXAxisConfig(isLastChart, sharedDomain)} />
+          <XAxis {...getXAxisConfig(isLastChart, sharedDomain, sharedTicks)} />
           <YAxis
             {...Y_AXIS_CONFIG}
             tickFormatter={(value) => `${value.toFixed(0)}%`}

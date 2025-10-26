@@ -26,7 +26,7 @@ import {
 
 const CASH_COLOR = '#95d5b2'; // Light green for cash
 
-const PortfolioCompositionChartAligned = ({ data, isLastChart, sharedDomain }) => {
+const PortfolioCompositionChartAligned = ({ data, isLastChart, sharedDomain, sharedTicks }) => {
   // Extract stock symbols from the data (exclude date, cash, total)
   const stockSymbols = useMemo(() => {
     if (!data || data.length === 0) return [];
@@ -133,7 +133,7 @@ const PortfolioCompositionChartAligned = ({ data, isLastChart, sharedDomain }) =
           stackOffset="none"
         >
           <CartesianGrid {...GRID_CONFIG} />
-          <XAxis {...getXAxisConfig(isLastChart, sharedDomain)} />
+          <XAxis {...getXAxisConfig(isLastChart, sharedDomain, sharedTicks)} />
           <YAxis {...Y_AXIS_CONFIG} tickFormatter={formatCurrency} domain={[0, 'auto']} />
           <Tooltip content={<CustomTooltip />} {...TOOLTIP_CONFIG} />
 

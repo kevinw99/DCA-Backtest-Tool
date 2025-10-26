@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import PortfolioSummaryCard from './PortfolioSummaryCard';
 import StockPerformanceTable from './StockPerformanceTable';
 import RejectedOrdersTable from './RejectedOrdersTable';
+import DeferredSellsTable from './DeferredSellsTable';
 import DailyTradesView from './DailyTradesView';
 import PortfolioBuyAndHoldComparison from './PortfolioBuyAndHoldComparison';
 import AlignedChartsContainer from './portfolio/AlignedChartsContainer';
@@ -30,6 +31,7 @@ const PortfolioResults = ({ data }) => {
     portfolioCompositionTimeSeries,
     capitalDeploymentTimeSeries,
     rejectedOrders,
+    deferredSells,
     portfolioRunId,
     parameters,
     buyAndHoldSummary,
@@ -193,6 +195,16 @@ const PortfolioResults = ({ data }) => {
           </p>
         </div>
         <RejectedOrdersTable orders={rejectedOrders} />
+      </section>
+
+      <section className="deferred-sells-section">
+        <div className="section-header">
+          <h3>🕐 Deferred Sells Analysis</h3>
+          <p className="section-description">
+            Sell signals that were postponed due to cash abundance strategy
+          </p>
+        </div>
+        <DeferredSellsTable orders={deferredSells} />
       </section>
     </div>
   );

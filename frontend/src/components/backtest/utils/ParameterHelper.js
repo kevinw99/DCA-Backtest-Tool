@@ -312,8 +312,6 @@ export const ParameterHelper = {
         trailingBuyReboundPercent: globalDefaults.trailingBuyReboundPercent || 5,
         trailingSellActivationPercent: globalDefaults.trailingSellActivationPercent || 20,
         trailingSellPullbackPercent: globalDefaults.trailingSellPullbackPercent || 10,
-        enableTrailingBuy: globalDefaults.enableTrailingBuy || false,
-        enableTrailingSell: globalDefaults.enableTrailingSell || false,
         enableConsecutiveIncrementalBuyGrid: globalDefaults.enableConsecutiveIncrementalBuyGrid || false,
         gridConsecutiveIncrement: globalDefaults.gridConsecutiveIncrement || 5,
         enableConsecutiveIncrementalSellProfit: globalDefaults.enableConsecutiveIncrementalSellProfit || false,

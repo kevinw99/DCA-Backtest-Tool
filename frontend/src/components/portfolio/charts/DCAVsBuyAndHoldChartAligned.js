@@ -23,7 +23,7 @@ import {
   CHART_HEIGHTS
 } from '../../charts/SharedChartConfig';
 
-const DCAVsBuyAndHoldChartAligned = ({ data, isLastChart, sharedDomain }) => {
+const DCAVsBuyAndHoldChartAligned = ({ data, isLastChart, sharedDomain, sharedTicks }) => {
   const [visibleLines, setVisibleLines] = useState({
     dca: true,
     buyAndHold: true
@@ -85,7 +85,7 @@ const DCAVsBuyAndHoldChartAligned = ({ data, isLastChart, sharedDomain }) => {
           margin={getChartMargin(isLastChart)}
         >
           <CartesianGrid {...GRID_CONFIG} />
-          <XAxis {...getXAxisConfig(isLastChart, sharedDomain)} />
+          <XAxis {...getXAxisConfig(isLastChart, sharedDomain, sharedTicks)} />
           <YAxis {...Y_AXIS_CONFIG} tickFormatter={formatCurrency} />
           <Tooltip content={<CustomTooltip />} {...TOOLTIP_CONFIG} />
 

@@ -109,10 +109,6 @@ const StockPerformanceTable = ({ stocks, portfolioRunId, parameters, buyAndHoldS
 
     // Add portfolio-level boolean flags from defaultParams
     if (parameters.defaultParams) {
-      // Add trailing buy/sell flags - default to false if not explicitly set
-      params.append('enableTrailingBuy', parameters.defaultParams.enableTrailingBuy || false);
-      params.append('enableTrailingSell', parameters.defaultParams.enableTrailingSell || false);
-
       if (parameters.defaultParams.enableConsecutiveIncrementalBuyGrid !== undefined) {
         params.append('enableConsecutiveIncrementalBuyGrid', parameters.defaultParams.enableConsecutiveIncrementalBuyGrid);
       }

@@ -19,6 +19,30 @@ const AlignedChartsContainer = ({ chartData, stockResults }) => {
     ? [chartData.masterDates[0], chartData.masterDates[chartData.masterDates.length - 1]]
     : ['auto', 'auto'];
 
+  // Generate explicit ticks to ensure all charts show the same dates
+  const sharedTicks = React.useMemo(() => {
+    if (!chartData.masterDates || chartData.masterDates.length === 0) return null;
+
+    const dates = chartData.masterDates;
+    const totalDates = dates.length;
+
+    // Calculate tick interval based on total dates
+    const targetTickCount = Math.min(12, Math.max(6, Math.floor(totalDates / 20)));
+    const tickInterval = Math.floor(totalDates / targetTickCount);
+
+    const ticks = [];
+    for (let i = 0; i < totalDates; i += tickInterval) {
+      ticks.push(dates[i]);
+    }
+
+    // Always include the last date
+    if (ticks[ticks.length - 1] !== dates[totalDates - 1]) {
+      ticks.push(dates[totalDates - 1]);
+    }
+
+    return ticks;
+  }, [chartData.masterDates]);
+
   // Define charts in order of display
   const charts = [
     {
@@ -74,6 +98,7 @@ const AlignedChartsContainer = ({ chartData, stockResults }) => {
                 {...chart.props}
                 isLastChart={isLastChart}
                 sharedDomain={sharedDomain}
+                sharedTicks={sharedTicks}
               />
             </div>
           </section>

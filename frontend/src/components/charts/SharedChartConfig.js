@@ -33,8 +33,9 @@ export function getChartMargin(isLastChart = false, hasDualAxis = false) {
  * Common X-axis configuration
  * @param {boolean} showXAxis - Whether to display x-axis (always true now - all charts show dates)
  * @param {Array} domain - Explicit domain to ensure all charts use same range
+ * @param {Array} ticks - Explicit tick marks to ensure all charts show same dates
  */
-export function getXAxisConfig(showXAxis = true, domain = null) {
+export function getXAxisConfig(showXAxis = true, domain = null, ticks = null) {
   const config = {
     dataKey: 'date',
     stroke: '#666',
@@ -46,12 +47,18 @@ export function getXAxisConfig(showXAxis = true, domain = null) {
     hide: false, // Always show x-axis on all charts
     height: 50,
     type: 'category', // Use category type for consistent spacing
-    allowDataOverflow: false // Don't allow data outside domain
+    allowDataOverflow: false, // Don't allow data outside domain
+    interval: 'preserveStartEnd' // Show first and last tick, auto-space others
   };
 
   // Add explicit domain if provided
   if (domain && domain.length === 2) {
     config.domain = domain;
+  }
+
+  // Add explicit ticks if provided (forces all charts to use same tick marks)
+  if (ticks && Array.isArray(ticks) && ticks.length > 0) {
+    config.ticks = ticks;
   }
 
   return config;
