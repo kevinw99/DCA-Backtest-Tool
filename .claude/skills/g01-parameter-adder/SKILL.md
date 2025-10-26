@@ -1,11 +1,74 @@
 ---
 name: g01-parameter-adder
 description: Add new parameters to DCA Backtest Tool following G01 multi-mode compliance guidelines. Use when adding boolean flags, numeric parameters, or configuration options that need to work across single, portfolio, and batch backtest modes. Ensures complete integration across all components.
+version: 1.1.0
+last_updated: 2025-10-26
+changelog: |
+  v1.1.0 (2025-10-26): Add critical batch mode lessons from Spec 46
+  v1.0.0 (2025-10-26): Initial creation
 ---
 
 # G01 Parameter Adder Skill
 
 Adds new parameters to the DCA Backtest Tool following G01 multi-mode support guidelines.
+
+## ⚠️ CRITICAL: Batch Mode Special Attention (from Spec 46)
+
+**The #1 mistake when adding parameters**: Batch mode has TWO separate places that must be updated.
+
+### Why Batch Mode is Different
+
+Single/Portfolio modes share the same `parameters` state object. Batch mode uses a completely separate `batchParameters` state object AND a separate request construction.
+
+### The Two Critical Updates
+
+**Update 1: batchParameters Default State** (DCABacktestForm.js ~lines 80-105)
+```javascript
+const defaultParams = {
+  // ... existing params ...
+  enableDynamicProfile: false,
+  // ADD YOUR PARAMETER HERE
+  newParameter: defaultValue  // ← Must add here!
+};
+```
+
+**Update 2: Batch Request Payload** (DCABacktestForm.js ~lines 764-791)
+```javascript
+const batchOptions = {
+  parameterRanges: {
+    // ... existing params ...
+    trailingStopOrderType: batchParameters.trailingStopOrderType,
+    // ADD YOUR PARAMETER HERE
+    newParameter: batchParameters.newParameter  // ← Must add here too!
+  }
+};
+```
+
+### What Happens If You Forget
+
+**Symptom**: UI checkboxes work, user can toggle them, but parameter is silently ignored by backend.
+
+**Example** (Spec 46 - Momentum Parameters):
+- ✅ UI checkboxes existed
+- ✅ Backend supported parameters
+- ❌ `batchParameters` state missing the parameters
+- ❌ Request payload didn't include parameters
+- **Result**: Feature appeared to work but did nothing
+
+### Verification Step
+
+**Always check Network tab in browser DevTools**:
+```javascript
+// POST request to /api/backtest/batch should include:
+{
+  "parameterRanges": {
+    "symbols": [...],
+    "newParameter": true  // ← Verify it's here!
+  }
+}
+```
+
+If missing → Check both update locations above.
 
 ## When to Use This Skill
 

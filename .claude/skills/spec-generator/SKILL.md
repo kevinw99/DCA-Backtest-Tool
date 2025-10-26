@@ -1,6 +1,11 @@
 ---
 name: spec-generator
 description: Generate comprehensive spec documentation (requirements.md, design.md, tasks.md) for new features or bug fixes. Use when starting new work, adding features, or fixing complex bugs. Automatically creates numbered spec directories following project conventions.
+version: 1.1.0
+last_updated: 2025-10-26
+changelog: |
+  v1.1.0 (2025-10-26): Emphasize G01 compliance for parameters, add verification-first phase
+  v1.0.0 (2025-10-26): Initial creation
 ---
 
 # Spec Generator Skill
@@ -101,19 +106,56 @@ Every spec must contain:
 
 6. **Proceed directly to implementation** unless critical information is missing
 
-## G01 Compliance (For Parameters)
+## G01 Compliance (For Parameters) - CRITICAL
 
-If adding a new parameter, ensure G01 compliance:
+⚠️ **If adding a parameter, START WITH VERIFICATION** (Lesson from Spec 46)
+
+### Verification-First Approach
+
+**Before implementation, create verification phase**:
+
+1. **Phase 0: Verification** (1-2 hours)
+   - Check what already exists
+   - Document gaps
+   - Create `verification-findings.md`
+   - Estimate actual work needed
+
+**Why this matters**: Spec 46 estimated 9-15 hours but only needed 1.5 hours because verification revealed backend was already complete.
+
+### G01 Compliance Requirements
+
+If adding a new parameter, the spec MUST include:
 
 1. **Multi-mode support**: Single, Portfolio, Batch
 2. **Components per mode**:
-   - Backend service
-   - Frontend UI
-   - Frontend state
-   - API request payload
+   - Backend service (may already exist!)
+   - Frontend UI (may exist but disconnected!)
+   - Frontend state (**TWO states for batch mode**)
+   - API request payload (separate for batch mode)
    - URL parameters (single/portfolio only)
 
-3. **Check G01 guidelines**: `.kiro/specs/generic/G01_adding-new-parameter/`
+3. **Batch Mode Critical Checks**:
+   - ✅ `batchParameters` default state updated
+   - ✅ Batch request payload includes parameter
+   - ✅ Not just `parameters` state (common mistake)
+
+4. **Check G01 guidelines**: `.kiro/specs/generic/G01_adding-new-parameter/`
+
+### G01 Compliance Spec Template
+
+```markdown
+## G01 Multi-Mode Compliance Status
+
+| Component | Single | Portfolio | Batch | Notes |
+|-----------|--------|-----------|-------|-------|
+| Backend Service | ✅ | ✅ | ❌ | Batch missing parameter |
+| Frontend UI | ✅ | ✅ | ✅ | Checkboxes exist |
+| Frontend State | ✅ | ✅ | ❌ | batchParameters missing |
+| API Request | ✅ | ✅ | ❌ | Batch payload missing |
+| URL Parameters | ✅ | ✅ | N/A | Batch doesn't use URLs |
+
+**Compliance**: ❌ Partial - Batch mode incomplete
+```
 
 ## Best Practices
 

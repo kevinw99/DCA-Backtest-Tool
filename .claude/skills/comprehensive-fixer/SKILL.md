@@ -1,6 +1,10 @@
 ---
 name: comprehensive-fixer
 description: Fix bugs comprehensively by addressing root cause, finding similar issues across codebase, removing technical debt, and testing thoroughly. Use when user reports bugs or when code issues are discovered. Implements the comprehensive problem-solving approach from CLAUDE.md.
+version: 1.0.0
+last_updated: 2025-10-26
+changelog: |
+  v1.0.0 (2025-10-26): Initial creation
 ---
 
 # Comprehensive Fixer Skill

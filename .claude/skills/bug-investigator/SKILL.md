@@ -1,6 +1,10 @@
 ---
 name: bug-investigator
 description: Systematically investigate DCA backtest bugs using server logs, curl tests, and transaction log analysis. Use when user reports bugs, unexpected behavior, or issues with frontend URLs or API endpoints. Follows the comprehensive debugging workflow from CLAUDE.md.
+version: 1.0.0
+last_updated: 2025-10-26
+changelog: |
+  v1.0.0 (2025-10-26): Initial creation
 ---
 
 # Bug Investigator Skill

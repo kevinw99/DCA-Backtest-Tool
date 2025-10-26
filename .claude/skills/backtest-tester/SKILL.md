@@ -1,6 +1,10 @@
 ---
 name: backtest-tester
 description: Test DCA backtest endpoints (single, portfolio, batch) with proper curl commands and result verification. Use when testing API changes, verifying fixes, or validating new features. Creates reusable test scripts and validates response format.
+version: 1.0.0
+last_updated: 2025-10-26
+changelog: |
+  v1.0.0 (2025-10-26): Initial creation
 ---
 
 # Backtest Tester Skill
