@@ -295,7 +295,10 @@ const PortfolioBacktestPage = () => {
             // Dynamic Grid Parameters - always send to override backend defaults
             enableDynamicGrid: paramsToUse.defaultParams.enableDynamicGrid !== undefined ? paramsToUse.defaultParams.enableDynamicGrid : false,
             normalizeToReference: paramsToUse.defaultParams.normalizeToReference !== undefined ? paramsToUse.defaultParams.normalizeToReference : false,
-            dynamicGridMultiplier: paramsToUse.defaultParams.dynamicGridMultiplier || 1.0
+            dynamicGridMultiplier: paramsToUse.defaultParams.dynamicGridMultiplier || 1.0,
+            // Spec 45/48: Momentum-based trading parameters
+            momentumBasedBuy: paramsToUse.defaultParams.momentumBasedBuy || false,
+            momentumBasedSell: paramsToUse.defaultParams.momentumBasedSell || false
           },
           stocks: stocksWithParams, // Send stocks with their specific parameters
           // Capital Optimization Parameters (top-level as expected by backend)
