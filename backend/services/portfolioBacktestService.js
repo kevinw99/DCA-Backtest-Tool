@@ -27,6 +27,7 @@ class PortfolioState {
 
     this.stocks = new Map();  // symbol -> StockState
     this.rejectedOrders = [];
+    this.deferredSells = [];  // Track deferred sell orders
     this.capitalFlowHistory = [];
     this.valuationHistory = [];
 
@@ -241,6 +242,10 @@ async function runPortfolioBacktest(config) {
     capitalOptimizer = new CapitalOptimizerService(capitalOptimization);
   }
 
+  // Store capitalOptimization and indexTracking back in config for access by PortfolioState
+  config.capitalOptimization = capitalOptimization;
+  config.indexTracking = indexTracking;
+
   // 1. Initialize portfolio state
   const portfolio = new PortfolioState(config);
 
@@ -417,6 +422,7 @@ async function runPortfolioBacktest(config) {
       // Get transaction count before processing
       const stateBefore = executor.getState();
       const txCountBefore = stateBefore.enhancedTransactions.length;
+      const activeStopBefore = stateBefore.activeStop ? {...stateBefore.activeStop} : null;
 
       // ALWAYS allow buy signal detection so we can track rejections
       // Process one day using executor with correct day index
@@ -425,6 +431,11 @@ async function runPortfolioBacktest(config) {
         sellEnabled: !shouldDeferSell,  // Defer selling when cash is abundant
         lotSizeUsd: currentLotSize
       });
+
+      // Track deferred sell if selling was disabled and there was an active stop
+      if (shouldDeferSell && activeStopBefore && dayData.close <= activeStopBefore.stopPrice) {
+        logDeferredSell(portfolio, stock, activeStopBefore, dayData, date, portfolio.cashReserve);
+      }
 
       // Check capital availability AFTER buy signal evaluation
       const hasCapital = portfolio.cashReserve >= currentLotSize;
@@ -597,6 +608,10 @@ async function runPortfolioBacktest(config) {
   if (capitalOptimizationMetrics) {
     results.capitalOptimization = capitalOptimizationMetrics;
   }
+
+  // 11. Add rejected orders and deferred sells
+  results.rejectedOrders = portfolio.rejectedOrders || [];
+  results.deferredSells = portfolio.deferredSells || [];
 
   return results;
 }
@@ -1030,6 +1045,37 @@ function logRejectedOrder(portfolio, stock, signal, dayData, date, lotSize = nul
   stock.rejectedBuys++;
   stock.rejectedBuyValues += lotSizeUsd;
   stock.rejectedOrders.push(rejectedOrder);  // NEW: Also add to stock's rejected orders
+}
+
+/**
+ * Log deferred sell order
+ */
+function logDeferredSell(portfolio, stock, activeStop, dayData, date, cashReserve) {
+  const lotsToSell = activeStop.lotsToSell;
+  const estimatedValue = lotsToSell.reduce((sum, lot) => sum + (lot.shares * dayData.close), 0);
+  const estimatedProfit = lotsToSell.reduce((sum, lot) => sum + ((dayData.close - lot.price) * lot.shares), 0);
+
+  const deferredSell = {
+    date,
+    symbol: stock.symbol,
+    orderType: 'SELL',
+    price: dayData.close,
+    stopPrice: activeStop.stopPrice,
+    limitPrice: activeStop.limitPrice,
+    lotsToSell: lotsToSell.length,
+    estimatedValue,
+    estimatedProfit,
+    reason: 'DEFERRED_DUE_TO_CASH_ABUNDANCE',
+    cashReserve,
+    cashThreshold: portfolio.config.capitalOptimization?.deferredSelling?.cashAbundanceThreshold,
+    portfolioState: {
+      deployedCapital: portfolio.deployedCapital,
+      cashReserve: portfolio.cashReserve,
+      utilizationPercent: portfolio.utilizationPercent
+    }
+  };
+
+  portfolio.deferredSells.push(deferredSell);
 }
 
 /**

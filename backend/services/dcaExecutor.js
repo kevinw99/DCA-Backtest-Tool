@@ -1952,7 +1952,10 @@ function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false
       if (context.buyEnabled !== undefined) {
         currentParams.buyEnabled = context.buyEnabled;
       }
-      
+      if (context.sellEnabled !== undefined) {
+        currentParams.sellEnabled = context.sellEnabled;
+      }
+
       return await processOneDayOfTrading(dayData, dayIndex, context);
     },
 
