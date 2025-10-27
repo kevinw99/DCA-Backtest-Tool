@@ -304,7 +304,7 @@ async function runPortfolioBacktest(config) {
         );
 
         if (scalingResult.success) {
-          console.log(`📊 Beta scaling applied for ${symbol}: beta=${scalingResult.betaInfo.beta}, factor=${scalingResult.betaInfo.betaFactor.toFixed(2)}`);
+          console.log(`📊 Beta scaling applied for ${symbol}: beta=${scalingResult.betaInfo?.beta || 'N/A'}, factor=${scalingResult.betaInfo?.betaFactor?.toFixed(2) || 'N/A'}`);
 
           // Use adjusted parameters from centralized service
           params = { ...params, ...scalingResult.adjustedParameters };
@@ -500,7 +500,7 @@ async function runPortfolioBacktest(config) {
               // Without this, phantom lots remain in P&L calculation, causing excessive buy blocking
               const oldPnL = stateAfter.positionPnL;
               stateAfter.positionPnL = calculatePositionPnL(stateAfter.lots, dayData.close);
-              console.log(`   🔧 PORTFOLIO FIX APPLIED: Recalculated positionPnL for ${symbol} on ${date} - old: ${oldPnL.toFixed(2)}, new: ${stateAfter.positionPnL.toFixed(2)}, lots: ${stateAfter.lots.length}`);
+              console.log(`   🔧 PORTFOLIO FIX APPLIED: Recalculated positionPnL for ${symbol} on ${date} - old: ${oldPnL?.toFixed(2) || 'N/A'}, new: ${stateAfter.positionPnL?.toFixed(2) || 'N/A'}, lots: ${stateAfter.lots.length}`);
             }
 
             // Remove the transaction from executor's transaction log

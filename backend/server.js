@@ -698,6 +698,7 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
       // Beta-related parameters
       beta,
       coefficient,
+      betaScalingCoefficient,  // Alternative name for coefficient
       enableBetaScaling,
       isManualBetaOverride,
       // Spec 27: Directional strategy control flags
@@ -715,7 +716,7 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
       symbol,  // Stock symbol for beta resolution
       {
         enableBetaScaling,
-        coefficient: coefficient !== undefined ? coefficient : 1.0,
+        coefficient: coefficient || betaScalingCoefficient || 1.0,
         beta,  // Manual beta override (optional)
         isManualBetaOverride
       }
@@ -735,8 +736,8 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
           isValid: scalingResult.isValid
         };
 
-        console.log(`🧮 Beta scaling applied: Beta=${betaInfo.beta}, Factor=${betaInfo.betaFactor.toFixed(2)}, Warnings=${betaInfo.warnings.length}`);
-        if (betaInfo.warnings.length > 0) {
+        console.log(`🧮 Beta scaling applied: Beta=${betaInfo.beta}, Factor=${betaInfo.betaFactor?.toFixed(2) || 'N/A'}, Warnings=${betaInfo.warnings?.length || 0}`);
+        if (betaInfo.warnings && betaInfo.warnings.length > 0) {
           console.log('⚠️  Beta warnings:', betaInfo.warnings);
         }
       }
@@ -1251,7 +1252,7 @@ app.post('/api/backtest/batch', validation.validateBatchBacktestParams, async (r
     const executionTime = Date.now() - startTime;
 
     console.log(`✅ Batch backtest completed in ${(executionTime / 1000).toFixed(1)}s`);
-    console.log(`📈 Best result: ${results.summary?.overallBest?.summary?.annualizedReturn.toFixed(2)}% annualized return`);
+    console.log(`📈 Best result: ${results.summary?.overallBest?.summary?.annualizedReturn?.toFixed(2) || 'N/A'}% annualized return`);
 
     res.json({
       success: true,
@@ -1312,7 +1313,7 @@ app.post('/api/backtest/short-batch', validation.validateBatchBacktestParams, as
     const executionTime = Date.now() - startTime;
 
     console.log(`✅ Short selling batch backtest completed in ${(executionTime / 1000).toFixed(1)}s`);
-    console.log(`📈 Best result: ${results.summary?.overallBest?.summary?.annualizedReturn.toFixed(2)}% annualized return`);
+    console.log(`📈 Best result: ${results.summary?.overallBest?.summary?.annualizedReturn?.toFixed(2) || 'N/A'}% annualized return`);
 
     res.json({
       success: true,
@@ -1371,7 +1372,7 @@ app.post('/api/backtest/beta-parameters', async (req, res) => {
       });
     }
 
-    console.log(`✅ Beta parameters calculated: Beta=${scalingResult.betaInfo.beta}, Coefficient=${coefficient}, β-factor=${scalingResult.betaInfo.betaFactor.toFixed(3)}`);
+    console.log(`✅ Beta parameters calculated: Beta=${scalingResult.betaInfo.beta}, Coefficient=${coefficient}, β-factor=${scalingResult.betaInfo.betaFactor?.toFixed(3) || 'N/A'}`);
 
     res.json({
       success: true,
@@ -1393,8 +1394,8 @@ app.post('/api/backtest/beta-parameters', async (req, res) => {
         warnings: scalingResult.warnings,
         isValid: scalingResult.isValid,
         calculation: {
-          formula: `Beta (${scalingResult.betaInfo.beta}) × Coefficient (${coefficient}) = β-factor (${scalingResult.betaInfo.betaFactor.toFixed(3)})`,
-          example: `Profit Requirement = ${(scalingResult.baseParameters.profitRequirement * 100).toFixed(0)}% × ${scalingResult.betaInfo.betaFactor.toFixed(3)} = ${(scalingResult.adjustedParameters.profitRequirement * 100).toFixed(2)}%`
+          formula: `Beta (${scalingResult.betaInfo.beta}) × Coefficient (${coefficient}) = β-factor (${scalingResult.betaInfo.betaFactor?.toFixed(3) || 'N/A'})`,
+          example: `Profit Requirement = ${(scalingResult.baseParameters.profitRequirement * 100).toFixed(0)}% × ${scalingResult.betaInfo.betaFactor?.toFixed(3) || 'N/A'} = ${(scalingResult.adjustedParameters.profitRequirement * 100).toFixed(2)}%`
         }
       }
     });
@@ -1611,9 +1612,9 @@ app.post('/api/portfolio-backtest', async (req, res) => {
 
     console.log(`✅ Portfolio backtest complete:`);
     console.log(`   Final Value: $${results.portfolioSummary.finalPortfolioValue.toLocaleString()}`);
-    console.log(`   Total Return: ${results.portfolioSummary.totalReturnPercent.toFixed(2)}%`);
-    console.log(`   CAGR: ${results.portfolioSummary.cagr.toFixed(2)}%`);
-    console.log(`   Capital Utilization: ${results.portfolioSummary.capitalUtilizationPercent.toFixed(1)}%`);
+    console.log(`   Total Return: ${results.portfolioSummary.totalReturnPercent?.toFixed(2) || 'N/A'}%`);
+    console.log(`   CAGR: ${results.portfolioSummary.cagr?.toFixed(2) || 'N/A'}%`);
+    console.log(`   Capital Utilization: ${results.portfolioSummary.capitalUtilizationPercent?.toFixed(1) || 'N/A'}%`);
     console.log(`   Rejected Buys: ${results.portfolioSummary.rejectedBuys}`);
 
     // Cache results for drill-down
@@ -1667,7 +1668,7 @@ app.post('/api/backtest/portfolio/config', async (req, res) => {
     console.log(`   Portfolio: ${config.name}`);
     console.log(`   Stocks: ${config.stocks.length}`);
     console.log(`   Final Value: $${results.portfolioSummary.finalPortfolioValue.toLocaleString()}`);
-    console.log(`   Total Return: ${results.portfolioSummary.totalReturnPercent.toFixed(2)}%`);
+    console.log(`   Total Return: ${results.portfolioSummary.totalReturnPercent?.toFixed(2) || 'N/A'}%`);
 
     // Cache results for drill-down
     const portfolioResultsCache = require('./services/portfolioResultsCache');
@@ -1714,7 +1715,7 @@ app.get('/api/backtest/portfolio/config/:configName', async (req, res) => {
     console.log(`   Portfolio: ${config.name}`);
     console.log(`   Stocks: ${config.stocks.length}`);
     console.log(`   Final Value: $${results.portfolioSummary.finalPortfolioValue.toLocaleString()}`);
-    console.log(`   Total Return: ${results.portfolioSummary.totalReturnPercent.toFixed(2)}%`);
+    console.log(`   Total Return: ${results.portfolioSummary.totalReturnPercent?.toFixed(2) || 'N/A'}%`);
 
     // Cache results for drill-down
     const portfolioResultsCache = require('./services/portfolioResultsCache');
