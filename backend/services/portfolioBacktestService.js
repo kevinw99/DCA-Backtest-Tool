@@ -11,7 +11,7 @@
 
 const dcaBacktestService = require('./dcaBacktestService');
 const dcaSignalEngine = require('./dcaSignalEngine');
-const { createDCAExecutor } = require('./dcaExecutor');
+const { createDCAExecutor, calculatePositionPnL } = require('./dcaExecutor');
 const database = require('../database');
 const IndexTrackingService = require('./indexTrackingService');
 const CapitalOptimizerService = require('./capitalOptimizerService');
@@ -495,6 +495,12 @@ async function runPortfolioBacktest(config) {
             // The executor added a lot when creating the transaction, we need to remove it
             if (stateAfter.lots && stateAfter.lots.length > 0) {
               stateAfter.lots.pop();  // Remove the last lot that was just added
+
+              // FIX: Recalculate positionPnL after rollback (Spec 45: Momentum mode)
+              // Without this, phantom lots remain in P&L calculation, causing excessive buy blocking
+              const oldPnL = stateAfter.positionPnL;
+              stateAfter.positionPnL = calculatePositionPnL(stateAfter.lots, dayData.close);
+              console.log(`   🔧 PORTFOLIO FIX APPLIED: Recalculated positionPnL for ${symbol} on ${date} - old: ${oldPnL.toFixed(2)}, new: ${stateAfter.positionPnL.toFixed(2)}, lots: ${stateAfter.lots.length}`);
             }
 
             // Remove the transaction from executor's transaction log

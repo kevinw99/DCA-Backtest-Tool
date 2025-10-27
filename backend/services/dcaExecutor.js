@@ -2208,6 +2208,7 @@ function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false
 
 module.exports = {
   createDCAExecutor,
+  calculatePositionPnL,  // Export for portfolio mode state restoration
   PROFILES,
   HYSTERESIS_DAYS
 };

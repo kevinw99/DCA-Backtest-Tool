@@ -686,10 +686,51 @@ async function runDCABacktest(params, dayCallback = null) {
     }
   }
 
+  // Apply beta scaling if enabled (Spec 43: Centralized Beta Scaling)
+  let executorParams = { ...params };
+
+  if (params.enableBetaScaling) {
+    const BetaScalingService = require('./betaScaling/BetaScalingService');
+    const betaService = require('./betaService');
+    const betaScalingService = new BetaScalingService(betaService);
+
+    const coefficient = params.betaScalingCoefficient || 1.0;
+
+    const scalingResult = await betaScalingService.applyBetaScaling(
+      params,
+      symbol,
+      {
+        enableBetaScaling: true,
+        coefficient,
+        beta: params.beta,
+        isManualBetaOverride: !!params.beta
+      }
+    );
+
+    if (scalingResult.success) {
+      executorParams = scalingResult.adjustedParameters;
+
+      if (verbose) {
+        console.log(`🔬 Beta Scaling Applied (Spec 43):`);
+        console.log(`   Beta: ${scalingResult.betaInfo.beta.toFixed(3)} (source: ${scalingResult.betaInfo.source})`);
+        console.log(`   Coefficient: ${scalingResult.betaInfo.coefficient.toFixed(2)}`);
+        console.log(`   Beta Factor: ${scalingResult.betaInfo.betaFactor.toFixed(3)}`);
+      }
+
+      // Log warnings if any
+      if (scalingResult.warnings && scalingResult.warnings.length > 0) {
+        console.log(`⚠️  Beta Scaling Warnings:`);
+        scalingResult.warnings.forEach(warning => console.log(`   - ${warning}`));
+      }
+    } else {
+      console.warn(`⚠️  Beta scaling failed, using base parameters:`, scalingResult.errors);
+    }
+  }
+
   // Initialize Adaptive Strategy
   let adaptiveStrategy = null;
   let currentParams = {
-    ...params,
+    ...executorParams,  // Use beta-scaled parameters
     buyEnabled: true,  // Default: buying enabled
     sellEnabled: true  // Default: selling enabled
   };
