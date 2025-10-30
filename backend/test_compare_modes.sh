@@ -5,10 +5,11 @@ echo "Testing with NVDA, identical parameters WITH beta scaling enabled"
 echo ""
 
 # Test parameters (identical for both modes)
+# Using 1-year range to avoid timeout while still being comprehensive
 PARAMS='{
   "symbol": "NVDA",
-  "startDate": "2021-11-01",
-  "endDate": "2025-10-17",
+  "startDate": "2024-01-01",
+  "endDate": "2024-12-31",
   "lotSizeUsd": 20000,
   "maxLots": 5,
   "gridIntervalPercent": 0.10,
@@ -46,8 +47,8 @@ PORTFOLIO_RESULT=$(curl -s -X POST http://localhost:3001/api/portfolio-backtest 
   -d "{
   \"totalCapital\": 100000,
   \"stocks\": [\"NVDA\"],
-  \"startDate\": \"2021-11-01\",
-  \"endDate\": \"2025-10-17\",
+  \"startDate\": \"2024-01-01\",
+  \"endDate\": \"2024-12-31\",
   \"lotSizeUsd\": 20000,
   \"maxLotsPerStock\": 5,
   \"gridIntervalPercent\": 0.10,

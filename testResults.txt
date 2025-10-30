@@ -1,3 +1,7 @@
+Real portfolio
+Batch mode:
+http://localhost:3000/batch/TSLA+APP+HOOD+SEZL+HIMS+SOFI+RXRX+CRCL+CRWV+FIGR+NBIS+AMSC+COIN+HYLN+SNDK+WDC+CRDO+IDCC+SOUN+CIFR+ONDS+NVDA+PLTR+ALAB+QBTS+AVGO+ORCL+IREN+FIG+OPEN+RDDT+AMD+BITF/results?symbols=TSLA%2CAPP%2CHOOD%2CSEZL%2CHIMS%2CSOFI%2CRXRX%2CCRCL%2CCRWV%2CFIGR%2CNBIS%2CAMSC%2CCOIN%2CHYLN%2CSNDK%2CWDC%2CCRDO%2CIDCC%2CSOUN%2CCIFR%2CONDS%2CNVDA%2CPLTR%2CALAB%2CQBTS%2CAVGO%2CORCL%2CIREN%2CFIG%2COPEN%2CRDDT%2CAMD%2CBITF&startDate=2021-09-01&endDate=2025-10-24&profitRequirement=5&gridIntervalPercent=10&trailingBuyActivationPercent=10&trailingBuyReboundPercent=5&trailingSellActivationPercent=20&trailingSellPullbackPercent=10&coefficients=1&enableBetaScaling=false&enableDynamicGrid=false&normalizeToReference=true&enableConsecutiveIncrementalBuyGrid=false&enableConsecutiveIncrementalSellProfit=false&enableScenarioDetection=false&trailingStopOrderType=market
+
 Tuning steps:
 Result saved in result dir.
 1. PLTR tunning 1

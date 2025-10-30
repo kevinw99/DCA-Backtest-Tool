@@ -31,9 +31,10 @@ export const CapitalOptimizationSection = ({
     return error ? error.message : null;
   };
 
-  // Calculate sensible defaults based on total capital
+  // Calculate sensible defaults based on lot size
+  const lotSize = parameters.lotSizeUsd || 10000;
   const defaultCashYieldMinimum = Math.max(10000, totalCapital * 0.1); // 10% of capital or $10K minimum
-  const defaultDeferredSellingThreshold = totalCapital * 0.3; // 30% of capital
+  const defaultDeferredSellingThreshold = lotSize * 5; // 5x lot size
   const defaultAdaptiveLotThreshold = totalCapital * 0.2; // 20% of capital
 
   return (
@@ -104,7 +105,7 @@ export const CapitalOptimizationSection = ({
               type="number"
               step="10000"
               min="0"
-              helpText={`Skip sells when cash exceeds this amount (default: ${(defaultDeferredSellingThreshold).toLocaleString()})`}
+              helpText={`Skip sells when cash exceeds this amount (default: ${(defaultDeferredSellingThreshold).toLocaleString()} = 5x lot size)`}
               error={getError('deferredSellingThreshold')}
             />
           </div>

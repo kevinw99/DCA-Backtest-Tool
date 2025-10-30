@@ -1,4 +1,79 @@
+The future trade is only the activation, it does not evaluate the the actual grid requrirement
+so for the future trade to guide my real trade, I don't have all the info, it could the current price already sastisfying the trailing order, yet it is not executed because the backtest know it does not satisfy the grid requirement.,so it abort the trade but keep the activation for next day evaluation.
+What do you suggest to provide better guidance for real trade?
+One way to do this is add one section : Current holding with lot details, including for each lot: buy price, current price, unrealized P/L, average price,  so that I can see whether the current price already satisfy the trailing order condition.
+The drawback is that I still need to evalute the grid requirement myself. is there a simple way the engine can evalute and tell me what the target price is to satisfy both trailing order and grid requirement?
+
+e.g., http://localhost:3000/batch/TSLA+APP+HOOD+SEZL+HIMS+SOFI+AMD+RXRX+CRCL+CRWV+FIGR+NBIS+AMSC+COIN+HYLN+SNDK+WDC+CRDO+IDCC+SOUN+BITF+CIFR+ONDS+NVDA+PLTR+ALAB+QBTS+AVGO+ORCL+IREN+FIG+OPEN+RDDT/results?startDate=2025-09-01&endDate=2025-10-30&profitRequirement=5&gridIntervalPercent=10&trailingBuyActivationPercent=10&trailingBuyReboundPercent=5&trailingSellActivationPercent=20&trailingSellPullbackPercent=10&coefficients=1&enableBetaScaling=false&enableDynamicGrid=true&normalizeToReference=true&enableConsecutiveIncrementalBuyGrid=false&enableConsecutiveIncrementalSellProfit=true&enableScenarioDetection=true
+http://localhost:3000/batch/TSLA+APP+HOOD+SEZL+HIMS+SOFI+AMD+RXRX+CRCL+CRWV+FIGR+NBIS+AMSC+COIN+HYLN+SNDK+WDC+CRDO+IDCC+SOUN+BITF+CIFR+ONDS+NVDA+PLTR+ALAB+QBTS+AVGO+ORCL+IREN+FIG+OPEN+RDDT/results?startDate=2025-09-01&endDate=2025-10-30&profitRequirement=5&gridIntervalPercent=10&trailingBuyActivationPercent=10&trailingBuyReboundPercent=5&trailingSellActivationPercent=20&trailingSellPullbackPercent=10&coefficients=1&enableBetaScaling=false&enableDynamicGrid=true&normalizeToReference=true&enableConsecutiveIncrementalBuyGrid=false&enableConsecutiveIncrementalSellProfit=true&enableScenarioDetection=true
+
+Take APP as example adn you can skip other symbols in the url and curl, I have
+"APP
+ Current: $628.71 as of 2025-10-30
+ Holdings: $631.85 avg
+ 📊 Run
+ ▼
+ Trading Context
+ Last Trade:
+ TRAILING_STOP_LIMIT_BUY at $631.85 on 2025-10-07
+ Peak:
+ $631.85 on 2025-10-07
+ Bottom:
+ $552.64 on 2025-10-21
+ Current Price: $628.71
+ Avg Cost: $631.85
+ Active BUY Stop
+ ACTIVE TRACKING
+ Stop Price:$580.27↓ $48.44 (+7.70%)
+ +5.00% rebound from $552.64
+ Lowest Price:$552.64↓ $76.07 (+12.10%)
+ Next SELL
+ PENDING
+ Activates at:$663.17↑ $34.45 (+5.48%)
+ +20.00% rise from $552.64
+ Reference Price:$552.64↓ $76.07 (+12.10%)
+ Then trails:+10.00% pullback
+ Profit target:$663.44↑ $34.73 (+5.52%)
+"
+Current: $628.71 as of 2025-10-30 already should trigger the active BUY stop at $580.27, right? but it is not executed and I guess it is because the grid requirement is not satisfied.
+Can you verify.
+Please use this example to propose a better way to provide guidance for real trade or implement my suggestion above.Please develop a new spec.
+
+
+
+
+Actaully I need you to investigate the deferring selling issue for config=nasqad100.json
+http://localhost:3000/portfolio-backtest?config=nasdaq100
+I can see there are "Deferred Sells Analysis
+Sell signals that were postponed due to cash abundance strategy
+
+264 deferred sells
+Est. value: $3,528,777 | Est. profit: $888,777"
+
+However since 1/1/2024, there are lots of cash that the deferred selling should have occured, But there are still lots of sellls occured.,as you can see the empty circle sign on the upper chart, or from the " Daily Trading Activity"
+..."Jan 1, 2024	4	0	4	$54,628	$14,628	$381,899	$436,527
+Feb 13, 2024	1	1	0	-$10,000	$0	$436,527	$426,527
+Feb 14, 2024	2	1	1	$750	$750	$426,527	$427,276
+Feb 21, 2024	1	1	0	-$10,000	$0	$427,276	$417,276
+Feb 22, 2024	2	2	0	-$20,000	$0	$417,276	$397,276
+Feb 25, 2024	1	1	0	-$10,000	$0	$397,276	$387,276
+Feb 28, 2024	1	1	0	-$10,000	$0	$387,276	$377,276
+Feb 29, 2024	1	0	1	$10,324	$324	$377,276	$387,600
+Mar 4, 2024	3	0	3	$39,943	$9,943	$387,600	$427,543
+Mar 6, 2024	1	1	0	-$10,000	$0	$427,543	$417,543
+Mar 7, 2024	2	1	1	$3,118	$3,118	$417,543	$420,661
+Mar 10, 2024	2	1	1	$4,594	$4,594	$420,661	$425,255"
+
+these sells occur when cash is $381,899 on 1/1/2024, which is way above the deferred selling threshold of $150,000, so these sells should not have occured.
+
+
+
 how does momentum based buy affect consecutive incremental buy grid?
+
+does nasdaq100.json has the new parameters for momentum based buy/sell? if not please update it.
+
+does nasdaq100.json has the new parameters for momentum based buy/sell? if not please update it.
+
 
 meaning we can fix the issue on a adhoc basis first, but we need the right framewrok/structure to prevent similar issues in the future.
 
