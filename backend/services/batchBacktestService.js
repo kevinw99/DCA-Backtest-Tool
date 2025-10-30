@@ -287,9 +287,12 @@ function calculateFutureTradesForResult(result) {
     activeTrailingStopSell,
     recentPeak,
     recentBottom,
+    recentPeakDate,        // [Spec 51]
+    recentBottomDate,      // [Spec 51]
     backtestParameters: params,
     summary,
-    finalMarketPrice
+    finalMarketPrice,
+    enhancedTransactions = []  // [Spec 51] For extracting last trade
   } = result;
 
   // Determine strategy type
@@ -306,6 +309,41 @@ function calculateFutureTradesForResult(result) {
     const totalValue = positions.reduce((sum, pos) => sum + (pos.price * pos.shares), 0);
     const totalShares = positions.reduce((sum, pos) => sum + pos.shares, 0);
     avgCost = totalShares > 0 ? totalValue / totalShares : 0;
+  }
+
+  // [Spec 52] Format holdings with P/L calculations
+  let formattedHoldings = null;
+  if (hasHoldings) {
+    const positions = isShortStrategy ? shorts : lots;
+    const holdingsArray = positions.map(pos => {
+      const currentValue = pos.shares * currentPrice;
+      const costBasis = pos.shares * pos.price;
+      const unrealizedPL = currentValue - costBasis;
+      const unrealizedPLPercent = costBasis > 0 ? (unrealizedPL / costBasis) * 100 : 0;
+
+      return {
+        buyPrice: pos.price,
+        shares: pos.shares,
+        purchaseDate: pos.date,
+        currentValue: currentValue,
+        unrealizedPL: unrealizedPL,
+        unrealizedPLPercent: unrealizedPLPercent
+      };
+    });
+
+    const totalValue = holdingsArray.reduce((sum, h) => sum + h.currentValue, 0);
+    const totalCostBasis = positions.reduce((sum, pos) => sum + (pos.price * pos.shares), 0);
+    const totalUnrealizedPL = totalValue - totalCostBasis;
+    const totalUnrealizedPLPercent = totalCostBasis > 0 ? (totalUnrealizedPL / totalCostBasis) * 100 : 0;
+
+    formattedHoldings = {
+      lots: holdingsArray,
+      totalLots: holdingsArray.length,
+      avgCost: avgCost,
+      totalValue: totalValue,
+      totalUnrealizedPL: totalUnrealizedPL,
+      totalUnrealizedPLPercent: totalUnrealizedPLPercent
+    };
   }
 
   // Calculate BUY activation (reuse logic from BacktestResults.js)
@@ -334,6 +372,80 @@ function calculateFutureTradesForResult(result) {
       referencePrice: recentPeak || currentPrice,
       description: isShortStrategy ? 'Next SHORT' : 'Next BUY'
     };
+  }
+
+  // [Spec 52] Calculate BUY grid requirement and validation
+  if (buyActivation) {
+    let gridRequirementPrice = null;
+    let gridSatisfied = false;
+    let effectiveExecutionPrice = null;
+    let executionStatus = null;
+    let lastBuyPrice = null;
+
+    // Get last buy price from most recent lot/short
+    if (hasHoldings) {
+      const positions = isShortStrategy ? shorts : lots;
+      if (positions.length > 0) {
+        // Get the most recent position (last element in array)
+        lastBuyPrice = positions[positions.length - 1].price;
+      }
+    }
+
+    // Calculate grid requirement price if we have a last buy price
+    if (lastBuyPrice !== null) {
+      // Get the effective grid interval (considering dynamic grid if enabled)
+      let effectiveGridInterval = params.gridIntervalPercent;
+
+      // For dynamic grid, check if we need to apply multiplier
+      if (params.enableDynamicGrid && hasHoldings) {
+        const positions = isShortStrategy ? shorts : lots;
+        const consecutiveBuys = positions.length;
+
+        // Apply grid multiplier based on consecutive buys (same logic as executor)
+        if (consecutiveBuys >= 2) {
+          const multiplier = Math.pow(1.5, consecutiveBuys - 1);
+          effectiveGridInterval = params.gridIntervalPercent * multiplier;
+        }
+      }
+
+      gridRequirementPrice = lastBuyPrice * (1 - effectiveGridInterval);
+      gridSatisfied = currentPrice <= gridRequirementPrice;
+
+      // Calculate effective execution price
+      if (buyActivation.isActive) {
+        // For ACTIVE stop: effective price is the MIN (more restrictive for BUY = lower price)
+        // BUY requires price to DROP, so we need the lower of stop and grid prices
+        effectiveExecutionPrice = Math.min(buyActivation.stopPrice, gridRequirementPrice);
+
+        // Determine execution status
+        const stopTriggered = currentPrice >= buyActivation.stopPrice;
+        if (stopTriggered && gridSatisfied) {
+          executionStatus = 'READY';
+        } else if (stopTriggered && !gridSatisfied) {
+          executionStatus = 'WAITING_FOR_GRID';
+        } else if (!stopTriggered && gridSatisfied) {
+          executionStatus = 'WAITING_FOR_STOP';
+        } else {
+          executionStatus = 'WAITING';
+        }
+      } else {
+        // For PENDING activation: effective price is also MIN for BUY
+        effectiveExecutionPrice = Math.min(buyActivation.activationPrice, gridRequirementPrice);
+        executionStatus = 'PENDING';
+      }
+    } else {
+      // No holdings yet - first buy has no grid requirement
+      effectiveExecutionPrice = buyActivation.isActive ? buyActivation.stopPrice : buyActivation.activationPrice;
+      executionStatus = buyActivation.isActive ? 'READY' : 'PENDING';
+      gridSatisfied = true; // First buy is always grid-satisfied
+    }
+
+    // Add grid validation fields to buyActivation
+    buyActivation.gridRequirementPrice = gridRequirementPrice;
+    buyActivation.gridSatisfied = gridSatisfied;
+    buyActivation.effectiveExecutionPrice = effectiveExecutionPrice;
+    buyActivation.executionStatus = executionStatus;
+    buyActivation.lastBuyPrice = lastBuyPrice;
   }
 
   // Calculate SELL activation (reuse logic from BacktestResults.js)
@@ -368,6 +480,54 @@ function calculateFutureTradesForResult(result) {
         description: isShortStrategy ? 'Next COVER' : 'Next SELL'
       };
     }
+
+    // [Spec 52] Calculate SELL profit requirement validation
+    if (sellActivation) {
+      const profitRequirementPrice = avgCost * (1 + params.profitRequirement);
+      const profitSatisfied = currentPrice >= profitRequirementPrice;
+      let effectiveExecutionPrice = null;
+      let executionStatus = null;
+
+      // Calculate effective execution price for SELL
+      if (sellActivation.isActive) {
+        // For ACTIVE stop: effective price is the max of stop price and profit requirement
+        // (stop price must be high enough to satisfy profit requirement)
+        effectiveExecutionPrice = Math.max(sellActivation.stopPrice, profitRequirementPrice);
+
+        // Determine execution status
+        const stopTriggered = currentPrice <= sellActivation.stopPrice;
+        if (stopTriggered && profitSatisfied) {
+          executionStatus = 'READY';
+        } else if (stopTriggered && !profitSatisfied) {
+          executionStatus = 'WAITING_FOR_PROFIT';
+        } else if (!stopTriggered && profitSatisfied) {
+          executionStatus = 'WAITING_FOR_STOP';
+        } else {
+          executionStatus = 'WAITING';
+        }
+      } else {
+        // For PENDING activation: effective price is also max
+        effectiveExecutionPrice = Math.max(sellActivation.activationPrice, profitRequirementPrice);
+        executionStatus = 'PENDING';
+      }
+
+      // Add validation fields to sellActivation
+      sellActivation.profitRequirementPrice = profitRequirementPrice;
+      sellActivation.profitSatisfied = profitSatisfied;
+      sellActivation.effectiveExecutionPrice = effectiveExecutionPrice;
+      sellActivation.executionStatus = executionStatus;
+    }
+  }
+
+  // [Spec 51] Extract last trade information
+  let lastTrade = null;
+  if (enhancedTransactions && enhancedTransactions.length > 0) {
+    const lastTransaction = enhancedTransactions[enhancedTransactions.length - 1];
+    lastTrade = {
+      type: lastTransaction.type,
+      price: lastTransaction.price,
+      date: lastTransaction.date
+    };
   }
 
   return {
@@ -375,9 +535,13 @@ function calculateFutureTradesForResult(result) {
     currentPriceDate: params.endDate, // Date of the current price (last date in backtest)
     avgCost,
     hasHoldings,
+    holdings: formattedHoldings,  // [Spec 52] Formatted holdings with P/L
     isShortStrategy,
     recentPeak,
     recentBottom,
+    recentPeakDate,    // [Spec 51]
+    recentBottomDate,  // [Spec 51]
+    lastTrade,         // [Spec 51]
     buyActivation,
     sellActivation
   };

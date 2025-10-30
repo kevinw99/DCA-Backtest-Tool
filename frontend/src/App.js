@@ -316,8 +316,8 @@ function AppContent() {
         console.log('Batch Endpoint:', batchEndpoint);
         console.log('===================================');
 
-        // Use async mode for SSE progress tracking (add ?async=true query param)
-        const batchResponse = await fetch(`${batchEndpoint}?async=true`, {
+        // Use async mode for SSE progress tracking (?async=true already in endpoint URL)
+        const batchResponse = await fetch(batchEndpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

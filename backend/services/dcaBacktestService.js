@@ -1188,6 +1188,8 @@ async function runDCABacktest(params, dayCallback = null) {
       // Peak/Bottom tracking for Future Trade display
       recentPeak: recentPeak,
       recentBottom: recentBottom,
+      recentPeakDate: executorResults.recentPeakDate,       // [Spec 51]
+      recentBottomDate: executorResults.recentBottomDate,   // [Spec 51]
       lastTransactionDate: lastTransactionDate,
 
       // Consecutive incremental buy grid statistics

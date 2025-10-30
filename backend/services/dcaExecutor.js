@@ -415,6 +415,8 @@ function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false
     // Recent Peak/Bottom Tracking System (simplified approach)
     let recentPeak = null;  // Highest price since last transaction
     let recentBottom = null; // Lowest price since last transaction
+    let recentPeakDate = null;  // [Spec 51] Date when peak occurred
+    let recentBottomDate = null; // [Spec 51] Date when bottom occurred
     let trailingStopBuy = null; // Active trailing stop buy order
     let lastTransactionDate = null; // Track when peak/bottom tracking started
 
@@ -517,17 +519,21 @@ function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false
     const resetPeakBottomTracking = (currentPrice, currentDate) => {
       recentPeak = currentPrice;
       recentBottom = currentPrice;
+      recentPeakDate = currentDate;      // [Spec 51]
+      recentBottomDate = currentDate;    // [Spec 51]
       lastTransactionDate = currentDate;
-      transactionLog.push(colorize(`  ACTION: Reset peak/bottom tracking - Peak: ${currentPrice.toFixed(2)}, Bottom: ${currentPrice.toFixed(2)}`, 'cyan'));
+      transactionLog.push(colorize(`  ACTION: Reset peak/bottom tracking - Peak: ${currentPrice.toFixed(2)} (${currentDate}), Bottom: ${currentPrice.toFixed(2)} (${currentDate})`, 'cyan'));
     };
 
     // Update recent peak and bottom tracking
-    const updatePeakBottomTracking = (currentPrice) => {
+    const updatePeakBottomTracking = (currentPrice, currentDate) => {
       if (recentPeak === null || currentPrice > recentPeak) {
         recentPeak = currentPrice;
+        recentPeakDate = currentDate;  // [Spec 51]
       }
       if (recentBottom === null || currentPrice < recentBottom) {
         recentBottom = currentPrice;
+        recentBottomDate = currentDate;  // [Spec 51]
       }
     };
 
@@ -1764,6 +1770,8 @@ function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false
       if (recentPeak === null || recentBottom === null) {
         recentPeak = currentPrice;
         recentBottom = currentPrice;
+        recentPeakDate = dayData.date;      // [Spec 51]
+        recentBottomDate = dayData.date;    // [Spec 51]
         lastTransactionDate = dayData.date;
       }
 
@@ -2084,7 +2092,7 @@ function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false
 
       // Update peak/bottom tracking AFTER all executions for the day
       // This ensures trailing stops are checked against yesterday's peaks, not today's
-      updatePeakBottomTracking(currentPrice);
+      updatePeakBottomTracking(currentPrice, dayData.date); // [Spec 51] Added date parameter
     };
 
   // Return executor interface
@@ -2188,6 +2196,8 @@ function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false
         questionableEvents,
         recentPeak,
         recentBottom,
+        recentPeakDate,        // [Spec 51]
+        recentBottomDate,      // [Spec 51]
         lastTransactionDate,
         maxConsecutiveBuyCount,
         totalGridSizeUsed,

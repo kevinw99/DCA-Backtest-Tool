@@ -62,22 +62,211 @@ const FutureTradeCard = ({ symbol, futureTrades, parameters, isSelected, onRunSi
 
       {isExpanded && (
         <div className="card-body">
+          {/* [Spec 52] Current Holdings Section */}
+          {futureTrades.holdings && futureTrades.holdings.lots.length > 0 && (
+            <div className="holdings-section" style={{
+              marginBottom: '15px',
+              padding: '12px',
+              backgroundColor: '#f0f8ff',
+              borderRadius: '6px',
+              border: '1px solid #b8daf5'
+            }}>
+              <h5 style={{
+                margin: '0 0 10px 0',
+                fontSize: '14px',
+                fontWeight: '600',
+                color: '#0066cc'
+              }}>Current Holdings ({futureTrades.holdings.totalLots} {futureTrades.holdings.totalLots === 1 ? 'lot' : 'lots'})</h5>
+
+              {/* Summary row */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                marginBottom: '8px',
+                padding: '6px 8px',
+                backgroundColor: 'rgba(0, 102, 204, 0.1)',
+                borderRadius: '4px',
+                fontSize: '13px',
+                fontWeight: '600'
+              }}>
+                <span>Avg Cost: {formatCurrency(futureTrades.holdings.avgCost)}</span>
+                <span>Total Value: {formatCurrency(futureTrades.holdings.totalValue)}</span>
+                <span style={{
+                  color: futureTrades.holdings.totalUnrealizedPL >= 0 ? '#28a745' : '#dc3545'
+                }}>
+                  P/L: {formatCurrency(futureTrades.holdings.totalUnrealizedPL)} ({futureTrades.holdings.totalUnrealizedPLPercent.toFixed(2)}%)
+                </span>
+              </div>
+
+              {/* Individual lots */}
+              <div style={{ display: 'grid', gap: '6px' }}>
+                {futureTrades.holdings.lots.map((lot, index) => (
+                  <div key={index} style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '6px 8px',
+                    backgroundColor: '#fff',
+                    borderRadius: '4px',
+                    border: '1px solid #e0e0e0',
+                    fontSize: '12px'
+                  }}>
+                    <span style={{ fontWeight: '500', color: '#555' }}>
+                      Lot {index + 1}: {formatCurrency(lot.buyPrice)} × {lot.shares.toFixed(2)} shares
+                      <span style={{ color: '#888', fontSize: '0.9em', marginLeft: '6px' }}>
+                        ({lot.purchaseDate})
+                      </span>
+                    </span>
+                    <span style={{
+                      fontWeight: '600',
+                      color: lot.unrealizedPL >= 0 ? '#28a745' : '#dc3545'
+                    }}>
+                      {formatCurrency(lot.unrealizedPL)} ({lot.unrealizedPLPercent.toFixed(2)}%)
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* [Spec 51] Trading Context Section */}
+          <div className="trading-context-section" style={{
+            marginBottom: '15px',
+            padding: '12px',
+            backgroundColor: '#f8f9fa',
+            borderRadius: '6px',
+            border: '1px solid #e0e0e0'
+          }}>
+            <h5 style={{
+              margin: '0 0 10px 0',
+              fontSize: '14px',
+              fontWeight: '600',
+              color: '#555'
+            }}>Trading Context</h5>
+            <div className="context-grid" style={{ display: 'grid', gap: '8px' }}>
+              {/* Last Trade */}
+              <div className="context-item" style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'baseline',
+                gap: '6px'
+              }}>
+                <span style={{ fontWeight: '600', color: '#666', minWidth: '90px' }}>Last Trade:</span>
+                {futureTrades.lastTrade ? (
+                  <span style={{ color: '#333', fontWeight: '500' }}>
+                    <strong>{futureTrades.lastTrade.type}</strong> at{' '}
+                    {formatCurrency(futureTrades.lastTrade.price)}
+                    <span style={{ color: '#888', fontSize: '0.9em', fontWeight: 'normal' }}>
+                      {' '}on {futureTrades.lastTrade.date}
+                    </span>
+                  </span>
+                ) : (
+                  <span style={{ color: '#333', fontWeight: '500' }}>N/A</span>
+                )}
+              </div>
+
+              {/* Local Peak */}
+              <div className="context-item" style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'baseline',
+                gap: '6px'
+              }}>
+                <span style={{ fontWeight: '600', color: '#666', minWidth: '90px' }}>Peak:</span>
+                {futureTrades.recentPeak && futureTrades.recentPeakDate ? (
+                  <span style={{ color: '#333', fontWeight: '500' }}>
+                    {formatCurrency(futureTrades.recentPeak)}
+                    <span style={{ color: '#888', fontSize: '0.9em', fontWeight: 'normal' }}>
+                      {' '}on {futureTrades.recentPeakDate}
+                    </span>
+                  </span>
+                ) : (
+                  <span style={{ color: '#333', fontWeight: '500' }}>N/A</span>
+                )}
+              </div>
+
+              {/* Local Bottom */}
+              <div className="context-item" style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'baseline',
+                gap: '6px'
+              }}>
+                <span style={{ fontWeight: '600', color: '#666', minWidth: '90px' }}>Bottom:</span>
+                {futureTrades.recentBottom && futureTrades.recentBottomDate ? (
+                  <span style={{ color: '#333', fontWeight: '500' }}>
+                    {formatCurrency(futureTrades.recentBottom)}
+                    <span style={{ color: '#888', fontSize: '0.9em', fontWeight: 'normal' }}>
+                      {' '}on {futureTrades.recentBottomDate}
+                    </span>
+                  </span>
+                ) : (
+                  <span style={{ color: '#333', fontWeight: '500' }}>N/A</span>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div className="current-price-section">
             <div><span className="label">Current Price:</span> <span className="value">{formatCurrency(currentPrice)}</span></div>
             {hasHoldings && <div><span className="label">Avg Cost:</span> <span className="value">{formatCurrency(avgCost)}</span></div>}
           </div>
           <div className="trade-directions">
-            {/* BUY Direction */}
+            {/* [Spec 52] Enhanced BUY Direction with Grid Validation */}
             <div className={`buy-section ${buyActivation.isActive ? 'is-active' : 'is-pending'}`}>
               <h5>
                 <TrendingDown size={16} />
                 {buyActivation.description}
-                <span className="status-badge">
-                  {buyActivation.isActive ? 'ACTIVE TRACKING' : 'PENDING'}
+                {/* [Spec 52] Execution Status Badge */}
+                <span className={`status-badge ${
+                  buyActivation.executionStatus === 'READY' ? 'status-ready' :
+                  buyActivation.executionStatus === 'WAITING_FOR_GRID' ? 'status-waiting-grid' :
+                  buyActivation.executionStatus === 'WAITING_FOR_STOP' ? 'status-waiting-stop' :
+                  'status-waiting'
+                }`}>
+                  {buyActivation.executionStatus === 'READY' && '✅ READY'}
+                  {buyActivation.executionStatus === 'WAITING_FOR_GRID' && '⏳ WAITING FOR GRID'}
+                  {buyActivation.executionStatus === 'WAITING_FOR_STOP' && '⏳ WAITING FOR STOP'}
+                  {buyActivation.executionStatus === 'WAITING' && '⏳ WAITING'}
+                  {buyActivation.executionStatus === 'PENDING' && 'PENDING'}
                 </span>
               </h5>
+
               {buyActivation.isActive ? (
                 <>
+                  {/* [Spec 52] Grid Validation Details for ACTIVE stop */}
+                  {buyActivation.gridRequirementPrice !== null && (
+                    <div style={{
+                      marginBottom: '10px',
+                      padding: '8px',
+                      backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                      borderRadius: '4px',
+                      border: '1px solid rgba(255, 193, 7, 0.3)'
+                    }}>
+                      <div style={{ fontWeight: '600', marginBottom: '4px', fontSize: '13px' }}>Grid Validation:</div>
+                      <div style={{ display: 'grid', gap: '4px', fontSize: '12px' }}>
+                        <div>
+                          <span className="label">Trailing Stop:</span>
+                          <span className="value">{formatCurrency(buyActivation.stopPrice)}</span>
+                          <span style={{ marginLeft: '8px', color: buyActivation.gridSatisfied ? '#dc3545' : '#28a745' }}>
+                            {currentPrice >= buyActivation.stopPrice ? '✓ triggered' : '✗ not triggered'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="label">Grid Requirement:</span>
+                          <span className="value">{formatCurrency(buyActivation.gridRequirementPrice)}</span>
+                          <span style={{ marginLeft: '8px', color: buyActivation.gridSatisfied ? '#28a745' : '#dc3545' }}>
+                            {buyActivation.gridSatisfied ? '✓ satisfied' : '✗ not satisfied'}
+                          </span>
+                        </div>
+                        <div style={{ marginTop: '4px', fontWeight: '600', borderTop: '1px solid rgba(0,0,0,0.1)', paddingTop: '4px' }}>
+                          <span className="label">→ Effective Target:</span>
+                          <span className="value" style={{ color: '#0066cc' }}>{formatCurrency(buyActivation.effectiveExecutionPrice)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="active-stop">
                     <div>
                       <span className="label">Stop Price:</span>
@@ -100,6 +289,37 @@ const FutureTradeCard = ({ symbol, futureTrades, parameters, isSelected, onRunSi
                       return dist && <span className="distance">{dist.pct >= 0 ? '↑' : '↓'} {formatCurrency(Math.abs(dist.diff))} ({formatParameterPercent(Math.abs(dist.pct / 100))})</span>;
                     })()}
                   </div>
+
+                  {/* [Spec 52] Target Distance & Explanation */}
+                  {buyActivation.effectiveExecutionPrice && (
+                    <div style={{
+                      marginTop: '10px',
+                      padding: '8px',
+                      backgroundColor: 'rgba(0, 123, 255, 0.05)',
+                      borderRadius: '4px',
+                      fontSize: '12px'
+                    }}>
+                      {(() => {
+                        const dist = calculateDistance(buyActivation.effectiveExecutionPrice);
+                        return (
+                          <>
+                            <div style={{ fontWeight: '600', marginBottom: '4px' }}>Target Distance:</div>
+                            <div>Current: {formatCurrency(currentPrice)}</div>
+                            <div>Target: {formatCurrency(buyActivation.effectiveExecutionPrice)} {dist && <span style={{ color: dist.pct < 0 ? '#dc3545' : '#28a745' }}>↓ {formatCurrency(Math.abs(dist.diff))} ({formatParameterPercent(Math.abs(dist.pct / 100))})</span>}</div>
+                            <div style={{ marginTop: '6px', fontStyle: 'italic', color: '#666' }}>
+                              {buyActivation.executionStatus === 'READY' && 'Trade will execute now!'}
+                              {buyActivation.executionStatus === 'WAITING_FOR_GRID' && buyActivation.lastBuyPrice &&
+                                `Price needs to drop to ${formatCurrency(buyActivation.effectiveExecutionPrice)} or below (grid spacing from last buy at ${formatCurrency(buyActivation.lastBuyPrice)})`}
+                              {buyActivation.executionStatus === 'WAITING_FOR_STOP' &&
+                                `Waiting for trailing stop to trigger at ${formatCurrency(buyActivation.stopPrice)}`}
+                              {buyActivation.executionStatus === 'WAITING' &&
+                                'Waiting for both trailing stop activation and grid spacing'}
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  )}
                 </>
               ) : (
                 <>
@@ -129,22 +349,82 @@ const FutureTradeCard = ({ symbol, futureTrades, parameters, isSelected, onRunSi
                       {formatParameterPercent(buyActivation.reboundPercent)} rebound
                     </span>
                   </div>
+
+                  {/* [Spec 52] Grid requirement for PENDING activation */}
+                  {buyActivation.gridRequirementPrice !== null && buyActivation.effectiveExecutionPrice && (
+                    <div style={{
+                      marginTop: '10px',
+                      padding: '8px',
+                      backgroundColor: 'rgba(0, 123, 255, 0.05)',
+                      borderRadius: '4px',
+                      fontSize: '12px'
+                    }}>
+                      <div style={{ fontWeight: '600', marginBottom: '4px' }}>Effective Target: {formatCurrency(buyActivation.effectiveExecutionPrice)}</div>
+                      <div style={{ fontStyle: 'italic', color: '#666' }}>
+                        Considering grid spacing from last buy at {buyActivation.lastBuyPrice && formatCurrency(buyActivation.lastBuyPrice)}
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </div>
 
-            {/* SELL Direction */}
+            {/* [Spec 52] Enhanced SELL Direction with Profit Requirement Validation */}
             {sellActivation ? (
               <div className={`sell-section ${sellActivation.isActive ? 'is-active' : 'is-pending'}`}>
                 <h5>
                   <TrendingUp size={16} />
                   {sellActivation.description}
-                  <span className="status-badge">
-                    {sellActivation.isActive ? 'ACTIVE TRACKING' : 'PENDING'}
+                  {/* [Spec 52] Execution Status Badge */}
+                  <span className={`status-badge ${
+                    sellActivation.executionStatus === 'READY' ? 'status-ready' :
+                    sellActivation.executionStatus === 'WAITING_FOR_PROFIT' ? 'status-waiting-profit' :
+                    sellActivation.executionStatus === 'WAITING_FOR_STOP' ? 'status-waiting-stop' :
+                    'status-waiting'
+                  }`}>
+                    {sellActivation.executionStatus === 'READY' && '✅ READY'}
+                    {sellActivation.executionStatus === 'WAITING_FOR_PROFIT' && '⏳ WAITING FOR PROFIT'}
+                    {sellActivation.executionStatus === 'WAITING_FOR_STOP' && '⏳ WAITING FOR STOP'}
+                    {sellActivation.executionStatus === 'WAITING' && '⏳ WAITING'}
+                    {sellActivation.executionStatus === 'PENDING' && 'PENDING'}
                   </span>
                 </h5>
+
                 {sellActivation.isActive ? (
                   <>
+                    {/* [Spec 52] Profit Requirement Validation for ACTIVE stop */}
+                    {sellActivation.profitRequirementPrice && (
+                      <div style={{
+                        marginBottom: '10px',
+                        padding: '8px',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        borderRadius: '4px',
+                        border: '1px solid rgba(40, 167, 69, 0.3)'
+                      }}>
+                        <div style={{ fontWeight: '600', marginBottom: '4px', fontSize: '13px' }}>Profit Validation:</div>
+                        <div style={{ display: 'grid', gap: '4px', fontSize: '12px' }}>
+                          <div>
+                            <span className="label">Trailing Stop:</span>
+                            <span className="value">{formatCurrency(sellActivation.stopPrice)}</span>
+                            <span style={{ marginLeft: '8px', color: currentPrice <= sellActivation.stopPrice ? '#28a745' : '#dc3545' }}>
+                              {currentPrice <= sellActivation.stopPrice ? '✓ triggered' : '✗ not triggered'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="label">Profit Requirement:</span>
+                            <span className="value">{formatCurrency(sellActivation.profitRequirementPrice)}</span>
+                            <span style={{ marginLeft: '8px', color: sellActivation.profitSatisfied ? '#28a745' : '#dc3545' }}>
+                              {sellActivation.profitSatisfied ? '✓ satisfied' : '✗ not satisfied'}
+                            </span>
+                          </div>
+                          <div style={{ marginTop: '4px', fontWeight: '600', borderTop: '1px solid rgba(0,0,0,0.1)', paddingTop: '4px' }}>
+                            <span className="label">→ Effective Target:</span>
+                            <span className="value" style={{ color: '#0066cc' }}>{formatCurrency(sellActivation.effectiveExecutionPrice)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="active-stop">
                       <div>
                         <span className="label">Stop Price:</span>
@@ -185,6 +465,37 @@ const FutureTradeCard = ({ symbol, futureTrades, parameters, isSelected, onRunSi
                         return dist && <span className="distance">{dist.pct >= 0 ? '↑' : '↓'} {formatCurrency(Math.abs(dist.diff))} ({formatParameterPercent(Math.abs(dist.pct / 100))})</span>;
                       })()}
                     </div>
+
+                    {/* [Spec 52] Target Distance & Explanation for SELL */}
+                    {sellActivation.effectiveExecutionPrice && (
+                      <div style={{
+                        marginTop: '10px',
+                        padding: '8px',
+                        backgroundColor: 'rgba(0, 123, 255, 0.05)',
+                        borderRadius: '4px',
+                        fontSize: '12px'
+                      }}>
+                        {(() => {
+                          const dist = calculateDistance(sellActivation.effectiveExecutionPrice);
+                          return (
+                            <>
+                              <div style={{ fontWeight: '600', marginBottom: '4px' }}>Target Distance:</div>
+                              <div>Current: {formatCurrency(currentPrice)}</div>
+                              <div>Target: {formatCurrency(sellActivation.effectiveExecutionPrice)} {dist && <span style={{ color: dist.pct > 0 ? '#dc3545' : '#28a745' }}>↓ {formatCurrency(Math.abs(dist.diff))} ({formatParameterPercent(Math.abs(dist.pct / 100))})</span>}</div>
+                              <div style={{ marginTop: '6px', fontStyle: 'italic', color: '#666' }}>
+                                {sellActivation.executionStatus === 'READY' && 'Trade will execute now!'}
+                                {sellActivation.executionStatus === 'WAITING_FOR_PROFIT' &&
+                                  `Price must stay above ${formatCurrency(sellActivation.effectiveExecutionPrice)} to meet profit requirement`}
+                                {sellActivation.executionStatus === 'WAITING_FOR_STOP' &&
+                                  `Waiting for trailing stop to trigger at ${formatCurrency(sellActivation.stopPrice)}`}
+                                {sellActivation.executionStatus === 'WAITING' &&
+                                  'Waiting for both trailing stop activation and profit requirement'}
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    )}
                   </>
                 ) : (
                   <>
@@ -222,6 +533,22 @@ const FutureTradeCard = ({ symbol, futureTrades, parameters, isSelected, onRunSi
                         return dist && <span className="distance">{dist.pct >= 0 ? '↑' : '↓'} {formatCurrency(Math.abs(dist.diff))} ({formatParameterPercent(Math.abs(dist.pct / 100))})</span>;
                       })()}
                     </div>
+
+                    {/* [Spec 52] Effective target for PENDING activation */}
+                    {sellActivation.effectiveExecutionPrice && (
+                      <div style={{
+                        marginTop: '10px',
+                        padding: '8px',
+                        backgroundColor: 'rgba(0, 123, 255, 0.05)',
+                        borderRadius: '4px',
+                        fontSize: '12px'
+                      }}>
+                        <div style={{ fontWeight: '600', marginBottom: '4px' }}>Effective Target: {formatCurrency(sellActivation.effectiveExecutionPrice)}</div>
+                        <div style={{ fontStyle: 'italic', color: '#666' }}>
+                          Considering profit requirement of {formatCurrency(sellActivation.profitRequirementPrice)}
+                        </div>
+                      </div>
+                    )}
                   </>
                 )}
               </div>

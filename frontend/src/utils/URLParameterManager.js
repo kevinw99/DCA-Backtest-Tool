@@ -208,6 +208,10 @@ class URLParameterManager {
         delete paramsToEncode.strategyMode;
       } else if (mode === 'batch') {
         delete paramsToEncode.symbols;
+        // [Spec 51] Also delete symbols from parameterRanges to prevent duplication in query params
+        if (paramsToEncode.parameterRanges) {
+          delete paramsToEncode.parameterRanges.symbols;
+        }
       }
 
       let url;
