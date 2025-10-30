@@ -25,6 +25,18 @@ class PortfolioState {
     this.cashReserve = config.totalCapital;  // Starts at total
     this.deployedCapital = 0;                // Starts at 0
 
+    // Spec 50: Margin support
+    this.marginPercent = config.marginPercent || 0;
+    this.effectiveCapital = this.totalCapital * (1 + this.marginPercent / 100);
+
+    // Spec 50: Margin metrics tracking
+    this.marginMetrics = {
+      maxMarginUtilization: 0,      // Peak margin usage (%)
+      daysOnMargin: 0,               // Days when deployed > base
+      totalMarginUtilization: 0,     // Sum for average calc
+      daysTracked: 0                 // Total days
+    };
+
     this.stocks = new Map();  // symbol -> StockState
     this.rejectedOrders = [];
     this.deferredSells = [];  // Track deferred sell orders
@@ -59,25 +71,30 @@ class PortfolioState {
    * @throws Error if constraints violated
    */
   validateCapitalConstraints() {
-    // deployed + cash can exceed total due to profits, but should never be less
-    const calculated = this.deployedCapital + this.cashReserve;
-    const expected = this.totalCapital;
+    // Spec 50: With margin, we can borrow additional capital
+    const marginAmount = this.totalCapital * (this.marginPercent / 100);
 
-    // Allow for profits (calculated >= expected), but check for capital leaks (calculated < expected)
-    if (calculated < expected - 0.01) {
+    // deployed + cash can exceed total due to profits, but should never be less than (total - margin)
+    const calculated = this.deployedCapital + this.cashReserve;
+    const minimumExpected = this.totalCapital - marginAmount;
+
+    // Allow for profits (calculated >= expected), but check for capital leaks
+    // With margin, we can go negative by up to the margin amount
+    if (calculated < minimumExpected - 0.01) {
       throw new Error(
-        `Capital constraint violated (capital leaked): ` +
+        `Capital constraint violated (capital leaked beyond margin): ` +
         `deployed(${this.deployedCapital.toFixed(2)}) + ` +
         `cash(${this.cashReserve.toFixed(2)}) = ${calculated.toFixed(2)}, ` +
-        `expected at least ${expected.toFixed(2)}`
+        `expected at least ${minimumExpected.toFixed(2)} (total: ${this.totalCapital.toFixed(2)}, margin: ${marginAmount.toFixed(2)})`
       );
     }
 
-    // Also validate that cash reserve is never negative
-    if (this.cashReserve < -0.01) {
+    // Spec 50: Cash reserve can be negative up to margin amount (borrowed capital)
+    if (this.cashReserve < -(marginAmount + 0.01)) {
       throw new Error(
-        `Capital constraint violated (negative cash): ` +
-        `cashReserve = ${this.cashReserve.toFixed(2)}`
+        `Capital constraint violated (borrowed beyond margin limit): ` +
+        `cashReserve = ${this.cashReserve.toFixed(2)}, ` +
+        `margin limit = ${marginAmount.toFixed(2)}`
       );
     }
   }
@@ -203,6 +220,39 @@ class StockState {
 
     this.transactions.push(transaction);
   }
+}
+
+/**
+ * Spec 50: Update margin utilization metrics
+ * Called once per day after transaction processing
+ */
+function updateMarginMetrics(portfolio) {
+  const { deployedCapital, totalCapital, effectiveCapital, marginMetrics } = portfolio;
+
+  // Calculate current margin usage
+  const marginUsed = Math.max(0, deployedCapital - totalCapital);
+  const maxMarginAvailable = effectiveCapital - totalCapital;
+
+  // Calculate utilization percentage
+  let currentUtilization = 0;
+  if (maxMarginAvailable > 0 && marginUsed > 0) {
+    currentUtilization = (marginUsed / maxMarginAvailable) * 100;
+  }
+
+  // Update max utilization
+  marginMetrics.maxMarginUtilization = Math.max(
+    marginMetrics.maxMarginUtilization,
+    currentUtilization
+  );
+
+  // Count days on margin
+  if (deployedCapital > totalCapital) {
+    marginMetrics.daysOnMargin++;
+  }
+
+  // Track for average calculation
+  marginMetrics.totalMarginUtilization += currentUtilization;
+  marginMetrics.daysTracked++;
 }
 
 /**
@@ -461,7 +511,8 @@ async function runPortfolioBacktest(config) {
         logDeferredSell(portfolio, stock, activeStopBefore, dayData, date, portfolio.cashReserve);
       }
 
-      // Check capital availability AFTER buy signal evaluation
+      // Spec 50: Check capital availability AND margin limit
+      const wouldExceedMargin = (portfolio.deployedCapital + currentLotSize) > portfolio.effectiveCapital;
       const hasCapital = portfolio.cashReserve >= currentLotSize;
 
       // Increment day index for this executor
@@ -477,18 +528,22 @@ async function runPortfolioBacktest(config) {
         const tx = stateAfter.enhancedTransactions[txCountAfter - 1];
 
         if (tx.type.includes('BUY')) {
-          if (hasCapital) {
-            // Capital available - execute the buy
+          // Spec 50: Margin provides available capital - only check margin limit
+          // If within margin limit, allow buy (cash reserve can go negative - that's what margin is for)
+          if (!wouldExceedMargin) {
+            // Within margin limit - execute the buy
             portfolio.cashReserve -= tx.value;
             portfolio.deployedCapital += tx.value;
             stock.addBuy(tx);
             transactionCount++;
           } else {
-            // Insufficient capital - reject and undo executor changes
-            console.log(`   ❌ BUY REJECTED for ${symbol} on ${date} - insufficient capital (need ${currentLotSize}, have ${portfolio.cashReserve.toFixed(2)})`);
+            // Reject - would exceed margin limit
+            const reason = `would exceed margin limit (${portfolio.deployedCapital.toFixed(0)} + ${currentLotSize.toFixed(0)} > ${portfolio.effectiveCapital.toFixed(0)})`;
 
-            // Log the rejected order
-            logRejectedOrder(portfolio, stock, { triggered: true }, dayData, date, currentLotSize);
+            console.log(`   ❌ BUY REJECTED for ${symbol} on ${date} - ${reason}`);
+
+            // Log the rejected order with specific reason
+            logRejectedOrder(portfolio, stock, { triggered: true }, dayData, date, currentLotSize, reason);
             rejectedCount++;
 
             // CRITICAL: Remove the lot that was added to executor's lots array
@@ -540,6 +595,9 @@ async function runPortfolioBacktest(config) {
 
     // Snapshot portfolio state - DAILY for accurate volatility calculation
     portfolio.valuationHistory.push(createSnapshot(portfolio, date));
+
+    // Spec 50: Update margin metrics
+    updateMarginMetrics(portfolio);
 
     // Progress logging
     if (i > 0 && i % 100 === 0) {
@@ -651,6 +709,24 @@ async function runPortfolioBacktest(config) {
   if (capitalOptimizationMetrics) {
     results.capitalOptimization = capitalOptimizationMetrics;
   }
+
+  // Spec 50: Add margin metrics to capital metrics
+  const avgMarginUtilization = portfolio.marginMetrics.daysTracked > 0
+    ? portfolio.marginMetrics.totalMarginUtilization / portfolio.marginMetrics.daysTracked
+    : 0;
+
+  if (!results.capitalMetrics) {
+    results.capitalMetrics = {};
+  }
+
+  results.capitalMetrics.marginPercent = portfolio.marginPercent;
+  results.capitalMetrics.effectiveCapital = portfolio.effectiveCapital;
+  results.capitalMetrics.marginUtilization = {
+    max: portfolio.marginMetrics.maxMarginUtilization,
+    average: avgMarginUtilization,
+    daysOnMargin: portfolio.marginMetrics.daysOnMargin,
+    totalDays: portfolio.marginMetrics.daysTracked
+  };
 
   // 11. Add rejected orders and deferred sells
   results.rejectedOrders = portfolio.rejectedOrders || [];
@@ -1049,9 +1125,17 @@ function executeBuy(stock, signal, dayData, date, lotSizeUsd) {
 /**
  * Log rejected buy order
  */
-function logRejectedOrder(portfolio, stock, signal, dayData, date, lotSize = null) {
+function logRejectedOrder(portfolio, stock, signal, dayData, date, lotSize = null, reason = null) {
   const lotSizeUsd = lotSize || portfolio.config.lotSizeUsd;
   const shortfall = lotSizeUsd - portfolio.cashReserve;
+
+  // Spec 50: Calculate margin context
+  const marginUsed = Math.max(0, portfolio.deployedCapital - portfolio.totalCapital);
+  const maxMarginAvailable = portfolio.effectiveCapital - portfolio.totalCapital;
+  let marginUtilization = 0;
+  if (maxMarginAvailable > 0 && marginUsed > 0) {
+    marginUtilization = (marginUsed / maxMarginAvailable) * 100;
+  }
 
   // Identify which stocks are holding capital
   const competingStocks = [];
@@ -1071,23 +1155,31 @@ function logRejectedOrder(portfolio, stock, signal, dayData, date, lotSize = nul
     orderType: 'BUY',
     price: dayData.close,
     lotSize: lotSizeUsd,
-    attemptedValue: lotSizeUsd,  // NEW: For frontend compatibility
-    reason: 'INSUFFICIENT_CAPITAL',
+    attemptedValue: lotSizeUsd,  // For frontend compatibility
+    reason: reason || 'INSUFFICIENT_CAPITAL',  // Spec 50: Specific reason
     availableCapital: portfolio.cashReserve,
     requiredCapital: lotSizeUsd,
     shortfall,
-    competingStocks: competingStocks.map(s => s.symbol),  // NEW: List of competing symbols
+    competingStocks: competingStocks.map(s => s.symbol),
     portfolioState: {
       deployedCapital: portfolio.deployedCapital,
       cashReserve: portfolio.cashReserve,
       utilizationPercent: portfolio.utilizationPercent
+    },
+    // Spec 50: Margin context
+    capitalState: {
+      totalCapital: portfolio.totalCapital,
+      effectiveCapital: portfolio.effectiveCapital,
+      marginPercent: portfolio.marginPercent,
+      marginUsed: marginUsed,
+      marginUtilization: marginUtilization
     }
   };
 
   portfolio.rejectedOrders.push(rejectedOrder);
   stock.rejectedBuys++;
   stock.rejectedBuyValues += lotSizeUsd;
-  stock.rejectedOrders.push(rejectedOrder);  // NEW: Also add to stock's rejected orders
+  stock.rejectedOrders.push(rejectedOrder);
 }
 
 /**

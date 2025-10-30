@@ -2,25 +2,28 @@
   "name": "Nasdaq 100",
   "description": "Portfolio backtest for all Nasdaq 100 component stocks",
   "totalCapitalUsd": 3000000,
-  "startDate": "2021-09-01",
-  "endDate": "2025-10-17",
+  "marginPercent": 20,
+  "startDate": "2021-09-02",
+  "endDate": "2025-10-22",
   "globalDefaults": {
     "basic": {
       "lotSizeUsd": 10000,
       "strategyMode": "long"
     },
     "longStrategy": {
-      "maxLots": 10,
+      "maxLots": 40,
       "maxLotsToSell": 1,
       "gridIntervalPercent": 10,
       "profitRequirement": 10,
       "stopLossPercent": 30,
       "enableTrailingBuy": false,
       "enableTrailingSell": false,
-      "trailingBuyActivationPercent": 10,
+      "trailingBuyActivationPercent": 15,
       "trailingBuyReboundPercent": 5,
-      "trailingSellActivationPercent": 20,
-      "trailingSellPullbackPercent": 10
+      "trailingSellActivationPercent": 30,
+      "trailingSellPullbackPercent": 5,
+      "momentumBasedBuy": false,
+      "momentumBasedSell": false
     },
     "shortStrategy": {
       "maxShorts": 6,
@@ -38,10 +41,10 @@
       }
     },
     "beta": {
-      "enableBetaScaling": false,
+      "enableBetaScaling": true,
       "beta": 1,
       "betaFactor": 1,
-      "coefficient": 1,
+      "coefficient": 0.1,
       "isManualBetaOverride": false
     },
     "dynamicFeatures": {
@@ -82,7 +85,7 @@
     },
     "deferredSelling": {
       "enabled": true,
-      "cashAbundanceThreshold": 500000
+      "cashAbundanceThreshold": 100000
     }
   },
   "stocks": [

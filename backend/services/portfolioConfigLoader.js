@@ -81,6 +81,7 @@ async function loadPortfolioConfig(configName) {
 function configToBacktestParams(config) {
   const {
     totalCapitalUsd,
+    marginPercent,
     startDate,
     endDate,
     globalDefaults,
@@ -111,6 +112,7 @@ function configToBacktestParams(config) {
   // Convert to format expected by portfolioBacktestService
   return {
     totalCapital: totalCapitalUsd,
+    marginPercent: marginPercent !== undefined ? marginPercent : 0,  // Spec 50: Include margin parameter
     startDate: endDate === 'current' ? startDate : startDate,
     endDate: endDate === 'current' ? getCurrentDate() : endDate,
     lotSizeUsd,
@@ -145,6 +147,30 @@ function validateConfig(config) {
   // Validate totalCapitalUsd
   if (typeof config.totalCapitalUsd !== 'number' || config.totalCapitalUsd < 1000) {
     throw new Error('Field "totalCapitalUsd" must be a number >= 1000');
+  }
+
+  // Spec 50: Validate marginPercent if present
+  if (config.marginPercent !== undefined) {
+    if (typeof config.marginPercent !== 'number') {
+      throw new Error('Field "marginPercent" must be a number');
+    }
+
+    if (config.marginPercent < 0) {
+      throw new Error('Field "marginPercent" must be >= 0');
+    }
+
+    if (config.marginPercent > 100) {
+      throw new Error('Field "marginPercent" must be <= 100 (maximum 100% leverage)');
+    }
+
+    if (!Number.isFinite(config.marginPercent)) {
+      throw new Error('Field "marginPercent" must be a finite number (not NaN or Infinity)');
+    }
+  }
+
+  // Set default if not provided
+  if (config.marginPercent === undefined) {
+    config.marginPercent = 0;
   }
 
   // Validate dates
