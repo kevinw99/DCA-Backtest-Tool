@@ -2,14 +2,11 @@
  * Portfolio Config Loader Service
  *
  * Loads, validates, and converts portfolio config files to backtest parameters.
- * Supports caching for performance and provides detailed error messages.
+ * Provides detailed error messages.
  */
 
 const fs = require('fs').promises;
 const path = require('path');
-
-// Config cache: Map<configName, {config, loadTime, filePath}>
-const configCache = new Map();
 
 // Config directory
 const CONFIG_DIR = path.join(__dirname, '../configs/portfolios');
@@ -23,12 +20,6 @@ const CONFIG_DIR = path.join(__dirname, '../configs/portfolios');
 async function loadPortfolioConfig(configName) {
   // Sanitize config name (remove .json if present)
   const sanitized = sanitizeConfigName(configName);
-
-  // Check cache first
-  if (configCache.has(sanitized)) {
-    console.log(`📋 Using cached config: ${sanitized}`);
-    return configCache.get(sanitized).config;
-  }
 
   // Build file path
   const filePath = path.join(CONFIG_DIR, `${sanitized}.json`);
@@ -60,13 +51,6 @@ async function loadPortfolioConfig(configName) {
 
   // Validate config structure
   validateConfig(config);
-
-  // Cache config
-  configCache.set(sanitized, {
-    config,
-    loadTime: new Date(),
-    filePath
-  });
 
   console.log(`✅ Config loaded successfully: ${config.name} (${config.stocks.length} stocks)`);
 
@@ -194,10 +178,6 @@ function validateConfig(config) {
 
   if (config.stocks.length === 0) {
     throw new Error('Field "stocks" cannot be empty - must contain at least one stock symbol');
-  }
-
-  if (config.stocks.length > 200) {
-    throw new Error(`Too many stocks: ${config.stocks.length} (maximum 200 allowed)`);
   }
 
   // Validate each stock symbol
@@ -479,15 +459,6 @@ function getCurrentDate() {
 }
 
 /**
- * Clear config cache (for testing/development)
- */
-function clearConfigCache() {
-  const count = configCache.size;
-  configCache.clear();
-  console.log(`🗑️  Cleared ${count} cached configs`);
-}
-
-/**
  * Get list of all available config files
  * @returns {Promise<Array<string>>} Array of config names (without .json extension)
  */
@@ -507,7 +478,6 @@ module.exports = {
   loadPortfolioConfig,
   configToBacktestParams,
   validateConfig,
-  clearConfigCache,
   listAvailableConfigs,
   getCurrentDate
 };

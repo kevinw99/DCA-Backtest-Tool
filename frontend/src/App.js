@@ -158,7 +158,20 @@ function AppContent() {
         });
 
         if (!batchResponse.ok) {
-          throw new Error(`Batch backtest failed: ${batchResponse.statusText}`);
+          // Try to parse error response body
+          let errorDetails;
+          try {
+            errorDetails = await batchResponse.json();
+            console.error('❌ Batch API Error Response:', errorDetails);
+            console.error('❌ Full error details:', JSON.stringify(errorDetails, null, 2));
+          } catch (e) {
+            console.error('❌ Failed to parse error response:', e);
+          }
+
+          const errorMessage = errorDetails?.message || errorDetails?.error || batchResponse.statusText;
+          console.error('❌ Batch backtest failed:', errorMessage);
+          console.error('❌ Request parameters sent:', JSON.stringify(parameters, null, 2));
+          throw new Error(`Batch backtest failed: ${errorMessage}`);
         }
 
         const batchResult = await batchResponse.json();
@@ -334,7 +347,20 @@ function AppContent() {
         });
 
         if (!batchResponse.ok) {
-          throw new Error(`Batch backtest failed: ${batchResponse.statusText}`);
+          // Try to parse error response body
+          let errorDetails;
+          try {
+            errorDetails = await batchResponse.json();
+            console.error('❌ Batch API Error Response:', errorDetails);
+            console.error('❌ Full error details:', JSON.stringify(errorDetails, null, 2));
+          } catch (e) {
+            console.error('❌ Failed to parse error response:', e);
+          }
+
+          const errorMessage = errorDetails?.message || errorDetails?.error || batchResponse.statusText;
+          console.error('❌ Batch backtest failed:', errorMessage);
+          console.error('❌ Request parameters sent:', JSON.stringify(parameters, null, 2));
+          throw new Error(`Batch backtest failed: ${errorMessage}`);
         }
 
         const batchResult = await batchResponse.json();

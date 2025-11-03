@@ -157,9 +157,7 @@ export const ValidationHelper = {
     if (!stocks || stocks.length === 0) {
       return { field: 'stocks', message: 'Please select at least one stock' };
     }
-    if (stocks.length > 20) {
-      return { field: 'stocks', message: 'Maximum 20 stocks allowed' };
-    }
+    // No maximum stock limit - removed for large portfolios like S&P 500
     return null;
   },
 

@@ -161,48 +161,6 @@ export const CapitalOptimizationSection = ({
           </div>
         )}
       </div>
-
-      <style jsx>{`
-        .strategy-group {
-          margin-bottom: 1.5rem;
-          padding: 1rem;
-          border: 1px solid #e5e7eb;
-          border-radius: 8px;
-          background: #fafafa;
-        }
-
-        .strategy-header {
-          display: flex;
-          align-items: flex-start;
-          gap: 0.75rem;
-          margin-bottom: 1rem;
-          cursor: pointer;
-        }
-
-        .strategy-header input[type="checkbox"] {
-          margin-top: 0.2rem;
-        }
-
-        .strategy-header strong {
-          color: #1f2937;
-          font-size: 1rem;
-        }
-
-        .strategy-params {
-          margin-top: 1rem;
-          padding-left: 2rem;
-          background: white;
-          padding: 1rem;
-          border-radius: 6px;
-        }
-
-        .help-text {
-          display: block;
-          font-size: 0.875rem;
-          color: #6b7280;
-          margin-top: 0.25rem;
-        }
-      `}</style>
     </section>
   );
 };

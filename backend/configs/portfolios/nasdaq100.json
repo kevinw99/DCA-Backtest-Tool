@@ -7,21 +7,21 @@
   "endDate": "2025-10-22",
   "globalDefaults": {
     "basic": {
-      "lotSizeUsd": 10000,
+      "lotSizeUsd": 5000,
       "strategyMode": "long"
     },
     "longStrategy": {
-      "maxLots": 40,
+      "maxLots": 10,
       "maxLotsToSell": 1,
       "gridIntervalPercent": 10,
       "profitRequirement": 10,
       "stopLossPercent": 30,
       "enableTrailingBuy": false,
       "enableTrailingSell": false,
-      "trailingBuyActivationPercent": 15,
+      "trailingBuyActivationPercent": 10,
       "trailingBuyReboundPercent": 5,
-      "trailingSellActivationPercent": 30,
-      "trailingSellPullbackPercent": 5,
+      "trailingSellActivationPercent": 20,
+      "trailingSellPullbackPercent": 10,
       "momentumBasedBuy": false,
       "momentumBasedSell": false
     },
@@ -44,7 +44,7 @@
       "enableBetaScaling": true,
       "beta": 1,
       "betaFactor": 1,
-      "coefficient": 0.1,
+      "coefficient": 0.5,
       "isManualBetaOverride": false
     },
     "dynamicFeatures": {

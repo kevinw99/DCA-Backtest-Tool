@@ -333,7 +333,7 @@ const FutureTradeCard = ({ symbol, futureTrades, parameters, isSelected, onRunSi
                   </div>
                   <div className="detail">
                     {formatParameterPercent(buyActivation.activationPercent)} drop
-                    from {formatCurrency(buyActivation.referencePrice)}
+                    from {formatCurrency(buyActivation.referencePrice)}, executes on {formatParameterPercent(buyActivation.reboundPercent)} rebound
                   </div>
                   <div>
                     <span className="label">Reference Price:</span>
@@ -342,12 +342,6 @@ const FutureTradeCard = ({ symbol, futureTrades, parameters, isSelected, onRunSi
                       const dist = calculateDistance(buyActivation.referencePrice);
                       return dist && <span className="distance">{dist.pct >= 0 ? '↑' : '↓'} {formatCurrency(Math.abs(dist.diff))} ({formatParameterPercent(Math.abs(dist.pct / 100))})</span>;
                     })()}
-                  </div>
-                  <div>
-                    <span className="label">Executes on:</span>
-                    <span className="value">
-                      {formatParameterPercent(buyActivation.reboundPercent)} rebound
-                    </span>
                   </div>
 
                   {/* [Spec 52] Grid requirement for PENDING activation */}
@@ -509,7 +503,7 @@ const FutureTradeCard = ({ symbol, futureTrades, parameters, isSelected, onRunSi
                     </div>
                     <div className="detail">
                       {formatParameterPercent(sellActivation.activationPercent)} rise
-                      from {formatCurrency(sellActivation.referencePrice)}
+                      from {formatCurrency(sellActivation.referencePrice)}, then trails {formatParameterPercent(sellActivation.pullbackPercent)} pullback
                     </div>
                     <div>
                       <span className="label">Reference Price:</span>
@@ -518,12 +512,6 @@ const FutureTradeCard = ({ symbol, futureTrades, parameters, isSelected, onRunSi
                         const dist = calculateDistance(sellActivation.referencePrice);
                         return dist && <span className="distance">{dist.pct >= 0 ? '↑' : '↓'} {formatCurrency(Math.abs(dist.diff))} ({formatParameterPercent(Math.abs(dist.pct / 100))})</span>;
                       })()}
-                    </div>
-                    <div>
-                      <span className="label">Then trails:</span>
-                      <span className="value">
-                        {formatParameterPercent(sellActivation.pullbackPercent)} pullback
-                      </span>
                     </div>
                     <div>
                       <span className="label">Profit target:</span>

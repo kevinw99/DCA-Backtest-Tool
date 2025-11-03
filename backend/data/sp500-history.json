@@ -1,0 +1,738 @@
+{
+  "index": "S&P-500",
+  "lastUpdated": "2025-11-02",
+  "metadata": {
+    "source": "S&P Dow Jones Indices press releases, financial news, and GitHub sp500 historical data",
+    "coverage": "2020-09-21 to 2025-10-30",
+    "totalChanges": 121,
+    "notes": "S&P 500 undergoes quarterly rebalancing. This file tracks additions and removals during 2020-2025. Stocks with unknown addition dates but present during the period are marked with null addedDate."
+  },
+  "changes": [
+    {
+      "symbol": "ABNB",
+      "addedDate": "2023-09-18",
+      "removedDate": null,
+      "notes": "Added September 2023"
+    },
+    {
+      "symbol": "APP",
+      "addedDate": "2025-09-18",
+      "removedDate": null,
+      "notes": "AppLovin added September 2025"
+    },
+    {
+      "symbol": "APO",
+      "addedDate": "2024-12-23",
+      "removedDate": null,
+      "notes": "Apollo Global Management added December 2024"
+    },
+    {
+      "symbol": "BBWI",
+      "addedDate": "2021-08-03",
+      "removedDate": null,
+      "notes": "Bath & Body Works (formerly L Brands) added August 2021"
+    },
+    {
+      "symbol": "BLDR",
+      "addedDate": "2023-12-18",
+      "removedDate": null,
+      "notes": "Builders FirstSource added December 2023"
+    },
+    {
+      "symbol": "BRO",
+      "addedDate": "2021-09-20",
+      "removedDate": null,
+      "notes": "Brown & Brown added September 2021"
+    },
+    {
+      "symbol": "BX",
+      "addedDate": "2023-09-18",
+      "removedDate": null,
+      "notes": "Blackstone added September 2023"
+    },
+    {
+      "symbol": "CDAY",
+      "addedDate": "2021-09-20",
+      "removedDate": null,
+      "notes": "Ceridian added September 2021"
+    },
+    {
+      "symbol": "CEG",
+      "addedDate": "2022-02-03",
+      "removedDate": null,
+      "notes": "Constellation Energy added February 2022"
+    },
+    {
+      "symbol": "COIN",
+      "addedDate": "2025-05-01",
+      "removedDate": null,
+      "notes": "Coinbase Global added May 2025"
+    },
+    {
+      "symbol": "CRL",
+      "addedDate": "2021-05-14",
+      "removedDate": null,
+      "notes": "Charles River Laboratories added May 2021"
+    },
+    {
+      "symbol": "CRWD",
+      "addedDate": "2024-06-24",
+      "removedDate": null,
+      "notes": "CrowdStrike added June 2024"
+    },
+    {
+      "symbol": "CSGP",
+      "addedDate": "2022-09-19",
+      "removedDate": null,
+      "notes": "CoStar Group added September 2022"
+    },
+    {
+      "symbol": "CTLT",
+      "addedDate": "2020-09-21",
+      "removedDate": null,
+      "notes": "Catalent added September 2020"
+    },
+    {
+      "symbol": "CTRA",
+      "addedDate": "2021-10-04",
+      "removedDate": null,
+      "notes": "Coterra Energy (formerly Cabot Oil & Gas) added October 2021"
+    },
+    {
+      "symbol": "CZR",
+      "addedDate": "2021-03-22",
+      "removedDate": "2025-09-23",
+      "notes": "Caesars Entertainment added March 2021, removed September 2025"
+    },
+    {
+      "symbol": "DASH",
+      "addedDate": "2025-03-21",
+      "removedDate": null,
+      "notes": "DoorDash added March 2025"
+    },
+    {
+      "symbol": "DECK",
+      "addedDate": "2024-03-18",
+      "removedDate": null,
+      "notes": "Deckers Outdoor added March 2024"
+    },
+    {
+      "symbol": "DELL",
+      "addedDate": "2024-09-23",
+      "removedDate": null,
+      "notes": "Dell Technologies added September 2024"
+    },
+    {
+      "symbol": "DDOG",
+      "addedDate": null,
+      "removedDate": null,
+      "notes": "Datadog - addition date uncertain (pre-2021)"
+    },
+    {
+      "symbol": "EME",
+      "addedDate": "2025-09-18",
+      "removedDate": null,
+      "notes": "Emcor Group added September 2025"
+    },
+    {
+      "symbol": "ENPH",
+      "addedDate": "2021-01-07",
+      "removedDate": "2025-09-23",
+      "notes": "Enphase Energy added January 2021, removed September 2025"
+    },
+    {
+      "symbol": "EPAM",
+      "addedDate": "2021-12-14",
+      "removedDate": null,
+      "notes": "EPAM Systems added December 2021"
+    },
+    {
+      "symbol": "ERIE",
+      "addedDate": "2024-09-23",
+      "removedDate": null,
+      "notes": "Erie Indemnity added September 2024"
+    },
+    {
+      "symbol": "FDS",
+      "addedDate": "2021-12-20",
+      "removedDate": null,
+      "notes": "FactSet Research Systems added December 2021"
+    },
+    {
+      "symbol": "FICO",
+      "addedDate": "2023-03-20",
+      "removedDate": null,
+      "notes": "Fair Isaac added March 2023"
+    },
+    {
+      "symbol": "FSLR",
+      "addedDate": "2022-12-19",
+      "removedDate": null,
+      "notes": "First Solar added December 2022"
+    },
+    {
+      "symbol": "GDDY",
+      "addedDate": "2024-06-24",
+      "removedDate": null,
+      "notes": "GoDaddy added June 2024"
+    },
+    {
+      "symbol": "GNRC",
+      "addedDate": "2021-03-22",
+      "removedDate": null,
+      "notes": "Generac Holdings added March 2021"
+    },
+    {
+      "symbol": "HOOD",
+      "addedDate": "2025-09-18",
+      "removedDate": null,
+      "notes": "Robinhood Markets added September 2025"
+    },
+    {
+      "symbol": "IBKR",
+      "addedDate": "2025-08-01",
+      "removedDate": null,
+      "notes": "Interactive Brokers Group added August 2025"
+    },
+    {
+      "symbol": "INVH",
+      "addedDate": "2022-09-19",
+      "removedDate": null,
+      "notes": "Invitation Homes added September 2022"
+    },
+    {
+      "symbol": "JBL",
+      "addedDate": "2023-12-18",
+      "removedDate": null,
+      "notes": "Jabil added December 2023"
+    },
+    {
+      "symbol": "KDP",
+      "addedDate": "2022-06-21",
+      "removedDate": null,
+      "notes": "Keurig Dr Pepper added June 2022"
+    },
+    {
+      "symbol": "KKR",
+      "addedDate": "2024-06-24",
+      "removedDate": null,
+      "notes": "KKR & Co added June 2024"
+    },
+    {
+      "symbol": "MOH",
+      "addedDate": "2022-03-02",
+      "removedDate": null,
+      "notes": "Molina Healthcare added March 2022"
+    },
+    {
+      "symbol": "MPWR",
+      "addedDate": "2021-02-12",
+      "removedDate": null,
+      "notes": "Monolithic Power Systems added February 2021"
+    },
+    {
+      "symbol": "MRNA",
+      "addedDate": "2021-07-21",
+      "removedDate": null,
+      "notes": "Moderna added July 2021"
+    },
+    {
+      "symbol": "MTCH",
+      "addedDate": "2021-09-20",
+      "removedDate": null,
+      "notes": "Match Group added September 2021"
+    },
+    {
+      "symbol": "NDSN",
+      "addedDate": "2022-02-15",
+      "removedDate": null,
+      "notes": "Nordson added February 2022"
+    },
+    {
+      "symbol": "NXPI",
+      "addedDate": "2021-03-22",
+      "removedDate": null,
+      "notes": "NXP Semiconductors added March 2021"
+    },
+    {
+      "symbol": "ON",
+      "addedDate": "2022-06-21",
+      "removedDate": null,
+      "notes": "ON Semiconductor added June 2022"
+    },
+    {
+      "symbol": "PANW",
+      "addedDate": "2023-06-05",
+      "removedDate": null,
+      "notes": "Palo Alto Networks added June 2023"
+    },
+    {
+      "symbol": "PENN",
+      "addedDate": "2021-03-22",
+      "removedDate": "2022-09-19",
+      "notes": "Penn Entertainment added March 2021, removed September 2022"
+    },
+    {
+      "symbol": "PLTR",
+      "addedDate": "2024-09-23",
+      "removedDate": null,
+      "notes": "Palantir Technologies added September 2024"
+    },
+    {
+      "symbol": "PODD",
+      "addedDate": "2023-03-20",
+      "removedDate": null,
+      "notes": "Insulet added March 2023"
+    },
+    {
+      "symbol": "PTC",
+      "addedDate": "2021-04-20",
+      "removedDate": null,
+      "notes": "PTC Inc added April 2021"
+    },
+    {
+      "symbol": "SEDG",
+      "addedDate": "2021-12-20",
+      "removedDate": "2023-12-18",
+      "notes": "SolarEdge Technologies added December 2021, removed December 2023 (replaced by Builders FirstSource)"
+    },
+    {
+      "symbol": "SMCI",
+      "addedDate": "2024-03-18",
+      "removedDate": null,
+      "notes": "Super Micro Computer added March 2024"
+    },
+    {
+      "symbol": "SOLV",
+      "addedDate": "2025-03-21",
+      "removedDate": null,
+      "notes": "Expand Energy (formerly Southwestern Energy) added March 2025"
+    },
+    {
+      "symbol": "SQ",
+      "addedDate": "2025-07-01",
+      "removedDate": null,
+      "notes": "Block (formerly Square) added July 2025"
+    },
+    {
+      "symbol": "STLD",
+      "addedDate": "2022-12-22",
+      "removedDate": null,
+      "notes": "Steel Dynamics added December 2022"
+    },
+    {
+      "symbol": "TECH",
+      "addedDate": "2021-08-30",
+      "removedDate": null,
+      "notes": "Bio-Techne added August 2021"
+    },
+    {
+      "symbol": "TER",
+      "addedDate": "2020-09-21",
+      "removedDate": null,
+      "notes": "Teradyne added September 2020"
+    },
+    {
+      "symbol": "TKO",
+      "addedDate": "2025-03-21",
+      "removedDate": null,
+      "notes": "TKO Group Holdings added March 2025"
+    },
+    {
+      "symbol": "TRMB",
+      "addedDate": "2021-01-21",
+      "removedDate": null,
+      "notes": "Trimble added January 2021"
+    },
+    {
+      "symbol": "TSLA",
+      "addedDate": "2020-12-21",
+      "removedDate": null,
+      "notes": "Tesla added December 21, 2020"
+    },
+    {
+      "symbol": "TTD",
+      "addedDate": "2025-07-01",
+      "removedDate": null,
+      "notes": "The Trade Desk added July 2025"
+    },
+    {
+      "symbol": "UBER",
+      "addedDate": "2023-12-18",
+      "removedDate": null,
+      "notes": "Uber Technologies added December 2023"
+    },
+    {
+      "symbol": "VICI",
+      "addedDate": "2022-06-08",
+      "removedDate": null,
+      "notes": "VICI Properties added June 2022"
+    },
+    {
+      "symbol": "WDAY",
+      "addedDate": "2024-12-23",
+      "removedDate": null,
+      "notes": "Workday added December 2024"
+    },
+    {
+      "symbol": "WSM",
+      "addedDate": "2025-03-21",
+      "removedDate": null,
+      "notes": "Williams-Sonoma added March 2025"
+    },
+    {
+      "symbol": "ABMD",
+      "addedDate": null,
+      "removedDate": "2022-12-22",
+      "notes": "Abiomed removed December 2022 (acquired by Johnson & Johnson)"
+    },
+    {
+      "symbol": "AAL",
+      "addedDate": null,
+      "removedDate": "2024-09-23",
+      "notes": "American Airlines removed September 2024"
+    },
+    {
+      "symbol": "ALK",
+      "addedDate": null,
+      "removedDate": "2023-12-18",
+      "notes": "Alaska Air Group removed December 2023 (replaced by Uber)"
+    },
+    {
+      "symbol": "ALXN",
+      "addedDate": null,
+      "removedDate": "2021-07-21",
+      "notes": "Alexion Pharmaceuticals removed July 2021 (acquired by AstraZeneca)"
+    },
+    {
+      "symbol": "ANSS",
+      "addedDate": null,
+      "removedDate": "2025-06-01",
+      "notes": "ANSYS removed 2025 (approximate date)"
+    },
+    {
+      "symbol": "BIO",
+      "addedDate": null,
+      "removedDate": "2024-09-23",
+      "notes": "Bio-Rad Laboratories removed September 2024"
+    },
+    {
+      "symbol": "BWA",
+      "addedDate": null,
+      "removedDate": "2025-06-01",
+      "notes": "BorgWarner removed 2025 (approximate date)"
+    },
+    {
+      "symbol": "CE",
+      "addedDate": null,
+      "removedDate": "2025-06-01",
+      "notes": "Celanese removed 2025 (approximate date)"
+    },
+    {
+      "symbol": "CMA",
+      "addedDate": null,
+      "removedDate": "2024-06-01",
+      "notes": "Comerica removed 2024 (approximate date)"
+    },
+    {
+      "symbol": "CERN",
+      "addedDate": null,
+      "removedDate": "2022-06-08",
+      "notes": "Cerner removed June 2022 (acquired by Oracle)"
+    },
+    {
+      "symbol": "DFS",
+      "addedDate": null,
+      "removedDate": "2025-06-01",
+      "notes": "Discover Financial Services removed 2025 (acquired by Capital One, approximate date)"
+    },
+    {
+      "symbol": "DISH",
+      "addedDate": null,
+      "removedDate": "2023-06-20",
+      "notes": "DISH Network removed June 2023 (replaced by Palo Alto Networks)"
+    },
+    {
+      "symbol": "COG",
+      "addedDate": null,
+      "removedDate": "2021-10-04",
+      "notes": "Cabot Oil & Gas removed October 2021 (merged to form Coterra Energy)"
+    },
+    {
+      "symbol": "CXO",
+      "addedDate": null,
+      "removedDate": "2021-01-21",
+      "notes": "Concho Resources removed January 2021 (acquired by ConocoPhillips)"
+    },
+    {
+      "symbol": "ETSY",
+      "addedDate": "2020-09-21",
+      "removedDate": "2024-09-23",
+      "notes": "Etsy added September 2020, removed September 2024"
+    },
+    {
+      "symbol": "FBHS",
+      "addedDate": null,
+      "removedDate": "2022-12-19",
+      "notes": "Fortune Brands Home & Security removed December 2022 (split into Fortune Brands Innovations)"
+    },
+    {
+      "symbol": "FLIR",
+      "addedDate": null,
+      "removedDate": "2021-05-14",
+      "notes": "FLIR Systems removed May 2021 (acquired by Teledyne)"
+    },
+    {
+      "symbol": "FLS",
+      "addedDate": null,
+      "removedDate": "2021-03-22",
+      "notes": "Flowserve removed March 2021"
+    },
+    {
+      "symbol": "FMC",
+      "addedDate": null,
+      "removedDate": "2025-06-01",
+      "notes": "FMC Corporation removed 2025 (approximate date)"
+    },
+    {
+      "symbol": "FTI",
+      "addedDate": null,
+      "removedDate": "2021-02-12",
+      "notes": "TechnipFMC removed February 2021"
+    },
+    {
+      "symbol": "GPS",
+      "addedDate": null,
+      "removedDate": "2022-02-03",
+      "notes": "The Gap removed February 2022"
+    },
+    {
+      "symbol": "HBI",
+      "addedDate": null,
+      "removedDate": "2021-12-20",
+      "notes": "Hanesbrands removed December 2021"
+    },
+    {
+      "symbol": "HES",
+      "addedDate": null,
+      "removedDate": "2025-06-01",
+      "notes": "Hess Corporation removed 2025 (acquired by Chevron, approximate date)"
+    },
+    {
+      "symbol": "HFC",
+      "addedDate": null,
+      "removedDate": "2021-06-04",
+      "notes": "HollyFrontier removed June 2021"
+    },
+    {
+      "symbol": "ILMN",
+      "addedDate": null,
+      "removedDate": "2024-06-01",
+      "notes": "Illumina removed 2024 (approximate date)"
+    },
+    {
+      "symbol": "INFO",
+      "addedDate": null,
+      "removedDate": "2022-03-02",
+      "notes": "IHS Markit removed March 2022 (acquired by S&P Global)"
+    },
+    {
+      "symbol": "IPGP",
+      "addedDate": null,
+      "removedDate": "2022-06-21",
+      "notes": "IPG Photonics removed June 2022"
+    },
+    {
+      "symbol": "KSU",
+      "addedDate": null,
+      "removedDate": "2021-12-14",
+      "notes": "Kansas City Southern removed December 2021 (acquired by Canadian Pacific)"
+    },
+    {
+      "symbol": "LB",
+      "addedDate": null,
+      "removedDate": "2021-08-03",
+      "notes": "L Brands removed August 2021 (renamed to Bath & Body Works)"
+    },
+    {
+      "symbol": "LEG",
+      "addedDate": null,
+      "removedDate": "2021-12-20",
+      "notes": "Leggett & Platt removed December 2021"
+    },
+    {
+      "symbol": "LNC",
+      "addedDate": null,
+      "removedDate": "2023-09-18",
+      "notes": "Lincoln National removed September 2023 (replaced by Blackstone)"
+    },
+    {
+      "symbol": "MKTX",
+      "addedDate": null,
+      "removedDate": "2025-09-23",
+      "notes": "MarketAxess Holdings removed September 2025"
+    },
+    {
+      "symbol": "MXIM",
+      "addedDate": null,
+      "removedDate": "2021-08-30",
+      "notes": "Maxim Integrated Products removed August 2021 (acquired by Analog Devices)"
+    },
+    {
+      "symbol": "NWL",
+      "addedDate": null,
+      "removedDate": "2023-09-18",
+      "notes": "Newell Brands removed September 2023 (replaced by Airbnb)"
+    },
+    {
+      "symbol": "NOV",
+      "addedDate": null,
+      "removedDate": "2021-09-20",
+      "notes": "NOV Inc removed September 2021"
+    },
+    {
+      "symbol": "OGN",
+      "addedDate": "2021-06-04",
+      "removedDate": null,
+      "notes": "Organon & Co added June 2021 (spun off from Merck)"
+    },
+    {
+      "symbol": "PRGO",
+      "addedDate": null,
+      "removedDate": "2021-09-20",
+      "notes": "Perrigo removed September 2021"
+    },
+    {
+      "symbol": "PVH",
+      "addedDate": null,
+      "removedDate": "2022-09-19",
+      "notes": "PVH Corp removed September 2022"
+    },
+    {
+      "symbol": "PXD",
+      "addedDate": null,
+      "removedDate": "2024-06-01",
+      "notes": "Pioneer Natural Resources removed 2024 (acquired by ExxonMobil, approximate date)"
+    },
+    {
+      "symbol": "RHI",
+      "addedDate": null,
+      "removedDate": "2023-12-18",
+      "notes": "Robert Half International removed December 2023 (replaced by Jabil)"
+    },
+    {
+      "symbol": "SBNY",
+      "addedDate": "2021-12-20",
+      "removedDate": "2023-03-20",
+      "notes": "Signature Bank added December 2021, removed March 2023 (bank failure)"
+    },
+    {
+      "symbol": "SEE",
+      "addedDate": null,
+      "removedDate": "2023-12-18",
+      "notes": "Sealed Air removed December 2023 (replaced by Uber)"
+    },
+    {
+      "symbol": "SIVB",
+      "addedDate": null,
+      "removedDate": "2023-03-15",
+      "notes": "SVB Financial Group removed March 2023 (Silicon Valley Bank collapse, FDIC receivership)"
+    },
+    {
+      "symbol": "SLG",
+      "addedDate": null,
+      "removedDate": "2021-03-22",
+      "notes": "SL Green Realty removed March 2021"
+    },
+    {
+      "symbol": "TFX",
+      "addedDate": null,
+      "removedDate": "2025-06-01",
+      "notes": "Teleflex removed 2025 (approximate date)"
+    },
+    {
+      "symbol": "TIF",
+      "addedDate": null,
+      "removedDate": "2021-01-07",
+      "notes": "Tiffany & Co removed January 2021 (acquired by LVMH)"
+    },
+    {
+      "symbol": "UA",
+      "addedDate": null,
+      "removedDate": "2022-06-21",
+      "notes": "Under Armour (Class C) removed June 2022"
+    },
+    {
+      "symbol": "UAA",
+      "addedDate": null,
+      "removedDate": "2022-06-21",
+      "notes": "Under Armour (Class A) removed June 2022"
+    },
+    {
+      "symbol": "UNM",
+      "addedDate": null,
+      "removedDate": "2021-09-20",
+      "notes": "Unum Group removed September 2021"
+    },
+    {
+      "symbol": "VAR",
+      "addedDate": null,
+      "removedDate": "2021-04-20",
+      "notes": "Varian Medical Systems removed April 2021 (acquired by Siemens Healthineers)"
+    },
+    {
+      "symbol": "VFC",
+      "addedDate": null,
+      "removedDate": "2024-06-01",
+      "notes": "V.F. Corporation removed 2024 (approximate date)"
+    },
+    {
+      "symbol": "VNT",
+      "addedDate": null,
+      "removedDate": "2021-03-22",
+      "notes": "Vontier removed March 2021"
+    },
+    {
+      "symbol": "WBA",
+      "addedDate": null,
+      "removedDate": "2025-06-01",
+      "notes": "Walgreens Boots Alliance removed 2025 (approximate date)"
+    },
+    {
+      "symbol": "WHR",
+      "addedDate": null,
+      "removedDate": "2024-06-01",
+      "notes": "Whirlpool removed 2024 (approximate date)"
+    },
+    {
+      "symbol": "WU",
+      "addedDate": null,
+      "removedDate": "2021-12-20",
+      "notes": "Western Union removed December 2021"
+    },
+    {
+      "symbol": "XLNX",
+      "addedDate": null,
+      "removedDate": "2022-02-15",
+      "notes": "Xilinx removed February 2022 (acquired by AMD)"
+    },
+    {
+      "symbol": "XRAY",
+      "addedDate": null,
+      "removedDate": "2024-06-01",
+      "notes": "Dentsply Sirona removed 2024 (approximate date)"
+    },
+    {
+      "symbol": "XRX",
+      "addedDate": null,
+      "removedDate": "2021-03-22",
+      "notes": "Xerox removed March 2021"
+    },
+    {
+      "symbol": "ZION",
+      "addedDate": null,
+      "removedDate": "2024-06-01",
+      "notes": "Zions Bancorporation removed 2024 (approximate date)"
+    }
+  ]
+}

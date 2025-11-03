@@ -11,17 +11,17 @@
       "strategyMode": "long"
     },
     "longStrategy": {
-      "maxLots": 40,
+      "maxLots": 10,
       "maxLotsToSell": 1,
       "gridIntervalPercent": 10,
       "profitRequirement": 10,
       "stopLossPercent": 30,
       "enableTrailingBuy": false,
       "enableTrailingSell": false,
-      "trailingBuyActivationPercent": 15,
+      "trailingBuyActivationPercent": 10,
       "trailingBuyReboundPercent": 5,
-      "trailingSellActivationPercent": 30,
-      "trailingSellPullbackPercent": 5,
+      "trailingSellActivationPercent": 20,
+      "trailingSellPullbackPercent": 10,
       "momentumBasedBuy": false,
       "momentumBasedSell": false
     },
@@ -41,11 +41,11 @@
       }
     },
     "beta": {
-      "enableBetaScaling": true,
+      "enableBetaScaling": false,
       "beta": 1,
       "betaFactor": 1,
       "coefficient": 0.5,
-      "isManualBetaOverride": false
+      "isManualBetaOverride": true
     },
     "dynamicFeatures": {
       "enableDynamicGrid": false,

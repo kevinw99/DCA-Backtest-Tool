@@ -54,63 +54,17 @@
     }
   },
   "PLTR": {
-    "basic": {
-      "lotSizeUsd": 10000,
-      "strategyMode": "long"
-    },
-    "longStrategy": {
-      "maxLots": 10,
-      "maxLotsToSell": 1,
-      "gridIntervalPercent": 10,
-      "profitRequirement": 10,
-      "trailingBuyActivationPercent": 10,
-      "trailingBuyReboundPercent": 5,
-      "trailingSellActivationPercent": 20,
-      "trailingSellPullbackPercent": 10
-    },
-    "shortStrategy": {
-      "stopLoss": {
-        "hardStopLossPercent": 30,
-        "portfolioStopLossPercent": 25,
-        "cascadeStopLossPercent": 35
-      },
-      "gridIntervalPercent": 10,
-      "profitRequirement": 10,
-      "maxShorts": 6,
-      "maxShortsToCovers": 3,
-      "trailingShortActivationPercent": 25,
-      "trailingShortPullbackPercent": 15,
-      "trailingCoverActivationPercent": 20,
-      "trailingCoverReboundPercent": 10
-    },
     "beta": {
-      "enableBetaScaling": false,
       "beta": 2.592,
-      "betaFactor": 2.592,
-      "coefficient": 1,
-      "isManualBetaOverride": false
+      "betaFactor": 2.592
     },
     "dynamicFeatures": {
-      "enableDynamicGrid": false,
-      "dynamicGridMultiplier": 1,
-      "enableConsecutiveIncrementalBuyGrid": false,
-      "gridConsecutiveIncrement": 5,
-      "enableConsecutiveIncrementalSellProfit": false,
-      "enableScenarioDetection": false,
       "normalizeToReference": true
-    },
-    "adaptiveStrategy": {
-      "enableAdaptiveStrategy": false,
-      "adaptationCheckIntervalDays": 30,
-      "adaptationRollingWindowDays": 90,
-      "minDataDaysBeforeAdaptation": 90,
-      "confidenceThreshold": 0.7
     }
   },
   "AAPL": {
     "basic": {
-      "lotSizeUsd": 15000,
-      "strategyMode": "long"
+      "lotSizeUsd": 15000
     },
     "longStrategy": {
       "maxLots": 8,
@@ -123,204 +77,48 @@
       "trailingSellPullbackPercent": 12.5
     },
     "shortStrategy": {
-      "maxShorts": 6,
-      "maxShortsToCovers": 3,
       "gridIntervalPercent": 15,
-      "profitRequirement": 15,
-      "trailingShortActivationPercent": 25,
-      "trailingShortPullbackPercent": 15,
-      "trailingCoverActivationPercent": 20,
-      "trailingCoverReboundPercent": 10,
-      "stopLoss": {
-        "hardStopLossPercent": 30,
-        "portfolioStopLossPercent": 25,
-        "cascadeStopLossPercent": 35
-      }
+      "profitRequirement": 15
     },
     "beta": {
-      "enableBetaScaling": false,
       "beta": 1.5,
-      "betaFactor": 1.5,
-      "coefficient": 1,
-      "isManualBetaOverride": false
+      "betaFactor": 1.5
     },
     "dynamicFeatures": {
-      "enableDynamicGrid": false,
-      "dynamicGridMultiplier": 1,
-      "enableConsecutiveIncrementalBuyGrid": false,
-      "gridConsecutiveIncrement": 5,
-      "enableConsecutiveIncrementalSellProfit": false,
       "enableScenarioDetection": true,
       "normalizeToReference": true
     },
     "adaptiveStrategy": {
-      "enableAdaptiveStrategy": true,
-      "adaptationCheckIntervalDays": 30,
-      "adaptationRollingWindowDays": 90,
-      "minDataDaysBeforeAdaptation": 90,
-      "confidenceThreshold": 0.7
+      "enableAdaptiveStrategy": true
     }
   },
   "TSLA": {
-    "basic": {
-      "lotSizeUsd": 10000,
-      "strategyMode": "long"
-    },
-    "longStrategy": {
-      "maxLots": 10,
-      "maxLotsToSell": 1,
-      "gridIntervalPercent": 10,
-      "profitRequirement": 10,
-      "trailingBuyActivationPercent": 10,
-      "trailingBuyReboundPercent": 5,
-      "trailingSellActivationPercent": 20,
-      "trailingSellPullbackPercent": 10
-    },
-    "shortStrategy": {
-      "stopLoss": {
-        "hardStopLossPercent": 30,
-        "portfolioStopLossPercent": 25,
-        "cascadeStopLossPercent": 35
-      },
-      "gridIntervalPercent": 10,
-      "profitRequirement": 10,
-      "maxShorts": 6,
-      "maxShortsToCovers": 3,
-      "trailingShortActivationPercent": 25,
-      "trailingShortPullbackPercent": 15,
-      "trailingCoverActivationPercent": 20,
-      "trailingCoverReboundPercent": 10
-    },
     "beta": {
-      "enableBetaScaling": false,
       "beta": 2.592,
-      "betaFactor": 2.592,
-      "coefficient": 1,
-      "isManualBetaOverride": false
+      "betaFactor": 2.592
     },
     "dynamicFeatures": {
-      "enableDynamicGrid": false,
-      "dynamicGridMultiplier": 1,
       "enableConsecutiveIncrementalBuyGrid": true,
-      "gridConsecutiveIncrement": 5,
-      "enableConsecutiveIncrementalSellProfit": false,
-      "enableScenarioDetection": false,
       "normalizeToReference": true
-    },
-    "adaptiveStrategy": {
-      "enableAdaptiveStrategy": false,
-      "adaptationCheckIntervalDays": 30,
-      "adaptationRollingWindowDays": 90,
-      "minDataDaysBeforeAdaptation": 90,
-      "confidenceThreshold": 0.7
     }
   },
   "SHOP": {
-    "basic": {
-      "lotSizeUsd": 10000,
-      "strategyMode": "long"
-    },
     "longStrategy": {
-      "maxLots": 10,
-      "maxLotsToSell": 1,
-      "gridIntervalPercent": 10,
       "profitRequirement": 5,
       "trailingBuyActivationPercent": 5,
-      "trailingBuyReboundPercent": 5,
       "trailingSellActivationPercent": 5,
       "trailingSellPullbackPercent": 0
     },
     "shortStrategy": {
-      "stopLoss": {
-        "hardStopLossPercent": 30,
-        "portfolioStopLossPercent": 25,
-        "cascadeStopLossPercent": 35
-      },
-      "gridIntervalPercent": 10,
-      "profitRequirement": 5,
-      "maxShorts": 6,
-      "maxShortsToCovers": 3,
-      "trailingShortActivationPercent": 25,
-      "trailingShortPullbackPercent": 15,
-      "trailingCoverActivationPercent": 20,
-      "trailingCoverReboundPercent": 10
+      "profitRequirement": 5
     },
     "beta": {
-      "enableBetaScaling": false,
       "beta": 2.592,
-      "betaFactor": 2.592,
-      "coefficient": 1,
-      "isManualBetaOverride": false
+      "betaFactor": 2.592
     },
     "dynamicFeatures": {
-      "enableDynamicGrid": false,
-      "dynamicGridMultiplier": 1,
-      "enableConsecutiveIncrementalBuyGrid": false,
-      "gridConsecutiveIncrement": 5,
       "enableConsecutiveIncrementalSellProfit": true,
-      "enableScenarioDetection": false,
       "normalizeToReference": true
-    },
-    "adaptiveStrategy": {
-      "enableAdaptiveStrategy": false,
-      "adaptationCheckIntervalDays": 30,
-      "adaptationRollingWindowDays": 90,
-      "minDataDaysBeforeAdaptation": 90,
-      "confidenceThreshold": 0.7
-    }
-  },
-  "MSFT": {
-    "basic": {
-      "lotSizeUsd": 10000,
-      "strategyMode": "long"
-    },
-    "longStrategy": {
-      "maxLots": 10,
-      "maxLotsToSell": 1,
-      "gridIntervalPercent": 10,
-      "profitRequirement": 10,
-      "trailingBuyActivationPercent": 10,
-      "trailingBuyReboundPercent": 5,
-      "trailingSellActivationPercent": 20,
-      "trailingSellPullbackPercent": 10
-    },
-    "shortStrategy": {
-      "stopLoss": {
-        "hardStopLossPercent": 30,
-        "portfolioStopLossPercent": 25,
-        "cascadeStopLossPercent": 35
-      },
-      "gridIntervalPercent": 10,
-      "profitRequirement": 10,
-      "maxShorts": 6,
-      "maxShortsToCovers": 3,
-      "trailingShortActivationPercent": 25,
-      "trailingShortPullbackPercent": 15,
-      "trailingCoverActivationPercent": 20,
-      "trailingCoverReboundPercent": 10
-    },
-    "beta": {
-      "enableBetaScaling": false,
-      "beta": 1,
-      "betaFactor": 1,
-      "coefficient": 1,
-      "isManualBetaOverride": false
-    },
-    "dynamicFeatures": {
-      "enableDynamicGrid": false,
-      "dynamicGridMultiplier": 1,
-      "enableConsecutiveIncrementalBuyGrid": false,
-      "enableConsecutiveIncrementalSellProfit": false,
-      "enableScenarioDetection": false,
-      "normalizeToReference": false,
-      "gridConsecutiveIncrement": 5
-    },
-    "adaptiveStrategy": {
-      "enableAdaptiveStrategy": false,
-      "adaptationCheckIntervalDays": 30,
-      "adaptationRollingWindowDays": 90,
-      "minDataDaysBeforeAdaptation": 90,
-      "confidenceThreshold": 0.7
     }
   }
 }

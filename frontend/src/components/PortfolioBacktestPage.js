@@ -80,11 +80,12 @@ const PortfolioBacktestPage = () => {
   // Parse URL parameters on mount
   useEffect(() => {
     const configParam = searchParams.get('config');
+    const rerunParam = searchParams.get('rerun');
     const stocksParam = searchParams.get('stocks');
 
-    // Priority 1: Config file (e.g., ?config=nasdaq100)
+    // Priority 1: Config file (e.g., ?config=nasdaq100&rerun=true)
     if (configParam) {
-      runConfigBacktest(configParam);
+      runConfigBacktest(configParam, rerunParam === 'true' || rerunParam === '1');
       return;
     }
 

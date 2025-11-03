@@ -14,7 +14,7 @@ const fs = require('fs').promises;
 
 class BetaService {
   constructor() {
-    this.DEFAULTS_PATH = path.join(__dirname, '../../frontend/src/config/backtestDefaults.json');
+    this.DEFAULTS_PATH = path.join(__dirname, '../../config/backtestDefaults.json');
     this.defaultsCache = null;
     this.defaultsCacheTime = null;
     this.DEFAULTS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes

@@ -585,6 +585,27 @@ app.get('/api/backtest/defaults', (req, res) => {
   }
 });
 
+// Get raw backtest defaults config (for frontend)
+app.get('/api/config/backtest-defaults', (req, res) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const configPath = path.join(__dirname, '../config/backtestDefaults.json');
+    const rawConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+
+    res.json({
+      success: true,
+      data: rawConfig
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to load backtest defaults config',
+      message: error.message
+    });
+  }
+});
+
 // Get ticker-specific default parameters
 app.get('/api/backtest/defaults/:symbol', async (req, res) => {
   try {
@@ -1698,8 +1719,9 @@ app.post('/api/backtest/portfolio/config', async (req, res) => {
 app.get('/api/backtest/portfolio/config/:configName', async (req, res) => {
   try {
     const { configName } = req.params;
+    const { rerun } = req.query;
 
-    console.log(`📋 Portfolio config backtest requested (GET): ${configName}`);
+    console.log(`📋 Portfolio config backtest requested (GET): ${configName}${rerun ? ' [RERUN FORCED]' : ''}`);
 
     // Load and validate config
     const config = await portfolioConfigLoader.loadPortfolioConfig(configName);
@@ -1721,13 +1743,23 @@ app.get('/api/backtest/portfolio/config/:configName', async (req, res) => {
     const portfolioResultsCache = require('./services/portfolioResultsCache');
     portfolioResultsCache.set(results.portfolioRunId, results);
 
+    // Set cache-control headers to prevent browser caching
+    // This ensures fresh results on every request, especially with rerun=true
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'Surrogate-Control': 'no-store'
+    });
+
     res.json({
       success: true,
       data: results,
       meta: {
         configFile: `${configName}.json`,
         portfolioName: config.name,
-        portfolioDescription: config.description
+        portfolioDescription: config.description,
+        rerun: rerun === 'true' || rerun === '1'
       }
     });
 

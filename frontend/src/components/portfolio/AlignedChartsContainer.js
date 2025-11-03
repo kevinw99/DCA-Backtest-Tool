@@ -49,6 +49,14 @@ const AlignedChartsContainer = ({ chartData, stockResults }) => {
   // Define charts in order of display
   const charts = [
     {
+      id: 'capitalUtilization',
+      component: CapitalUtilizationChartAligned,
+      title: 'Capital Utilization Metrics',
+      description: 'Monitor deployed capital, cash reserve, and utilization percentage',
+      dataKey: 'capitalUtilization',
+      props: { data: chartData.capitalUtilization }
+    },
+    {
       id: 'dcaVsBuyAndHold',
       component: DCAVsBuyAndHoldChartAligned,
       title: 'Portfolio Value: DCA vs Buy & Hold',
@@ -71,14 +79,6 @@ const AlignedChartsContainer = ({ chartData, stockResults }) => {
       description: 'All stock prices normalized to % change from their starting price',
       dataKey: 'normalizedPrices',
       props: { data: chartData.normalizedPrices, stockResults }
-    },
-    {
-      id: 'capitalUtilization',
-      component: CapitalUtilizationChartAligned,
-      title: 'Capital Utilization Metrics',
-      description: 'Monitor deployed capital, cash reserve, and utilization percentage',
-      dataKey: 'capitalUtilization',
-      props: { data: chartData.capitalUtilization }
     }
   ];
 

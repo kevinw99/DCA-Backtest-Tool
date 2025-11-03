@@ -1,3 +1,10 @@
+back to previous issue #2. what is NVDA's beta? then use this beta to calculate all 4 params I
+  asked, see if you can matched the result. The values seems contradict to
+  each others
+
+
+
+
 The future trade is only the activation, it does not evaluate the the actual grid requrirement
 so for the future trade to guide my real trade, I don't have all the info, it could the current price already sastisfying the trailing order, yet it is not executed because the backtest know it does not satisfy the grid requirement.,so it abort the trade but keep the activation for next day evaluation.
 What do you suggest to provide better guidance for real trade?
@@ -39,6 +46,7 @@ Current: $628.71 as of 2025-10-30 already should trigger the active BUY stop at 
 Can you verify.
 Please use this example to propose a better way to provide guidance for real trade or implement my suggestion above.Please develop a new spec.
 
+I like to run a differnet config of nasdaq100_ConsecutiveBuying.json , but how does the portfolio backtest knows to get the nasdaq100-history.json ?
 
 
 

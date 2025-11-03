@@ -300,10 +300,13 @@ async function runPortfolioBacktest(config) {
   const portfolio = new PortfolioState(config);
 
   // 2. Load price data for all stocks
-  console.log('📡 Loading price data for all stocks...');
+  console.log('\n📡 PHASE 1: Loading price data for all stocks...');
+  console.log(`   Loading data for ${config.stocks.length} stocks from ${config.startDate} to ${config.endDate}`);
   const priceDataMap = await loadAllPriceData(config.stocks, config.startDate, config.endDate);
+  console.log('✅ Price data loading complete\n');
 
   // 3. Initialize executors and stock states for each stock
+  console.log('⚙️  PHASE 2: Initializing executors for all stocks...');
   const executors = new Map();
   const executorDayIndices = new Map();  // Track each executor's current day index
 
@@ -335,13 +338,15 @@ async function runPortfolioBacktest(config) {
     });
 
     // Apply beta scaling if enabled (Spec 43: Centralized Beta Scaling)
-    if (config.betaScaling?.enabled) {
+    // Check params (flattened from globalDefaults.beta) instead of config.betaScaling
+    if (params.enableBetaScaling) {
       const BetaScalingService = require('./betaScaling');
       const betaService = require('./betaService');
       const betaScalingService = new BetaScalingService(betaService);
 
       try {
-        const coefficient = config.betaScaling.coefficient || 1.0;
+        const coefficient = params.coefficient || 1.0;
+        console.log(`🎯 Beta scaling enabled for ${symbol}: coefficient=${coefficient}`);
 
         // Apply beta scaling using centralized service
         const scalingResult = await betaScalingService.applyBetaScaling(
@@ -354,37 +359,22 @@ async function runPortfolioBacktest(config) {
         );
 
         if (scalingResult.success) {
-          console.log(`📊 Beta scaling applied for ${symbol}: beta=${scalingResult.betaInfo?.beta || 'N/A'}, factor=${scalingResult.betaInfo?.betaFactor?.toFixed(2) || 'N/A'}`);
-
           // Use adjusted parameters from centralized service
           params = { ...params, ...scalingResult.adjustedParameters };
 
-          // DEBUG: Log params AFTER beta scaling
-          console.log(`🔍 [DEBUG] Portfolio - ${symbol} - Params AFTER beta scaling:`, {
-            gridIntervalPercent: params.gridIntervalPercent,
-            trailingSellActivationPercent: params.trailingSellActivationPercent,
-            profitRequirement: params.profitRequirement,
-            gridConsecutiveIncrement: params.gridConsecutiveIncrement
-          });
-
           // Store betaInfo for this stock (can be used in results)
           params._betaInfo = scalingResult.betaInfo;
+
+          // IMPORTANT: Mark that beta scaling has been applied to prevent double-scaling
+          // in drill-down/standalone backtests (Spec 43 fix for double-scaling issue)
+          params.enableBetaScaling = false;
         } else {
           console.error(`❌ Beta scaling failed for ${symbol}:`, scalingResult.errors);
-          console.warn(`⚠️  Using unadjusted parameters for ${symbol}`);
         }
       } catch (error) {
         console.warn(`⚠️  Beta scaling error for ${symbol}, using unadjusted parameters:`, error.message);
       }
     }
-
-    // DEBUG: Log final params before creating executor
-    console.log(`🔍 [DEBUG] Portfolio - ${symbol} - Final params before executor:`, {
-      gridIntervalPercent: params.gridIntervalPercent,
-      trailingSellActivationPercent: params.trailingSellActivationPercent,
-      profitRequirement: params.profitRequirement,
-      gridConsecutiveIncrement: params.gridConsecutiveIncrement
-    });
 
     // Get price data as array for this stock
     const pricesArray = Array.from(dateMap.values());
@@ -407,14 +397,43 @@ async function runPortfolioBacktest(config) {
 
   // 4. Get all unique dates (union of all stock dates)
   const allDates = getAllUniqueDates(priceDataMap);
-  console.log(`📅 Simulating ${allDates.length} trading days...`);
+  console.log(`✅ Executors initialized for ${executors.size} stocks\n`);
+
+  console.log(`🎬 PHASE 3: Running backtest simulation...`);
+  console.log(`   Total trading days: ${allDates.length}`);
+  console.log(`   Total stocks: ${executors.size}`);
+  console.log(`   Date range: ${allDates[0]} to ${allDates[allDates.length - 1]}\n`);
 
   // 5. Simulate chronologically using executors
   let transactionCount = 0;
   let rejectedCount = 0;
 
+  // Intelligent progress logging - batch size based on number of stocks and days
+  const totalOperations = allDates.length * executors.size;
+  let progressInterval;
+  if (totalOperations > 500000) {
+    // Large portfolios (500+ stocks): log every 10%
+    progressInterval = Math.floor(allDates.length / 10);
+  } else if (totalOperations > 100000) {
+    // Medium portfolios (200-500 stocks): log every 20%
+    progressInterval = Math.floor(allDates.length / 5);
+  } else {
+    // Small portfolios (<200 stocks): log every 25%
+    progressInterval = Math.floor(allDates.length / 4);
+  }
+  progressInterval = Math.max(progressInterval, 100); // At least every 100 days
+
+  let lastLoggedDay = -1;
+
   for (let i = 0; i < allDates.length; i++) {
     const date = allDates[i];
+
+    // Log progress at intervals
+    if (i - lastLoggedDay >= progressInterval || i === allDates.length - 1) {
+      const progress = ((i + 1) / allDates.length * 100).toFixed(1);
+      console.log(`   📊 Progress: ${progress}% (Day ${i + 1}/${allDates.length}: ${date}) - Transactions: ${transactionCount}, Rejected: ${rejectedCount}`);
+      lastLoggedDay = i;
+    }
 
     // Process each stock using its executor
     const sortedSymbols = Array.from(portfolio.stocks.keys()).sort();
@@ -467,11 +486,16 @@ async function runPortfolioBacktest(config) {
           }
 
           console.log(`   ✅ Liquidation complete for ${symbol}: Realized P&L = $${stock.realizedPNL.toFixed(2)}`);
+
+          // Update market value to zero after liquidation
+          stock.updateMarketValue(dayData.close);
         }
       }
 
       // Check if stock can be traded today (index tracking)
       if (indexTracker && !indexTracker.isInIndex(symbol, date)) {
+        // Update market value even for non-tradeable stocks (maintains accurate portfolio value)
+        stock.updateMarketValue(dayData.close);
         continue; // Skip this stock for today (already liquidated if needed)
       }
 
@@ -606,9 +630,11 @@ async function runPortfolioBacktest(config) {
     }
   }
 
-  console.log('✅ Portfolio Backtest Complete');
+  console.log('\n✅ PHASE 4: Portfolio Backtest Complete');
   console.log(`   Total Transactions: ${transactionCount}`);
   console.log(`   Rejected Orders: ${rejectedCount}`);
+  console.log(`   Total Trading Days: ${allDates.length}`);
+  console.log(`   Stocks Processed: ${executors.size}`);
   console.log(`   Final Portfolio Value: $${portfolio.portfolioValue.toLocaleString()}`);
   console.log(`   Total Return: $${portfolio.totalPNL.toLocaleString()} (${((portfolio.totalPNL / portfolio.totalCapital) * 100).toFixed(2)}%)`);
 

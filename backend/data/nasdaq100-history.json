@@ -3,8 +3,8 @@
   "lastUpdated": "2025-01-15",
   "metadata": {
     "source": "Nasdaq official press releases and financial news",
-    "coverage": "2021-12-20 to 2024-12-23",
-    "totalChanges": 50,
+    "coverage": "2020-12-21 to 2024-12-23",
+    "totalChanges": 45,
     "notes": "Annual reconstitution typically occurs on 3rd Friday in December. Special additions can occur mid-year."
   },
   "changes": [
@@ -13,6 +13,12 @@
       "addedDate": "2021-12-20",
       "removedDate": null,
       "notes": "Added during December 2021 annual reconstitution"
+    },
+    {
+      "symbol": "AEP",
+      "addedDate": "2020-12-21",
+      "removedDate": null,
+      "notes": "Added during December 2020 annual reconstitution"
     },
     {
       "symbol": "FTNT",
@@ -82,9 +88,15 @@
     },
     {
       "symbol": "SPLK",
+      "addedDate": null,
+      "removedDate": "2022-12-19",
+      "notes": "Removed December 2022 annual reconstitution, re-added December 2023"
+    },
+    {
+      "symbol": "SPLK",
       "addedDate": "2023-12-18",
       "removedDate": null,
-      "notes": "Removed December 2022, re-added December 2023 annual reconstitution"
+      "notes": "Re-added December 2023 annual reconstitution (was removed December 2022)"
     },
     {
       "symbol": "CDW",
@@ -111,10 +123,28 @@
       "notes": "Added during December 2023 annual reconstitution"
     },
     {
+      "symbol": "MRVL",
+      "addedDate": "2020-12-21",
+      "removedDate": null,
+      "notes": "Added during December 2020 annual reconstitution"
+    },
+    {
+      "symbol": "MTCH",
+      "addedDate": "2020-12-21",
+      "removedDate": "2022-12-19",
+      "notes": "Added December 2020, removed December 2022 annual reconstitution"
+    },
+    {
       "symbol": "ROP",
       "addedDate": "2023-12-18",
       "removedDate": null,
       "notes": "Added during December 2023 annual reconstitution"
+    },
+    {
+      "symbol": "TEAM",
+      "addedDate": "2020-12-21",
+      "removedDate": null,
+      "notes": "Added during December 2020 annual reconstitution"
     },
     {
       "symbol": "TTWO",
@@ -205,6 +235,48 @@
       "addedDate": null,
       "removedDate": "2024-12-23",
       "notes": "Removed during December 2024 annual reconstitution, replaced by Axon (AXON)"
+    },
+    {
+      "symbol": "VRSN",
+      "addedDate": null,
+      "removedDate": "2022-12-19",
+      "notes": "VeriSign removed December 2022 annual reconstitution"
+    },
+    {
+      "symbol": "SWKS",
+      "addedDate": null,
+      "removedDate": "2022-12-19",
+      "notes": "Skyworks Solutions removed December 2022 annual reconstitution"
+    },
+    {
+      "symbol": "BIDU",
+      "addedDate": null,
+      "removedDate": "2022-12-19",
+      "notes": "Baidu removed December 2022 annual reconstitution"
+    },
+    {
+      "symbol": "OKTA",
+      "addedDate": "2020-12-21",
+      "removedDate": null,
+      "notes": "Added during December 2020 annual reconstitution"
+    },
+    {
+      "symbol": "PTON",
+      "addedDate": "2020-12-21",
+      "removedDate": null,
+      "notes": "Added during December 2020 annual reconstitution"
+    },
+    {
+      "symbol": "DOCU",
+      "addedDate": null,
+      "removedDate": "2022-12-19",
+      "notes": "DocuSign removed December 2022 annual reconstitution"
+    },
+    {
+      "symbol": "NTES",
+      "addedDate": null,
+      "removedDate": "2022-12-19",
+      "notes": "NetEase removed December 2022 annual reconstitution"
     }
   ]
 }

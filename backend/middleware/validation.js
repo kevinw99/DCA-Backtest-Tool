@@ -94,14 +94,33 @@ function validateNumeric(value, name, options = {}) {
 }
 
 /**
- * Validate percentage parameter (0-100 range as whole numbers)
+ * Validate percentage parameter
+ * Accepts both decimal format (0.0-1.0) and whole number format (0-100)
  * @param {any} value - Value to validate
  * @param {string} name - Parameter name
  * @param {boolean} required - Whether parameter is required
  * @throws {Error} If value is invalid
  */
 function validatePercentage(value, name, required = true) {
-  validateNumeric(value, name, { min: 0, max: 100, required });
+  if (value === undefined || value === null) {
+    if (required) {
+      throw new Error(`Invalid ${name}: required parameter is missing`);
+    }
+    return; // Optional parameter not provided
+  }
+
+  const num = Number(value);
+
+  if (isNaN(num)) {
+    throw new Error(`Invalid ${name}: must be a valid number`);
+  }
+
+  // Accept both decimal (0.0-1.0) and whole number (0-100) formats
+  // Decimal format: 0.0 to 1.0 (frontend sends this for new API)
+  // Whole number format: 0 to 100 (legacy/URL parameters)
+  if (num < 0 || num > 100) {
+    throw new Error(`Invalid ${name}: must be between 0 and 100 (or 0.0 and 1.0 for decimal format)`);
+  }
 }
 
 /**
@@ -226,10 +245,15 @@ function validateShortDCABacktestParams(req, res, next) {
  */
 function validateBatchBacktestParams(req, res, next) {
   try {
+    console.log('🔍 Batch validation - Request body:', JSON.stringify(req.body, null, 2));
+
     const { symbols: topLevelSymbols, parameterRanges } = req.body;
 
     // Validate parameter ranges exist
     if (!parameterRanges || typeof parameterRanges !== 'object') {
+      console.error('❌ Batch validation failed: parameterRanges missing or not an object');
+      console.error('   topLevelSymbols:', topLevelSymbols);
+      console.error('   parameterRanges:', parameterRanges);
       throw new Error('Invalid parameterRanges: must be an object');
     }
 
@@ -237,6 +261,10 @@ function validateBatchBacktestParams(req, res, next) {
     const symbols = topLevelSymbols || parameterRanges.symbols;
 
     if (!symbols || !Array.isArray(symbols) || symbols.length === 0) {
+      console.error('❌ Batch validation failed: symbols invalid');
+      console.error('   topLevelSymbols:', topLevelSymbols);
+      console.error('   parameterRanges.symbols:', parameterRanges.symbols);
+      console.error('   resolved symbols:', symbols);
       throw new Error('Invalid symbols: must be a non-empty array (either at top level or inside parameterRanges)');
     }
 
@@ -247,8 +275,10 @@ function validateBatchBacktestParams(req, res, next) {
       validateDateRange(parameterRanges.startDate, parameterRanges.endDate);
     }
 
+    console.log('✅ Batch validation passed');
     next();
   } catch (error) {
+    console.error('❌ Batch validation error:', error.message);
     res.status(400).json({
       error: 'Validation Error',
       message: error.message
