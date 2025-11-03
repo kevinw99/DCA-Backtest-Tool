@@ -8,11 +8,19 @@ import BatchProgressBanner from './components/BatchProgressBanner';
 import PortfolioBacktestPage from './components/PortfolioBacktestPage';
 import URLParameterManager from './utils/URLParameterManager';
 import useSSEProgress from './hooks/useSSEProgress';
+import { fetchBacktestDefaults } from './services/configService';
 import { Play, TrendingUp, Settings, Zap } from 'lucide-react';
 
 function AppContent() {
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Preload config on app mount (Spec 54: Single Source of Truth)
+  useEffect(() => {
+    fetchBacktestDefaults().catch(error => {
+      console.error('Failed to preload backtest defaults:', error);
+    });
+  }, []);
 
   const [backtestData, setBacktestData] = useState(null);
   const [batchData, setBatchData] = useState(null);

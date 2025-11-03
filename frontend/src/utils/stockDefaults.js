@@ -1,4 +1,4 @@
-import backtestDefaults from '../config/backtestDefaults.json';
+import { getConfigSync } from '../services/configService';
 
 /**
  * Get stock-specific parameters merged with global defaults
@@ -6,6 +6,7 @@ import backtestDefaults from '../config/backtestDefaults.json';
  * @returns {object} - Merged parameters for the stock
  */
 export const getStockParameters = (symbol) => {
+  const backtestDefaults = getConfigSync();
   const globalDefaults = backtestDefaults.global;
   const stockSpecific = backtestDefaults[symbol];
 
@@ -57,6 +58,7 @@ export const getStockParameters = (symbol) => {
  * @returns {boolean} - True if stock has specific config
  */
 export const hasStockSpecificDefaults = (symbol) => {
+  const backtestDefaults = getConfigSync();
   return backtestDefaults.hasOwnProperty(symbol);
 };
 
@@ -65,6 +67,7 @@ export const hasStockSpecificDefaults = (symbol) => {
  * @returns {string[]} - Array of stock symbols with specific configs
  */
 export const getStocksWithDefaults = () => {
+  const backtestDefaults = getConfigSync();
   return Object.keys(backtestDefaults).filter(key => key !== 'global');
 };
 

@@ -16,17 +16,18 @@
  * - Beta factor display calculation (calculateBetaFactor)
  */
 
-import backtestDefaults from '../../../config/backtestDefaults.json';
+import { getConfigSync } from '../../../services/configService';
 
 export const BetaCalculator = {
   /**
-   * Get beta value for a stock from backtestDefaults.json
+   * Get beta value for a stock from backend config
    * Used for UI display/hints only - backend fetches actual beta for calculations
    *
    * @param {string} symbol - Stock symbol
    * @returns {number} Beta value (defaults to 1.0 if not found)
    */
   getStockBeta(symbol) {
+    const backtestDefaults = getConfigSync();
     const stockDefaults = backtestDefaults[symbol];
     const globalDefaults = backtestDefaults.global;
 

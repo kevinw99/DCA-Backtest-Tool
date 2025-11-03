@@ -1,17 +1,18 @@
 /**
  * ParameterHelper - Parameter loading, merging, and persistence utilities
  *
- * Handles loading defaults from backtestDefaults.json, localStorage persistence,
+ * Handles loading defaults from backend API via configService, localStorage persistence,
  * URL parameter parsing, and parameter comparison operations.
  */
 
-import backtestDefaults from '../../../config/backtestDefaults.json';
+import { getConfigSync } from '../../../services/configService';
 
 export const ParameterHelper = {
   /**
    * Get global default parameters
    */
   getGlobalDefaults() {
+    const backtestDefaults = getConfigSync();
     return backtestDefaults.global || {};
   },
 
@@ -22,6 +23,7 @@ export const ParameterHelper = {
    * @returns {Object} Merged parameters (stock-specific overrides + global defaults)
    */
   getStockDefaults(symbol) {
+    const backtestDefaults = getConfigSync();
     const globalDefaults = this.getGlobalDefaults();
     const stockDefaults = backtestDefaults[symbol] || {};
 
@@ -115,6 +117,7 @@ export const ParameterHelper = {
    * @returns {boolean} True if stock has custom parameters
    */
   hasStockSpecificOverrides(symbol) {
+    const backtestDefaults = getConfigSync();
     return backtestDefaults[symbol] !== undefined && backtestDefaults[symbol] !== null;
   },
 
@@ -124,6 +127,7 @@ export const ParameterHelper = {
    * @returns {Array} Array of stock symbols with custom parameters
    */
   getStocksWithOverrides() {
+    const backtestDefaults = getConfigSync();
     const symbols = [];
     for (const key in backtestDefaults) {
       if (key !== 'global' && backtestDefaults[key]) {
@@ -140,6 +144,7 @@ export const ParameterHelper = {
    * @returns {Object} Object with differences by section
    */
   getStockDifferences(symbol) {
+    const backtestDefaults = getConfigSync();
     const globalDefaults = this.getGlobalDefaults();
     const stockDefaults = backtestDefaults[symbol] || {};
 
