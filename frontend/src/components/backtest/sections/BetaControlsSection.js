@@ -4,7 +4,7 @@
  * Allows users to enable beta scaling, adjust coefficient, and optionally override beta values.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Settings } from 'lucide-react';
 import { SectionHeader } from '../shared/SectionHeader';
 import { ParameterInput } from '../shared/ParameterInput';
@@ -32,7 +32,10 @@ export const BetaControlsSection = ({
   const [manualBetaValue, setManualBetaValue] = useState('');
 
   // Portfolio mode: Use hook to manage betas for multiple stocks
-  const portfolioBetas = useStockBetas(mode === 'portfolio' && enableBetaScaling ? stocks : []);
+  // Use empty array constant to prevent infinite loop when conditions are not met
+  const EMPTY_STOCKS = useMemo(() => [], []);
+  const stocksToFetch = mode === 'portfolio' && enableBetaScaling ? stocks : EMPTY_STOCKS;
+  const portfolioBetas = useStockBetas(stocksToFetch);
 
   // For portfolio mode: Get first stock's beta as example
   const getExampleBeta = () => {

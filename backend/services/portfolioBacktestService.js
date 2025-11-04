@@ -556,6 +556,7 @@ async function runPortfolioBacktest(config) {
           // If within margin limit, allow buy (cash reserve can go negative - that's what margin is for)
           if (!wouldExceedMargin) {
             // Within margin limit - execute the buy
+            console.log(`   💵 BUY ${symbol}: deducting tx.value=${tx.value.toFixed(2)}, currentLotSize=${currentLotSize.toFixed(2)}`);
             portfolio.cashReserve -= tx.value;
             portfolio.deployedCapital += tx.value;
             stock.addBuy(tx);
@@ -1030,9 +1031,10 @@ async function processBuys(portfolio, date, priceDataMap) {
         const buyTransaction = executeBuy(stock, buySignal, dayData, date, portfolio.config.lotSizeUsd);
 
         if (buyTransaction) {
-          // Deduct from capital pool
-          portfolio.cashReserve -= portfolio.config.lotSizeUsd;
-          portfolio.deployedCapital += portfolio.config.lotSizeUsd;
+          // Deduct from capital pool - use actual transaction value, not config value
+          // (they may differ if adaptive lot sizing or other adjustments are applied)
+          portfolio.cashReserve -= buyTransaction.value;
+          portfolio.deployedCapital += buyTransaction.value;
 
           stock.addBuy(buyTransaction);
           executed++;
