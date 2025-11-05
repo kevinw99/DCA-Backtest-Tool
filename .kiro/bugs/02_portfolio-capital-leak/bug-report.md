@@ -1,7 +1,7 @@
 # Bug Report: Portfolio Capital Leak ($20,587 Missing)
 
 ## Status
-🔴 OPEN - Unresolved
+🟡 INVESTIGATING - Phase 1/Phase 2 fix implemented, secondary issue found
 
 ## Priority
 HIGH - Blocks portfolio backtesting
@@ -160,8 +160,72 @@ Line 610: `portfolio.cashReserve += yieldRevenue;`
 5. **Audit stock.capitalDeployed vs portfolio.deployedCapital**:
    - Add validation: `sum(stock.capitalDeployed) === portfolio.deployedCapital`
 
+## Investigation Update (2025-11-04)
+
+### ROOT CAUSE IDENTIFIED AND PARTIALLY FIXED
+
+**Primary Issue: Interleaved BUY/SELL During Liquidations** ✅ FIXED
+- **Problem**: Liquidations happened one stock at a time with normal trading in between
+- **Impact**: Capital from liquidated stocks wasn't available for margin calculations
+- **Fix**: Split daily processing into Phase 1 (all liquidations) and Phase 2 (normal trading)
+- **Location**: `backend/services/portfolioBacktestService.js:438-511`
+- **Status**: IMPLEMENTED ✅
+
+**Secondary Issue: Missing marginPercent in Config**
+- **Problem**: `nasdaq100_NoLotResizing.json` missing `marginPercent` field
+- **Impact**: Defaults to 0%, causing validation to fail on ANY trading losses
+- **Solution**: Add `"marginPercent": 20` to config file (line 5, after totalCapitalUsd)
+
+**Tertiary Issue: Extra $44.62 Being Created**
+- **Problem**: After liquidations cash=369368, after FANG BUY expected=359368, actual=359412.62
+- **Impact**: +$44.62 capital created from unknown source
+- **Status**: NEEDS INVESTIGATION
+
+### Capital Flow Analysis
+
+**Before Liquidations (2023-12-18)**:
+- deployed: $3,000,000
+- cash: $134,677
+- sum: $3,134,677 (+$134,677 profit from previous trades)
+
+**After All Liquidations**:
+- deployed: $2,610,000
+- cash: $369,368
+- sum: $2,979,368
+
+**Liquidation Losses**:
+- ALGN: -$18,197
+- EBAY: -$7,510
+- ENPH: -$12,191
+- JD: -$26,363
+- LCID: -$52,916
+- ZM: -$37,105
+- **Total**: -$154,282
+
+**After FANG BUY**:
+- deployed: $2,620,000 (increased by $10,000 ✓)
+- cash: $359,412.62 (should be $359,368, off by +$44.62)
+- sum: $2,979,412.62
+
+### Validation Logic
+
+Current validation (line 73-90):
+```javascript
+const calculated = deployedCapital + cashReserve;
+const minimumExpected = totalCapital - marginAmount;
+if (calculated < minimumExpected - 0.01) throw Error;
+```
+
+With marginPercent=0:
+- minimumExpected = 3,000,000 - 0 = 3,000,000
+- calculated = 2,979,412.62
+- FAILS validation (less than minimum)
+
+The validation is correctly catching that capital dropped below minimum, but this is due to LEGITIMATE TRADING LOSSES, not a bug.
+
 ## Workaround
-None - blocks all portfolio backtesting
+**Option 1**: Add `"marginPercent": 20` to `nasdaq100_NoLotResizing.json` (line 5)
+**Option 2**: Accept that validation will fail when trading losses exceed margin buffer
 
 ## Related Issues
 - None

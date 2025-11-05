@@ -43,6 +43,10 @@ class PortfolioState {
     this.capitalFlowHistory = [];
     this.valuationHistory = [];
 
+    // Capital leak detection - track all capital changes
+    this.totalRealizedPNL = 0;  // Sum of all realized profits/losses from trades
+    this.totalCashYield = 0;    // Sum of all cash yield revenue
+
     this.config = config;
   }
 
@@ -71,25 +75,29 @@ class PortfolioState {
    * @throws Error if constraints violated
    */
   validateCapitalConstraints() {
-    // Spec 50: With margin, we can borrow additional capital
-    const marginAmount = this.totalCapital * (this.marginPercent / 100);
+    // Check for ACTUAL capital leaks by verifying accounting equation:
+    // deployed + cash = initialCapital + realizedPNL + cashYield
+    //
+    // This allows for losses (normal in backtesting) but catches actual leaks
+    // where capital disappears without being accounted for
 
-    // deployed + cash can exceed total due to profits, but should never be less than (total - margin)
     const calculated = this.deployedCapital + this.cashReserve;
-    const minimumExpected = this.totalCapital - marginAmount;
+    const expected = this.totalCapital + this.totalRealizedPNL + this.totalCashYield;
+    const discrepancy = Math.abs(calculated - expected);
 
-    // Allow for profits (calculated >= expected), but check for capital leaks
-    // With margin, we can go negative by up to the margin amount
-    if (calculated < minimumExpected - 0.01) {
+    // Allow 1 cent of rounding error
+    if (discrepancy > 0.01) {
       throw new Error(
-        `Capital constraint violated (capital leaked beyond margin): ` +
-        `deployed(${this.deployedCapital.toFixed(2)}) + ` +
-        `cash(${this.cashReserve.toFixed(2)}) = ${calculated.toFixed(2)}, ` +
-        `expected at least ${minimumExpected.toFixed(2)} (total: ${this.totalCapital.toFixed(2)}, margin: ${marginAmount.toFixed(2)})`
+        `Capital leak detected: ` +
+        `deployed(${this.deployedCapital.toFixed(2)}) + cash(${this.cashReserve.toFixed(2)}) = ${calculated.toFixed(2)}, ` +
+        `but expected ${expected.toFixed(2)} ` +
+        `(initial: ${this.totalCapital.toFixed(2)} + PNL: ${this.totalRealizedPNL.toFixed(2)} + yield: ${this.totalCashYield.toFixed(2)}). ` +
+        `Discrepancy: ${discrepancy.toFixed(2)}`
       );
     }
 
     // Spec 50: Cash reserve can be negative up to margin amount (borrowed capital)
+    const marginAmount = this.totalCapital * (this.marginPercent / 100);
     if (this.cashReserve < -(marginAmount + 0.01)) {
       throw new Error(
         `Capital constraint violated (borrowed beyond margin limit): ` +
@@ -435,20 +443,19 @@ async function runPortfolioBacktest(config) {
       lastLoggedDay = i;
     }
 
-    // Process each stock using its executor
     const sortedSymbols = Array.from(portfolio.stocks.keys()).sort();
 
-    for (const symbol of sortedSymbols) {
-      const executor = executors.get(symbol);
-      const stock = portfolio.stocks.get(symbol);
-      const dayData = priceDataMap.get(symbol).get(date);
+    // PHASE 1: Handle all index removal liquidations FIRST
+    // This ensures capital from liquidations is available before any new BUYs
+    if (indexTracker && indexTracking.enabled && indexTracking.handleRemovals === 'liquidate_positions') {
+      const previousDate = i > 0 ? allDates[i - 1] : null;
 
-      if (!dayData) continue;
+      for (const symbol of sortedSymbols) {
+        const stock = portfolio.stocks.get(symbol);
+        const dayData = priceDataMap.get(symbol).get(date);
 
-      // Check if stock was removed from index (liquidation required)
-      // IMPORTANT: Only applies when index tracking is explicitly enabled
-      if (indexTracker && indexTracking.enabled && indexTracking.handleRemovals === 'liquidate_positions') {
-        const previousDate = i > 0 ? allDates[i - 1] : null;
+        if (!dayData) continue;
+
         const wasInIndexYesterday = previousDate ? indexTracker.isInIndex(symbol, previousDate) : false;
         const isInIndexToday = indexTracker.isInIndex(symbol, date);
 
@@ -477,8 +484,12 @@ async function runPortfolioBacktest(config) {
             };
 
             // Return capital to pool
+            const cashBefore = portfolio.cashReserve;
+            const deployedBefore = portfolio.deployedCapital;
             portfolio.cashReserve += sellValue;
             portfolio.deployedCapital -= lotCost;
+            portfolio.totalRealizedPNL += realizedPNL;  // Track P&L for leak detection
+            console.log(`   💰 LIQUIDATION ${symbol}: cash ${cashBefore.toFixed(0)} + ${sellValue.toFixed(0)} = ${portfolio.cashReserve.toFixed(0)}, deployed ${deployedBefore.toFixed(0)} - ${lotCost.toFixed(0)} = ${portfolio.deployedCapital.toFixed(0)}, sum=${(portfolio.cashReserve + portfolio.deployedCapital).toFixed(0)}`);
 
             // Update stock state
             stock.addSell(liquidationTx);
@@ -491,6 +502,15 @@ async function runPortfolioBacktest(config) {
           stock.updateMarketValue(dayData.close);
         }
       }
+    }
+
+    // PHASE 2: Process normal trading for each stock
+    for (const symbol of sortedSymbols) {
+      const executor = executors.get(symbol);
+      const stock = portfolio.stocks.get(symbol);
+      const dayData = priceDataMap.get(symbol).get(date);
+
+      if (!dayData) continue;
 
       // Check if stock can be traded today (index tracking)
       if (indexTracker && !indexTracker.isInIndex(symbol, date)) {
@@ -556,9 +576,12 @@ async function runPortfolioBacktest(config) {
           // If within margin limit, allow buy (cash reserve can go negative - that's what margin is for)
           if (!wouldExceedMargin) {
             // Within margin limit - execute the buy
+            const cashBefore = portfolio.cashReserve;
+            const deployedBefore = portfolio.deployedCapital;
             console.log(`   💵 BUY ${symbol}: deducting tx.value=${tx.value.toFixed(2)}, currentLotSize=${currentLotSize.toFixed(2)}`);
             portfolio.cashReserve -= tx.value;
             portfolio.deployedCapital += tx.value;
+            console.log(`   💰 BUY ${symbol}: cash ${cashBefore.toFixed(0)} - ${tx.value.toFixed(0)} = ${portfolio.cashReserve.toFixed(0)}, deployed ${deployedBefore.toFixed(0)} + ${tx.value.toFixed(0)} = ${portfolio.deployedCapital.toFixed(0)}, sum=${(portfolio.cashReserve + portfolio.deployedCapital).toFixed(0)}`);
             stock.addBuy(tx);
             transactionCount++;
           } else {
@@ -588,10 +611,16 @@ async function runPortfolioBacktest(config) {
           }
         } else {
           // SELL or other transaction types
+          const cashBefore = portfolio.cashReserve;
+          const deployedBefore = portfolio.deployedCapital;
           // Add full sell value to cash (includes both original cost and profit/loss)
           portfolio.cashReserve += tx.value;
           // Reduce deployed capital by original cost
           portfolio.deployedCapital -= tx.lotsCost;
+          // Track realized P&L for leak detection
+          const realizedPNL = tx.realizedPNLFromTrade || 0;
+          portfolio.totalRealizedPNL += realizedPNL;
+          console.log(`   💰 SELL ${symbol}: cash ${cashBefore.toFixed(0)} + ${tx.value.toFixed(0)} = ${portfolio.cashReserve.toFixed(0)}, deployed ${deployedBefore.toFixed(0)} - ${tx.lotsCost.toFixed(0)} = ${portfolio.deployedCapital.toFixed(0)}, sum=${(portfolio.cashReserve + portfolio.deployedCapital).toFixed(0)}`);
           stock.addSell(tx);
           transactionCount++;
         }
@@ -609,6 +638,7 @@ async function runPortfolioBacktest(config) {
       const yieldRevenue = capitalOptimizer.calculateDailyCashYield(portfolio.cashReserve);
       if (yieldRevenue > 0) {
         portfolio.cashReserve += yieldRevenue;
+        portfolio.totalCashYield += yieldRevenue;  // Track for leak detection
         if (i % 200 === 0) {
           console.log(`   💵 Cash Yield: +$${yieldRevenue.toFixed(2)} from $${(portfolio.cashReserve - yieldRevenue).toFixed(2)} reserve on ${date}`);
         }
