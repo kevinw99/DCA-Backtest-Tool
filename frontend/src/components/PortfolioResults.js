@@ -6,6 +6,7 @@ import DeferredSellsTable from './DeferredSellsTable';
 import DailyTradesView from './DailyTradesView';
 import PortfolioBuyAndHoldComparison from './PortfolioBuyAndHoldComparison';
 import AlignedChartsContainer from './portfolio/AlignedChartsContainer';
+import BetaGroupAnalysis from './backtest/BetaGroupAnalysis';
 import { preprocessPortfolioChartData } from '../services/chartDataProcessor';
 import './PortfolioResults.css';
 
@@ -36,7 +37,8 @@ const PortfolioResults = ({ data }) => {
     parameters,
     buyAndHoldSummary,
     comparison,
-    skippedStocks
+    skippedStocks,
+    betaGrouping
   } = data;
 
   // Count skipped stocks
@@ -139,6 +141,13 @@ const PortfolioResults = ({ data }) => {
             comparison={comparison}
             buyAndHoldSummary={buyAndHoldSummary}
           />
+        </section>
+      )}
+
+      {/* Beta Group Analysis Section */}
+      {betaGrouping && (
+        <section className="beta-analysis-section">
+          <BetaGroupAnalysis betaGrouping={betaGrouping} />
         </section>
       )}
 

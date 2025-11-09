@@ -789,6 +789,21 @@ async function runPortfolioBacktest(config) {
   results.rejectedOrders = portfolio.rejectedOrders || [];
   results.deferredSells = portfolio.deferredSells || [];
 
+  // 12. Spec 55: Add beta grouping analysis
+  const betaGroupAnalysisService = require('./betaGroupAnalysisService');
+  try {
+    const betaGrouping = await betaGroupAnalysisService.analyzeBetaGroups(
+      results.stockResults,
+      { startDate: config.startDate, endDate: config.endDate }
+    );
+    if (betaGrouping) {
+      results.betaGrouping = betaGrouping;
+    }
+  } catch (error) {
+    console.warn('[PortfolioBacktest] Beta grouping analysis failed:', error.message);
+    // Continue without beta grouping - non-critical feature
+  }
+
   return results;
 }
 
