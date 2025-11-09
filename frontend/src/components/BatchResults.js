@@ -39,10 +39,13 @@ const FutureTradeCard = ({ symbol, futureTrades, parameters, isSelected, onRunSi
       >
         <h4>{symbol}</h4>
         <div className="header-info">
-          <span>Current: {formatCurrency(currentPrice)} as of {currentPriceDate}</span>
-          <span className={hasHoldings ? 'has-holdings' : 'no-holdings'}>
-            {hasHoldings ? `Holdings: ${formatCurrency(avgCost)} avg` : 'No Holdings'}
-          </span>
+          <div>
+            <span className="label">Current Price:</span> <span className="value">{formatCurrency(currentPrice)}</span>
+            <span style={{ color: '#888', fontSize: '0.9em', marginLeft: '6px' }}>as of {currentPriceDate}</span>
+          </div>
+          <div>
+            <span className="label">{hasHoldings ? 'Avg Cost:' : 'Status:'}</span> <span className={`value ${hasHoldings ? 'has-holdings' : 'no-holdings'}`}>{hasHoldings ? formatCurrency(avgCost) : 'No Holdings'}</span>
+          </div>
           {onRunSingleBacktest && (
             <button
               onClick={(e) => {
@@ -65,6 +68,7 @@ const FutureTradeCard = ({ symbol, futureTrades, parameters, isSelected, onRunSi
           {/* [Spec 52] Current Holdings Section */}
           {futureTrades.holdings && futureTrades.holdings.lots.length > 0 && (
             <div className="holdings-section" style={{
+              marginTop: '0',
               marginBottom: '15px',
               padding: '12px',
               backgroundColor: '#f0f8ff',
@@ -165,7 +169,7 @@ const FutureTradeCard = ({ symbol, futureTrades, parameters, isSelected, onRunSi
                 )}
               </div>
 
-              {/* Local Peak */}
+              {/* Local Peak & Bottom - Combined */}
               <div className="context-item" style={{
                 display: 'flex',
                 flexWrap: 'wrap',
@@ -183,16 +187,8 @@ const FutureTradeCard = ({ symbol, futureTrades, parameters, isSelected, onRunSi
                 ) : (
                   <span style={{ color: '#333', fontWeight: '500' }}>N/A</span>
                 )}
-              </div>
 
-              {/* Local Bottom */}
-              <div className="context-item" style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                alignItems: 'baseline',
-                gap: '6px'
-              }}>
-                <span style={{ fontWeight: '600', color: '#666', minWidth: '90px' }}>Bottom:</span>
+                <span style={{ fontWeight: '600', color: '#666', marginLeft: '20px' }}>Bottom:</span>
                 {futureTrades.recentBottom && futureTrades.recentBottomDate ? (
                   <span style={{ color: '#333', fontWeight: '500' }}>
                     {formatCurrency(futureTrades.recentBottom)}
@@ -207,10 +203,6 @@ const FutureTradeCard = ({ symbol, futureTrades, parameters, isSelected, onRunSi
             </div>
           </div>
 
-          <div className="current-price-section">
-            <div><span className="label">Current Price:</span> <span className="value">{formatCurrency(currentPrice)}</span></div>
-            {hasHoldings && <div><span className="label">Avg Cost:</span> <span className="value">{formatCurrency(avgCost)}</span></div>}
-          </div>
           <div className="trade-directions">
             {/* [Spec 52] Enhanced BUY Direction with Grid Validation */}
             <div className={`buy-section ${buyActivation.isActive ? 'is-active' : 'is-pending'}`}>
