@@ -1,7 +1,7 @@
 {
   "name": "Nasdaq 100",
   "description": "Portfolio backtest for all Nasdaq 100 component stocks",
-  "totalCapitalUsd": 3000000,
+  "totalCapitalUsd": 4000000,
   "startDate": "2021-09-01",
   "endDate": "2025-10-17",
   "globalDefaults": {

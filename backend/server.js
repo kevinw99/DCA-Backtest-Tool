@@ -1435,7 +1435,10 @@ app.post('/api/portfolio-backtest', async (req, res) => {
       _betaScaling,
       enableBetaScaling,
       coefficient,
-      beta
+      beta,
+      // Nested configuration objects
+      capitalOptimization,
+      indexTracking
     } = req.body;
 
     // Validation
@@ -1495,51 +1498,77 @@ app.post('/api/portfolio-backtest', async (req, res) => {
     );
 
     // Build capital optimization config
-    // Check both top-level and defaultParams for capital optimization settings
-    const capitalOptimizationParams = {
-      enableCashYield,
-      cashYieldAnnualPercent,
-      cashYieldMinCash,
-      enableDeferredSelling,
-      deferredSellingThreshold,
-      enableAdaptiveLotSizing,
-      adaptiveLotCashThreshold,
-      adaptiveLotMaxMultiplier,
-      adaptiveLotIncreaseStep
-    };
+    // Priority: 1) Nested capitalOptimization object, 2) Top-level params, 3) defaultParams, 4) Defaults
+    let capitalOptimizationConfig;
 
-    // Also check defaultParams for capital optimization settings
-    const defaultParamsCapitalOpt = defaultParams || {};
+    if (capitalOptimization && typeof capitalOptimization === 'object') {
+      // Use nested capitalOptimization object directly if provided
+      console.log(`📋 Using nested capitalOptimization object from request`);
+      capitalOptimizationConfig = {
+        enabled: capitalOptimization.enabled || false,
+        strategies: capitalOptimization.strategies || [],
+        adaptiveLotSizing: capitalOptimization.adaptiveLotSizing || {
+          cashReserveThreshold: totalCapital * 0.2,
+          maxLotSizeMultiplier: 2.0,
+          increaseStepPercent: 20
+        },
+        cashYield: capitalOptimization.cashYield || {
+          enabled: false,
+          annualYieldPercent: 4.5,
+          minCashToInvest: Math.max(10000, totalCapital * 0.1)
+        },
+        deferredSelling: capitalOptimization.deferredSelling || {
+          enabled: false,
+          cashAbundanceThreshold: totalCapital * 0.3
+        }
+      };
+    } else {
+      // Build from individual top-level parameters (legacy support)
+      const capitalOptimizationParams = {
+        enableCashYield,
+        cashYieldAnnualPercent,
+        cashYieldMinCash,
+        enableDeferredSelling,
+        deferredSellingThreshold,
+        enableAdaptiveLotSizing,
+        adaptiveLotCashThreshold,
+        adaptiveLotMaxMultiplier,
+        adaptiveLotIncreaseStep
+      };
 
-    const capitalOptimizationConfig = {
-      enabled:
-        capitalOptimizationParams.enableCashYield ||
-        capitalOptimizationParams.enableDeferredSelling ||
-        capitalOptimizationParams.enableAdaptiveLotSizing ||
-        defaultParamsCapitalOpt.enableCashYield ||
-        defaultParamsCapitalOpt.enableDeferredSelling ||
-        defaultParamsCapitalOpt.enableAdaptiveLotSizing ||
-        false,
-      strategies: [
-        ...(capitalOptimizationParams.enableAdaptiveLotSizing || defaultParamsCapitalOpt.enableAdaptiveLotSizing ? ['adaptive_lot_sizing'] : []),
-        ...(capitalOptimizationParams.enableCashYield || defaultParamsCapitalOpt.enableCashYield ? ['cash_yield'] : []),
-        ...(capitalOptimizationParams.enableDeferredSelling || defaultParamsCapitalOpt.enableDeferredSelling ? ['deferred_selling'] : [])
-      ],
-      adaptiveLotSizing: {
-        cashReserveThreshold: capitalOptimizationParams.adaptiveLotCashThreshold || defaultParamsCapitalOpt.adaptiveLotCashThreshold || totalCapital * 0.2,
-        maxLotSizeMultiplier: capitalOptimizationParams.adaptiveLotMaxMultiplier || defaultParamsCapitalOpt.adaptiveLotMaxMultiplier || 2.0,
-        increaseStepPercent: capitalOptimizationParams.adaptiveLotIncreaseStep || defaultParamsCapitalOpt.adaptiveLotIncreaseStep || 20
-      },
-      cashYield: {
-        enabled: capitalOptimizationParams.enableCashYield || defaultParamsCapitalOpt.enableCashYield || false,
-        annualYieldPercent: capitalOptimizationParams.cashYieldAnnualPercent || defaultParamsCapitalOpt.cashYieldAnnualPercent || 4.5,
-        minCashToInvest: capitalOptimizationParams.cashYieldMinCash || defaultParamsCapitalOpt.cashYieldMinCash || Math.max(10000, totalCapital * 0.1)
-      },
-      deferredSelling: {
-        enabled: capitalOptimizationParams.enableDeferredSelling || defaultParamsCapitalOpt.enableDeferredSelling || false,
-        cashAbundanceThreshold: capitalOptimizationParams.deferredSellingThreshold || defaultParamsCapitalOpt.deferredSellingThreshold || totalCapital * 0.3
-      }
-    };
+      // Also check defaultParams for capital optimization settings
+      const defaultParamsCapitalOpt = defaultParams || {};
+
+      capitalOptimizationConfig = {
+        enabled:
+          capitalOptimizationParams.enableCashYield ||
+          capitalOptimizationParams.enableDeferredSelling ||
+          capitalOptimizationParams.enableAdaptiveLotSizing ||
+          defaultParamsCapitalOpt.enableCashYield ||
+          defaultParamsCapitalOpt.enableDeferredSelling ||
+          defaultParamsCapitalOpt.enableAdaptiveLotSizing ||
+          false,
+        strategies: [
+          ...(capitalOptimizationParams.enableAdaptiveLotSizing || defaultParamsCapitalOpt.enableAdaptiveLotSizing ? ['adaptive_lot_sizing'] : []),
+          ...(capitalOptimizationParams.enableCashYield || defaultParamsCapitalOpt.enableCashYield ? ['cash_yield'] : []),
+          ...(capitalOptimizationParams.enableDeferredSelling || defaultParamsCapitalOpt.enableDeferredSelling ? ['deferred_selling'] : [])
+        ],
+        adaptiveLotSizing: {
+          cashReserveThreshold: capitalOptimizationParams.adaptiveLotCashThreshold || defaultParamsCapitalOpt.adaptiveLotCashThreshold || totalCapital * 0.2,
+          maxLotSizeMultiplier: capitalOptimizationParams.adaptiveLotMaxMultiplier || defaultParamsCapitalOpt.adaptiveLotMaxMultiplier || 2.0,
+          increaseStepPercent: capitalOptimizationParams.adaptiveLotIncreaseStep || defaultParamsCapitalOpt.adaptiveLotIncreaseStep || 20
+        },
+        cashYield: {
+          enabled: capitalOptimizationParams.enableCashYield || defaultParamsCapitalOpt.enableCashYield || false,
+          annualYieldPercent: capitalOptimizationParams.cashYieldAnnualPercent || defaultParamsCapitalOpt.cashYieldAnnualPercent || 4.5,
+          minCashToInvest: capitalOptimizationParams.cashYieldMinCash || defaultParamsCapitalOpt.cashYieldMinCash || Math.max(10000, totalCapital * 0.1)
+        },
+        deferredSelling: {
+          enabled: capitalOptimizationParams.enableDeferredSelling || defaultParamsCapitalOpt.enableDeferredSelling || false,
+          cashAbundanceThreshold: capitalOptimizationParams.deferredSellingThreshold || defaultParamsCapitalOpt.deferredSellingThreshold || totalCapital * 0.3
+        }
+      };
+    }
 
     // Handle both string arrays and object arrays for stocks
     const stockSymbols = stocks.map(s => typeof s === 'string' ? s : s.symbol);
@@ -1582,7 +1611,8 @@ app.post('/api/portfolio-backtest', async (req, res) => {
       defaultParams: finalDefaultParams,
       stocks,
       capitalOptimization: capitalOptimizationConfig,
-      betaScaling: betaScalingConfig
+      betaScaling: betaScalingConfig,
+      indexTracking: indexTracking || { enabled: false }
     };
 
     const results = await portfolioBacktestService.runPortfolioBacktest(config);

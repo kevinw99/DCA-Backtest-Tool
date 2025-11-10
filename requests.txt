@@ -7,6 +7,7 @@ one more way is not to sell when there is idle cash.
 ,"Recommendation: Click "Refresh All" to update META, MSFT, NVDA, AMZN with fresh values from Yahoo Finance." it does not
   do that.
 
+
   what about coefficient? what is the priority?
 
   1. portfolio backtest request url seems correct to have beta param
