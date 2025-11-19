@@ -6,8 +6,7 @@ This guide explains how to deploy the DCA Backtest Tool to Render.com.
 
 - GitHub account with this repository
 - Render.com account (free tier available)
-- Alpha Vantage API key
-- Polygon API key
+- **No API keys required!** (uses free Yahoo Finance via yfinance)
 
 ## Deployment Steps
 
@@ -27,21 +26,25 @@ git push origin main
 4. Select the `DCA-Backtest-Tool` repository
 5. Render will automatically detect the `render.yaml` configuration
 
-### 3. Configure Environment Variables
+### 3. Configure Environment Variables (Optional)
 
-Before deploying, you need to set your API keys:
+The app works out of the box with Yahoo Finance (free, no API key needed)!
+
+If you want to use alternative data providers in the future, you can add API keys later:
 
 #### Backend Service (dca-backtest-api):
 
-1. Go to the **dca-backtest-api** service in Render dashboard
-2. Navigate to **Environment** tab
-3. Add the following environment variables:
+The default configuration in `render.yaml` sets:
+- `DATA_PROVIDER=yfinance` (free, no key needed)
+- `NODE_ENV=production`
+- `PORT=3001`
 
+**Optional**: To use paid providers, add these in Render dashboard → Environment tab:
 ```
-ALPHA_VANTAGE_API_KEY=your_alpha_vantage_key_here
-POLYGON_API_KEY=your_polygon_key_here
-NODE_ENV=production
-PORT=3001
+ALPHA_VANTAGE_API_KEY=your_key  # For Alpha Vantage (25 req/day)
+FMP_API_KEY=your_key             # For Financial Modeling Prep
+TIINGO_API_KEY=your_key          # For Tiingo
+DATA_PROVIDER=alphavantage       # Change provider (default: yfinance)
 ```
 
 ### 4. Deploy
@@ -191,10 +194,14 @@ Frontend automatically uses `http://localhost:3001` in development (see `fronten
 ### Backend (.env)
 
 ```bash
-ALPHA_VANTAGE_API_KEY=your_key
-POLYGON_API_KEY=your_key
+DATA_PROVIDER=yfinance  # Free Yahoo Finance (default)
 PORT=3001
 NODE_ENV=production
+
+# Optional - only if using paid providers
+# ALPHA_VANTAGE_API_KEY=your_key
+# FMP_API_KEY=your_key
+# TIINGO_API_KEY=your_key
 ```
 
 ### Frontend

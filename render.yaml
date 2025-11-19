@@ -13,10 +13,15 @@ services:
         value: production
       - key: PORT
         value: 3001
-      - key: ALPHA_VANTAGE_API_KEY
-        sync: false # You'll set this in Render dashboard
-      - key: POLYGON_API_KEY
-        sync: false # You'll set this in Render dashboard
+      - key: DATA_PROVIDER
+        value: yfinance
+      # Optional API keys (only needed if you switch providers)
+      # - key: ALPHA_VANTAGE_API_KEY
+      #   sync: false
+      # - key: FMP_API_KEY
+      #   sync: false
+      # - key: TIINGO_API_KEY
+      #   sync: false
     healthCheckPath: /health
     autoDeploy: true
 
