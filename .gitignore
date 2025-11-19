@@ -38,3 +38,6 @@ frontend/build/
 # Temporary files
 *.tmp
 *.temp
+
+# Test results
+test-results/

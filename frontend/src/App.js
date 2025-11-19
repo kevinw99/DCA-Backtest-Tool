@@ -6,6 +6,7 @@ import BacktestResults from './components/BacktestResults';
 import BatchResults from './components/BatchResults';
 import BatchProgressBanner from './components/BatchProgressBanner';
 import PortfolioBacktestPage from './components/PortfolioBacktestPage';
+import AutomatedTestingPage from './components/AutomatedTestingPage';
 import URLParameterManager from './utils/URLParameterManager';
 import useSSEProgress from './hooks/useSSEProgress';
 import { fetchBacktestDefaults } from './services/configService';
@@ -573,6 +574,9 @@ function App() {
 
         {/* Portfolio backtest route */}
         <Route path="/portfolio-backtest" element={<PortfolioBacktestPage />} />
+
+        {/* Automated testing route */}
+        <Route path="/automated-testing" element={<AutomatedTestingPage />} />
 
         {/* Semantic routes for single backtest */}
         <Route path="/backtest/:strategyMode/:symbol" element={<AppContent />} />

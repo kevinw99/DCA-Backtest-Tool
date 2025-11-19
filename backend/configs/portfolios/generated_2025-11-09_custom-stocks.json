@@ -1,0 +1,15 @@
+{
+  "name": "generated_2025-11-09_custom-stocks",
+  "description": "Auto-generated config: portfolio backtest with stocks: [AAPL, MSFT]",
+  "stocks": [
+    "AAPL",
+    "MSFT"
+  ],
+  "totalCapital": 100000,
+  "lotSizeUsd": 10000,
+  "maxLots": 10,
+  "gridIntervalPercent": 10,
+  "profitRequirement": 10,
+  "enableBetaScaling": false,
+  "trailingStopPercent": 20
+}

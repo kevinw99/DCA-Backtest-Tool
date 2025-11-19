@@ -1,0 +1,15 @@
+{
+  "name": "Test Beta Grouping (Small)",
+  "startDate": "2024-01-01",
+  "endDate": "2024-12-31",
+  "totalCapitalUsd": 50000,
+  "lotSizeUsd": 1000,
+  "maxLotsPerStock": 10,
+  "stocks": ["AAPL", "NVDA", "MSFT", "GOOGL", "AMZN"],
+  "defaultParams": {
+    "gridSpacing": 0.03,
+    "stopLossPercent": 0.10,
+    "trailingTakeProfitPercent": 0.05,
+    "useBetaScaling": false
+  }
+}

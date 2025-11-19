@@ -1,0 +1,85 @@
+{
+  "name": "Nasdaq 100 High Beta (β > 1.75)",
+  "description": "Portfolio backtest for NASDAQ-100 stocks with beta > 1.75 (high volatility)",
+  "totalCapitalUsd": 170000,
+  "marginPercent": 20,
+  "startDate": "2021-09-02",
+  "endDate": "2025-10-22",
+  "lotSizeUsd": 5000,
+  "maxLotsPerStock": 10,
+  "globalDefaults": {
+    "basic": {
+      "lotSizeUsd": 5000,
+      "strategyMode": "long"
+    },
+    "longStrategy": {
+      "maxLots": 10,
+      "maxLotsToSell": 1,
+      "gridIntervalPercent": 10,
+      "profitRequirement": 10,
+      "stopLossPercent": 30,
+      "enableTrailingBuy": false,
+      "enableTrailingSell": false,
+      "trailingBuyActivationPercent": 10,
+      "trailingBuyReboundPercent": 5,
+      "trailingSellActivationPercent": 20,
+      "trailingSellPullbackPercent": 10,
+      "momentumBasedBuy": false,
+      "momentumBasedSell": false
+    },
+    "shortStrategy": {
+      "maxShorts": 6,
+      "maxShortsToCovers": 3,
+      "gridIntervalPercent": 10,
+      "profitRequirement": 10,
+      "trailingShortActivationPercent": 25,
+      "trailingShortPullbackPercent": 15,
+      "trailingCoverActivationPercent": 20,
+      "trailingCoverReboundPercent": 10,
+      "stopLoss": {
+        "hardStopLossPercent": 30,
+        "portfolioStopLossPercent": 25,
+        "cascadeStopLossPercent": 35
+      }
+    },
+    "beta": {
+      "enableBetaScaling": true,
+      "beta": 1,
+      "betaFactor": 1,
+      "coefficient": 0.5,
+      "isManualBetaOverride": false
+    },
+    "dynamicFeatures": {
+      "enableDynamicGrid": false,
+      "dynamicGridMultiplier": 1,
+      "enableConsecutiveIncrementalBuyGrid": false,
+      "gridConsecutiveIncrement": 5,
+      "enableConsecutiveIncrementalSellProfit": false,
+      "enableScenarioDetection": false,
+      "normalizeToReference": false
+    },
+    "adaptiveStrategy": {
+      "enableAdaptiveStrategy": false,
+      "adaptationCheckIntervalDays": 30,
+      "adaptationRollingWindowDays": 90,
+      "minDataDaysBeforeAdaptation": 90,
+      "confidenceThreshold": 0.7
+    }
+  },
+  "indexTracking": {
+    "enabled": true,
+    "indexName": "NASDAQ-100",
+    "enforceMembership": true,
+    "handleRemovals": "liquidate_positions"
+  },
+  "stocks": [
+    "ARM",
+    "MSTR",
+    "SHOP",
+    "APP",
+    "NVDA",
+    "MRNA",
+    "LRCX",
+    "RIVN"
+  ]
+}

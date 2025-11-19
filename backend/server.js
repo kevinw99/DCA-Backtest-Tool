@@ -2229,6 +2229,80 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
+// Test Automation API (Spec 56)
+app.post('/api/test/automated', async (req, res) => {
+  try {
+    const { description } = req.body;
+
+    if (!description || typeof description !== 'string') {
+      return res.status(400).json({
+        error: 'Validation Error',
+        message: 'Test description is required and must be a string'
+      });
+    }
+
+    console.log(`\n🎯 Automated Test Request: ${description}`);
+
+    const testAutomationService = require('./services/testAutomationService');
+    const result = await testAutomationService.runAutomatedTest(description);
+
+    res.json({
+      success: true,
+      data: result
+    });
+
+  } catch (error) {
+    console.error('❌ Automated test failed:', error);
+
+    res.status(500).json({
+      error: 'Test Execution Error',
+      message: error.message,
+      details: error.stack
+    });
+  }
+});
+
+// Get test archive index
+app.get('/api/test/archives', async (req, res) => {
+  try {
+    const fs = require('fs').promises;
+    const path = require('path');
+    const testResultsDir = path.join(__dirname, '../test-results');
+
+    await fs.mkdir(testResultsDir, { recursive: true });
+    const entries = await fs.readdir(testResultsDir, { withFileTypes: true });
+    const archives = [];
+
+    for (const entry of entries) {
+      if (entry.isDirectory() && entry.name !== 'index.html') {
+        try {
+          const metadataPath = path.join(testResultsDir, entry.name, 'metadata.json');
+          const metadata = JSON.parse(await fs.readFile(metadataPath, 'utf-8'));
+          archives.push({ ...metadata, folder: entry.name });
+        } catch (error) {
+          // Skip directories without metadata
+        }
+      }
+    }
+
+    // Sort by timestamp (newest first)
+    archives.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    res.json({
+      success: true,
+      data: archives
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to fetch test archives:', error);
+
+    res.status(500).json({
+      error: 'Archive Retrieval Error',
+      message: error.message
+    });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
