@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
+import { getApiBaseUrl } from '../config/api';
 
 /**
  * Custom hook for Server-Sent Events progress tracking
  * @param {string} sessionId - Session ID for the batch backtest
- * @param {string} baseURL - Base URL for the API (default: http://localhost:3001)
+ * @param {string} baseURL - Base URL for the API (default: from centralized config)
  * @returns {object} Progress state and connection status
  */
-function useSSEProgress(sessionId, baseURL = 'http://localhost:3001') {
+function useSSEProgress(sessionId, baseURL = getApiBaseUrl()) {
   const [progress, setProgress] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState(null);

@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import PortfolioBacktestForm from './PortfolioBacktestForm';
 import PortfolioResults from './PortfolioResults';
 import { getDefaultStockSelection, getStockParameters } from '../utils/stockDefaults';
+import { getApiUrl } from '../config/api';
 import './PortfolioBacktestPage.css';
 
 const PortfolioBacktestPage = () => {
@@ -226,7 +227,7 @@ const PortfolioBacktestPage = () => {
     try {
       console.log('📋 Running config-based portfolio backtest:', configName);
 
-      const response = await fetch(`http://localhost:3001/api/backtest/portfolio/config/${configName}`);
+      const response = await fetch(getApiUrl(`/api/backtest/portfolio/config/${configName}`));
       const data = await response.json();
 
       if (!data.success) {
@@ -273,7 +274,7 @@ const PortfolioBacktestPage = () => {
 
       console.log('📋 Stocks with specific parameters:', stocksWithParams);
 
-      const response = await fetch('http://localhost:3001/api/portfolio-backtest', {
+      const response = await fetch(getApiUrl('/api/portfolio-backtest'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

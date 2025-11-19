@@ -8,7 +8,7 @@
  * Spec 54: Configuration Single Source of Truth
  */
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+import { getApiUrl } from '../config/api';
 
 // Singleton cache
 let cachedConfig = null;
@@ -36,7 +36,7 @@ export const fetchBacktestDefaults = async () => {
   console.log('🌐 Fetching backtest defaults from API...');
 
   // Start new fetch
-  fetchPromise = fetch(`${API_BASE_URL}/api/config/backtest-defaults`)
+  fetchPromise = fetch(getApiUrl('/api/config/backtest-defaults'))
     .then(async (response) => {
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);

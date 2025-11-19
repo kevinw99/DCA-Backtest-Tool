@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { TrendingUp, TrendingDown, Target, Trophy, Activity, DollarSign, BarChart3, Users, Percent } from 'lucide-react';
 import URLParameterManager from '../utils/URLParameterManager';
 import { formatCurrency, formatPercent, formatParameterPercent, formatPerformancePercent, formatNumber } from '../utils/formatters';
+import { getApiUrl } from '../config/api';
 
 /**
  * FutureTradeCard Component (Spec 33)
@@ -867,7 +868,7 @@ const BatchResults = ({ data }) => {
                 };
 
                 const jsonBody = JSON.stringify(requestBody, null, 2);
-                return `curl -X POST http://localhost:3001/api/backtest/batch -H "Content-Type: application/json" -d '${jsonBody.replace(/\n/g, ' ')}'`;
+                return `curl -X POST ${getApiUrl('/api/backtest/batch')} -H "Content-Type: application/json" -d '${jsonBody.replace(/\n/g, ' ')}'`;
               })()}
               style={{
                 flex: 1,
@@ -910,7 +911,7 @@ const BatchResults = ({ data }) => {
                 };
 
                 const jsonBody = JSON.stringify(requestBody, null, 2);
-                const curlCommand = `curl -X POST http://localhost:3001/api/backtest/batch -H "Content-Type: application/json" -d '${jsonBody.replace(/\n/g, ' ')}'`;
+                const curlCommand = `curl -X POST ${getApiUrl('/api/backtest/batch')} -H "Content-Type: application/json" -d '${jsonBody.replace(/\n/g, ' ')}'`;
                 navigator.clipboard.writeText(curlCommand);
                 alert('Curl command copied to clipboard!');
               }}

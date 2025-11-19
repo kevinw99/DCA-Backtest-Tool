@@ -5,6 +5,7 @@ import { Play, DollarSign, TrendingUp, Settings, Info, Zap, Target, ArrowUpDown,
 import BetaControls from './BetaControls';
 import { getTickerDefaults, saveTickerDefaults, extractTickerSpecificParams } from '../utils/strategyDefaults';
 import URLParameterManager from '../utils/URLParameterManager';
+import { getApiUrl } from '../config/api';
 
 const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setAppTestMode }) => {
   const navigate = useNavigate();
@@ -241,7 +242,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
   useEffect(() => {
     const loadDefaults = async () => {
       try {
-        const response = await fetch('http://localhost:3001/api/backtest/defaults');
+        const response = await fetch(getApiUrl('/api/backtest/defaults'));
         if (response.ok) {
           const result = await response.json();
           if (result.success && result.data) {
@@ -1073,7 +1074,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
     setBetaError(null);
     
     try {
-      const response = await fetch(`http://localhost:3001/api/stocks/${symbol}/beta`);
+      const response = await fetch(getApiUrl(`/api/stocks/${symbol}/beta`));
       const data = await response.json();
       
       if (response.ok || response.status === 206) { // 206 = Partial Content (with warnings)
@@ -1125,7 +1126,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-      const response = await fetch('http://localhost:3001/api/backtest/beta-parameters', {
+      const response = await fetch(getApiUrl('/api/backtest/beta-parameters'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

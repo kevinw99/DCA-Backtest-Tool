@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+import { getApiUrl } from '../config/api';
 
 /**
  * Ensure all required parameters exist with default values
@@ -31,7 +31,7 @@ function ensureCompleteParameters(parameters) {
  * @returns {Promise<object>} Default parameters for the ticker
  */
 export async function getTickerDefaults(symbol) {
-  const response = await fetch(`${API_BASE_URL}/api/backtest/defaults/${symbol}`);
+  const response = await fetch(getApiUrl(`/api/backtest/defaults/${symbol}`));
   const data = await response.json();
 
   if (!data.success || !data.defaults) {
@@ -51,7 +51,7 @@ export async function getTickerDefaults(symbol) {
  */
 export async function saveTickerDefaults(symbol, parameters) {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/backtest/defaults/${symbol}`, {
+    const response = await fetch(getApiUrl(`/api/backtest/defaults/${symbol}`), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

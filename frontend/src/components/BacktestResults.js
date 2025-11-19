@@ -23,6 +23,7 @@ import {
   getCurrentLots,
   calculateCapitalDeployed
 } from '../utils/chartCalculations';
+import { getApiUrl } from '../config/api';
 
 const BacktestResults = ({ data, chartData: priceData, metadata }) => {
   const [visibleIndicators, setVisibleIndicators] = useState({
@@ -678,7 +679,7 @@ const BacktestResults = ({ data, chartData: priceData, metadata }) => {
                 // Generate curl command for testing the backend API
                 // The backend expects POST with JSON body (not GET with query params)
                 const jsonBody = JSON.stringify(priceData.backtestParameters, null, 2);
-                return `curl -X POST http://localhost:3001/api/backtest/dca -H "Content-Type: application/json" -d '${jsonBody.replace(/\n/g, ' ')}'`;
+                return `curl -X POST ${getApiUrl('/api/backtest/dca')} -H "Content-Type: application/json" -d '${jsonBody.replace(/\n/g, ' ')}'`;
               })()}
               style={{
                 flex: 1,
@@ -694,7 +695,7 @@ const BacktestResults = ({ data, chartData: priceData, metadata }) => {
             <button
               onClick={() => {
                 const jsonBody = JSON.stringify(priceData.backtestParameters, null, 2);
-                const curlCommand = `curl -X POST http://localhost:3001/api/backtest/dca -H "Content-Type: application/json" -d '${jsonBody.replace(/\n/g, ' ')}'`;
+                const curlCommand = `curl -X POST ${getApiUrl('/api/backtest/dca')} -H "Content-Type: application/json" -d '${jsonBody.replace(/\n/g, ' ')}'`;
                 navigator.clipboard.writeText(curlCommand);
                 alert('Curl command copied to clipboard!');
               }}

@@ -11,6 +11,7 @@ import URLParameterManager from './utils/URLParameterManager';
 import useSSEProgress from './hooks/useSSEProgress';
 import { fetchBacktestDefaults } from './services/configService';
 import { Play, TrendingUp, Settings, Zap } from 'lucide-react';
+import { getApiUrl } from './config/api';
 
 function AppContent() {
   const location = useLocation();
@@ -141,8 +142,8 @@ function AppContent() {
         // Determine the batch endpoint based on strategy mode
         const strategyMode = parameters.strategyMode || parameters.parameterRanges?.strategyMode;
         const batchEndpoint = strategyMode === 'short'
-          ? 'http://localhost:3001/api/backtest/short-batch?async=true'
-          : 'http://localhost:3001/api/backtest/batch?async=true';
+          ? getApiUrl('/api/backtest/short-batch?async=true')
+          : getApiUrl('/api/backtest/batch?async=true');
 
         console.log('=== DEBUG: Auto Batch API Call Info ===');
         console.log('Strategy Mode:', strategyMode);
@@ -204,7 +205,7 @@ function AppContent() {
           console.log('================================================');
 
           // Fetch from portfolio stock results cache
-          const portfolioStockEndpoint = `http://localhost:3001/api/portfolio-backtest/${parameters.portfolioRunId}/stock/${parameters.symbol}/results`;
+          const portfolioStockEndpoint = getApiUrl(`/api/portfolio-backtest/${parameters.portfolioRunId}/stock/${parameters.symbol}/results`);
 
           const portfolioResponse = await fetch(portfolioStockEndpoint);
 
@@ -225,7 +226,7 @@ function AppContent() {
 
           // Fetch chart data for the stock
           const chartResponse = await fetch(
-            `http://localhost:3001/api/stocks/${parameters.symbol}?startDate=${parameters.startDate}&endDate=${parameters.endDate}`
+            getApiUrl(`/api/stocks/${parameters.symbol}?startDate=${parameters.startDate}&endDate=${parameters.endDate}`)
           );
 
           if (!chartResponse.ok) {
@@ -240,8 +241,8 @@ function AppContent() {
           // Standard backtest flow
           // Determine the endpoint based on strategy mode
           const endpoint = parameters.strategyMode === 'short'
-            ? 'http://localhost:3001/api/backtest/short-dca'
-            : 'http://localhost:3001/api/backtest/dca';
+            ? getApiUrl('/api/backtest/short-dca')
+            : getApiUrl('/api/backtest/dca');
 
           console.log('=== DEBUG: Auto API Call Info ===');
           console.log('Strategy Mode:', parameters.strategyMode);
@@ -264,7 +265,7 @@ function AppContent() {
           setBacktestData(backtestResult.data);
 
           const chartResponse = await fetch(
-            `http://localhost:3001/api/stocks/${parameters.symbol}?startDate=${parameters.startDate}&endDate=${parameters.endDate}`
+            getApiUrl(`/api/stocks/${parameters.symbol}?startDate=${parameters.startDate}&endDate=${parameters.endDate}`)
           );
 
           if (!chartResponse.ok) {
@@ -330,8 +331,8 @@ function AppContent() {
         // For short batch, strategyMode is at top level; for long batch, check parameterRanges
         const strategyMode = parameters.strategyMode || parameters.parameterRanges?.strategyMode;
         const batchEndpoint = strategyMode === 'short'
-          ? 'http://localhost:3001/api/backtest/short-batch?async=true'
-          : 'http://localhost:3001/api/backtest/batch?async=true';
+          ? getApiUrl('/api/backtest/short-batch?async=true')
+          : getApiUrl('/api/backtest/batch?async=true');
 
         console.log('=== DEBUG: Batch API Call Info ===');
         console.log('Strategy Mode:', strategyMode);
@@ -381,8 +382,8 @@ function AppContent() {
       } else {
         // Determine the endpoint based on strategy mode
         const endpoint = parameters.strategyMode === 'short'
-          ? 'http://localhost:3001/api/backtest/short-dca'
-          : 'http://localhost:3001/api/backtest/dca';
+          ? getApiUrl('/api/backtest/short-dca')
+          : getApiUrl('/api/backtest/dca');
 
         console.log('=== DEBUG: API Call Info ===');
         console.log('Strategy Mode:', parameters.strategyMode);
@@ -408,7 +409,7 @@ function AppContent() {
         setBacktestData(backtestResult.data);
 
         const chartResponse = await fetch(
-          `http://localhost:3001/api/stocks/${parameters.symbol}?startDate=${parameters.startDate}&endDate=${parameters.endDate}`
+          getApiUrl(`/api/stocks/${parameters.symbol}?startDate=${parameters.startDate}&endDate=${parameters.endDate}`)
         );
 
         if (!chartResponse.ok) {

@@ -8,6 +8,7 @@ import PortfolioBuyAndHoldComparison from './PortfolioBuyAndHoldComparison';
 import AlignedChartsContainer from './portfolio/AlignedChartsContainer';
 import BetaGroupAnalysis from './backtest/BetaGroupAnalysis';
 import { preprocessPortfolioChartData } from '../services/chartDataProcessor';
+import { getApiUrl } from '../config/api';
 import './PortfolioResults.css';
 
 const PortfolioResults = ({ data }) => {
@@ -90,7 +91,7 @@ const PortfolioResults = ({ data }) => {
               value={(() => {
                 // Generate curl command for testing the backend API
                 const jsonBody = JSON.stringify(parameters, null, 2);
-                return `curl -X POST http://localhost:3001/api/portfolio-backtest -H "Content-Type: application/json" -d '${jsonBody.replace(/\n/g, ' ')}'`;
+                return `curl -X POST ${getApiUrl('/api/portfolio-backtest')} -H "Content-Type: application/json" -d '${jsonBody.replace(/\n/g, ' ')}'`;
               })()}
               style={{
                 flex: 1,
@@ -106,7 +107,7 @@ const PortfolioResults = ({ data }) => {
             <button
               onClick={() => {
                 const jsonBody = JSON.stringify(parameters, null, 2);
-                const curlCommand = `curl -X POST http://localhost:3001/api/portfolio-backtest -H "Content-Type: application/json" -d '${jsonBody.replace(/\n/g, ' ')}'`;
+                const curlCommand = `curl -X POST ${getApiUrl('/api/portfolio-backtest')} -H "Content-Type: application/json" -d '${jsonBody.replace(/\n/g, ' ')}'`;
                 navigator.clipboard.writeText(curlCommand);
                 alert('Curl command copied to clipboard!');
               }}

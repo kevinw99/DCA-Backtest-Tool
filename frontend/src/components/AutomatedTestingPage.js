@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './AutomatedTestingPage.css';
+import { getApiUrl } from '../config/api';
 
 function AutomatedTestingPage() {
   const [description, setDescription] = useState('');
@@ -14,7 +15,7 @@ function AutomatedTestingPage() {
 
   const loadArchives = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/test/archives');
+      const response = await fetch(getApiUrl('/api/test/archives'));
       const data = await response.json();
 
       if (data.success) {
@@ -36,7 +37,7 @@ function AutomatedTestingPage() {
     setResult(null);
 
     try {
-      const response = await fetch('http://localhost:3001/api/test/automated', {
+      const response = await fetch(getApiUrl('/api/test/automated'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
