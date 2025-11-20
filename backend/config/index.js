@@ -79,10 +79,8 @@ const config = {
 function validateConfig() {
   const errors = [];
 
-  // Check critical configuration
-  if (!config.api.alphaVantage && config.server.env === 'production') {
-    errors.push('ALPHA_VANTAGE_API_KEY is required in production');
-  }
+  // Alpha Vantage key is optional since we have Yahoo Finance as fallback
+  // No critical errors to check - all providers have fallbacks
 
   if (errors.length > 0) {
     throw new Error(`Configuration errors:\n${errors.join('\n')}`);
