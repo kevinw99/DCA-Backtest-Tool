@@ -63,6 +63,7 @@ Once deployed, Render will provide URLs:
 
 - **Frontend**: `https://dca-backtest-frontend.onrender.com`
 - **Backend API**: `https://dca-backtest-api.onrender.com`
+- **Database Viewer**: `https://dca-backtest-api.onrender.com/db-viewer`
 
 The frontend will automatically connect to the backend API.
 
@@ -144,6 +145,23 @@ Should return:
   "timestamp": "2024-11-19T..."
 }
 ```
+
+### Database Viewer
+
+Access the database viewer to inspect the SQLite database:
+
+```
+https://dca-backtest-api.onrender.com/db-viewer
+```
+
+Features:
+- Browse all database tables
+- View table schemas
+- Execute read-only SQL queries
+- Filter price data by stock and date range
+- Paginated results for large datasets
+
+**Note:** The database is stored on disk and will persist between restarts, but may be reset on redeployments in free tier.
 
 ## Troubleshooting
 
