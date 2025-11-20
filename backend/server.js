@@ -2303,9 +2303,87 @@ app.get('/api/test/archives', async (req, res) => {
   }
 });
 
+// ============================================================================
+// Database Viewer Routes (integrated from db-viewer.js)
+// ============================================================================
+
+// Get list of tables with row counts
+app.get('/api/db/tables', (req, res) => {
+  const db = database.getDatabase();
+
+  db.all("SELECT name FROM sqlite_master WHERE type='table'", (err, tables) => {
+    if (err) {
+      return res.json({ error: err.message });
+    }
+
+    const tablePromises = tables.map(table => {
+      return new Promise((resolve, reject) => {
+        db.get(`SELECT COUNT(*) as count FROM ${table.name}`, (err, row) => {
+          if (err) reject(err);
+          else resolve({ name: table.name, count: row.count });
+        });
+      });
+    });
+
+    Promise.all(tablePromises)
+      .then(tablesWithCounts => {
+        res.json({ tables: tablesWithCounts });
+      })
+      .catch(err => {
+        res.json({ error: err.message });
+      });
+  });
+});
+
+// Get database schema
+app.get('/api/db/schema', (req, res) => {
+  const db = database.getDatabase();
+
+  db.all("SELECT name, sql FROM sqlite_master WHERE type='table'", (err, rows) => {
+    if (err) {
+      res.json({ error: err.message });
+    } else {
+      res.json({ tables: rows });
+    }
+  });
+});
+
+// Execute SQL query (read-only)
+app.post('/api/db/query', (req, res) => {
+  const { query } = req.body;
+
+  if (!query) {
+    return res.status(400).json({ error: 'Query is required' });
+  }
+
+  // Basic security check - only allow SELECT queries
+  const trimmedQuery = query.trim().toUpperCase();
+  if (!trimmedQuery.startsWith('SELECT')) {
+    return res.status(403).json({ error: 'Only SELECT queries are allowed' });
+  }
+
+  const db = database.getDatabase();
+
+  db.all(query, (err, rows) => {
+    if (err) {
+      res.json({ error: err.message });
+    } else {
+      const columns = rows.length > 0 ? Object.keys(rows[0]) : [];
+      res.json({ columns, rows });
+    }
+  });
+});
+
+// Database viewer UI (accessible at /db-viewer)
+app.get('/db-viewer', (req, res) => {
+  const dbViewerHTML = require('fs').readFileSync(require('path').join(__dirname, 'db-viewer.html'), 'utf8');
+  res.send(dbViewerHTML.replace(/http:\/\/localhost:8080/g, ''));
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`Database viewer available at http://localhost:${PORT}/db-viewer`);
 });
 
 // Graceful shutdown
