@@ -161,6 +161,47 @@ Features:
 - Filter price data by stock and date range
 - Paginated results for large datasets
 
+### Database Info API
+
+Check database statistics programmatically:
+
+```bash
+curl https://dca-backtest-api.onrender.com/api/db/info
+```
+
+Returns:
+```json
+{
+  "database": {
+    "path": "/app/backend/stocks.db",
+    "size_mb": "126.00",
+    "modified": "2024-11-19T...",
+    "created": "2024-11-15T..."
+  },
+  "tables": [
+    {"table": "stocks", "count": 552},
+    {"table": "daily_prices", "count": 666196},
+    {"table": "stock_beta", "count": 539}
+  ],
+  "summary": {
+    "total_rows": 667287,
+    "stocks_count": 552,
+    "price_records": 666196,
+    "beta_values": 539
+  },
+  "server": {
+    "hostname": "...",
+    "platform": "linux",
+    "uptime_seconds": 3600
+  }
+}
+```
+
+**Use this to:**
+- Monitor database size on Render
+- Verify data persistence across deployments
+- Check how many stocks and price records are cached
+
 **Note:** The database is stored on disk and will persist between restarts, but may be reset on redeployments in free tier.
 
 ## Troubleshooting
