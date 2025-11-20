@@ -993,9 +993,39 @@
   overflow-x: auto;
 }
 
+/* Make table behave like a grid */
+.enhanced-transactions-table table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1600px;
+}
+
+.enhanced-transactions-table thead tr {
+  display: grid;
+  grid-template-columns: 100px 120px 90px 180px 180px 90px 90px 90px 90px 60px 100px 100px 100px 100px 100px 100px;
+  gap: 1rem;
+  padding: 1rem 0.5rem;
+  background: #f7fafc;
+  font-weight: 600;
+  color: #4a5568;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.85rem;
+}
+
+.enhanced-transactions-table tbody tr {
+  display: grid;
+  grid-template-columns: 100px 120px 90px 180px 180px 90px 90px 90px 90px 60px 100px 100px 100px 100px 100px 100px;
+  gap: 1rem;
+  padding: 1.25rem 0.5rem;
+  border-bottom: 1px solid #f1f5f9;
+  align-items: start;
+  font-size: 0.85rem;
+}
+
+/* Legacy grid classes (keep for backwards compatibility) */
 .enhanced-transactions-table .table-header {
   display: grid;
-  grid-template-columns: 100px 120px 90px 180px 180px 90px 90px 180px 90px 100px 100px 100px 100px 100px 100px;
+  grid-template-columns: 100px 120px 90px 180px 180px 90px 90px 90px 90px 60px 100px 100px 100px 100px 100px 100px;
   gap: 1rem;
   padding: 1rem 0.5rem;
   background: #f7fafc;
@@ -1008,7 +1038,7 @@
 
 .enhanced-transactions-table .table-row {
   display: grid;
-  grid-template-columns: 100px 120px 90px 180px 180px 90px 90px 180px 90px 100px 100px 100px 100px 100px 100px;
+  grid-template-columns: 100px 120px 90px 180px 180px 90px 90px 90px 90px 60px 100px 100px 100px 100px 100px 100px;
   gap: 1rem;
   padding: 1.25rem 0.5rem;
   border-bottom: 1px solid #f1f5f9;
