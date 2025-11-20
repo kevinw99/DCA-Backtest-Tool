@@ -2309,7 +2309,7 @@ app.get('/api/test/archives', async (req, res) => {
 
 // Get list of tables with row counts
 app.get('/api/db/tables', (req, res) => {
-  const db = database.getDatabase();
+  const db = database.db;
 
   db.all("SELECT name FROM sqlite_master WHERE type='table'", (err, tables) => {
     if (err) {
@@ -2337,7 +2337,7 @@ app.get('/api/db/tables', (req, res) => {
 
 // Get database schema
 app.get('/api/db/schema', (req, res) => {
-  const db = database.getDatabase();
+  const db = database.db;
 
   db.all("SELECT name, sql FROM sqlite_master WHERE type='table'", (err, rows) => {
     if (err) {
@@ -2362,7 +2362,7 @@ app.post('/api/db/query', (req, res) => {
     return res.status(403).json({ error: 'Only SELECT queries are allowed' });
   }
 
-  const db = database.getDatabase();
+  const db = database.db;
 
   db.all(query, (err, rows) => {
     if (err) {
@@ -2378,6 +2378,82 @@ app.post('/api/db/query', (req, res) => {
 app.get('/db-viewer', (req, res) => {
   const dbViewerHTML = require('fs').readFileSync(require('path').join(__dirname, 'db-viewer.html'), 'utf8');
   res.send(dbViewerHTML.replace(/http:\/\/localhost:8080/g, ''));
+});
+
+// Database info endpoint - Get database statistics
+app.get('/api/db/info', (req, res) => {
+  const fs = require('fs');
+  const path = require('path');
+  const dbPath = path.join(__dirname, 'stocks.db');
+
+  try {
+    // Check if database file exists
+    if (!fs.existsSync(dbPath)) {
+      return res.json({
+        error: 'Database file not found',
+        path: dbPath
+      });
+    }
+
+    const stats = fs.statSync(dbPath);
+    const db = database.db; // Access the sqlite3 database instance directly
+
+    // Get row counts for main tables
+    const queries = [
+      { name: 'stocks', query: 'SELECT COUNT(*) as count FROM stocks' },
+      { name: 'daily_prices', query: 'SELECT COUNT(*) as count FROM daily_prices' },
+      { name: 'stock_beta', query: 'SELECT COUNT(*) as count FROM stock_beta' },
+      { name: 'corporate_actions', query: 'SELECT COUNT(*) as count FROM corporate_actions' },
+      { name: 'technical_indicators', query: 'SELECT COUNT(*) as count FROM technical_indicators' }
+    ];
+
+    const countPromises = queries.map(item => {
+      return new Promise((resolve, reject) => {
+        db.get(item.query, (err, row) => {
+          if (err) {
+            // Table might not exist, return 0
+            resolve({ table: item.name, count: 0 });
+          } else {
+            resolve({ table: item.name, count: row.count });
+          }
+        });
+      });
+    });
+
+    Promise.all(countPromises)
+      .then(tableCounts => {
+        const totalRows = tableCounts.reduce((sum, item) => sum + item.count, 0);
+
+        res.json({
+          database: {
+            path: dbPath,
+            exists: true,
+            size_bytes: stats.size,
+            size_mb: (stats.size / 1024 / 1024).toFixed(2),
+            modified: stats.mtime,
+            created: stats.birthtime
+          },
+          tables: tableCounts,
+          summary: {
+            total_rows: totalRows,
+            stocks_count: tableCounts.find(t => t.table === 'stocks')?.count || 0,
+            price_records: tableCounts.find(t => t.table === 'daily_prices')?.count || 0,
+            beta_values: tableCounts.find(t => t.table === 'stock_beta')?.count || 0
+          },
+          server: {
+            hostname: require('os').hostname(),
+            platform: process.platform,
+            node_version: process.version,
+            uptime_seconds: process.uptime()
+          }
+        });
+      })
+      .catch(err => {
+        res.status(500).json({ error: err.message });
+      });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Start server
