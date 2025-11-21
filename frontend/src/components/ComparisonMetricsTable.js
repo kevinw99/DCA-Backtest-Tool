@@ -2,35 +2,14 @@ import React from 'react';
 import './ComparisonMetricsTable.css';
 
 const ComparisonMetricsTable = ({ dcaMetrics, buyAndHoldMetrics }) => {
-  // Calculate CAGR consistently for both DCA and Buy & Hold
-  const calculateCAGR = (totalReturnPercent, startDate, endDate) => {
-    if (!totalReturnPercent || !startDate || !endDate) return null;
+  // Spec 60: Use backend-calculated CAGR values for consistency
+  // Backend now uses unified metricsCalculator for accurate calendar-year CAGR
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const years = (end - start) / (1000 * 60 * 60 * 24 * 365.25);
+  // DCA CAGR from backend (cagrOnMaxDeployed - as decimal e.g., 0.5899)
+  const dcaCAGR = dcaMetrics?.performanceMetrics?.cagrOnMaxDeployed ?? null;
 
-    if (years <= 0) return null;
-
-    const finalValue = 1 + (totalReturnPercent / 100);
-    if (finalValue <= 0) return null;
-
-    return Math.pow(finalValue, 1 / years) - 1;
-  };
-
-  // Calculate DCA CAGR from returnOnMaxDeployedPercent
-  const dcaCAGR = calculateCAGR(
-    dcaMetrics?.performanceMetrics?.returnOnMaxDeployedPercent,
-    dcaMetrics?.startDate,
-    dcaMetrics?.endDate
-  );
-
-  // Calculate Buy & Hold CAGR from totalReturnPercent
-  const bnhCAGR = calculateCAGR(
-    buyAndHoldMetrics?.totalReturnPercent,
-    dcaMetrics?.startDate,
-    dcaMetrics?.endDate
-  );
+  // Buy & Hold CAGR from backend (annualizedReturn - as decimal e.g., 0.6651)
+  const bnhCAGR = buyAndHoldMetrics?.annualizedReturn ?? null;
 
   // Helper function to determine metric comparison class
   const getMetricClass = (dcaValue, buyHoldValue, higherIsBetter = true) => {
@@ -140,14 +119,18 @@ const ComparisonMetricsTable = ({ dcaMetrics, buyAndHoldMetrics }) => {
         },
         {
           label: 'Max Drawdown',
-          dcaValue: dcaMetrics?.maxDrawdownPercent ? dcaMetrics.maxDrawdownPercent / 100 : null,
+          // Spec 60: DCA maxDrawdownPercent is decimal (0.353), B&H is percentage (36.88)
+          // DCA from performanceMetrics is already decimal, use directly
+          // B&H from buyAndHoldMetrics is percentage, divide by 100
+          dcaValue: dcaMetrics?.performanceMetrics?.maxDrawdownPercent ?? null,
           bnhValue: buyAndHoldMetrics?.maxDrawdownPercent ? buyAndHoldMetrics.maxDrawdownPercent / 100 : null,
           type: 'percent',
           higherIsBetter: false
         },
         {
           label: 'Avg Drawdown',
-          dcaValue: dcaMetrics?.performanceMetrics?.avgDrawdownPercent,
+          // Spec 60: DCA avgDrawdownPercent is decimal, B&H is percentage
+          dcaValue: dcaMetrics?.performanceMetrics?.avgDrawdownPercent ?? null,
           bnhValue: buyAndHoldMetrics?.avgDrawdownPercent ? buyAndHoldMetrics.avgDrawdownPercent / 100 : null,
           type: 'percent',
           higherIsBetter: false

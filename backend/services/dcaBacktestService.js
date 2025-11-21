@@ -260,8 +260,14 @@ function calculateTradeAnnualizedReturns(enhancedTransactions, startDate, endDat
 // calculatePortfolioDrawdown and assessMarketCondition moved to shared/backtestUtilities.js
 
 function calculateBuyAndHold(prices, initialCapital, avgCapitalForComparison = null) {
+  // Spec 60: Use unified metrics calculator for consistent calculations
+  const metricsCalc = require('./shared/metricsCalculator');
+
   const startPrice = prices[0].adjusted_close;
   const endPrice = prices[prices.length - 1].adjusted_close;
+  const startDate = prices[0].date;
+  const endDate = prices[prices.length - 1].date;
+
   const shares = initialCapital / startPrice;
   const finalValue = shares * endPrice;
   const totalReturn = finalValue - initialCapital;
@@ -269,93 +275,36 @@ function calculateBuyAndHold(prices, initialCapital, avgCapitalForComparison = n
   // Buy & Hold invests full initialCapital upfront, so return % is based on that
   const totalReturnPercent = (totalReturn / initialCapital) * 100;
 
-  // Calculate annualized return: (1 + total return) ^ (365 / days) - 1
-  const totalDays = prices.length;
-  const annualizedReturn = totalDays > 0 ?
-    Math.pow(1 + (totalReturnPercent / 100), 365 / totalDays) - 1 : 0;
+  // Spec 60 FIX: Calculate CAGR using calendar years (not trading days)
+  const annualizedReturn = metricsCalc.calculateCAGR(finalValue, initialCapital, startDate, endDate);
   const annualizedReturnPercent = annualizedReturn * 100;
 
-  let peakValue = initialCapital;
-  let maxDrawdown = 0;
-  let maxDrawdownPercent = 0;
-  const dailyValues = [];
+  // Build daily values array for metrics calculation
+  const dailyValues = prices.map(p => shares * p.adjusted_close);
 
-  // Track drawdown periods for average calculation
-  const drawdownPeriods = [];
-  let currentDrawdownStart = null;
-  let currentMaxDrawdownPercent = 0;
+  // Calculate daily returns
+  const dailyReturns = metricsCalc.calculateDailyReturns(dailyValues);
 
-  for (let i = 0; i < prices.length; i++) {
-    const currentValue = shares * prices[i].adjusted_close;
-    dailyValues.push(currentValue);
+  // Calculate drawdown using unified calculator (returns negative decimals)
+  const drawdownAnalysis = metricsCalc.calculateMaxDrawdown(dailyValues);
 
-    if (currentValue > peakValue) {
-      // New peak - end of drawdown period if there was one
-      if (currentDrawdownStart !== null && currentMaxDrawdownPercent > 0) {
-        drawdownPeriods.push(currentMaxDrawdownPercent);
-        currentDrawdownStart = null;
-        currentMaxDrawdownPercent = 0;
-      }
-      peakValue = currentValue;
-    } else if (currentValue < peakValue) {
-      // In drawdown
-      const drawdown = peakValue - currentValue;
-      const drawdownPercent = (drawdown / peakValue) * 100;
+  // Convert maxDrawdownPercent to positive percentage for backward compatibility
+  // Note: metricsCalculator returns negative decimals, we need positive percentages for existing code
+  const maxDrawdown = Math.abs(drawdownAnalysis.maxDrawdown);
+  const maxDrawdownPercent = Math.abs(drawdownAnalysis.maxDrawdownPercent) * 100;
+  const avgDrawdownPercent = Math.abs(drawdownAnalysis.avgDrawdownPercent) * 100;
 
-      // Track the maximum drawdown within this period
-      currentMaxDrawdownPercent = Math.max(currentMaxDrawdownPercent, drawdownPercent);
+  // Calculate volatility (returns decimal, convert to percentage)
+  const volatilityDecimal = metricsCalc.calculateVolatility(dailyReturns);
+  const volatility = volatilityDecimal * 100;
 
-      if (currentDrawdownStart === null) {
-        currentDrawdownStart = i;
-      }
+  // Spec 60 FIX: Calculate risk-adjusted ratios using unified calculator
+  // These use daily returns approach (more accurate)
+  const sharpeRatio = metricsCalc.calculateSharpeRatioFromReturns(dailyReturns);
+  const sortinoRatio = metricsCalc.calculateSortinoRatioFromReturns(dailyReturns);
 
-      if (drawdown > maxDrawdown) {
-        maxDrawdown = drawdown;
-      }
-      if (drawdownPercent > maxDrawdownPercent) {
-        maxDrawdownPercent = drawdownPercent;
-      }
-    }
-  }
-
-  // Handle ongoing drawdown at the end
-  if (currentDrawdownStart !== null && currentMaxDrawdownPercent > 0) {
-    drawdownPeriods.push(currentMaxDrawdownPercent);
-  }
-
-  // Calculate average drawdown
-  const avgDrawdownPercent = drawdownPeriods.length > 0
-    ? drawdownPeriods.reduce((a, b) => a + b, 0) / drawdownPeriods.length
-    : 0;
-
-  const returns = [];
-  for (let i = 1; i < dailyValues.length; i++) {
-    returns.push((dailyValues[i] - dailyValues[i-1]) / dailyValues[i-1]);
-  }
-  const avgReturn = returns.reduce((a, b) => a + b, 0) / returns.length;
-  const volatility = Math.sqrt(returns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / (returns.length - 1)) * Math.sqrt(252) * 100;
-  const sharpeRatio = volatility > 0 ? (avgReturn * 252) / (volatility / 100) : 0;
-
-  // Calculate Sortino Ratio (only penalize downside volatility)
-  const riskFreeRate = 0.04; // 4% annual
-  const dailyRiskFreeRate = riskFreeRate / 252;
-  const excessReturns = returns.map(r => r - dailyRiskFreeRate);
-  const avgExcessReturn = excessReturns.reduce((a, b) => a + b, 0) / excessReturns.length;
-  const downsideReturns = excessReturns.filter(r => r < 0);
-  let sortinoRatio = 0;
-  if (downsideReturns.length > 0) {
-    const downsideAvg = downsideReturns.reduce((a, b) => a + b, 0) / downsideReturns.length;
-    const downsideVariance = downsideReturns.reduce((sum, r) => sum + Math.pow(r - downsideAvg, 2), 0) / downsideReturns.length;
-    const downsideDeviation = Math.sqrt(downsideVariance);
-    if (downsideDeviation > 0) {
-      sortinoRatio = (avgExcessReturn / downsideDeviation) * Math.sqrt(252);
-    }
-  } else if (avgExcessReturn > 0) {
-    sortinoRatio = 999; // No downside, high Sortino
-  }
-
-  // Calculate Calmar Ratio: CAGR / Max Drawdown %
-  const calmarRatio = maxDrawdownPercent > 0 ? (annualizedReturn * 100) / maxDrawdownPercent : 0;
+  // Calmar uses CAGR (decimal) / maxDrawdown (decimal)
+  const calmarRatio = metricsCalc.calculateCalmarRatio(annualizedReturn, drawdownAnalysis.maxDrawdownPercent);
 
   return {
     totalReturn: totalReturn,
