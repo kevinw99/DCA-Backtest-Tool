@@ -39,7 +39,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
 
     // Default dates: fixed start, current end
     return {
-      symbol: 'TSLA',
+      symbol: 'NVDA',
       strategyMode: 'long',
       startDate: '2021-09-01',
       endDate: new Date().toISOString().split('T')[0]
@@ -62,7 +62,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
 
     // Default dates: fixed start, current end
     return {
-      symbol: 'TSLA',
+      symbol: 'NVDA',
       strategyMode: 'SHORT_DCA',
       startDate: '2021-09-01',
       endDate: new Date().toISOString().split('T')[0]
