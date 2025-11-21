@@ -31,7 +31,7 @@ Enhanced Dollar Cost Averaging for Volatile Stocks
 layout: two-cols
 ---
 
-# 1: Problem Statement
+# 2: Problem Statement
 
 The Challenge of Investing in Volatile, High-Growth Stocks
 
@@ -63,7 +63,71 @@ The Challenge of Investing in Volatile, High-Growth Stocks
 
 ---
 
-# 1: The Fundamental Questions
+# 3: The Fundamental Questions
+
+<br>
+
+<v-clicks>
+
+1. Can you do **better than buy-and-hold**?
+
+2. Can you **outperform S&P 500** with less risk?
+
+3. How do you **systematically** capture gains while managing volatility?
+
+</v-clicks>
+
+<br><br>
+
+<v-click>
+
+<div class="text-center text-2xl font-bold text-blue-400">
+Let's explore the answer through Enhanced DCA Strategies
+</div>
+
+</v-click>
+
+---
+layout: center
+class: text-center
+---
+
+# 4: Important Disclaimer
+
+<br>
+
+<div class="text-2xl text-red-400 font-bold mb-8">
+⚠️ NOT FINANCIAL ADVICE ⚠️
+</div>
+
+<v-clicks>
+
+<div class="text-xl mb-4">
+This presentation is for <strong>educational and research purposes only</strong>.
+</div>
+
+<div class="text-xl mb-4">
+<strong>Do not try this at home.</strong> Real trading is far more subtle and complex than these coarse methods suggest.
+</div>
+
+<div class="text-lg mb-4">
+The strategies shown involve significant risks including:<br>
+• Loss of principal • Margin calls • Emotional stress • Tax implications
+</div>
+
+<div class="text-lg mb-4">
+<strong>Always consult a qualified financial advisor</strong> before making investment decisions.
+</div>
+
+<div class="text-sm text-gray-400 mt-8">
+Past performance does not guarantee future results. Backtesting has inherent limitations and biases.
+</div>
+
+</v-clicks>
+
+---
+
+# 5: Solution - Enhanced DCA Framework
 
 <br>
 
@@ -89,7 +153,7 @@ Let's explore the answer through Enhanced DCA Strategies
 
 ---
 
-# 2: Solution - Enhanced DCA Framework
+# 5: Solution - Enhanced DCA Framework
 
 Deep Dive into Systematic DCA Strategies
 
@@ -118,7 +182,7 @@ layout: center
 class: text-center
 ---
 
-# 3: Enhanced DCA Overview
+# 6: Enhanced DCA Overview
 
 Beyond Vanilla DCA - Intelligent, Adaptive Strategies
 
@@ -151,7 +215,7 @@ This tool implements **8 advanced strategy enhancements**:
 
 ---
 
-# 4: Strategy #1 - Grid-Based DCA
+# 7: Strategy #1 - Grid-Based DCA
 
 Price-Triggered Buy/Sell at Systematic Intervals
 
@@ -181,7 +245,7 @@ Price-Triggered Buy/Sell at Systematic Intervals
 
 ---
 
-# 4: Grid Comparison Example
+# 7: Grid Comparison Example
 
 |Price Level|Fixed 10%|Dynamic Grid|
 |-----------|---------|------------|
@@ -203,7 +267,7 @@ Price-Triggered Buy/Sell at Systematic Intervals
 
 ---
 
-# 5: Strategy #2 - Trailing Stop Orders
+# 8: Strategy #2 - Trailing Stop Orders
 
 Momentum Confirmation for Entries & Exits
 
@@ -225,7 +289,7 @@ Momentum Confirmation for Entries & Exits
 
 ---
 
-# 5: Order Types
+# 8: Order Types
 
 <br>
 
@@ -256,7 +320,7 @@ Day 7: Price $91 (3% rebound) → BUY EXECUTED
 
 ---
 
-# 6: Strategy #3 - Momentum-Based Trading
+# 9: Strategy #3 - Momentum-Based Trading
 
 Contrarian vs. Trend-Following Approaches
 
@@ -278,7 +342,7 @@ Contrarian vs. Trend-Following Approaches
 
 ---
 
-# 6: Momentum Sell Mode
+# 9: Momentum Sell Mode
 
 <br>
 
@@ -291,7 +355,7 @@ Contrarian vs. Trend-Following Approaches
 
 ---
 
-# 6: Comparison Table
+# 9: Comparison Table
 
 <br>
 
@@ -318,7 +382,7 @@ Portfolio: +$5,000 (profitable), Price: Dips 10%
 
 ---
 
-# 7: Strategy #4 - Consecutive Incremental Profit
+# 10: Strategy #4 - Consecutive Incremental Profit
 
 "Let Winners Run" with Systematic Profit-Taking
 
@@ -343,7 +407,7 @@ Portfolio: +$5,000 (profitable), Price: Dips 10%
 
 ---
 
-# 7: Visual Example
+# 10: Visual Example
 
 <br>
 
@@ -375,7 +439,7 @@ Lot 3 (bought @$81):  SELL @$101 (25% profit) ✓
 
 ---
 
-# 8: Strategy #5 - Scenario Detection
+# 11: Strategy #5 - Scenario Detection
 
 AI-Powered Market Classification
 
@@ -404,7 +468,7 @@ AI-Powered Market Classification
 
 ---
 
-# 8: What You Get from Scenario Detection
+# 11: What You Get from Scenario Detection
 
 <br>
 
@@ -437,7 +501,7 @@ Win Rate: 15% | Capital Efficiency: 22% | Max Drawdown: -68%
 
 ---
 
-# 9: Strategy #6 - Short Selling
+# 12: Strategy #6 - Short Selling
 
 Profiting from Downtrends with Risk Management
 
@@ -464,7 +528,7 @@ Profiting from Downtrends with Risk Management
 
 ---
 
-# 9: Cascade Stop Losses
+# 12: Cascade Stop Losses
 
 <br>
 
@@ -494,7 +558,7 @@ Level 4: Emergency Stop (market crash)
 
 ---
 
-# 10: Strategy #7 - Beta Scaling
+# 13: Strategy #7 - Beta Scaling
 
 Risk Parity Across Different Stocks
 
@@ -517,7 +581,7 @@ Adjusted Position Size = Base Size / Beta Factor
 
 ---
 
-# 10: Beta Scaling Example
+# 13: Beta Scaling Example
 
 <br>
 
@@ -540,7 +604,7 @@ Adjusted Position Size = Base Size / Beta Factor
 
 ---
 
-# 11: Strategy #8 - Technical Indicators
+# 14: Strategy #8 - Technical Indicators
 
 Multi-Layered Market Analysis
 
@@ -565,7 +629,7 @@ Multi-Layered Market Analysis
 
 ---
 
-# 11: More Technical Indicators
+# 14: More Technical Indicators
 
 <br>
 
@@ -585,7 +649,7 @@ Multi-Layered Market Analysis
 
 ---
 
-# 12: The Moment of Truth - Backtesting
+# 15: The Moment of Truth - Backtesting
 
 Comprehensive Testing Framework
 
@@ -609,7 +673,7 @@ Comprehensive Testing Framework
 
 ---
 
-# 12: Batch Mode Backtesting
+# 15: Batch Mode Backtesting
 
 <br>
 
@@ -634,7 +698,7 @@ Comprehensive Testing Framework
 
 ---
 
-# 12: Portfolio Mode Backtesting
+# 15: Portfolio Mode Backtesting
 
 Multi-Symbol Testing with Capital Constraints
 
@@ -659,7 +723,82 @@ Multi-Symbol Testing with Capital Constraints
 
 ---
 
-# 12: Capital Efficiency Benefits
+# 15: Understanding Lots (Tranches)
+
+The Building Block of DCA Position Management
+
+## What is a Lot/Tranche?
+
+<v-clicks>
+
+A **lot** (or tranche) is a single unit of investment entered at a specific price point.
+
+**Key Characteristics:**
+- Each lot is bought at a **different entry price**
+- Each lot has its **own cost basis and P/L**
+- Each lot may require a **different time horizon** to become profitable
+- Multiple lots form a **position** in a stock
+
+</v-clicks>
+
+---
+
+# 15: Lot Example - NVDA Position
+
+<br>
+
+## Example: Building a Position Over Time
+
+| Lot # | Entry Date | Entry Price | Shares | Cost Basis | Current P/L |
+|-------|------------|-------------|--------|------------|-------------|
+| 1 | Jan 2024 | $480 | 10 | $4,800 | +$2,200 (+46%) |
+| 2 | Mar 2024 | $850 | 5 | $4,250 | -$500 (-12%) |
+| 3 | Aug 2024 | $100 | 20 | $2,000 | +$1,200 (+60%) |
+
+<v-click>
+
+<br>
+
+## Key Insight
+- **Lot 1:** Profitable in 3 months (early entry)
+- **Lot 2:** Still underwater (bought at local peak)
+- **Lot 3:** Profitable quickly (bought dip after correction)
+
+**Each lot tells its own story** - averaging in spreads risk across time
+
+</v-click>
+
+---
+
+# 15: Why Lots Matter in Portfolio Mode
+
+<br>
+
+<v-clicks>
+
+**1. Individual P/L Tracking**
+- Know exactly which entries are profitable
+- Identify which lots to sell first (tax-loss harvesting)
+
+**2. Different Time Horizons**
+- Early lots may profit quickly
+- Later lots (bought at peaks) need more time
+- Don't panic sell underwater lots prematurely
+
+**3. Position Building Strategy**
+- DCA naturally creates multiple lots
+- Grid spacing determines lot entry points
+- Capital constraint limits total lots across portfolio
+
+**4. Risk Distribution**
+- No single entry point determines success
+- Bad timing on one lot is offset by good timing on others
+
+</v-clicks>
+
+---
+
+# 15: Capital Efficiency Benefits
 
 <br>
 
@@ -686,7 +825,7 @@ Multi-Symbol Testing with Capital Constraints
 
 ---
 
-# 13: Demo 1 - TSLA 2021-2024
+# 16: Demo 1 - TSLA 2021-2024
 
 Extreme Volatility Period (Actual Backtest Data)
 
@@ -714,7 +853,7 @@ Peak: $414, Bottom: $102
 
 ---
 
-# 14: Demo 2 - Batch Optimization
+# 17: Demo 2 - Batch Optimization
 
 Finding Optimal Parameters for PLTR (2021-2024)
 
@@ -740,7 +879,7 @@ Finding Optimal Parameters for PLTR (2021-2024)
 
 ---
 
-# 15: Demo 3 - Nasdaq 100 Portfolio
+# 18: Demo 3 - Nasdaq 100 Portfolio
 
 10-Stock Diversified Portfolio
 
@@ -755,7 +894,7 @@ NVDA, TSLA, AAPL, MSFT, META, GOOGL, AMZN, NFLX, AMD, AVGO
 
 ---
 
-# 15: Capital Constraint Demonstration
+# 18: Capital Constraint Demonstration
 
 <br>
 
@@ -783,7 +922,7 @@ Day 90: AAPL +30%
 
 ---
 
-# 15: Portfolio Results
+# 18: Portfolio Results
 
 <br>
 
@@ -799,7 +938,7 @@ Day 90: AAPL +30%
 
 ---
 
-# 15: Key Insights
+# 18: Key Insights
 
 <br>
 
@@ -831,7 +970,7 @@ Dynamic allocation with constraints >> Static allocation
 
 ---
 
-# 16: Demo 4 - Full Nasdaq 100 Backtest
+# 19: Demo 4 - Full Nasdaq 100 Backtest
 
 Testing All 100 Stocks with Historical Accuracy
 
@@ -851,7 +990,7 @@ Simple approach: Backtest current 100 Nasdaq stocks for 2021-2024
 
 ---
 
-# 16: Survivorship Bias Handling
+# 19: Survivorship Bias Handling
 
 <br>
 
@@ -877,7 +1016,7 @@ Simple approach: Backtest current 100 Nasdaq stocks for 2021-2024
 
 ---
 
-# 16: Index Changes Example
+# 19: Index Changes Example
 
 <br>
 
@@ -898,7 +1037,7 @@ Simple approach: Backtest current 100 Nasdaq stocks for 2021-2024
 
 ---
 
-# 16: Beta Grouping Analysis
+# 19: Beta Grouping Analysis
 
 Identifying Which Volatility Profiles Suit DCA Best (Spec 55)
 
@@ -922,7 +1061,7 @@ Group 100 Nasdaq stocks into 5 beta ranges:
 
 ---
 
-# 16: Beta Group Performance Metrics
+# 19: Beta Group Performance Metrics
 
 <br>
 
@@ -950,7 +1089,7 @@ Group 100 Nasdaq stocks into 5 beta ranges:
 
 ---
 
-# 16: DCA Suitability Score
+# 19: DCA Suitability Score
 
 Composite Metric for Strategy Fit (0-100 scale)
 
@@ -977,7 +1116,7 @@ Composite Metric for Strategy Fit (0-100 scale)
 
 ---
 
-# 16: Hypothetical Beta Group Results
+# 19: Hypothetical Beta Group Results
 
 *Note: Illustrative example - actual results vary by time period*
 
@@ -1002,7 +1141,7 @@ Composite Metric for Strategy Fit (0-100 scale)
 
 ---
 
-# 16: Idle Cash Optimization
+# 19: Idle Cash Optimization
 
 Making Every Dollar Work (Spec 40)
 
@@ -1025,7 +1164,7 @@ Making Every Dollar Work (Spec 40)
 
 ---
 
-# 16: Full Nasdaq 100 Summary
+# 19: Full Nasdaq 100 Summary
 
 <br>
 
@@ -1053,7 +1192,7 @@ Making Every Dollar Work (Spec 40)
 
 ---
 
-# 17: Demo 5 - NVDA AI Boom
+# 20: Demo 5 - NVDA AI Boom
 
 *(Illustrative Example)*
 
@@ -1069,7 +1208,7 @@ AI boom rally (2023-2024, $150 → $900 approximate range)
 
 ---
 
-# 17: Illustrative Results
+# 20: Illustrative Results
 
 <br>
 
@@ -1089,7 +1228,7 @@ AI boom rally (2023-2024, $150 → $900 approximate range)
 
 ---
 
-# 17: Why DCA Underperforms in Fast Rallies
+# 20: Why DCA Underperforms in Fast Rallies
 
 <br>
 
@@ -1123,7 +1262,7 @@ AI boom rally (2023-2024, $150 → $900 approximate range)
 
 ---
 
-# 18: Deployment Architecture
+# 21: Deployment Architecture
 
 Production-Ready on Render.com
 
@@ -1143,7 +1282,7 @@ Production-Ready on Render.com
 
 ---
 
-# 18: Render Deployment
+# 21: Render Deployment
 
 <br>
 
@@ -1164,7 +1303,7 @@ Production-Ready on Render.com
 
 ---
 
-# 19: Development Methodology
+# 22: Development Methodology
 
 Built with Claude Code & Context Engineering
 
@@ -1192,7 +1331,7 @@ Built with Claude Code & Context Engineering
 
 ---
 
-# 20: Context Engineering - The Framework
+# 23: Context Engineering - The Framework
 
 Natural Language Agile Development
 
@@ -1221,7 +1360,7 @@ Use structured natural language specifications instead of traditional SAAS tools
 
 ---
 
-# 20: Context Engineering (continued)
+# 23: Context Engineering (continued)
 
 <br>
 
@@ -1253,7 +1392,7 @@ Use structured natural language specifications instead of traditional SAAS tools
 
 ---
 
-# 20: Why This Works
+# 23: Why This Works
 
 <br>
 
@@ -1285,7 +1424,7 @@ Use structured natural language specifications instead of traditional SAAS tools
 
 ---
 
-# 21: Context Engineering - Specifications
+# 24: Context Engineering - Specifications
 
 The "JIRA Ticket" Equivalent
 
@@ -1315,7 +1454,7 @@ The "JIRA Ticket" Equivalent
 
 ---
 
-# 21: Spec Benefits
+# 24: Spec Benefits
 
 <br>
 
@@ -1348,7 +1487,7 @@ The "JIRA Ticket" Equivalent
 
 ---
 
-# 22: Context Engineering - Skills
+# 25: Context Engineering - Skills
 
 Reusable AI Workflows
 
@@ -1375,7 +1514,7 @@ Reusable AI Workflows
 
 ---
 
-# 22: Superpowers Skills
+# 25: Superpowers Skills
 
 Plugin from superpowers.dev
 
@@ -1400,7 +1539,7 @@ Plugin from superpowers.dev
 
 ---
 
-# 22: Skills as "QA Process"
+# 25: Skills as "QA Process"
 
 <br>
 
@@ -1433,7 +1572,7 @@ Plugin from superpowers.dev
 
 ---
 
-# 23: Context Engineering - MCP Integration
+# 26: Context Engineering - MCP Integration
 
 Model Context Protocol for Real-World Data
 
@@ -1456,7 +1595,7 @@ Protocol for connecting Claude to external services
 
 ---
 
-# 23: How Render MCP Helps Development
+# 26: How Render MCP Helps Development
 
 <br>
 
@@ -1485,7 +1624,7 @@ Protocol for connecting Claude to external services
 
 ---
 
-# 23: Other MCP Integrations
+# 26: Other MCP Integrations
 
 <br>
 
@@ -1516,7 +1655,7 @@ Protocol for connecting Claude to external services
 
 ---
 
-# 24: CLAUDE.md - AI Instructions
+# 27: CLAUDE.md - AI Instructions
 
 Project Guidelines for Consistent Quality
 
@@ -1538,7 +1677,7 @@ Project Guidelines for Consistent Quality
 
 ---
 
-# 24: CLAUDE.md Impact
+# 27: CLAUDE.md Impact
 
 <br>
 
@@ -1573,7 +1712,7 @@ Project Guidelines for Consistent Quality
 
 ---
 
-# 25: Development Workflow (Reality Check)
+# 28: Development Workflow (Reality Check)
 
 Actual Workflow with Improvement Opportunities
 
@@ -1599,7 +1738,7 @@ Git Commit (structured history)
 
 ---
 
-# 25: What We Did Well ✅
+# 28: What We Did Well ✅
 
 <br>
 
@@ -1615,7 +1754,7 @@ Git Commit (structured history)
 
 ---
 
-# 25: What We Skipped (Honestly) ⚠️
+# 28: What We Skipped (Honestly) ⚠️
 
 <br>
 
@@ -1638,7 +1777,7 @@ Git Commit (structured history)
 
 ---
 
-# 25: Code Reviewer Skill (Quality Check)
+# 28: Code Reviewer Skill (Quality Check)
 
 <br>
 
@@ -1662,7 +1801,7 @@ Git Commit (structured history)
 
 ---
 
-# 26: Future Development Improvements
+# 29: Future Development Improvements
 
 Lessons Learned & Best Practices
 
@@ -1684,7 +1823,7 @@ Automated Test Suite (runs before commit)
 
 ---
 
-# 26: Mandatory Code Review
+# 29: Mandatory Code Review
 
 <br>
 
@@ -1714,7 +1853,7 @@ Reviewer Rejects? → Back to Implementation
 
 ---
 
-# 26: Realistic Assessment
+# 29: Realistic Assessment
 
 <br>
 
@@ -1742,7 +1881,7 @@ Reviewer Rejects? → Back to Implementation
 
 ---
 
-# 26: The ROI of Proper Testing
+# 29: The ROI of Proper Testing
 
 <br>
 
@@ -1776,7 +1915,7 @@ Reviewer Rejects? → Back to Implementation
 
 ---
 
-# 27: Context Engineering Summary
+# 30: Context Engineering Summary
 
 Why This Approach Works
 
@@ -1802,7 +1941,7 @@ Why This Approach Works
 
 ---
 
-# 27: The Key Insight
+# 30: The Key Insight
 
 <br>
 

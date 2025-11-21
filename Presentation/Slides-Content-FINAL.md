@@ -1,10 +1,18 @@
 # DCA Backtest Tool - Complete Presentation Content
 
-*All slides in readable format - Updated with Demo 4 (Nasdaq 100) and Context Engineering*
+*All slides in readable format - Updated with Disclaimer, Lots/Tranches, Demo 4 (Nasdaq 100) and Context Engineering*
 
 ---
 
-## Slide 1: Problem Statement
+## Slide 1: Title
+
+**DCA Backtest Tool**
+
+Enhanced Dollar Cost Averaging for Volatile Stocks
+
+---
+
+## Slide 2: Problem Statement
 
 ### The Challenge of Investing in Volatile, High-Growth Stocks
 
@@ -30,7 +38,27 @@
 
 ---
 
-## Slide 2: Solution - Enhanced DCA Framework
+## Slide 3: Important Disclaimer
+
+### ⚠️ NOT FINANCIAL ADVICE ⚠️
+
+This presentation is for **educational and research purposes only**.
+
+**Do not try this at home.** Real trading is far more subtle and complex than these coarse methods suggest.
+
+**The strategies shown involve significant risks including:**
+- Loss of principal
+- Margin calls
+- Emotional stress
+- Tax implications
+
+**Always consult a qualified financial advisor** before making investment decisions.
+
+*Past performance does not guarantee future results. Backtesting has inherent limitations and biases.*
+
+---
+
+## Slide 4: Solution - Enhanced DCA Framework
 
 ### Deep Dive into Systematic DCA Strategies for Volatile Stocks
 
@@ -51,7 +79,7 @@
 
 ---
 
-## Slide 3: Enhanced DCA Overview
+## Slide 5: Enhanced DCA Overview
 
 ### Beyond Vanilla DCA - Intelligent, Adaptive Strategies
 
@@ -70,7 +98,7 @@ This tool implements **8 advanced strategy enhancements** over vanilla DCA:
 
 ---
 
-## Slide 4: Strategy #1 - Grid-Based DCA
+## Slide 6: Strategy #1 - Grid-Based DCA
 
 ### Price-Triggered Buy/Sell at Systematic Intervals
 
@@ -104,7 +132,7 @@ $1000          $100 (10%)   $35 (3.5%)
 
 ---
 
-## Slide 5: Strategy #2 - Trailing Stop Orders
+## Slide 7: Strategy #2 - Trailing Stop Orders
 
 ### Momentum Confirmation for Entries & Exits
 
@@ -140,7 +168,7 @@ Day 7: Price $91 (3% rebound) → BUY EXECUTED
 
 ---
 
-## Slide 6: Strategy #3 - Momentum-Based Trading
+## Slide 8: Strategy #3 - Momentum-Based Trading
 
 ### Contrarian vs. Trend-Following Approaches
 
@@ -183,7 +211,7 @@ Price: Dips 10%
 
 ---
 
-## Slide 7: Strategy #4 - Consecutive Incremental Profit
+## Slide 9: Strategy #4 - Consecutive Incremental Profit
 
 ### "Let Winners Run" with Systematic Profit-Taking
 
@@ -219,7 +247,7 @@ Lot 3 (bought @$81):  SELL @$101 (25% profit) ✓
 
 ---
 
-## Slide 8: Strategy #5 - Scenario Detection & Adaptation
+## Slide 10: Strategy #5 - Scenario Detection & Adaptation
 
 ### AI-Powered Market Classification
 
@@ -264,7 +292,7 @@ Max Drawdown: -68%
 
 ---
 
-## Slide 9: Strategy #6 - Short Selling with Advanced Controls
+## Slide 11: Strategy #6 - Short Selling with Advanced Controls
 
 ### Profiting from Downtrends with Risk Management
 
@@ -305,7 +333,7 @@ Level 4: Emergency Stop (market crash) → Immediate market orders
 
 ---
 
-## Slide 10: Strategy #7 - Beta Scaling & Volatility Adjustment
+## Slide 12: Strategy #7 - Beta Scaling & Volatility Adjustment
 
 ### Risk Parity Across Different Stocks
 
@@ -341,7 +369,7 @@ Adjusted Position Size = Base Size / Beta Factor
 
 ---
 
-## Slide 11: Strategy #8 - Technical Indicators
+## Slide 13: Strategy #8 - Technical Indicators
 
 ### Multi-Layered Market Analysis
 
@@ -387,7 +415,7 @@ High Volatility Event (Volatility 45%):
 
 ---
 
-## Slide 12: The Moment of Truth - Backtesting
+## Slide 14: The Moment of Truth - Backtesting
 
 ### Comprehensive Testing Framework
 
@@ -473,7 +501,7 @@ Dynamic Approach (Capital Constraint):
 
 ---
 
-## Slide 13: Demo 1 - TSLA 2021-2024
+## Slide 15: Demo 1 - TSLA 2021-2024
 
 ### Extreme Volatility Period (Actual Backtest Data)
 
@@ -495,7 +523,7 @@ Dynamic Approach (Capital Constraint):
 
 ---
 
-## Slide 14: Demo 2 - Batch Optimization
+## Slide 16: Demo 2 - Batch Optimization
 
 ### Finding Optimal Parameters for PLTR (2021-2024)
 
@@ -518,7 +546,7 @@ Dynamic Approach (Capital Constraint):
 
 ---
 
-## Slide 15: Demo 3 - Portfolio Mode (Nasdaq 100)
+## Slide 17: Demo 3 - Portfolio Mode (Nasdaq 100)
 
 ### Diversified Portfolio of 10 Nasdaq 100 Stocks
 
@@ -580,7 +608,58 @@ Day 90: AAPL +30%
 
 ---
 
-## Slide 16: Demo 4 - Full Nasdaq 100 Backtest (NEW!)
+## Slide 18: Understanding Lots (Tranches)
+
+### The Building Block of DCA Position Management
+
+#### **What is a Lot/Tranche?**
+
+A **lot** (or tranche) is a single unit of investment entered at a specific price point.
+
+**Key Characteristics:**
+- Each lot is bought at a **different entry price**
+- Each lot has its **own cost basis and P/L**
+- Each lot may require a **different time horizon** to become profitable
+- Multiple lots form a **position** in a stock
+
+#### **Example: Building a Position Over Time (NVDA)**
+
+| Lot # | Entry Date | Entry Price | Shares | Cost Basis | Current P/L |
+|-------|------------|-------------|--------|------------|-------------|
+| 1 | Jan 2024 | $480 | 10 | $4,800 | +$2,200 (+46%) |
+| 2 | Mar 2024 | $850 | 5 | $4,250 | -$500 (-12%) |
+| 3 | Aug 2024 | $100 | 20 | $2,000 | +$1,200 (+60%) |
+
+**Key Insight:**
+- **Lot 1:** Profitable in 3 months (early entry)
+- **Lot 2:** Still underwater (bought at local peak)
+- **Lot 3:** Profitable quickly (bought dip after correction)
+
+**Each lot tells its own story** - averaging in spreads risk across time
+
+#### **Why Lots Matter in Portfolio Mode**
+
+**1. Individual P/L Tracking**
+- Know exactly which entries are profitable
+- Identify which lots to sell first (tax-loss harvesting)
+
+**2. Different Time Horizons**
+- Early lots may profit quickly
+- Later lots (bought at peaks) need more time
+- Don't panic sell underwater lots prematurely
+
+**3. Position Building Strategy**
+- DCA naturally creates multiple lots
+- Grid spacing determines lot entry points
+- Capital constraint limits total lots across portfolio
+
+**4. Risk Distribution**
+- No single entry point determines success
+- Bad timing on one lot is offset by good timing on others
+
+---
+
+## Slide 19: Demo 4 - Full Nasdaq 100 Backtest
 
 ### Testing All 100 Stocks with Historical Accuracy
 
@@ -623,7 +702,7 @@ Simple approach: Backtest current 100 Nasdaq stocks for 2021-2024
 
 ---
 
-## Slide 17: Demo 4 - Beta Grouping Analysis (Spec 55)
+## Slide 20: Demo 4 - Beta Grouping Analysis (Spec 55)
 
 ### Identifying Which Volatility Profiles Suit DCA Best
 
@@ -731,7 +810,7 @@ Group 100 Nasdaq stocks into 5 beta ranges:
 
 ---
 
-## Slide 18: Demo 5 - NVDA AI Boom (Illustrative Example)
+## Slide 21: Demo 5 - NVDA AI Boom (Illustrative Example)
 
 **Note:** *This demo uses illustrative numbers to show strategy behavior. For actual backtest results, run the tool with your parameters.*
 
@@ -765,7 +844,7 @@ Group 100 Nasdaq stocks into 5 beta ranges:
 
 ---
 
-## Slide 19: Deployment Architecture
+## Slide 22: Deployment Architecture
 
 ### Production-Ready on Render.com
 
@@ -805,7 +884,7 @@ Group 100 Nasdaq stocks into 5 beta ranges:
 
 ---
 
-## Slide 20: Development Methodology
+## Slide 23: Development Methodology
 
 ### Built with Claude Code & Context Engineering
 
@@ -823,7 +902,7 @@ Group 100 Nasdaq stocks into 5 beta ranges:
 
 ---
 
-## Slide 21: Context Engineering - The Framework
+## Slide 24: Context Engineering - The Framework
 
 ### Natural Language Agile Development
 
@@ -876,7 +955,7 @@ Use structured natural language specifications instead of traditional SAAS tools
 
 ---
 
-## Slide 22: Context Engineering - Specifications
+## Slide 25: Context Engineering - Specifications
 
 ### The "JIRA Ticket" Equivalent
 
@@ -921,7 +1000,7 @@ Use structured natural language specifications instead of traditional SAAS tools
 
 ---
 
-## Slide 23: Context Engineering - Skills
+## Slide 26: Context Engineering - Skills
 
 ### Reusable AI Workflows
 
@@ -978,7 +1057,7 @@ Use structured natural language specifications instead of traditional SAAS tools
 
 ---
 
-## Slide 24: Context Engineering - MCP Integration
+## Slide 27: Context Engineering - MCP Integration
 
 ### Model Context Protocol for Real-World Data
 
@@ -1035,7 +1114,7 @@ Protocol for connecting Claude to external services
 
 ---
 
-## Slide 25: CLAUDE.md - AI Instructions
+## Slide 28: CLAUDE.md - AI Instructions
 
 ### Project Guidelines for Consistent Quality
 
@@ -1072,7 +1151,7 @@ Protocol for connecting Claude to external services
 
 ---
 
-## Slide 26: Development Workflow (Reality Check)
+## Slide 29: Development Workflow (Reality Check)
 
 ### Actual Workflow with Improvement Opportunities
 
@@ -1135,7 +1214,7 @@ Git Commit (structured history)
 
 ---
 
-## Slide 27: Future Development Improvements
+## Slide 30: Future Development Improvements
 
 ### Lessons Learned & Best Practices
 
@@ -1220,7 +1299,7 @@ Reviewer Rejects? → Back to Implementation
 
 ---
 
-## Slide 28: Context Engineering Summary
+## Slide 31: Context Engineering Summary
 
 ### Why This Approach Works
 
@@ -1256,7 +1335,7 @@ Reviewer Rejects? → Back to Implementation
 
 ---
 
-## Slide 29: Appendix - Performance Comparisons
+## Slide 32: Appendix - Performance Comparisons
 
 ### Vanilla DCA vs. Enhanced DCA
 
@@ -1294,7 +1373,7 @@ Reviewer Rejects? → Back to Implementation
 
 ---
 
-## Slide 30: Why This Matters & Next Steps
+## Slide 33: Why This Matters & Next Steps
 
 ### For Individual Investors
 
@@ -1337,4 +1416,4 @@ Built with Claude Code | Deployed on Render.com | Open for Contributions
 
 **END OF PRESENTATION**
 
-*Total: 30 slides covering Problem Statement, 8 Enhanced Strategies, Backtesting Framework, 5 Demonstrations, Deployment, and Context Engineering Methodology*
+*Total: 33 slides covering Disclaimer, Problem Statement, 8 Enhanced Strategies, Lots/Tranches Concept, Backtesting Framework, 5 Demonstrations, Deployment, and Context Engineering Methodology*
