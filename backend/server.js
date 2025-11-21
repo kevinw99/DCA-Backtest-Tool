@@ -100,7 +100,7 @@ app.get('/api', (req, res) => {
         '/api/stocks/:symbol/fundamentals': 'GET - Get fundamental data (query: startDate, endDate)'
       },
       backtest: {
-        '/api/backtest/dca': `POST - Run DCA backtest (single stock) | UI: ${frontendUrl}/backtest/long/AAPL`,
+        '/api/backtest/dca': `POST - Run DCA backtest (single stock) | UI: ${frontendUrl}/backtest/long/NVDA`,
         '/api/backtest/portfolio': `POST - Run portfolio backtest | UI: ${frontendUrl}/portfolio-backtest`,
         '/api/backtest/batch': `POST - Run batch backtest | UI: ${frontendUrl}/batch`
       },

@@ -439,6 +439,15 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
         if (urlParams[key] !== undefined && urlParams[key] !== null && urlParams[key] !== '') {
           const value = urlParamMapping[key](urlParams[key]);
 
+          // Special handling for symbol: ensure it's in availableSymbols
+          if (key === 'symbol' && typeof value === 'string') {
+            const upperSymbol = value.toUpperCase();
+            if (!availableSymbols.includes(upperSymbol)) {
+              console.log(`📌 Adding symbol from URL to available symbols: ${upperSymbol}`);
+              setAvailableSymbols(prev => [...prev, upperSymbol].sort());
+            }
+          }
+
           // Common parameters apply to both strategies
           const commonParams = [
             'symbol', 'startDate', 'endDate', 'lotSizeUsd', 'gridIntervalPercent', 'profitRequirement',
@@ -468,6 +477,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
               updatedShortParams[key] = value;
               hasChanges = true;
               hasShortChanges = true;
+              console.log(`✓ URL param applied: ${key} = ${value}`);
             }
           } else if (longParams.includes(key) && targetStrategy === 'long') {
             // Apply long-specific parameters only to long parameter set
@@ -495,7 +505,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
         setBatchMode(true);
       }
     }
-  }, [urlParams, loadingDefaults]); // Run when urlParams OR loadingDefaults change (NOT parameters to avoid infinite loop)
+  }, [urlParams, loadingDefaults]); // Run when urlParams OR loadingDefaults change (NOT parameters/availableSymbols to avoid infinite loop)
 
   // Handle autoRun functionality
   useEffect(() => {

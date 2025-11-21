@@ -1,0 +1,52 @@
+S1 means slide 1, S2 means slide 2, and so on.
+
+
+S1: Problem Statement
+
+1. when you know a long term good stock like NVDA, TSLA or any of the magnificent 7, how do you invest in the stock while whether the volatility?
+2. A long term successful stock will always have volatility,.
+3. My personal expereience with TSLA and NVDA
+4. Can you do better than buy and hold strategy?
+5. can you do better than the broad market index like S&P500?
+
+S2: Solution/Experiment Overview
+Deep Dive into Investing Strategies for Volatile and long term successful Stocks
+
+DCA - Dollar Cost Averaging
+The vanilla version:
+- Invest a fixed amount of money at regular intervals (e.g., monthly) regardless of the stock price.
+- Benefits: Reduces the impact of volatility, lowers the average cost per share over time.
+- Example: Investing $500 every month in NVDA or TSLA.
+
+S3: Enhanced DCA Strategies
+The enhanced version:
+- grid based DCA
+
+- various strategies: please list the various strategies implemented in this project, check each spec.
+- technical indicator?
+
+S4
+The moment of truth - Backtesting
+- different modes:
+Single stock :
+Batch Mode :
+Portfolio Mode :
+
+S5
+Demonstration
+
+S6
+
+Deployment :Render
+
+S7
+
+Development methodology
+
+Claude code:
+Context Engineering
+    -Specification
+    -Skills
+    -MCP
+
+
