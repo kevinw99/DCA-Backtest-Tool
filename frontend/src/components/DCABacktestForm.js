@@ -822,8 +822,8 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
       const convertPercentageArray = (arr) => arr.map(val => val / 100);
 
       const batchOptions = {
+        symbols: batchParameters.symbols,  // symbols at top level for API
         parameterRanges: {
-          symbols: batchParameters.symbols,
           coefficients: batchParameters.coefficients,  // Not percentages, leave as-is
           maxLotsToSell: batchParameters.maxLotsToSell,  // Not percentages, leave as-is
           // Convert percentage parameters: 10 → 0.10
@@ -854,6 +854,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
         },
         sortBy: 'totalReturn'
       };
+      console.log('📤 Batch options being sent:', { symbols: batchOptions.symbols, hasSymbols: !!batchOptions.symbols, symbolsLength: batchOptions.symbols?.length });
       onSubmit(batchOptions, true); // true indicates batch mode
     } else {
       // Convert percentage parameters from whole numbers to decimals for API (CP-2)

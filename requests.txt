@@ -61,6 +61,12 @@ Profit Factor
 Expectancy
 $8,574.21 (what is Expectancy?)
 
+
+
+I need you to help me write a slide for presentation. I have the key points in Presentation/Slides.txt.Can you populate the slide content based on the key points?
+
+
+
 5. think about these metrics for buy and hold strategy, some may not be applicable, please handle appropriately.,
 
 
