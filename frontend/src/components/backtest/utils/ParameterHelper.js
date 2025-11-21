@@ -335,7 +335,7 @@ export const ParameterHelper = {
    * @param {string} symbol - Stock symbol
    * @returns {Object} Single stock default parameters
    */
-  getSingleStockDefaults(symbol = 'AAPL') {
+  getSingleStockDefaults(symbol = 'NVDA') {
     const stockDefaults = this.flattenDefaults(this.getStockDefaults(symbol));
 
     return {

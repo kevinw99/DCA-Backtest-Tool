@@ -1,0 +1,27 @@
+{
+  "name": "dca-backtest-presentation",
+  "version": "1.0.0",
+  "description": "DCA Backtest Tool Presentation - Enhanced Trading Strategies",
+  "type": "module",
+  "scripts": {
+    "dev": "slidev",
+    "build": "slidev build",
+    "export": "slidev export",
+    "start": "npx serve dist"
+  },
+  "keywords": [
+    "slidev",
+    "presentation",
+    "dca",
+    "trading"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@slidev/cli": "^52.9.1",
+    "@slidev/theme-default": "^0.25.0"
+  },
+  "dependencies": {
+    "serve": "^14.2.5"
+  }
+}

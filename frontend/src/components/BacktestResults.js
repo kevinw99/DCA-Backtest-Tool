@@ -1288,8 +1288,6 @@ const BacktestResults = ({ data, chartData: priceData, metadata }) => {
         <span><strong>{summary.strategy === 'SHORT_DCA' ? 'Shorts' : 'Lots'} Held:</strong> {summary.lotsHeld}</span>
         <span><strong>Total Trades:</strong> {summary.totalTrades}</span>
         <span><strong>Win Rate:</strong> {summary.winRate ? formatPercent(summary.winRate) : 'N/A'}</span>
-        <span><strong>DCA Max Drawdown:</strong> {summary.performanceMetrics?.maxDrawdownPercent ? formatPercent(summary.performanceMetrics.maxDrawdownPercent) : 'N/A'}</span>
-        <span><strong>B&H Max Drawdown:</strong> {holdResults?.maxDrawdownPercent ? `${holdResults.maxDrawdownPercent.toFixed(2)}%` : 'N/A'}</span>
         {summary.consecutiveIncrementalBuyGridStats?.enabled && (
           <>
             <span><strong>Max Consecutive Buys:</strong> {summary.consecutiveIncrementalBuyGridStats.maxConsecutiveBuyCount}</span>

@@ -61,16 +61,14 @@ const ComparisonMetricsTable = ({ dcaMetrics, buyAndHoldMetrics }) => {
       metrics: [
         {
           label: 'Total Return',
-          dcaValue: dcaMetrics?.performanceMetrics?.totalReturn,
+          dcaValue: dcaMetrics?.totalReturn,
           bnhValue: buyAndHoldMetrics?.totalReturn,
           type: 'currency',
           higherIsBetter: true
         },
         {
           label: 'Total Return %',
-          dcaValue: dcaMetrics?.performanceMetrics?.totalReturn && dcaMetrics?.performanceMetrics?.avgDeployedCapital
-            ? dcaMetrics.performanceMetrics.totalReturn / dcaMetrics.performanceMetrics.avgDeployedCapital
-            : null,
+          dcaValue: dcaMetrics?.returnPercent ? dcaMetrics.returnPercent / 100 : null,
           bnhValue: buyAndHoldMetrics?.totalReturnPercent ? buyAndHoldMetrics.totalReturnPercent / 100 : null,
           type: 'percent',
           higherIsBetter: true
@@ -110,7 +108,7 @@ const ComparisonMetricsTable = ({ dcaMetrics, buyAndHoldMetrics }) => {
         },
         {
           label: 'Max Drawdown',
-          dcaValue: dcaMetrics?.performanceMetrics?.maxDrawdownPercent,
+          dcaValue: dcaMetrics?.maxDrawdownPercent ? dcaMetrics.maxDrawdownPercent / 100 : null,
           bnhValue: buyAndHoldMetrics?.maxDrawdownPercent ? buyAndHoldMetrics.maxDrawdownPercent / 100 : null,
           type: 'percent',
           higherIsBetter: false
@@ -153,7 +151,7 @@ const ComparisonMetricsTable = ({ dcaMetrics, buyAndHoldMetrics }) => {
         },
         {
           label: 'Total Trades',
-          dcaValue: dcaMetrics?.totalTrades,
+          dcaValue: dcaMetrics?.performanceMetrics?.totalTrades,
           bnhValue: null, // N/A for Buy & Hold
           type: 'number',
           higherIsBetter: null,

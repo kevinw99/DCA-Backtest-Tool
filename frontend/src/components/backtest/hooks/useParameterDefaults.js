@@ -30,7 +30,7 @@ export function useParameterDefaults(symbol, mode = 'single') {
     try {
       if (mode === 'single') {
         // Single stock mode: load global + stock-specific defaults
-        const stockSymbol = typeof symbol === 'string' ? symbol : 'AAPL';
+        const stockSymbol = typeof symbol === 'string' ? symbol : 'NVDA';
         const defaults = ParameterHelper.getSingleStockDefaults(stockSymbol);
         setParameters(defaults);
       } else if (mode === 'portfolio') {
@@ -45,7 +45,7 @@ export function useParameterDefaults(symbol, mode = 'single') {
       setError(err.message);
       // Set fallback defaults
       setParameters(mode === 'single'
-        ? ParameterHelper.getSingleStockDefaults('AAPL')
+        ? ParameterHelper.getSingleStockDefaults('NVDA')
         : ParameterHelper.getPortfolioDefaults()
       );
     } finally {
