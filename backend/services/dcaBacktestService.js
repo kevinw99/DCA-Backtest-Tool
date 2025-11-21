@@ -1125,7 +1125,7 @@ async function runDCABacktest(params, dayCallback = null) {
     transactionLog.push('');
     transactionLog.push('TRADING EFFICIENCY:');
     transactionLog.push(`   Win Rate: ${performanceMetrics.winRatePercent.toFixed(2)}%`);
-    transactionLog.push(`   Profit Factor: ${performanceMetrics.profitFactor.toFixed(3)}`);
+    transactionLog.push(`   Profit Factor: ${performanceMetrics.profitFactor !== null ? performanceMetrics.profitFactor.toFixed(3) : 'Infinite (no losses)'}`);
     transactionLog.push(`   Expectancy: $${performanceMetrics.expectancy.toFixed(2)}`);
     transactionLog.push(`   Avg Win: $${performanceMetrics.avgWin.toFixed(2)}`);
     transactionLog.push(`   Avg Loss: $${performanceMetrics.avgLoss.toFixed(2)}`);

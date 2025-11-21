@@ -68,8 +68,8 @@ class PerformanceCalculatorService {
 
     // Drawdown analysis
     const drawdownAnalysis = this._calculateDrawdownAnalysis(dailyPortfolioValues);
-    const calmarRatio = drawdownAnalysis.maxDrawdown > 0
-      ? cagr / drawdownAnalysis.maxDrawdown
+    const calmarRatio = drawdownAnalysis.maxDrawdownPercent > 0
+      ? cagr / Math.abs(drawdownAnalysis.maxDrawdownPercent)
       : 0;
 
     // Trading efficiency metrics
@@ -143,7 +143,7 @@ class PerformanceCalculatorService {
 
     console.log('\n🎯 TRADING EFFICIENCY:');
     console.log(`   Win Rate: ${(tradingMetrics.winRate * 100).toFixed(2)}%`);
-    console.log(`   Profit Factor: ${tradingMetrics.profitFactor.toFixed(3)}`);
+    console.log(`   Profit Factor: ${tradingMetrics.profitFactor !== null ? tradingMetrics.profitFactor.toFixed(3) : 'Infinite (no losses)'}`);
     console.log(`   Expectancy: $${tradingMetrics.expectancy.toFixed(2)}`);
     console.log(`   Avg Win: $${tradingMetrics.avgWin.toFixed(2)}`);
     console.log(`   Avg Loss: $${tradingMetrics.avgLoss.toFixed(2)}`);
@@ -318,9 +318,12 @@ class PerformanceCalculatorService {
     let maxDrawdown = 0;
     let maxDrawdownPercent = 0;
 
-    const drawdowns = [];
+    // Track drawdown periods - collect max drawdown for each unique period
+    const drawdownPeriods = [];
     let currentDrawdownStart = null;
     let currentDrawdownDuration = 0;
+    let currentDrawdownPeak = peak;
+    let currentMaxDrawdownPercent = 0;
     let maxDrawdownDuration = 0;
 
     for (let i = 1; i < portfolioValues.length; i++) {
@@ -329,18 +332,23 @@ class PerformanceCalculatorService {
       if (value > peak) {
         // New peak - end of drawdown period if there was one
         if (currentDrawdownStart !== null) {
+          // Record the maximum drawdown for this period
+          drawdownPeriods.push(currentMaxDrawdownPercent);
           maxDrawdownDuration = Math.max(maxDrawdownDuration, currentDrawdownDuration);
           currentDrawdownStart = null;
           currentDrawdownDuration = 0;
+          currentMaxDrawdownPercent = 0;
         }
         peak = value;
+        currentDrawdownPeak = value;
       } else if (value < peak) {
         // In drawdown
         const drawdown = peak - value;
         const drawdownPercent = drawdown / peak;
 
         if (drawdownPercent > 0) {
-          drawdowns.push(drawdownPercent);
+          // Track the maximum drawdown within this period
+          currentMaxDrawdownPercent = Math.max(currentMaxDrawdownPercent, drawdownPercent);
 
           if (currentDrawdownStart === null) {
             currentDrawdownStart = i;
@@ -357,13 +365,15 @@ class PerformanceCalculatorService {
       }
     }
 
-    // Handle ongoing drawdown
+    // Handle ongoing drawdown at the end
     if (currentDrawdownStart !== null) {
+      drawdownPeriods.push(currentMaxDrawdownPercent);
       maxDrawdownDuration = Math.max(maxDrawdownDuration, currentDrawdownDuration);
     }
 
-    const avgDrawdownPercent = drawdowns.length > 0
-      ? this._calculateAverage(drawdowns)
+    // Average drawdown is the average of maximum drawdowns across all periods
+    const avgDrawdownPercent = drawdownPeriods.length > 0
+      ? this._calculateAverage(drawdownPeriods)
       : 0;
 
     return {
@@ -398,7 +408,12 @@ class PerformanceCalculatorService {
 
     const grossProfits = profitableTrades.reduce((sum, t) => sum + t.profit, 0);
     const grossLosses = Math.abs(losingTrades.reduce((sum, t) => sum + t.profit, 0));
-    const profitFactor = grossLosses > 0 ? grossProfits / grossLosses : 0;
+    // Profit Factor = Gross Profits / Gross Losses
+    // If no losses (perfect strategy), return null to indicate undefined/infinite
+    // If no profits, return 0
+    const profitFactor = grossLosses > 0
+      ? grossProfits / grossLosses
+      : (grossProfits > 0 ? null : 0);
 
     const avgWin = profitableTrades.length > 0
       ? grossProfits / profitableTrades.length

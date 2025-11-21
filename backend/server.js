@@ -1259,7 +1259,9 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
         momentumMode: results.momentumMode,
         maxLotsReached: results.maxLotsReached,
         buyBlockedByPnL: results.buyBlockedByPnL,
-        positionMetrics: results.positionMetrics
+        positionMetrics: results.positionMetrics,
+        // Spec 59: Add comprehensive performance metrics at top level
+        performanceMetrics: results.performanceMetrics
       }
     });
 

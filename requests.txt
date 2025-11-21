@@ -63,11 +63,34 @@ $8,574.21 (what is Expectancy?)
 
 
 
-I need you to help me write a slide for presentation. I have the key points in Presentation/Slides.txt.Can you populate the slide content based on the key points?
-
-
-
 5. think about these metrics for buy and hold strategy, some may not be applicable, please handle appropriately.,
+6.
+http://localhost:3000/backtest/long/NVDA/results?startDate=2021-09-01&endDate=2025-10-26&lotSizeUsd=10000&maxLots=10&maxLotsToSell=1&gridIntervalPercent=10&profitRequirement=10&trailingBuyActivationPercent=10&trailingBuyReboundPercent=5&trailingSellActivationPercent=20&trailingSellPullbackPercent=10&momentumBasedBuy=false&momentumBasedSell=false&beta=2.123&coefficient=1&enableBetaScaling=true&isManualBetaOverride=false&enableDynamicGrid=false&normalizeToReference=false&enableConsecutiveIncrementalBuyGrid=false&enableConsecutiveIncrementalSellProfit=false&enableScenarioDetection=false&enableAverageBasedGrid=false&enableAverageBasedSell=false&dynamicGridMultiplier=1&gridConsecutiveIncrement=5
+""
+Final Portfolio: $250,837.00
+Max Capital: $30,000.00
+Lots Held: 2
+Total Trades: 2
+Win Rate: +100.00%
+
+"
+"Total Trades: 2" is wrong
+
+
+1.
+let's add a slide Demo 4 for full nasdaq100 backtest with 100 stocks, not just a few selected stocks. use specs to elaborate on
+- talk about survivor bias handling.
+- talk about beta grouping analysis.
+- anything else interesting. with regarding nasdaq100 backtest.?
+2.
+"16: Demo 4 - NVDA AI Boom" becomse Demo 5
+
+2. add a slide on discussion on context engineering in the development methodology slide.
+ - Having the specs process is like having the jira tickets for each feature/bug, so that development is more structured and organized.
+ - having the bug tracking process is like having the QA process to ensure quality of the product.
+ - essentially the Natrual language specs and bug tracking process is like having the agile development process for software development, but more lightweight and flexible, without the overhead of SAAS applications like jira.
+
+
 
 
 let's look at nasdaq100, please group the beta of these stocks. are they all real value from the provider? please group them by value range, e.g., 0-0.5, 0.5-1, 1-1.5, 1.5-2, >2, and count how many stocks in each group.
