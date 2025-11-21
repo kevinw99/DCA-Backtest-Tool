@@ -12,7 +12,8 @@ const config = {
   server: {
     port: process.env.PORT || 3001,
     env: process.env.NODE_ENV || 'development',
-    corsOrigin: process.env.CORS_ORIGIN || '*'
+    corsOrigin: process.env.CORS_ORIGIN || '*',
+    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000'
   },
 
   // Database Configuration

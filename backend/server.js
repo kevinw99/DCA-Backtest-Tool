@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const config = require('./config');
 const database = require('./database');
 const stockDataService = require('./services/stockDataService');
 const validation = require('./middleware/validation');
@@ -82,6 +83,7 @@ app.get('/api/health', (req, res) => {
 app.get('/api', (req, res) => {
   const acceptHeader = req.headers.accept || '';
   const prefersHtml = acceptHeader.includes('text/html');
+  const frontendUrl = config.server.frontendUrl;
 
   const apiData = {
     message: 'DCA Backtest API - Available Endpoints',
@@ -98,9 +100,9 @@ app.get('/api', (req, res) => {
         '/api/stocks/:symbol/fundamentals': 'GET - Get fundamental data (query: startDate, endDate)'
       },
       backtest: {
-        '/api/backtest/dca': 'POST - Run DCA backtest (single stock)',
-        '/api/backtest/portfolio': 'POST - Run portfolio backtest',
-        '/api/backtest/batch': 'POST - Run batch backtest'
+        '/api/backtest/dca': `POST - Run DCA backtest (single stock) | UI: ${frontendUrl}/backtest/long/AAPL`,
+        '/api/backtest/portfolio': `POST - Run portfolio backtest | UI: ${frontendUrl}/portfolio-backtest`,
+        '/api/backtest/batch': `POST - Run batch backtest | UI: ${frontendUrl}/batch`
       },
       database: {
         '/api/db/info': 'GET - Get database statistics (file size, table counts)',
@@ -111,7 +113,8 @@ app.get('/api', (req, res) => {
         '/db-viewer': 'GET - Database viewer UI'
       }
     },
-    documentation: 'https://github.com/kevinw99/DCA-Backtest-Tool'
+    documentation: 'https://github.com/kevinw99/DCA-Backtest-Tool',
+    frontendUrl
   };
 
   // Return HTML for browsers, JSON for API clients
@@ -187,13 +190,25 @@ app.get('/api', (req, res) => {
       font-size: 0.95rem;
       color: #1e3a8a;
       font-weight: 600;
-      text-decoration: none;
       display: inline-block;
       margin-bottom: 0.25rem;
     }
-    .endpoint-path:hover {
-      color: #059669;
-      text-decoration: underline;
+    .endpoint-link {
+      display: inline-block;
+      margin-left: 1rem;
+      padding: 0.3rem 0.8rem;
+      background: linear-gradient(135deg, #3b82f6 0%, #059669 100%);
+      color: white;
+      text-decoration: none;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.2s;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .endpoint-link:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
     .method-get {
       background: #10b981;
@@ -258,18 +273,37 @@ app.get('/api', (req, res) => {
             const [method, ...descParts] = desc.split(' - ');
             const description = descParts.join(' - ');
             const methodClass = method.toLowerCase().includes('post') ? 'method-post' : 'method-get';
-            const isClickable = method.includes('GET');
-            const href = isClickable ? path.replace(':symbol', 'AAPL').replace(':table', 'stocks') : '#';
-            const target = isClickable ? '_blank' : '';
+
+            // Check for UI link in description (format: "Description | UI: url")
+            const uiLinkMatch = description.match(/(.+?)\s*\|\s*UI:\s*(.+)/);
+            const actualDesc = uiLinkMatch ? uiLinkMatch[1] : description;
+            const uiLink = uiLinkMatch ? uiLinkMatch[2].trim() : null;
+
+            // Determine href and clickability
+            let href, isClickable, linkText;
+            if (method.includes('GET')) {
+              href = path.replace(':symbol', 'AAPL').replace(':table', 'stocks');
+              isClickable = true;
+              linkText = 'Try API';
+            } else if (uiLink) {
+              href = uiLink;
+              isClickable = true;
+              linkText = 'Open UI';
+            } else {
+              href = '#';
+              isClickable = false;
+              linkText = '';
+            }
 
             return `
               <div class="endpoint">
                 <span class="${methodClass}">${method.split(' ')[0]}</span>
+                <span class="endpoint-path">${path}</span>
                 ${isClickable
-                  ? `<a href="${href}" class="endpoint-path" target="${target}">${path}</a>`
-                  : `<span class="endpoint-path">${path}</span>`
+                  ? `<a href="${href}" class="endpoint-link" target="_blank">${linkText}</a>`
+                  : ''
                 }
-                <div class="endpoint-desc">${description}</div>
+                <div class="endpoint-desc">${actualDesc}</div>
               </div>
             `;
           }).join('')}
@@ -277,8 +311,7 @@ app.get('/api', (req, res) => {
       `).join('')}
 
       <div class="note">
-        <strong>Note:</strong> GET endpoints are clickable and will open in a new tab with example parameters (e.g., :symbol = AAPL).
-        POST endpoints require a request body and should be tested with curl or API clients.
+        <strong>Note:</strong> Click "Try API" to test GET endpoints with example parameters, or "Open UI" to access the frontend interface for POST endpoints. You can also use curl or API clients directly.
       </div>
     </div>
 
