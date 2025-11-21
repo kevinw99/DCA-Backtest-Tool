@@ -1242,6 +1242,8 @@ app.post('/api/backtest/dca', validation.validateDCABacktestParams, async (req, 
         transactionLog: results.transactionLog,
         tradeAnalysis: results.tradeAnalysis,
         buyAndHoldResults: results.buyAndHoldResults,
+        // Spec 59: Add buyAndHoldMetrics for frontend compatibility (alias for buyAndHoldResults)
+        buyAndHoldMetrics: results.buyAndHoldResults,
         outperformance: results.outperformance,
         outperformancePercent: results.outperformancePercent,
         // Peak/Bottom tracking for Future Trade display
@@ -1336,6 +1338,8 @@ app.post('/api/backtest/short-dca', validation.validateShortDCABacktestParams, a
         transactionLog: results.transactionLog || [],
         tradeAnalysis: results.tradeAnalysis || {},
         shortAndHoldResults: results.shortAndHoldResults || {},
+        // Spec 59: Add shortAndHoldMetrics for frontend compatibility (alias for shortAndHoldResults)
+        shortAndHoldMetrics: results.shortAndHoldResults || {},
         outperformance: results.outperformance || 0,
         outperformancePercent: results.outperformancePercent || 0,
         questionableEvents: results.questionableEvents || [],
@@ -2228,6 +2232,8 @@ app.get('/api/portfolio-backtest/:runId/stock/:symbol/results', async (req, res)
 
     // Add Buy & Hold results to response
     dcaFormatResult.buyAndHoldResults = buyAndHoldResults;
+    // Spec 59: Add buyAndHoldMetrics for frontend compatibility (alias for buyAndHoldResults)
+    dcaFormatResult.buyAndHoldMetrics = buyAndHoldResults;
     dcaFormatResult.outperformance = outperformance;
     dcaFormatResult.outperformancePercent = outperformancePercent;
 

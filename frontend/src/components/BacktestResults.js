@@ -1224,56 +1224,43 @@ const BacktestResults = ({ data, chartData: priceData, metadata }) => {
           <h4>{summary.strategy === 'SHORT_DCA' ? 'Short & Hold' : 'Buy & Hold'}</h4>
           <div className={`metrics-grid ${(holdResults.totalReturn || 0) > 0 ? 'positive' : 'negative'}`}>
             {(() => {
-              // Use the final Buy & Hold % from price chart data (same as chart display)
-              if (chartData && chartData.length > 0) {
-                const finalDataPoint = chartData[chartData.length - 1];
-                const buyHoldPercent = finalDataPoint.buyAndHoldPercent;
+              // For Buy & Hold, use fixed capital (lotSizeUsd * maxLots)
+              const lotSizeUsd = priceData?.backtestParameters?.lotSizeUsd || summary?.lotSizeUsd || 10000;
+              const maxLots = priceData?.backtestParameters?.maxLots || summary?.maxLots || 10;
+              const fixedCapital = lotSizeUsd * maxLots;
 
-                if (buyHoldPercent !== null && buyHoldPercent !== undefined) {
-                  // Calculate annualized return (CAGR) for Buy & Hold
-                  const startDate = new Date(summary.startDate || priceData?.backtestParameters?.startDate);
-                  const endDate = new Date(summary.endDate || priceData?.backtestParameters?.endDate);
-                  const years = (endDate - startDate) / (1000 * 60 * 60 * 24 * 365.25);
+              // Calculate CAGR from total return % (same method as DCA for consistency)
+              const returnPercent = holdResults.totalReturnPercent;
+              let cagr = null;
 
-                  let cagr = null;
-                  if (years > 0) {
-                    const finalValue = 1 + (buyHoldPercent / 100);
-                    if (finalValue > 0) {
-                      cagr = Math.pow(finalValue, 1 / years) - 1;
-                    }
+              if (returnPercent !== null && returnPercent !== undefined) {
+                const startDate = new Date(summary.startDate || priceData?.backtestParameters?.startDate);
+                const endDate = new Date(summary.endDate || priceData?.backtestParameters?.endDate);
+                const years = (endDate - startDate) / (1000 * 60 * 60 * 24 * 365.25);
+
+                if (years > 0) {
+                  const finalValue = 1 + (returnPercent / 100);
+                  if (finalValue > 0) {
+                    cagr = Math.pow(finalValue, 1 / years) - 1;
                   }
-
-                  // For Buy & Hold, use fixed capital (lotSizeUsd * maxLots)
-                  const lotSizeUsd = priceData?.backtestParameters?.lotSizeUsd || summary?.lotSizeUsd || 10000;
-                  const maxLots = priceData?.backtestParameters?.maxLots || summary?.maxLots || 10;
-                  const fixedCapital = lotSizeUsd * maxLots;
-
-                  return (
-                    <>
-                      <span className="metric-value">{formatCurrency(holdResults.totalReturn)}</span>
-                      <span className="metric-separator">|</span>
-                      <span className="metric-value">{formatPercent(buyHoldPercent)}</span>
-                      <span className="metric-separator">|</span>
-                      <span className="metric-label">Capital:</span>
-                      <span className="metric-value">{formatCurrency(fixedCapital)}</span>
-                      {cagr !== null && (
-                        <>
-                          <span className="metric-separator">|</span>
-                          <span className="metric-label">CAGR:</span>
-                          <span className="metric-value">{(cagr * 100).toFixed(2)}%</span>
-                        </>
-                      )}
-                    </>
-                  );
                 }
               }
 
-              // Fallback to backend value if chart data not available
               return (
                 <>
                   <span className="metric-value">{formatCurrency(holdResults.totalReturn)}</span>
                   <span className="metric-separator">|</span>
                   <span className="metric-value">{formatPercent(holdResults.totalReturnPercent)}</span>
+                  <span className="metric-separator">|</span>
+                  <span className="metric-label">Capital:</span>
+                  <span className="metric-value">{formatCurrency(fixedCapital)}</span>
+                  {cagr !== null && (
+                    <>
+                      <span className="metric-separator">|</span>
+                      <span className="metric-label">CAGR:</span>
+                      <span className="metric-value">{(cagr * 100).toFixed(2)}%</span>
+                    </>
+                  )}
                 </>
               );
             })()}

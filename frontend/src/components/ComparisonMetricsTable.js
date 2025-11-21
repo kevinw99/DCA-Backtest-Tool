@@ -2,6 +2,36 @@ import React from 'react';
 import './ComparisonMetricsTable.css';
 
 const ComparisonMetricsTable = ({ dcaMetrics, buyAndHoldMetrics }) => {
+  // Calculate CAGR consistently for both DCA and Buy & Hold
+  const calculateCAGR = (totalReturnPercent, startDate, endDate) => {
+    if (!totalReturnPercent || !startDate || !endDate) return null;
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const years = (end - start) / (1000 * 60 * 60 * 24 * 365.25);
+
+    if (years <= 0) return null;
+
+    const finalValue = 1 + (totalReturnPercent / 100);
+    if (finalValue <= 0) return null;
+
+    return Math.pow(finalValue, 1 / years) - 1;
+  };
+
+  // Calculate DCA CAGR from returnOnMaxDeployedPercent
+  const dcaCAGR = calculateCAGR(
+    dcaMetrics?.performanceMetrics?.returnOnMaxDeployedPercent,
+    dcaMetrics?.startDate,
+    dcaMetrics?.endDate
+  );
+
+  // Calculate Buy & Hold CAGR from totalReturnPercent
+  const bnhCAGR = calculateCAGR(
+    buyAndHoldMetrics?.totalReturnPercent,
+    dcaMetrics?.startDate,
+    dcaMetrics?.endDate
+  );
+
   // Helper function to determine metric comparison class
   const getMetricClass = (dcaValue, buyHoldValue, higherIsBetter = true) => {
     if (dcaValue === null || dcaValue === undefined || buyHoldValue === null || buyHoldValue === undefined) {
@@ -68,15 +98,17 @@ const ComparisonMetricsTable = ({ dcaMetrics, buyAndHoldMetrics }) => {
         },
         {
           label: 'Total Return %',
-          dcaValue: dcaMetrics?.returnPercent ? dcaMetrics.returnPercent / 100 : null,
+          // Use returnOnMaxDeployedPercent to match the summary card display
+          dcaValue: dcaMetrics?.performanceMetrics?.returnOnMaxDeployedPercent ? dcaMetrics.performanceMetrics.returnOnMaxDeployedPercent / 100 : null,
           bnhValue: buyAndHoldMetrics?.totalReturnPercent ? buyAndHoldMetrics.totalReturnPercent / 100 : null,
           type: 'percent',
           higherIsBetter: true
         },
         {
           label: 'CAGR',
-          dcaValue: dcaMetrics?.performanceMetrics?.cagr,
-          bnhValue: buyAndHoldMetrics?.annualizedReturn,
+          // Use calculated CAGR to match the summary card display
+          dcaValue: dcaCAGR,
+          bnhValue: bnhCAGR,
           type: 'percent',
           higherIsBetter: true
         }
