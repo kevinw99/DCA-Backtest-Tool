@@ -100,7 +100,9 @@ function calculateMaxDrawdown(dailyValues) {
       drawdownPercents.push(drawdownPct);
     }
 
-    if (drawdown < maxDrawdown) {
+    // Spec 60 FIX: Compare PERCENTAGE not dollar amount
+    // A 66% drawdown is worse than a 17% drawdown, even if 17% is more dollars
+    if (drawdownPct < maxDrawdownPercent) {
       maxDrawdown = drawdown;
       maxDrawdownPercent = drawdownPct;
     }
