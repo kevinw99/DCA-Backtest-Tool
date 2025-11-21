@@ -80,14 +80,25 @@ function AppContent() {
 
         // Auto-execute if in results mode and not already executed
         const isBatch = semanticParams?.mode === 'batch' || path.includes('/batch');
+
+        // For batch mode, ensure symbols array is included in parameters
+        let execParams = params;
+        if (isBatch && semanticParams?.symbols) {
+          execParams = {
+            ...params,
+            symbols: semanticParams.symbols  // Add symbols from semantic URL parse
+          };
+          console.log(`✓ Added symbols to batch params: [${semanticParams.symbols.join(', ')}]`);
+        }
+
         const shouldAutoExecute = isBatch
-          ? (params.symbols && !autoExecuted)
-          : (params.symbol && !autoExecuted);
+          ? (execParams.symbols && !autoExecuted)
+          : (execParams.symbol && !autoExecuted);
 
         if (shouldAutoExecute) {
           console.log(`🚀 Auto-executing ${isBatch ? 'batch' : 'single'} from semantic URL`);
           setAutoExecuted(true);
-          executeBacktestWithoutURLUpdate(params, isBatch);
+          executeBacktestWithoutURLUpdate(execParams, isBatch);
         }
       } else {
         setActiveTab('parameters');

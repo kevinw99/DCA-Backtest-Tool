@@ -43,6 +43,25 @@ In single DCA backtest mode, need to add a couple of metrics to compare with buy
  i.e., side by side comparison of DCA vs Buy and Hold for all metrics.
 3. you will need to reformat the current layout.. as it is not effiicent use of space.
 please come up with a new layout design to accommodate the new metrics.
+Can you make this as a new spec and implement please.
+please don't ask for my input during implementation. I am going to sleep and trust you will do a good job.
+4. we nned to review the current calculation of some metrics and its value:
+
+Risk-Adjusted
+Calmar Ratio
+0.000
+Avg Drawdown
+0.08%(what is it, and how is it cacluated)
+
+Trading Efficiency
+
+Profit Factor
+0.00
+
+Expectancy
+$8,574.21 (what is Expectancy?)
+
+5. think about these metrics for buy and hold strategy, some may not be applicable, please handle appropriately.,
 
 
 let's look at nasdaq100, please group the beta of these stocks. are they all real value from the provider? please group them by value range, e.g., 0-0.5, 0.5-1, 1-1.5, 1.5-2, >2, and count how many stocks in each group.
