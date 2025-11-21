@@ -15,8 +15,34 @@ Can you develop a new spec to run these 3 tests automatically and save the resul
 1. handle unused capital issue in portfolio backtest.
 2. run the 3 tests above automatically and save the result for comparison.
 
+In single DCA backtest mode, need to add a couple of metrics to compare with buy and hold strategy in this section: "Total Return
+                                                                                                                     $417,632.21
+                                                                                                                     |
+                                                                                                                     +596.62%
+                                                                                                                     |
+                                                                                                                     Avg Capital:
+                                                                                                                     $48,974.36
+                                                                                                                     |
+                                                                                                                     CAGR:
+                                                                                                                     58.47%
+                                                                                                                     Buy & Hold
+                                                                                                                     $732,822.92
+                                                                                                                     |
+                                                                                                                     +732.82%
+                                                                                                                     |
+                                                                                                                     Capital:
+                                                                                                                     $100,000.00
+                                                                                                                     |
+                                                                                                                     CAGR:
+                                                                                                                     65.32%
+"
 
+- Max Drawdown
 
+2. Also in the detailed "Performance Metrics",  can you also add the buy and hold metrics for comparison?
+ i.e., side by side comparison of DCA vs Buy and Hold for all metrics.
+3. you will need to reformat the current layout.. as it is not effiicent use of space.
+please come up with a new layout design to accommodate the new metrics.
 
 
 let's look at nasdaq100, please group the beta of these stocks. are they all real value from the provider? please group them by value range, e.g., 0-0.5, 0.5-1, 1-1.5, 1.5-2, >2, and count how many stocks in each group.

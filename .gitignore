@@ -41,3 +41,20 @@ frontend/build/
 
 # Test results
 test-results/
+test/results/*.json
+test/results/*.txt
+
+# Generated data
+data/backtest-results/*.json
+
+# Root directory enforcement - no loose files except essentials
+# (See .file-rules.md for allowed root files)
+/*.sh
+/*.py
+/*.js
+!index.js
+/*Results.txt
+/test_*.json
+/baseline-*.json
+/portfolio-*.json
+/*-result.json

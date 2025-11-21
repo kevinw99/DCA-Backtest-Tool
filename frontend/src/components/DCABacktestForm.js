@@ -498,14 +498,60 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
         setShortParameters(updatedShortParams);
       }
 
-      // Set test mode based on URL parameter (only if explicitly provided)
-      if (urlParams.mode === 'single') {
-        setBatchMode(false);
-      } else if (urlParams.mode === 'batch') {
+      // Handle batch mode parameters
+      if (urlParams.mode === 'batch') {
         setBatchMode(true);
+
+        // Apply batch-specific parameters from URL
+        const updatedBatchParams = { ...batchParameters };
+        const updatedShortBatchParams = { ...shortBatchParameters };
+        let hasBatchChanges = false;
+        let hasShortBatchChanges = false;
+
+        // Apply symbols array if present
+        if (urlParams.symbols && Array.isArray(urlParams.symbols) && urlParams.symbols.length > 0) {
+          console.log(`✓ Batch URL param: symbols = [${urlParams.symbols.join(', ')}]`);
+          updatedBatchParams.symbols = urlParams.symbols;
+          updatedShortBatchParams.symbols = urlParams.symbols;
+          hasBatchChanges = true;
+          hasShortBatchChanges = true;
+        }
+
+        // Apply common parameters to batch parameters as well
+        Object.keys(urlParamMapping).forEach(key => {
+          if (urlParams[key] !== undefined && urlParams[key] !== null && urlParams[key] !== '') {
+            const value = urlParamMapping[key](urlParams[key]);
+            const commonParams = [
+              'startDate', 'endDate', 'lotSizeUsd', 'gridIntervalPercent', 'profitRequirement',
+              'enableDynamicGrid', 'normalizeToReference', 'enableConsecutiveIncrementalBuyGrid',
+              'enableConsecutiveIncrementalSellProfit', 'enableAdaptiveTrailingBuy', 'enableAdaptiveTrailingSell',
+              'enableScenarioDetection', 'enableAverageBasedGrid', 'enableAverageBasedSell', 'enableDynamicProfile',
+              'dynamicGridMultiplier', 'gridConsecutiveIncrement', 'trailingStopOrderType'
+            ];
+
+            if (commonParams.includes(key)) {
+              if (targetStrategy === 'long' || targetStrategy === 'short') {
+                updatedBatchParams[key] = value;
+                updatedShortBatchParams[key] = value;
+                hasBatchChanges = true;
+                hasShortBatchChanges = true;
+                console.log(`✓ Batch URL param: ${key} = ${value}`);
+              }
+            }
+          }
+        });
+
+        if (hasBatchChanges) {
+          setBatchParameters(updatedBatchParams);
+        }
+        if (hasShortBatchChanges) {
+          setShortBatchParameters(updatedShortBatchParams);
+        }
+      } else if (urlParams.mode === 'single') {
+        setBatchMode(false);
       }
     }
-  }, [urlParams, loadingDefaults]); // Run when urlParams OR loadingDefaults change (NOT parameters/availableSymbols to avoid infinite loop)
+  }, [urlParams, loadingDefaults]); // Run when urlParams OR loadingDefaults change (NOT batch/parameters to avoid infinite loop)
 
   // Handle autoRun functionality
   useEffect(() => {
