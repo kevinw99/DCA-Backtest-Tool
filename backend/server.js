@@ -80,7 +80,10 @@ app.get('/api/health', (req, res) => {
 
 // API Documentation - List all available endpoints
 app.get('/api', (req, res) => {
-  res.json({
+  const acceptHeader = req.headers.accept || '';
+  const prefersHtml = acceptHeader.includes('text/html');
+
+  const apiData = {
     message: 'DCA Backtest API - Available Endpoints',
     version: '1.0.0',
     endpoints: {
@@ -109,7 +112,190 @@ app.get('/api', (req, res) => {
       }
     },
     documentation: 'https://github.com/kevinw99/DCA-Backtest-Tool'
-  });
+  };
+
+  // Return HTML for browsers, JSON for API clients
+  if (prefersHtml) {
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DCA Backtest API - Documentation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #1e3a8a 0%, #059669 100%);
+      min-height: 100vh;
+      padding: 2rem;
+      color: #333;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      color: white;
+      padding: 2rem;
+      text-align: center;
+    }
+    .header h1 {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+    .version {
+      opacity: 0.9;
+      font-size: 0.9rem;
+    }
+    .content {
+      padding: 2rem;
+    }
+    .category {
+      margin-bottom: 2rem;
+    }
+    .category-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: #1e3a8a;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #e5e7eb;
+      text-transform: capitalize;
+    }
+    .endpoint {
+      margin-bottom: 0.75rem;
+      padding: 0.75rem;
+      background: #f9fafb;
+      border-radius: 6px;
+      border-left: 3px solid #3b82f6;
+      transition: all 0.2s;
+    }
+    .endpoint:hover {
+      background: #eff6ff;
+      border-left-color: #059669;
+      transform: translateX(4px);
+    }
+    .endpoint-path {
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 0.95rem;
+      color: #1e3a8a;
+      font-weight: 600;
+      text-decoration: none;
+      display: inline-block;
+      margin-bottom: 0.25rem;
+    }
+    .endpoint-path:hover {
+      color: #059669;
+      text-decoration: underline;
+    }
+    .method-get {
+      background: #10b981;
+      color: white;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-right: 0.5rem;
+    }
+    .method-post {
+      background: #f59e0b;
+      color: white;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-right: 0.5rem;
+    }
+    .endpoint-desc {
+      color: #6b7280;
+      font-size: 0.9rem;
+      margin-left: 3.5rem;
+    }
+    .footer {
+      background: #f9fafb;
+      padding: 1.5rem 2rem;
+      text-align: center;
+      border-top: 1px solid #e5e7eb;
+    }
+    .footer a {
+      color: #3b82f6;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .footer a:hover {
+      text-decoration: underline;
+    }
+    .note {
+      background: #fef3c7;
+      border-left: 3px solid #f59e0b;
+      padding: 1rem;
+      margin-top: 1rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      color: #78350f;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>DCA Backtest API</h1>
+      <p class="version">Version ${apiData.version}</p>
+    </div>
+
+    <div class="content">
+      ${Object.entries(apiData.endpoints).map(([category, endpoints]) => `
+        <div class="category">
+          <h2 class="category-title">${category}</h2>
+          ${Object.entries(endpoints).map(([path, desc]) => {
+            const [method, ...descParts] = desc.split(' - ');
+            const description = descParts.join(' - ');
+            const methodClass = method.toLowerCase().includes('post') ? 'method-post' : 'method-get';
+            const isClickable = method.includes('GET');
+            const href = isClickable ? path.replace(':symbol', 'AAPL').replace(':table', 'stocks') : '#';
+            const target = isClickable ? '_blank' : '';
+
+            return `
+              <div class="endpoint">
+                <span class="${methodClass}">${method.split(' ')[0]}</span>
+                ${isClickable
+                  ? `<a href="${href}" class="endpoint-path" target="${target}">${path}</a>`
+                  : `<span class="endpoint-path">${path}</span>`
+                }
+                <div class="endpoint-desc">${description}</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `).join('')}
+
+      <div class="note">
+        <strong>Note:</strong> GET endpoints are clickable and will open in a new tab with example parameters (e.g., :symbol = AAPL).
+        POST endpoints require a request body and should be tested with curl or API clients.
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>
+        📚 <a href="${apiData.documentation}" target="_blank">GitHub Documentation</a> |
+        💾 <a href="/db-viewer" target="_blank">Database Viewer</a> |
+        ❤️ <a href="/api/health" target="_blank">Health Check</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>`;
+    res.send(html);
+  } else {
+    res.json(apiData);
+  }
 });
 
 // Get stock data with all metrics
