@@ -78,6 +78,40 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Stock Trading API is running' });
 });
 
+// API Documentation - List all available endpoints
+app.get('/api', (req, res) => {
+  res.json({
+    message: 'DCA Backtest API - Available Endpoints',
+    version: '1.0.0',
+    endpoints: {
+      health: {
+        '/health': 'GET - Health check (Render compatibility)',
+        '/api/health': 'GET - Health check'
+      },
+      stocks: {
+        '/api/stocks/:symbol': 'GET - Get stock data with metrics (query: startDate, endDate)',
+        '/api/stocks/:symbol/beta': 'GET - Get stock beta value',
+        '/api/stocks/:symbol/prices': 'GET - Get historical prices (query: startDate, endDate, interval)',
+        '/api/stocks/:symbol/fundamentals': 'GET - Get fundamental data (query: startDate, endDate)'
+      },
+      backtest: {
+        '/api/backtest/dca': 'POST - Run DCA backtest (single stock)',
+        '/api/backtest/portfolio': 'POST - Run portfolio backtest',
+        '/api/backtest/batch': 'POST - Run batch backtest'
+      },
+      database: {
+        '/api/db/info': 'GET - Get database statistics (file size, table counts)',
+        '/api/db/tables': 'GET - List all database tables',
+        '/api/db/schema': 'GET - Get database schema',
+        '/api/db/:table': 'GET - Query specific table (query: limit, where)',
+        '/api/db/query': 'POST - Execute custom SQL query (read-only)',
+        '/db-viewer': 'GET - Database viewer UI'
+      }
+    },
+    documentation: 'https://github.com/kevinw99/DCA-Backtest-Tool'
+  });
+});
+
 // Get stock data with all metrics
 app.get('/api/stocks/:symbol', validation.validateSymbolParam, validation.validateQueryDateRange, async (req, res) => {
   try {
@@ -316,36 +350,8 @@ app.get('/api/stocks/:symbol/full-chart-data', validation.validateSymbolParam, a
   }
 });
 
-// Database viewer endpoint
-app.get('/api/db/:table', async (req, res) => {
-  try {
-    const { table } = req.params;
-    const { limit = 50, where } = req.query;
-    
-    // Security: only allow specific tables
-    const allowedTables = ['stocks', 'daily_prices', 'quarterly_fundamentals', 'corporate_actions'];
-    if (!allowedTables.includes(table)) {
-      return res.status(400).json({ error: 'Table not allowed' });
-    }
-    
-    let sql = `SELECT * FROM ${table}`;
-    if (where) {
-      sql += ` WHERE ${where}`;
-    }
-    sql += ` ORDER BY id DESC LIMIT ${parseInt(limit)}`;
-    
-    const rows = await new Promise((resolve, reject) => {
-      database.db.all(sql, (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows);
-      });
-    });
-    
-    res.json({ table, rows, count: rows.length });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+// Database viewer parametric route moved to after specific /api/db/* routes
+// to avoid route matching conflicts (see end of database routes section)
 
 // Test Alpha Vantage API directly
 app.get('/api/test-av/:symbol', async (req, res) => {
@@ -2456,6 +2462,37 @@ app.get('/api/db/info', (req, res) => {
       .catch(err => {
         res.status(500).json({ error: err.message });
       });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Database table viewer endpoint (parametric route - must be AFTER specific /api/db/* routes)
+app.get('/api/db/:table', async (req, res) => {
+  try {
+    const { table } = req.params;
+    const { limit = 50, where } = req.query;
+
+    // Security: only allow specific tables
+    const allowedTables = ['stocks', 'daily_prices', 'quarterly_fundamentals', 'corporate_actions'];
+    if (!allowedTables.includes(table)) {
+      return res.status(400).json({ error: 'Table not allowed' });
+    }
+
+    let sql = `SELECT * FROM ${table}`;
+    if (where) {
+      sql += ` WHERE ${where}`;
+    }
+    sql += ` ORDER BY id DESC LIMIT ${parseInt(limit)}`;
+
+    const rows = await new Promise((resolve, reject) => {
+      database.db.all(sql, (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows);
+      });
+    });
+
+    res.json({ table, rows, count: rows.length });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
