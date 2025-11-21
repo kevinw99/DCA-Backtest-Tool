@@ -16,13 +16,13 @@
   <rect x="17" y="11" width="3" height="16" fill="#3b82f6" rx="1"/>
   <rect x="21" y="8" width="3" height="19" fill="#10b981" rx="1"/>
 
-  <!-- Upward trend line (connecting tops) -->
-  <polyline points="6.5,20 10.5,17 14.5,14 18.5,11 22.5,8"
+  <!-- Realistic price movement (up-down-up pattern showing volatility) -->
+  <polyline points="4,22 6.5,20 8,21 10.5,17 12,18 14.5,14 16,15 18.5,11 20,12 22.5,8 24,9 26,7"
             fill="none" stroke="#fbbf24" stroke-width="1.5"
-            stroke-linecap="round" stroke-linejoin="round"/>
+            stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
 
-  <!-- Growth arrow -->
-  <path d="M 22.5 8 L 24 6 L 26 8 M 24 6 L 24 10"
+  <!-- Growth arrow at the end -->
+  <path d="M 26 7 L 27.5 5 L 29 7 M 27.5 5 L 27.5 9"
         fill="none" stroke="#fbbf24" stroke-width="1.5"
         stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
