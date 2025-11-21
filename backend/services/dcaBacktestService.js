@@ -280,24 +280,53 @@ function calculateBuyAndHold(prices, initialCapital, avgCapitalForComparison = n
   let maxDrawdownPercent = 0;
   const dailyValues = [];
 
-  for (const price of prices) {
-    const currentValue = shares * price.adjusted_close;
+  // Track drawdown periods for average calculation
+  const drawdownPeriods = [];
+  let currentDrawdownStart = null;
+  let currentMaxDrawdownPercent = 0;
+
+  for (let i = 0; i < prices.length; i++) {
+    const currentValue = shares * prices[i].adjusted_close;
     dailyValues.push(currentValue);
 
     if (currentValue > peakValue) {
+      // New peak - end of drawdown period if there was one
+      if (currentDrawdownStart !== null && currentMaxDrawdownPercent > 0) {
+        drawdownPeriods.push(currentMaxDrawdownPercent);
+        currentDrawdownStart = null;
+        currentMaxDrawdownPercent = 0;
+      }
       peakValue = currentValue;
-    }
+    } else if (currentValue < peakValue) {
+      // In drawdown
+      const drawdown = peakValue - currentValue;
+      const drawdownPercent = (drawdown / peakValue) * 100;
 
-    const drawdown = peakValue - currentValue;
-    const drawdownPercent = (drawdown / peakValue) * 100;
+      // Track the maximum drawdown within this period
+      currentMaxDrawdownPercent = Math.max(currentMaxDrawdownPercent, drawdownPercent);
 
-    if (drawdown > maxDrawdown) {
-      maxDrawdown = drawdown;
-    }
-    if (drawdownPercent > maxDrawdownPercent) {
-      maxDrawdownPercent = drawdownPercent;
+      if (currentDrawdownStart === null) {
+        currentDrawdownStart = i;
+      }
+
+      if (drawdown > maxDrawdown) {
+        maxDrawdown = drawdown;
+      }
+      if (drawdownPercent > maxDrawdownPercent) {
+        maxDrawdownPercent = drawdownPercent;
+      }
     }
   }
+
+  // Handle ongoing drawdown at the end
+  if (currentDrawdownStart !== null && currentMaxDrawdownPercent > 0) {
+    drawdownPeriods.push(currentMaxDrawdownPercent);
+  }
+
+  // Calculate average drawdown
+  const avgDrawdownPercent = drawdownPeriods.length > 0
+    ? drawdownPeriods.reduce((a, b) => a + b, 0) / drawdownPeriods.length
+    : 0;
 
   const returns = [];
   for (let i = 1; i < dailyValues.length; i++) {
@@ -307,6 +336,27 @@ function calculateBuyAndHold(prices, initialCapital, avgCapitalForComparison = n
   const volatility = Math.sqrt(returns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / (returns.length - 1)) * Math.sqrt(252) * 100;
   const sharpeRatio = volatility > 0 ? (avgReturn * 252) / (volatility / 100) : 0;
 
+  // Calculate Sortino Ratio (only penalize downside volatility)
+  const riskFreeRate = 0.04; // 4% annual
+  const dailyRiskFreeRate = riskFreeRate / 252;
+  const excessReturns = returns.map(r => r - dailyRiskFreeRate);
+  const avgExcessReturn = excessReturns.reduce((a, b) => a + b, 0) / excessReturns.length;
+  const downsideReturns = excessReturns.filter(r => r < 0);
+  let sortinoRatio = 0;
+  if (downsideReturns.length > 0) {
+    const downsideAvg = downsideReturns.reduce((a, b) => a + b, 0) / downsideReturns.length;
+    const downsideVariance = downsideReturns.reduce((sum, r) => sum + Math.pow(r - downsideAvg, 2), 0) / downsideReturns.length;
+    const downsideDeviation = Math.sqrt(downsideVariance);
+    if (downsideDeviation > 0) {
+      sortinoRatio = (avgExcessReturn / downsideDeviation) * Math.sqrt(252);
+    }
+  } else if (avgExcessReturn > 0) {
+    sortinoRatio = 999; // No downside, high Sortino
+  }
+
+  // Calculate Calmar Ratio: CAGR / Max Drawdown %
+  const calmarRatio = maxDrawdownPercent > 0 ? (annualizedReturn * 100) / maxDrawdownPercent : 0;
+
   return {
     totalReturn: totalReturn,
     totalReturnPercent: totalReturnPercent,
@@ -314,7 +364,10 @@ function calculateBuyAndHold(prices, initialCapital, avgCapitalForComparison = n
     annualizedReturnPercent: annualizedReturnPercent,
     maxDrawdown: maxDrawdown,
     maxDrawdownPercent: maxDrawdownPercent,
+    avgDrawdownPercent: avgDrawdownPercent,
     sharpeRatio: sharpeRatio,
+    sortinoRatio: sortinoRatio,
+    calmarRatio: calmarRatio,
     volatility: volatility,
     finalValue: finalValue,
     shares: shares
