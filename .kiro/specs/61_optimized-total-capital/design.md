@@ -2,76 +2,55 @@
 
 ## Architecture Overview
 
-The optimized capital feature uses a two-pass simulation approach:
+The optimized capital feature finds the minimum capital needed for full strategy execution, then runs TWO scenarios for comparison:
 
 ```
-[User Request] ──> [Discovery Run] ──> [Optimization Run] ──> [Results]
-       │                  │                    │
-       │           Track max deployed    Use optimal capital
-       │           capital throughout    for final simulation
-       │                  │                    │
-       │                  └──────┬─────────────┘
-       │                         │
-       │              [Capital Analysis Module]
-       │                         │
-       │                         v
-       │              [Buy & Hold Calculator]
-       │              (uses same optimal capital)
-       │                         │
-       └────────────────────────>│
-                                 v
-                          [Final Response]
+[User Request] ──> [Discovery Run] ──────────────────────────────────> [Results]
+       │                  │                                                │
+       │           Track max deployed                              TWO RESULT TABS:
+       │           capital throughout                                      │
+       │                  │                                    ┌───────────┴───────────┐
+       │                  │                                    │                       │
+       │                  v                              [Tab 1: 100%]          [Tab 2: 90%]
+       │           optimalCapital                        Optimal Capital      Constrained Capital
+       │                  │                              Zero rejections      Some rejections
+       │                  │                                    │                       │
+       │           ┌──────┴──────┐                      Full comparison        Full comparison
+       │           │             │                       DCA vs B&H            DCA vs B&H
+       │           v             v
+       │     [100% Run]    [90% Run]
+       │     (Discovery     (2nd Run)
+       │      IS final)
+       │           │             │
+       └───────────┴─────────────┴──────────────> [Final Response with 2 Scenarios]
 ```
+
+## Key Insight: Discovery Run IS the Final Result
+
+The discovery run with unlimited capital:
+- Produces the **ceiling performance** with zero rejected orders
+- Records `peakDeployedCapital` = exact capital needed
+- **No re-run needed** - this IS the 100% optimal scenario result
+
+We only need a second run for the 90% constrained scenario.
 
 ## Component Design
 
-### 1. Capital Discovery Module
-
-New file: `backend/services/capitalDiscoveryService.js`
-
-```javascript
-/**
- * Runs a discovery simulation to find optimal capital requirements
- * @param {Object} config - Portfolio backtest configuration
- * @returns {Object} Discovery results with optimal capital metrics
- */
-async function discoverOptimalCapital(config) {
-  // Run simulation with very high capital (effectively unlimited)
-  const discoveryConfig = {
-    ...config,
-    totalCapital: config.totalCapital * 10,  // 10x to ensure no constraints
-    _discoveryMode: true  // Flag to enable capital tracking
-  };
-
-  const result = await runPortfolioBacktest(discoveryConfig);
-
-  return {
-    peakDeployedCapital: result.capitalTracking.maxDeployed,
-    peakCapitalDate: result.capitalTracking.maxDeployedDate,
-    averageDeployedCapital: result.capitalTracking.avgDeployed,
-    deploymentHistory: result.capitalTracking.dailyDeployed
-  };
-}
-```
-
-### 2. Portfolio Manager Enhancements
+### 1. Capital Tracking in Portfolio Class
 
 Modify: `backend/services/portfolioBacktestService.js`
-
-Add capital tracking to the Portfolio class:
 
 ```javascript
 class Portfolio {
   constructor(totalCapital, options = {}) {
     // ... existing constructor
 
-    // Capital tracking for discovery mode
+    // Capital tracking (always enabled)
     this.capitalTracking = {
       maxDeployed: 0,
       maxDeployedDate: null,
       totalDeployedDays: 0,
-      sumDeployed: 0,
-      dailyDeployed: []  // For detailed analysis
+      sumDeployed: 0
     };
   }
 
@@ -85,14 +64,6 @@ class Portfolio {
 
     this.capitalTracking.sumDeployed += currentDeployed;
     this.capitalTracking.totalDeployedDays++;
-
-    // Store daily snapshot (every N days to save memory)
-    if (this.capitalTracking.totalDeployedDays % 5 === 0) {
-      this.capitalTracking.dailyDeployed.push({
-        date,
-        deployed: currentDeployed
-      });
-    }
   }
 
   getCapitalAnalysis() {
@@ -100,13 +71,13 @@ class Portfolio {
       maxDeployed: this.capitalTracking.maxDeployed,
       maxDeployedDate: this.capitalTracking.maxDeployedDate,
       avgDeployed: this.capitalTracking.sumDeployed / this.capitalTracking.totalDeployedDays,
-      utilizationPercent: (this.capitalTracking.sumDeployed / this.capitalTracking.totalDeployedDays) / this.totalCapital
+      utilizationPercent: this.capitalTracking.maxDeployed / this.totalCapital
     };
   }
 }
 ```
 
-### 3. Main Orchestration Logic
+### 2. Main Orchestration Logic
 
 In `runPortfolioBacktest()`:
 
@@ -114,67 +85,96 @@ In `runPortfolioBacktest()`:
 async function runPortfolioBacktest(config) {
   const { optimizedTotalCapital = false } = config;
 
-  if (optimizedTotalCapital && !config._optimizationRun) {
-    // === DISCOVERY PHASE ===
-    console.log('🔍 Starting capital discovery run...');
+  if (optimizedTotalCapital && !config._isConstrainedRun) {
+    // === DISCOVERY RUN (100% Optimal) ===
+    console.log('🔍 Running discovery with unlimited capital...');
 
     const discoveryConfig = {
       ...config,
-      totalCapital: Math.max(config.totalCapital || 1000000, 10000000), // Use 10M or 10x user input
-      _discoveryMode: true
+      totalCapital: Math.max(config.totalCapital || 1000000, 10000000), // Effectively unlimited
+      _trackCapital: true
     };
 
-    const discoveryResult = await runPortfolioBacktest(discoveryConfig);
-    const optimalCapital = discoveryResult.capitalAnalysis.peakDeployedCapital;
+    const optimalResult = await runPortfolioBacktest(discoveryConfig);
+    const optimalCapital = optimalResult.capitalAnalysis.peakDeployedCapital;
 
-    console.log(`✅ Discovery complete. Optimal capital: $${optimalCapital.toLocaleString()}`);
+    console.log(`✅ Optimal capital found: $${optimalCapital.toLocaleString()}`);
 
-    // === OPTIMIZATION PHASE ===
-    console.log('🎯 Running optimized backtest...');
+    // Recalculate metrics with correct totalCapital = optimalCapital
+    // (Discovery run already has the DCA results, just need to adjust capital basis)
+    optimalResult.capitalAnalysis.optimizedCapital = optimalCapital;
+    optimalResult.capitalAnalysis.mode = 'optimal';
+    optimalResult.capitalAnalysis.rejectedOrderCount = 0;
 
-    const optimizedConfig = {
+    // Calculate Buy & Hold with optimal capital
+    optimalResult.buyAndHold = calculatePortfolioBuyAndHold(
+      priceDataMap,
+      { ...config, totalCapital: optimalCapital },
+      optimalResult
+    );
+
+    // === CONSTRAINED RUN (90% Capital) ===
+    console.log('🎯 Running constrained scenario at 90% capital...');
+
+    const constrainedCapital = Math.floor(optimalCapital * 0.9);
+    const constrainedConfig = {
       ...config,
-      totalCapital: optimalCapital,
-      _optimizationRun: true,
-      _originalCapital: config.totalCapital
+      totalCapital: constrainedCapital,
+      _isConstrainedRun: true
     };
 
-    const optimizedResult = await runPortfolioBacktest(optimizedConfig);
-
-    // Add discovery insights to response
-    optimizedResult.capitalAnalysis = {
-      userSpecifiedCapital: config.totalCapital,
-      optimizedCapital: optimalCapital,
-      peakDeployedCapital: optimalCapital,
-      peakCapitalDate: discoveryResult.capitalAnalysis.peakCapitalDate,
-      averageDeployedCapital: optimizedResult.capitalAnalysis.avgDeployed,
-      capitalUtilization: optimizedResult.capitalAnalysis.avgDeployed / optimalCapital,
-      rejectedOrderCount: optimizedResult.rejectedOrders?.length || 0,
-      capitalSavings: config.totalCapital ? config.totalCapital - optimalCapital : null
+    const constrainedResult = await runPortfolioBacktest(constrainedConfig);
+    constrainedResult.capitalAnalysis = {
+      optimizedCapital: constrainedCapital,
+      mode: 'constrained_90',
+      percentOfOptimal: 90,
+      rejectedOrderCount: constrainedResult.rejectedOrders?.length || 0
     };
 
-    return optimizedResult;
+    // Calculate Buy & Hold with constrained capital
+    constrainedResult.buyAndHold = calculatePortfolioBuyAndHold(
+      priceDataMap,
+      { ...config, totalCapital: constrainedCapital },
+      constrainedResult
+    );
+
+    // Return both scenarios
+    return {
+      success: true,
+      data: {
+        scenarios: {
+          optimal: optimalResult,      // Tab 1: 100% capital, 0 rejections
+          constrained: constrainedResult  // Tab 2: 90% capital, some rejections
+        },
+        capitalDiscovery: {
+          peakDeployedCapital: optimalCapital,
+          peakCapitalDate: optimalResult.capitalAnalysis.peakCapitalDate,
+          constrainedCapital: constrainedCapital
+        }
+      }
+    };
   }
 
   // === STANDARD BACKTEST (existing logic) ===
-  // ... existing implementation
+  // ... existing implementation with capital tracking always enabled
 }
 ```
 
-### 4. Buy & Hold Integration
+### 3. Buy & Hold Uses Same Capital
 
 Modify: `backend/services/portfolioBuyAndHoldService.js`
 
 ```javascript
-function calculatePortfolioBuyAndHold(priceDataMap, config, portfolio) {
-  // Use optimized capital if available
-  const effectiveCapital = config._optimizedCapital || config.totalCapital;
+function calculatePortfolioBuyAndHold(priceDataMap, config, dcaResult) {
+  // Use the totalCapital from config (either optimal or constrained)
+  const totalCapital = config.totalCapital;
 
-  // Calculate allocation per stock based on effective capital
+  // Calculate allocation per stock
   const stockCount = Object.keys(priceDataMap).length;
-  const capitalPerStock = effectiveCapital / stockCount;
+  const capitalPerStock = totalCapital / stockCount;
 
-  // ... rest of calculation using effectiveCapital
+  // ... rest of calculation
+  // Returns full comparison metrics (CAGR, Sharpe, Max Drawdown, etc.)
 }
 ```
 
@@ -184,22 +184,24 @@ function calculatePortfolioBuyAndHold(priceDataMap, config, portfolio) {
 
 ```
 1. API receives request with optimizedTotalCapital: true
-   └── totalCapital: 300000 (user specified, used as fallback)
+   └── User may specify totalCapital (used as fallback/minimum)
 
-2. Discovery Phase
+2. Discovery Run
    └── Run with totalCapital: 10,000,000 (effectively unlimited)
    └── Track deployedCapital every day
-   └── Record: maxDeployed = 185,000, maxDate = "2022-10-15"
+   └── Record: peakDeployed = $185,000, date = "2022-10-15"
+   └── This IS the 100% optimal result (zero rejections)
 
-3. Optimization Phase
-   └── Run with totalCapital: 185,000 (the optimal value)
-   └── All buy orders should execute (no capital constraints)
+3. Recalculate with Correct Capital Basis
+   └── Set totalCapital = $185,000 for metrics calculation
+   └── Calculate Buy & Hold with same $185,000
 
-4. Buy & Hold Calculation
-   └── Uses same 185,000 capital for fair comparison
-   └── Allocates proportionally: 185,000 / 3 stocks = 61,666.67 each
+4. Constrained Run (90%)
+   └── Run with totalCapital: $166,500 (90% of optimal)
+   └── Some buy orders may be rejected
+   └── Calculate Buy & Hold with same $166,500
 
-5. Response includes capitalAnalysis object
+5. Return Both Scenarios in Response
 ```
 
 ### Response Structure
@@ -208,73 +210,155 @@ function calculatePortfolioBuyAndHold(priceDataMap, config, portfolio) {
 {
   "success": true,
   "data": {
-    // ... existing portfolio backtest data
-
-    "capitalAnalysis": {
-      "mode": "optimized",
-      "userSpecifiedCapital": 300000,
-      "optimizedCapital": 185000,
+    "capitalDiscovery": {
       "peakDeployedCapital": 185000,
       "peakCapitalDate": "2022-10-15",
-      "averageDeployedCapital": 142500,
-      "capitalUtilization": 0.77,
-      "rejectedOrderCount": 0,
-      "capitalSavings": 115000,  // 300k - 185k = saved capital
-      "capitalSavingsPercent": 38.33
+      "constrainedCapital": 166500
     },
-
-    "comparison": {
-      // Both DCA and Buy & Hold using optimizedCapital: 185000
-      "dcaFinalValue": 425000,
-      "buyAndHoldFinalValue": 380000,
-      // ...
+    "scenarios": {
+      "optimal": {
+        // Tab 1: 100% Capital - Ceiling Performance
+        "capitalAnalysis": {
+          "mode": "optimal",
+          "optimizedCapital": 185000,
+          "rejectedOrderCount": 0,
+          "capitalUtilization": 0.77  // avg/total
+        },
+        "dcaResults": {
+          "finalValue": 425000,
+          "totalReturn": 240000,
+          "totalReturnPercent": 129.73,
+          "cagr": 25.38,
+          "maxDrawdown": 25.99,
+          "sharpeRatio": 1.14,
+          "sortinoRatio": 1.82,
+          "volatility": 22.17
+        },
+        "buyAndHold": {
+          "finalValue": 380000,
+          "totalReturn": 195000,
+          "totalReturnPercent": 105.41,
+          "cagr": 22.15,
+          "maxDrawdown": 43.94,
+          "sharpeRatio": 1.20,
+          "sortinoRatio": 1.65,
+          "volatility": 36.50
+        },
+        "comparison": {
+          "totalReturn": { "dca": 129.73, "buyAndHold": 105.41, "advantage": "DCA" },
+          "cagr": { "dca": 25.38, "buyAndHold": 22.15, "advantage": "DCA" },
+          "maxDrawdown": { "dca": 25.99, "buyAndHold": 43.94, "advantage": "DCA" },
+          "sharpeRatio": { "dca": 1.14, "buyAndHold": 1.20, "advantage": "BUY_AND_HOLD" },
+          "volatility": { "dca": 22.17, "buyAndHold": 36.50, "advantage": "DCA" }
+        }
+      },
+      "constrained": {
+        // Tab 2: 90% Capital - Realistic Performance
+        "capitalAnalysis": {
+          "mode": "constrained_90",
+          "optimizedCapital": 166500,
+          "percentOfOptimal": 90,
+          "rejectedOrderCount": 5
+        },
+        "dcaResults": {
+          "finalValue": 405000,
+          "totalReturn": 238500,
+          "totalReturnPercent": 143.24,  // Higher % due to lower capital base
+          "cagr": 24.85,
+          "maxDrawdown": 24.12,
+          "sharpeRatio": 1.11,
+          // ... other metrics
+        },
+        "buyAndHold": {
+          "finalValue": 342000,
+          "totalReturn": 175500,
+          "totalReturnPercent": 105.41,
+          "cagr": 22.15,
+          // ... other metrics
+        },
+        "comparison": {
+          // Full comparison same as optimal tab
+        },
+        "rejectedOrders": [
+          { "date": "2022-03-15", "symbol": "NVDA", "reason": "capital constraint" },
+          // ...
+        ]
+      }
     }
   }
 }
 ```
 
+## Frontend: Two Tabs
+
+The frontend will display two tabs, each containing a **COMPLETE backtest result page** (identical structure to current results, just with different capital):
+
+### Tab 1: Optimal Capital (100%)
+A complete backtest run with `totalCapital = peakDeployedCapital`:
+- Capital used: `$185,000` (auto-discovered)
+- Zero rejected orders
+- **Full result page including:**
+  - Portfolio summary (final value, total return, CAGR)
+  - Performance metrics (Sharpe, Sortino, Calmar, Volatility)
+  - Max drawdown analysis
+  - Per-stock breakdown
+  - Transaction log
+  - All charts (portfolio value, drawdown, allocation)
+  - Buy & Hold comparison with same capital
+  - Full comparison table (DCA vs B&H)
+
+### Tab 2: Constrained Capital (90%)
+A complete backtest run with `totalCapital = peakDeployedCapital * 0.9`:
+- Capital used: `$166,500` (90% of optimal)
+- Some rejected orders due to capital constraint
+- **Full result page including:**
+  - Portfolio summary (final value, total return, CAGR)
+  - Performance metrics (Sharpe, Sortino, Calmar, Volatility)
+  - Max drawdown analysis
+  - Per-stock breakdown
+  - Transaction log
+  - All charts (portfolio value, drawdown, allocation)
+  - Buy & Hold comparison with same capital
+  - Full comparison table (DCA vs B&H)
+  - **Rejected orders list** (additional section)
+
 ## Performance Considerations
 
-1. **Double Execution**: Optimized mode runs backtest twice
-   - Discovery run: Full simulation with capital tracking
-   - Optimization run: Final simulation with optimal capital
-   - Mitigation: Cache price data between runs
+1. **Two Simulations Total**:
+   - Discovery run (100% optimal) - ~50% of total time
+   - Constrained run (90%) - ~50% of total time
+   - Total: ~2x standard mode runtime
 
-2. **Memory Usage**: Capital tracking stores daily snapshots
-   - Mitigation: Sample every 5 days instead of every day
-   - Configurable sampling rate via `_capitalTrackingInterval`
+2. **Price Data Caching**:
+   - Cache fetched price data during discovery run
+   - Reuse for constrained run
+   - Reduces API calls and improves performance
 
-3. **API Response Time**: ~2x slower for optimized mode
-   - Acceptable trade-off for improved accuracy
-   - Frontend can show loading indicator
+3. **Memory**: Capital tracking is lightweight (just peak/sum/count)
 
 ## Testing Strategy
-
-### Unit Tests
-- `capitalDiscoveryService.test.js`: Test discovery logic
-- `portfolioBacktestService.test.js`: Test two-pass orchestration
-
-### Integration Tests
-- Verify zero rejected orders when optimizedTotalCapital: true
-- Verify Buy & Hold uses same capital as DCA
-- Verify backward compatibility when parameter is false
 
 ### Curl Test Commands
 
 ```bash
-# Standard mode (backward compatible)
+# Optimized mode - returns both scenarios
 curl -X POST http://localhost:3001/api/portfolio-backtest \
   -H "Content-Type: application/json" \
-  -d '{"stocks":["AAPL","MSFT","NVDA"],"totalCapital":300000,...}'
-
-# Optimized mode
-curl -X POST http://localhost:3001/api/portfolio-backtest \
-  -H "Content-Type: application/json" \
-  -d '{"stocks":["AAPL","MSFT","NVDA"],"totalCapital":300000,"optimizedTotalCapital":true,...}'
+  -d '{
+    "stocks": ["AAPL", "MSFT", "NVDA"],
+    "lotSizeUsd": 10000,
+    "maxLots": 10,
+    "startDate": "2021-01-01",
+    "endDate": "2025-11-23",
+    "gridIntervalPercent": 0.10,
+    "profitRequirement": 0.10,
+    "optimizedTotalCapital": true
+  }' | jq '.data.scenarios.optimal.capitalAnalysis, .data.scenarios.constrained.capitalAnalysis'
 ```
 
-## Migration Path
-
-1. Add parameter with default `false` - no breaking changes
-2. Frontend can enable via checkbox when ready
-3. Future: Make optimized mode the default for new users
+### Verification Checklist
+- [ ] Optimal scenario has zero rejected orders
+- [ ] Constrained scenario has some rejected orders
+- [ ] Both scenarios use correct capital for Buy & Hold
+- [ ] All comparison metrics present in both tabs
+- [ ] Backward compatibility when optimizedTotalCapital: false
