@@ -615,12 +615,13 @@ async function runPortfolioBacktest(config) {
           const deployedBefore = portfolio.deployedCapital;
           // Add full sell value to cash (includes both original cost and profit/loss)
           portfolio.cashReserve += tx.value;
-          // Reduce deployed capital by original cost
-          portfolio.deployedCapital -= tx.lotsCost;
+          // Reduce deployed capital by original cost (use 0 if lotsCost not available)
+          const lotsCost = tx.lotsCost || 0;
+          portfolio.deployedCapital -= lotsCost;
           // Track realized P&L for leak detection
           const realizedPNL = tx.realizedPNLFromTrade || 0;
           portfolio.totalRealizedPNL += realizedPNL;
-          console.log(`   💰 SELL ${symbol}: cash ${cashBefore.toFixed(0)} + ${tx.value.toFixed(0)} = ${portfolio.cashReserve.toFixed(0)}, deployed ${deployedBefore.toFixed(0)} - ${tx.lotsCost.toFixed(0)} = ${portfolio.deployedCapital.toFixed(0)}, sum=${(portfolio.cashReserve + portfolio.deployedCapital).toFixed(0)}`);
+          console.log(`   💰 SELL ${symbol}: cash ${cashBefore.toFixed(0)} + ${(tx.value || 0).toFixed(0)} = ${portfolio.cashReserve.toFixed(0)}, deployed ${deployedBefore.toFixed(0)} - ${lotsCost.toFixed(0)} = ${portfolio.deployedCapital.toFixed(0)}, sum=${(portfolio.cashReserve + portfolio.deployedCapital).toFixed(0)}`);
           stock.addSell(tx);
           transactionCount++;
         }

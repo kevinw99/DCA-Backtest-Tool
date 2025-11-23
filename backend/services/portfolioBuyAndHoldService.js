@@ -45,9 +45,11 @@ function calculateMaxDrawdownFromValues(dailyValues) {
     }
   });
 
+  // Spec 60: Return positive values for max drawdown (represents magnitude of decline)
+  // Negative convention is handled by metricsCalculator, but here we return positive for display
   return {
-    maxDrawdown: -maxDrawdown,
-    maxDrawdownPercent: -maxDrawdownPercent,
+    maxDrawdown: maxDrawdown,
+    maxDrawdownPercent: maxDrawdownPercent,
     duration: maxDrawdownDuration
   };
 }
@@ -426,7 +428,7 @@ function calculatePortfolioBuyAndHold(priceDataMap, config, portfolio) {
       return null;
     }
 
-    console.log(`Buy & Hold Final Value: $${metrics.finalValue.toFixed(2)}, Return: ${metrics.totalReturnPercent.toFixed(2)}%`);
+    console.log(`Buy & Hold Final Value: $${(metrics.finalValue || 0).toFixed(2)}, Return: ${(metrics.totalReturnPercent || 0).toFixed(2)}%`);
 
     // 5. Generate comparison with DCA results
     const comparison = generateComparisonMetrics(
