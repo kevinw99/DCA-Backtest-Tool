@@ -1,0 +1,5 @@
+# Serve presentation as static files (not through React Router)
+/presentation/*  /presentation/:splat  200
+
+# All other routes go to React app (SPA fallback)
+/*  /index.html  200
