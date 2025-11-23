@@ -10,7 +10,7 @@ import AutomatedTestingPage from './components/AutomatedTestingPage';
 import URLParameterManager from './utils/URLParameterManager';
 import useSSEProgress from './hooks/useSSEProgress';
 import { fetchBacktestDefaults } from './services/configService';
-import { Play, TrendingUp, Settings, Zap } from 'lucide-react';
+import { Play, TrendingUp, Settings, Zap, Presentation, ExternalLink } from 'lucide-react';
 import { getApiUrl } from './config/api';
 
 function AppContent() {
@@ -461,6 +461,16 @@ function AppContent() {
             DCA Backtesting Platform
           </h1>
           <p>Analyze Dollar Cost Averaging strategies with technical indicators</p>
+          <a
+            href="https://dca-presentation.onrender.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="presentation-link"
+          >
+            <Presentation size={16} />
+            View Presentation
+            <ExternalLink size={12} />
+          </a>
         </div>
       </header>
 
