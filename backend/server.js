@@ -317,6 +317,7 @@ app.get('/api', (req, res) => {
 
     <div class="footer">
       <p>
+        📊 <a href="${frontendUrl}/presentation" target="_blank">Presentation</a> |
         📚 <a href="${apiData.documentation}" target="_blank">GitHub Documentation</a> |
         💾 <a href="/db-viewer" target="_blank">Database Viewer</a> |
         ❤️ <a href="/api/health" target="_blank">Health Check</a>
