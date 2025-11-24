@@ -10,6 +10,35 @@ drawings:
   persist: false
 transition: slide-left
 mdc: true
+css: unocss
+---
+
+<style>
+/* Larger fonts for better readability */
+.slidev-layout {
+  font-size: 1.1em;
+}
+.slidev-layout pre {
+  font-size: 0.95em;
+}
+.slidev-layout code {
+  font-size: 0.95em;
+}
+.slidev-layout ul, .slidev-layout ol {
+  font-size: 1.05em;
+}
+.slidev-layout li {
+  margin: 0.4rem 0;
+  line-height: 1.5;
+}
+.slidev-layout h2 {
+  font-size: 1.4em;
+  margin-top: 0.8rem;
+}
+.slidev-layout table {
+  font-size: 0.95em;
+}
+</style>
 ---
 
 # Context Engineering with AI Coding Agents
@@ -21,7 +50,7 @@ From "Vibe Coding" to Structured Development
 </div>
 
 <div class="abs-br m-6 text-sm opacity-50">
-  DCA Backtest Tool Case Study | 2025
+  Grid-Based DCA Trading Case Study | 2025
 </div>
 
 ---
@@ -155,22 +184,22 @@ flowchart TD
 ## Layer 1: Project Context (CLAUDE.md)
 - Project-wide instructions and conventions
 - Testing commands and workflows
-- Permission boundaries
 
 ## Layer 2: Specifications (.kiro/specs/)
-- Requirements documents
-- Design documents
-- Task checklists
+- Requirements, design, and task documents
+- Kiro-style numbered directories
 
 ## Layer 3: Execution Protocols (PRPs)
 - Product Requirement Prompts
 - Context-rich implementation plans
-- Validation commands
 
 ## Layer 4: Skills & Commands (.claude/)
 - Reusable workflow automations
 - Domain-specific expertise
-- Custom slash commands
+
+## Layer 5: MCP Servers (External Integration)
+- Connect to deployment platforms (Render)
+- Access databases, APIs, external services
 
 </v-clicks>
 
@@ -400,6 +429,143 @@ The command triggers a multi-phase workflow:
 
 ---
 
+# MCP: Model Context Protocol
+
+Connecting Claude to External Services
+
+<v-clicks>
+
+## What is MCP?
+Protocol for connecting AI agents to external services and data sources
+
+## Key Capability
+Claude can **directly access** real-world systems during development:
+- Query deployment status
+- Read production logs
+- Check environment variables
+- Trigger redeployments
+
+## Available MCP Servers
+- **Render** - Deployment platform
+- **GitHub** - Repository and PR management
+- **PostgreSQL** - Database queries
+- **Yahoo Finance** - Live stock data
+
+</v-clicks>
+
+---
+
+# Case Study: Render MCP Integration
+
+Real-Time Deployment Monitoring
+
+## The Problem (Before MCP)
+```
+Developer: "Is the deployment done?"
+*Opens Render dashboard*
+*Navigates to service*
+*Clicks on deploys tab*
+*Scrolls through logs*
+"Ah, there's an error on line 247..."
+```
+
+<v-click>
+
+## The Solution (With MCP)
+```
+Developer: "Check the deployment status"
+Claude: *queries Render MCP*
+Claude: "Deploy failed at 2:34pm. Error in server.js:247 -
+         missing environment variable BACKEND_URL.
+         Should I add it and redeploy?"
+```
+
+</v-click>
+
+---
+
+# Render MCP Capabilities
+
+<v-clicks>
+
+## Deployment Operations
+- List all services and their status
+- View recent deployments and logs
+- Monitor build progress in real-time
+- Trigger new deployments
+
+## Environment Management
+- Read environment variables
+- Update configurations
+- Compare local vs production
+
+## Metrics & Monitoring
+- CPU and memory usage
+- Request counts and latency
+- Active database connections
+
+## Database Access
+- Run read-only SQL queries
+- Debug data issues directly
+- No SSH required
+
+</v-clicks>
+
+---
+
+# MCP Development Workflow
+
+```mermaid {scale: 0.75}
+flowchart LR
+    A[Code Change] --> B[Push to GitHub]
+    B --> C[Auto Deploy]
+    C --> D{Deploy OK?}
+    D -->|No| E[Claude queries logs via MCP]
+    E --> F[Identifies root cause]
+    F --> G[Fixes code]
+    G --> A
+    D -->|Yes| H[Claude verifies via MCP]
+    H --> I[Done]
+
+    style E fill:#ccffcc
+    style F fill:#ccffcc
+    style H fill:#ccffcc
+```
+
+<v-click>
+
+**Key Benefit**: Claude monitors and troubleshoots deployments without manual dashboard navigation
+
+</v-click>
+
+---
+
+# Other MCP Integrations
+
+<v-clicks>
+
+## Yahoo Finance MCP
+- Live stock prices and beta values
+- Historical data on-demand
+- No API rate limit management
+
+## GitHub MCP
+- Search repository history
+- Reference past implementations
+- Create PRs and issues
+
+## Database MCP
+- Query production SQLite safely (read-only)
+- Debug data issues without SSH
+- Verify data integrity
+
+## Key Insight
+> Claude accesses specialized knowledge on-demand, reducing hallucinations with grounded, real-world data
+
+</v-clicks>
+
+---
+
 # The Tools Landscape (2025)
 
 | Tool | Type | Strengths | Limitations |
@@ -441,7 +607,7 @@ The command triggers a multi-phase workflow:
 
 ---
 
-# Real-World Impact: DCA Backtest Tool
+# Real-World Impact: Grid-Based DCA Trading
 
 <v-clicks>
 
@@ -696,7 +862,7 @@ class: text-center
 
 [Claude Code Documentation](https://docs.anthropic.com/claude-code)
 
-[DCA Backtest Tool Demo](https://dca-backtest-frontend.onrender.com)
+[Grid-Based DCA Trading Demo](https://dca-backtest-frontend.onrender.com)
 
 </div>
 

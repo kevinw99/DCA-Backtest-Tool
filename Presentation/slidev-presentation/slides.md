@@ -5,7 +5,7 @@ class: text-center
 highlighter: shiki
 lineNumbers: false
 info: |
-  ## DCA Backtest Tool
+  ## Grid-Based DCA Trading
 
   Grid-Based Dollar Cost Averaging strategies for volatile stocks
 
@@ -13,11 +13,11 @@ info: |
 drawings:
   persist: false
 transition: slide-left
-title: DCA Backtest Tool - Advanced Trading Strategies
+title: Grid-Based DCA Trading - Advanced Trading Strategies
 mdc: true
 ---
 
-# DCA Backtest Tool
+# Grid-Based DCA Trading
 
 Grid-Based Dollar Cost Averaging Trading for Volatile Stocks
 
@@ -2079,7 +2079,7 @@ class: text-center
 
 <br>
 
-**DCA Backtest Tool**
+**Grid-Based DCA Trading**
 
 Turning Volatility into Opportunity
 
