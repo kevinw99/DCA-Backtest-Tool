@@ -317,7 +317,8 @@ app.get('/api', (req, res) => {
 
     <div class="footer">
       <p>
-        📊 <a href="${frontendUrl}/presentation/" target="_blank">Presentation</a> |
+        📊 <a href="${frontendUrl}/presentation/" target="_blank">Strategy Presentation</a> |
+        🎓 <a href="${frontendUrl}/methodology/" target="_blank">Methodology Presentation</a> |
         📚 <a href="${apiData.documentation}" target="_blank">GitHub Documentation</a> |
         💾 <a href="/db-viewer" target="_blank">Database Viewer</a> |
         ❤️ <a href="/api/health" target="_blank">Health Check</a>
@@ -1993,16 +1994,6 @@ app.get('/api/backtest/portfolio/config/:configName', async (req, res) => {
     const portfolioBacktestService = require('./services/portfolioBacktestService');
     const results = await portfolioBacktestService.runPortfolioBacktest(backtestParams);
 
-    console.log(`✅ Config-based portfolio backtest complete:`);
-    console.log(`   Portfolio: ${config.name}`);
-    console.log(`   Stocks: ${config.stocks.length}`);
-    console.log(`   Final Value: $${results.portfolioSummary.finalPortfolioValue.toLocaleString()}`);
-    console.log(`   Total Return: ${results.portfolioSummary.totalReturnPercent?.toFixed(2) || 'N/A'}%`);
-
-    // Cache results for drill-down
-    const portfolioResultsCache = require('./services/portfolioResultsCache');
-    portfolioResultsCache.set(results.portfolioRunId, results);
-
     // Set cache-control headers to prevent browser caching
     // This ensures fresh results on every request, especially with rerun=true
     res.set({
@@ -2012,16 +2003,53 @@ app.get('/api/backtest/portfolio/config/:configName', async (req, res) => {
       'Surrogate-Control': 'no-store'
     });
 
-    res.json({
-      success: true,
-      data: results,
-      meta: {
-        configFile: `${configName}.json`,
-        portfolioName: config.name,
-        portfolioDescription: config.description,
-        rerun: rerun === 'true' || rerun === '1'
+    // Spec 61: Handle two-scenario response format
+    if (results.success && results.data && results.data.scenarios) {
+      // Optimized capital mode returns two scenarios
+      const { optimal, constrained } = results.data.scenarios;
+      console.log(`✅ Config-based portfolio backtest complete (Optimized Capital Mode):`);
+      console.log(`   Portfolio: ${config.name}`);
+      console.log(`   Stocks: ${config.stocks.length}`);
+      console.log(`   Discovered Optimal Capital: $${results.data.capitalDiscovery?.peakDeployedCapital?.toLocaleString() || 'N/A'}`);
+      console.log(`   Optimal Final Value: $${optimal?.portfolioSummary?.finalPortfolioValue?.toLocaleString() || 'N/A'}`);
+      console.log(`   Constrained Final Value: $${constrained?.portfolioSummary?.finalPortfolioValue?.toLocaleString() || 'N/A'}`);
+      console.log(`   Constrained Rejected Orders: ${constrained?.capitalAnalysis?.rejectedOrderCount || 0}`);
+
+      // Return the two-scenario response directly with meta
+      res.json({
+        ...results,
+        meta: {
+          configFile: `${configName}.json`,
+          portfolioName: config.name,
+          portfolioDescription: config.description,
+          rerun: rerun === 'true' || rerun === '1'
+        }
+      });
+    } else {
+      // Standard single-scenario mode
+      console.log(`✅ Config-based portfolio backtest complete:`);
+      console.log(`   Portfolio: ${config.name}`);
+      console.log(`   Stocks: ${config.stocks.length}`);
+      console.log(`   Final Value: $${results.portfolioSummary?.finalPortfolioValue?.toLocaleString() || 'N/A'}`);
+      console.log(`   Total Return: ${results.portfolioSummary?.totalReturnPercent?.toFixed(2) || 'N/A'}%`);
+
+      // Cache results for drill-down
+      const portfolioResultsCache = require('./services/portfolioResultsCache');
+      if (results.portfolioRunId) {
+        portfolioResultsCache.set(results.portfolioRunId, results);
       }
-    });
+
+      res.json({
+        success: true,
+        data: results,
+        meta: {
+          configFile: `${configName}.json`,
+          portfolioName: config.name,
+          portfolioDescription: config.description,
+          rerun: rerun === 'true' || rerun === '1'
+        }
+      });
+    }
 
   } catch (error) {
     console.error('Config-based portfolio backtest error:', error);

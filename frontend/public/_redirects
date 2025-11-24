@@ -4,5 +4,11 @@
 # Serve presentation as static files (not through React Router)
 /presentation/*  /presentation/:splat  200
 
+# Redirect /methodology to /methodology/ (add trailing slash)
+/methodology  /methodology/  301
+
+# Serve methodology presentation as static files
+/methodology/*  /methodology/:splat  200
+
 # All other routes go to React app (SPA fallback)
 /*  /index.html  200
