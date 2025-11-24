@@ -2086,5 +2086,5 @@ Turning Volatility into Opportunity
 <br>
 
 <div class="text-sm text-gray-400">
-Built with Claude Code | Deployed on Render.com | Open for Contributions
+Built with Claude Code | Deployed on Render.com
 </div>
