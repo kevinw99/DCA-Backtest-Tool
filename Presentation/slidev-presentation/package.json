@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "slidev",
-    "build": "slidev build",
+    "build": "slidev build --base /presentation/",
     "export": "slidev export",
     "start": "npx serve dist"
   },
