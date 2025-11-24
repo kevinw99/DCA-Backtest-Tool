@@ -7,7 +7,7 @@ lineNumbers: false
 info: |
   ## DCA Backtest Tool
 
-  Enhanced Dollar Cost Averaging strategies for volatile stocks
+  Grid-Based Dollar Cost Averaging strategies for volatile stocks
 
   Built with Claude Code & Context Engineering
 drawings:
@@ -19,7 +19,7 @@ mdc: true
 
 # DCA Backtest Tool
 
-Enhanced Dollar Cost Averaging for Volatile Stocks
+Grid-Based Dollar Cost Averaging Trading for Volatile Stocks
 
 <div class="pt-12">
   <span @click="$slidev.nav.next" class="px-2 py-1 rounded cursor-pointer" hover="bg-white bg-opacity-10">
@@ -82,7 +82,7 @@ The Challenge of Investing in Volatile, High-Growth Stocks
 <v-click>
 
 <div class="text-center text-2xl font-bold text-blue-400">
-Let's explore the answer through Enhanced DCA Strategies
+Let's explore the answer through Grid-Based DCA Strategies
 </div>
 
 </v-click>
@@ -127,7 +127,7 @@ Past performance does not guarantee future results. Backtesting has inherent lim
 
 ---
 
-# 5: Solution - Enhanced DCA Framework
+# 5: Solution - Grid-Based DCA Framework
 
 Deep Dive into Systematic DCA Strategies
 
@@ -156,7 +156,7 @@ layout: center
 class: text-center
 ---
 
-# 6: Enhanced DCA Overview
+# 6: Grid-Based DCA Overview
 
 Beyond Vanilla DCA - Intelligent, Adaptive Strategies
 
@@ -1959,11 +1959,11 @@ Context Engineering = Structured Process + Zero Overhead
 layout: two-cols
 ---
 
-# Appendix: Vanilla vs. Enhanced DCA
+# Appendix: Vanilla vs. Grid-Based DCA
 
 <br>
 
-| Feature | Vanilla | Enhanced |
+| Feature | Vanilla | Grid-Based |
 |---------|---------|----------|
 | Grid Spacing | Fixed 10% | Dynamic 3-20% |
 | Profit Taking | Fixed | Incremental |
@@ -1976,7 +1976,7 @@ layout: two-cols
 
 <br><br>
 
-| Feature | Vanilla | Enhanced |
+| Feature | Vanilla | Grid-Based |
 |---------|---------|----------|
 | Volatility Adj | N/A | Beta-scaled |
 | Market Adapt | Fixed | 3-scenario |
@@ -1991,7 +1991,7 @@ layout: two-cols
 
 <br>
 
-| Metric | Vanilla DCA | Enhanced DCA | Improvement |
+| Metric | Vanilla DCA | Grid-Based DCA | Improvement |
 |--------|-------------|--------------|-------------|
 | **Max Drawdown** | 80% | <40% | 50% reduction ✅ |
 | **Win Rate** | 0% | 40-60% | Always losing → Profitable ✅ |
@@ -2004,10 +2004,10 @@ layout: two-cols
 
 ## Real-World Results (TSLA 2021-2024)
 - **Vanilla DCA:** -28% return, 80% max drawdown ❌
-- **Enhanced DCA:** +120% return, 40% max drawdown ✅
+- **Grid-Based DCA:** +120% return, 40% max drawdown ✅
 - **Buy & Hold:** +85% return, 75% max drawdown
 
-**Conclusion:** Enhanced DCA delivers superior risk-adjusted returns
+**Conclusion:** Grid-Based DCA delivers superior risk-adjusted returns
 
 </v-click>
 
