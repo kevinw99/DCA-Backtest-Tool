@@ -793,6 +793,266 @@ Task agent 4: "Verify URL persistence"
 
 ---
 
+# Testing: Traditional vs AI-Driven
+
+<div class="grid grid-cols-2 gap-4">
+
+<div>
+
+## Traditional Test Case Approach
+```
+1. Write test cases manually
+2. Define expected outputs
+3. Execute test suite
+4. Compare actual vs expected
+5. File bug reports
+6. Fix bugs
+7. Re-run tests
+```
+
+**Limitations:**
+- Time-consuming test writing
+- Brittle test maintenance
+- Test coverage gaps
+- Manual effort intensive
+
+</div>
+
+<div>
+
+## AI-Driven Workflow Approach
+```
+1. Define testing workflow (natural language)
+2. AI generates test scenarios
+3. AI executes tests autonomously
+4. AI analyzes results
+5. AI files detailed bug reports
+6. AI suggests fixes
+7. AI validates fixes
+```
+
+**Benefits:**
+- Faster test creation
+- Self-healing tests
+- Comprehensive coverage
+- Autonomous iteration
+
+</div>
+
+</div>
+
+---
+layout: two-cols
+---
+
+# Testing Flow: Traditional
+
+```mermaid {scale: 0.65}
+flowchart TD
+    A[Write Test Cases] --> B[Define Assertions]
+    B --> C[Execute Tests]
+    C --> D{Pass?}
+    D -->|No| E[Manual Bug Report]
+    E --> F[Developer Fixes]
+    F --> C
+    D -->|Yes| G[Done]
+
+    style A fill:#ffcccc
+    style B fill:#ffcccc
+    style E fill:#ffcccc
+```
+
+**Manual Steps:**
+- Test case authoring
+- Bug report writing
+- Context switching
+
+::right::
+
+# Testing Flow: AI-Driven
+
+```mermaid {scale: 0.65}
+flowchart TD
+    A[Define Workflow] --> B[AI Generates Tests]
+    B --> C[AI Executes]
+    C --> D{Pass?}
+    D -->|No| E[AI Analyzes]
+    E --> F[AI Reports + Fix]
+    F --> G[AI Validates]
+    G --> D
+    D -->|Yes| H[Done]
+
+    style B fill:#ccffcc
+    style C fill:#ccffcc
+    style E fill:#ccffcc
+    style F fill:#ccffcc
+    style G fill:#ccffcc
+```
+
+**Automated Steps:**
+- Test generation
+- Execution & analysis
+- Fix validation
+
+---
+
+# Systematic Refinement: Development Pipeline
+
+<v-clicks>
+
+## The Concept
+Instead of one-shot prompting, use **staged AI collaboration** through progressive refinement
+
+## The Pipeline
+
+```mermaid {scale: 0.75}
+flowchart LR
+    A[Idea/Story] --> B[AI: Spec]
+    B --> C[AI: Implementation]
+    C --> D[AI: Testing]
+    D --> E{Issues?}
+    E -->|Yes| F[AI: Bug Analysis]
+    F --> G[AI: Fix]
+    G --> D
+    E -->|No| H[Done]
+
+    style B fill:#e1f5ff
+    style C fill:#e1f5ff
+    style D fill:#e1f5ff
+    style F fill:#e1f5ff
+    style G fill:#e1f5ff
+```
+
+## Key: Each Stage Has Full Context
+- Spec informs implementation
+- Implementation informs testing
+- Test results inform fixes
+- **Progressive refinement, not one-shot**
+
+</v-clicks>
+
+---
+
+# AI as Your Co-Founder
+
+<v-clicks>
+
+## Mindset Shift: From Tool to Partner
+
+**Traditional View:**
+- AI = code completion tool
+- Give instructions, get code
+- Transactional interaction
+
+**Co-Founder View:**
+- AI = technical co-founder / CTO
+- Bounce ideas, iterate together
+- Strategic collaboration
+
+## What This Enables
+
+- **Architecture discussions**: "Should we use microservices or monolith?"
+- **Trade-off analysis**: "What are pros/cons of this approach?"
+- **Alternative exploration**: "What are 3 other ways to solve this?"
+- **Technical decisions**: "Which database fits our scaling needs?"
+
+## The Conversation Flow
+```
+You: "I want to build X for Y users"
+AI: "Here are 3 architectural approaches, let's discuss..."
+You: "Option 2 looks good, but concerned about Z"
+AI: "Valid concern. Here's how to mitigate..."
+```
+
+</v-clicks>
+
+---
+
+# The CLI Advantage
+
+<v-clicks>
+
+## Why CLI > GUI for AI Development
+
+**Traditional GUI:**
+- Click, point, scroll
+- Context switching
+- Limited by UI design
+- Constrained workflows
+
+**CLI + Natural Language:**
+- Direct command execution
+- Stays in flow state
+- Unlimited expressiveness
+- Custom workflows
+
+## Natural Language: The Ultimate Interface
+
+> You don't need to learn the tool's language. The tool learns yours.
+
+**Examples:**
+```
+"Deploy the latest changes to production"
+"Show me all failing tests"
+"Create a backup before this refactor"
+"Analyze performance bottlenecks in auth service"
+```
+
+## Claude Code Enables This
+- Understands full project context
+- Executes complex multi-step workflows
+- Integrates with any CLI tool
+- Extends via custom commands
+
+</v-clicks>
+
+---
+
+# Rethinking Project Management
+
+<v-clicks>
+
+## Do You Still Need Jira?
+
+**Traditional PM Tools:**
+- Create tickets manually
+- Update status fields
+- Write acceptance criteria
+- Track in kanban boards
+
+**AI-Native Approach:**
+```bash
+# Instead of opening Jira:
+"Create implementation plan for user auth feature"
+→ AI generates spec, tasks, acceptance criteria
+
+"What's the status of bug #42?"
+→ AI checks git history, test results, deployment status
+
+"Show me all P1 bugs"
+→ AI queries codebase, logs, recent issues
+```
+
+## The Shift
+From **data entry in PM tools** to **natural language task management**
+
+- Specs live in codebase (.kiro/specs/)
+- Tasks auto-generated from specs
+- Status derived from git + CI/CD
+- TodoWrite for real-time tracking
+
+## Still Useful: Team Coordination
+Jira remains valuable for:
+- Cross-team visibility
+- Stakeholder reporting
+- Enterprise compliance
+
+But for **individual developer workflow**: CLI + AI > GUI clicks
+
+</v-clicks>
+
+---
+
 # Getting Started
 
 <v-clicks>
