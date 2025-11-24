@@ -129,32 +129,6 @@ Past performance does not guarantee future results. Backtesting has inherent lim
 
 # 5: Solution - Enhanced DCA Framework
 
-<br>
-
-<v-clicks>
-
-1. Can you do **better than buy-and-hold**?
-
-2. Can you **outperform S&P 500** with less risk?
-
-3. How do you **systematically** capture gains while managing volatility?
-
-</v-clicks>
-
-<br><br>
-
-<v-click>
-
-<div class="text-center text-2xl font-bold text-blue-400">
-Let's explore the answer through Enhanced DCA Strategies
-</div>
-
-</v-click>
-
----
-
-# 5: Solution - Enhanced DCA Framework
-
 Deep Dive into Systematic DCA Strategies
 
 ## Vanilla DCA (Dollar Cost Averaging)
