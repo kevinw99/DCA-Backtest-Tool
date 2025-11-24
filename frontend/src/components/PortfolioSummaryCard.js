@@ -3,6 +3,20 @@ import { DollarSign, TrendingUp, TrendingDown, Target, BarChart3, AlertTriangle,
 import './PortfolioSummaryCard.css';
 
 const PortfolioSummaryCard = ({ summary, comparison }) => {
+  // Guard clause: if summary is not provided, show loading or return null
+  if (!summary) {
+    return (
+      <div className="portfolio-summary-card">
+        <div className="summary-header">
+          <h2>Portfolio Summary</h2>
+        </div>
+        <div className="summary-grid">
+          <p>Loading portfolio summary...</p>
+        </div>
+      </div>
+    );
+  }
+
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
