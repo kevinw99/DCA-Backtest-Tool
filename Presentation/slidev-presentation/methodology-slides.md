@@ -14,28 +14,29 @@ css: unocss
 ---
 
 <style>
-/* Larger fonts for better readability */
-.slidev-layout {
+/* Larger fonts for better readability - skip cover slide */
+.slidev-layout:not(.cover) {
   font-size: 1.1em;
 }
-.slidev-layout pre {
+.slidev-layout:not(.cover) pre {
   font-size: 0.95em;
 }
-.slidev-layout code {
+.slidev-layout:not(.cover) code {
   font-size: 0.95em;
 }
-.slidev-layout ul, .slidev-layout ol {
+.slidev-layout:not(.cover) ul,
+.slidev-layout:not(.cover) ol {
   font-size: 1.05em;
 }
-.slidev-layout li {
+.slidev-layout:not(.cover) li {
   margin: 0.4rem 0;
   line-height: 1.5;
 }
-.slidev-layout h2 {
+.slidev-layout:not(.cover) h2 {
   font-size: 1.4em;
   margin-top: 0.8rem;
 }
-.slidev-layout table {
+.slidev-layout:not(.cover) table {
   font-size: 0.95em;
 }
 </style>
