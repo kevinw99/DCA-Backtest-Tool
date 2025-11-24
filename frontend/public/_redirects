@@ -1,3 +1,6 @@
+# Redirect /presentation to /presentation/ (add trailing slash)
+/presentation  /presentation/  301
+
 # Serve presentation as static files (not through React Router)
 /presentation/*  /presentation/:splat  200
 

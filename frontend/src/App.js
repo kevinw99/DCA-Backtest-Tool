@@ -462,7 +462,7 @@ function AppContent() {
           </h1>
           <p>Analyze Dollar Cost Averaging strategies with technical indicators</p>
           <a
-            href="/presentation"
+            href="/presentation/"
             target="_blank"
             rel="noopener noreferrer"
             className="presentation-link"

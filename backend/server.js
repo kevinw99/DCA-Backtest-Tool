@@ -317,7 +317,7 @@ app.get('/api', (req, res) => {
 
     <div class="footer">
       <p>
-        📊 <a href="${frontendUrl}/presentation" target="_blank">Presentation</a> |
+        📊 <a href="${frontendUrl}/presentation/" target="_blank">Presentation</a> |
         📚 <a href="${apiData.documentation}" target="_blank">GitHub Documentation</a> |
         💾 <a href="/db-viewer" target="_blank">Database Viewer</a> |
         ❤️ <a href="/api/health" target="_blank">Health Check</a>
@@ -1713,15 +1713,18 @@ app.post('/api/portfolio-backtest', async (req, res) => {
       beta,
       // Spec 45: Momentum-based trading
       momentumBasedBuy,
-      momentumBasedSell
+      momentumBasedSell,
+      // Spec 61: Optimized capital discovery
+      optimizedTotalCapital
     } = req.body;
 
     // Validation
-    if (!totalCapital || totalCapital <= 0) {
+    // Spec 61: totalCapital is optional when optimizedTotalCapital is true
+    if (!optimizedTotalCapital && (!totalCapital || totalCapital <= 0)) {
       return res.status(400).json({
         success: false,
         error: 'Invalid totalCapital',
-        message: 'Total capital must be a positive number'
+        message: 'Total capital must be a positive number (or use optimizedTotalCapital: true to auto-discover)'
       });
     }
 
@@ -1826,7 +1829,7 @@ app.post('/api/portfolio-backtest', async (req, res) => {
     const stockSymbols = stocks.map(s => typeof s === 'string' ? s : s.symbol);
 
     console.log(`📊 Portfolio backtest requested:`);
-    console.log(`   Capital: $${totalCapital.toLocaleString()}`);
+    console.log(`   Capital: ${totalCapital ? `$${totalCapital.toLocaleString()}` : 'Auto-discover (optimized mode)'}`);
     console.log(`   Lot Size: $${lotSizeUsd.toLocaleString()}`);
     console.log(`   Stocks: ${stocks.length} (${stockSymbols.join(', ')})`);
     console.log(`   Period: ${startDate} to ${endDate}`);
@@ -1855,7 +1858,8 @@ app.post('/api/portfolio-backtest', async (req, res) => {
     };
 
     const config = {
-      totalCapital,
+      // Spec 61: When optimizedTotalCapital is true, use a default placeholder capital
+      totalCapital: totalCapital || (optimizedTotalCapital ? 10000000 : null),
       startDate,
       endDate,
       lotSizeUsd,
@@ -1863,26 +1867,45 @@ app.post('/api/portfolio-backtest', async (req, res) => {
       defaultParams: finalDefaultParams,
       stocks,
       capitalOptimization: capitalOptimizationConfig,
-      betaScaling: betaScalingConfig
+      betaScaling: betaScalingConfig,
+      // Spec 61: Optimized capital discovery
+      optimizedTotalCapital: optimizedTotalCapital || false
     };
 
     const results = await portfolioBacktestService.runPortfolioBacktest(config);
 
-    console.log(`✅ Portfolio backtest complete:`);
-    console.log(`   Final Value: $${results.portfolioSummary.finalPortfolioValue.toLocaleString()}`);
-    console.log(`   Total Return: ${results.portfolioSummary.totalReturnPercent?.toFixed(2) || 'N/A'}%`);
-    console.log(`   CAGR: ${results.portfolioSummary.cagr?.toFixed(2) || 'N/A'}%`);
-    console.log(`   Capital Utilization: ${results.portfolioSummary.capitalUtilizationPercent?.toFixed(1) || 'N/A'}%`);
-    console.log(`   Rejected Buys: ${results.portfolioSummary.rejectedBuys}`);
+    // Spec 61: Handle two-scenario response format
+    if (results.success && results.data && results.data.scenarios) {
+      // Optimized capital mode returns two scenarios
+      const { optimal, constrained } = results.data.scenarios;
+      console.log(`✅ Portfolio backtest complete (Optimized Capital Mode):`);
+      console.log(`   Discovered Optimal Capital: $${results.data.capitalDiscovery.peakDeployedCapital?.toLocaleString() || 'N/A'}`);
+      console.log(`   Optimal Final Value: $${optimal?.portfolioSummary?.finalPortfolioValue?.toLocaleString() || 'N/A'}`);
+      console.log(`   Constrained Final Value: $${constrained?.portfolioSummary?.finalPortfolioValue?.toLocaleString() || 'N/A'}`);
+      console.log(`   Constrained Rejected Orders: ${constrained?.capitalAnalysis?.rejectedOrderCount || 0}`);
 
-    // Cache results for drill-down
-    const portfolioResultsCache = require('./services/portfolioResultsCache');
-    portfolioResultsCache.set(results.portfolioRunId, results);
+      // Return the two-scenario response directly
+      res.json(results);
+    } else {
+      // Standard single-scenario mode
+      console.log(`✅ Portfolio backtest complete:`);
+      console.log(`   Final Value: $${results.portfolioSummary?.finalPortfolioValue?.toLocaleString() || 'N/A'}`);
+      console.log(`   Total Return: ${results.portfolioSummary?.totalReturnPercent?.toFixed(2) || 'N/A'}%`);
+      console.log(`   CAGR: ${results.portfolioSummary?.cagr?.toFixed(2) || 'N/A'}%`);
+      console.log(`   Capital Utilization: ${results.portfolioSummary?.capitalUtilizationPercent?.toFixed(1) || 'N/A'}%`);
+      console.log(`   Rejected Buys: ${results.portfolioSummary?.rejectedBuys || 0}`);
 
-    res.json({
-      success: true,
-      data: results
-    });
+      // Cache results for drill-down
+      const portfolioResultsCache = require('./services/portfolioResultsCache');
+      if (results.portfolioRunId) {
+        portfolioResultsCache.set(results.portfolioRunId, results);
+      }
+
+      res.json({
+        success: true,
+        data: results
+      });
+    }
 
   } catch (error) {
     console.error('Portfolio backtest error:', error);
