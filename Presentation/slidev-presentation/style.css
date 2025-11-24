@@ -1,0 +1,66 @@
+/* Global slide styling to prevent content cutoff */
+
+/* Allow slides to fit content */
+.slidev-layout {
+  overflow-y: auto;
+  max-height: 100vh;
+  padding: 2rem 3rem;
+}
+
+/* Reduce font size for dense content */
+.slidev-layout table {
+  font-size: 0.85em;
+}
+
+.slidev-layout pre {
+  font-size: 0.8em;
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+/* Smaller headings to save space */
+.slidev-layout h1 {
+  font-size: 1.8em;
+  margin-bottom: 0.5rem;
+}
+
+.slidev-layout h2 {
+  font-size: 1.3em;
+  margin-bottom: 0.3rem;
+}
+
+/* Tighter list spacing */
+.slidev-layout ul, .slidev-layout ol {
+  margin: 0.3rem 0;
+}
+
+.slidev-layout li {
+  margin: 0.2rem 0;
+  line-height: 1.4;
+}
+
+/* Two-column layout improvements */
+.two-cols {
+  gap: 1rem;
+}
+
+/* Smaller paragraph spacing */
+.slidev-layout p {
+  margin: 0.4rem 0;
+}
+
+/* Compact tables */
+.slidev-layout table td,
+.slidev-layout table th {
+  padding: 0.3rem 0.6rem;
+}
+
+/* Code blocks compact */
+.slidev-layout code {
+  font-size: 0.85em;
+}
+
+/* v-clicks animations - ensure visible */
+.slidev-vclick-target {
+  transition: opacity 0.3s ease;
+}
