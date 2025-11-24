@@ -17,6 +17,7 @@ yarn-error.log*
 
 # Database
 *.db
+!backend/stocks.db
 *.sqlite
 *.sqlite3
 
