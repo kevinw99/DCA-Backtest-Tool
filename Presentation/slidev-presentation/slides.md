@@ -102,37 +102,28 @@ class: text-center
 
 <v-clicks>
 
-<div class="text-xl mb-4">
+<div class="text-xl mb-6">
 This presentation is for <strong>educational and research purposes only</strong>.
 </div>
 
-<div class="text-xl mb-4">
-<strong>Do not try this at home.</strong> Real trading is far more subtle and complex than these coarse methods suggest.
+<div class="text-xl mb-6">
+<strong>Do not try this at home.</strong> Real trading is far more complex than these methods suggest.
 </div>
 
 <div class="text-lg mb-4">
-The strategies shown involve significant risks including:<br>
-• Loss of principal • Margin calls • Emotional stress • Tax implications
+Strategies shown involve significant risks: Loss of principal • Margin calls • Emotional stress • Taxes
 </div>
 
-<div class="text-lg mb-4">
-<strong>Always consult a qualified financial advisor</strong> before making investment decisions.
+<div class="text-lg mb-6">
+<strong>Always consult a qualified financial advisor</strong> before investing.
 </div>
 
-<div class="text-lg mb-4">
-<strong>Backtests exclude transaction costs, slippage, taxes, and other real-world frictions</strong> which typically reduce returns by 0.5-3% annually.
+<div class="text-base mb-4">
+<strong>Backtests exclude costs, slippage, and taxes</strong> (typically -0.5% to -3% annually). Parameter optimization may overfit. Portfolio strategies need substantial capital ($100k+).
 </div>
 
-<div class="text-lg mb-4">
-Parameter optimization may result in overfitting to historical data. Substantial capital ($100,000+) recommended for portfolio strategies.
-</div>
-
-<div class="text-sm text-gray-400 mt-8">
-Past performance does not guarantee future results. Backtesting has inherent limitations and biases.
-</div>
-
-<div class="text-sm text-blue-400 mt-4">
-📄 <a href="../ORIGINALITY-ASSESSMENT.md" target="_blank">View Originality Assessment & Research Validation</a>
+<div class="text-sm text-gray-400 mt-6">
+Past performance ≠ future results. Research validation document available in project repository.
 </div>
 
 </v-clicks>
@@ -166,7 +157,7 @@ class: text-center
 - ❌ Order rejection (broker/exchange may reject orders)
 
 **Tax & Compliance:**
-- ❌ Tax liabilities from high-frequency trading (short-term capital gains)
+- ❌ Tax liabilities from frequent trading (short-term capital gains)
 - ❌ Wash sale rules
 - ❌ Pattern day trader restrictions
 
@@ -194,7 +185,7 @@ class: text-center
 **Tax impact can be even larger**
 - Short-term capital gains taxed at ordinary income rates (up to 37%)
 - vs. Long-term gains (15-20%)
-- High-frequency DCA generates mostly short-term gains
+- Frequent DCA trading generates mostly short-term gains
 
 </div>
 
