@@ -1,0 +1,29 @@
+Grid-Based DCA Trading Tool
+Copyright © 2025 Kevin Weng. All Rights Reserved.
+
+INTELLECTUAL PROPERTY NOTICE
+============================
+
+This software contains original innovations and proprietary algorithms
+protected by copyright and trade secret law.
+
+PROTECTED INNOVATIONS:
+- Grid-Based DCA (Price Spacing for Accumulation)
+- DCA Suitability Score (0-100 composite metric)
+- Beta Grouping Analysis for DCA
+- Consecutive Incremental Profit Requirement
+- Dynamic Grid Spacing (Square Root-Based)
+- Context Engineering Framework
+- curl + AI Autonomous Bug Resolution
+- Recursive AI Scaffolding Pattern
+
+LICENSE:
+The source code is licensed under the MIT License (see LICENSE file).
+However, the original algorithms, methodologies, and innovations remain
+the intellectual property of the copyright holder.
+
+TRADE SECRETS:
+Core algorithm implementations are protected as trade secrets.
+Unauthorized disclosure is prohibited. See TRADE-SECRETS.md for details.
+
+For licensing inquiries: kevin.weng.ai@gmail.com

@@ -1,3 +1,19 @@
+/**
+ * CONFIDENTIAL - TRADE SECRET
+ *
+ * Grid-Based DCA Trading Algorithm
+ * Copyright © 2025 Kevin Weng. All Rights Reserved.
+ *
+ * This file contains proprietary algorithms and trade secrets.
+ *
+ * DO NOT:
+ * - Share this code with unauthorized parties
+ * - Disclose implementation details publicly
+ * - Copy or redistribute without written permission
+ *
+ * For collaboration, NDA required. Contact: kevin.weng.ai@gmail.com
+ */
+
 const database = require('../database');
 const PerformanceCalculatorService = require('./performanceCalculatorService');
 const AdaptiveStrategyService = require('./adaptiveStrategyService');

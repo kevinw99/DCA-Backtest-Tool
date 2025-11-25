@@ -1,6 +1,12 @@
-# Stock Trading Dashboard
+# Grid-Based DCA Trading Tool
 
-A comprehensive web application for stock analysis with focus on YoY quarterly growth and financial metrics, featuring synchronized charts and up to 5 years of historical data.
+**Copyright © 2025 Kevin Weng. All Rights Reserved.**
+
+This software is released under the MIT License (see LICENSE file), but the original innovations, algorithms, and methodologies documented in [ORIGINALITY-ASSESSMENT.md](Presentation/ORIGINALITY-ASSESSMENT.md) are protected by copyright and trade secret law.
+
+---
+
+A comprehensive backtest tool for Grid-Based Dollar Cost Averaging (DCA) strategies on volatile stocks, featuring systematic accumulation at price levels, momentum-based selling, and portfolio optimization.
 
 ## Features
 

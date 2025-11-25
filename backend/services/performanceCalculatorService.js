@@ -1,4 +1,20 @@
 /**
+ * CONFIDENTIAL - TRADE SECRET
+ *
+ * Grid-Based DCA Trading Algorithm - Performance Metrics
+ * Copyright © 2025 Kevin Weng. All Rights Reserved.
+ *
+ * This file contains proprietary algorithms and trade secrets.
+ *
+ * DO NOT:
+ * - Share this code with unauthorized parties
+ * - Disclose implementation details publicly
+ * - Copy or redistribute without written permission
+ *
+ * For collaboration, NDA required. Contact: kevin.weng.ai@gmail.com
+ */
+
+/**
  * Performance Calculator Service
  *
  * Comprehensive performance metrics calculation for DCA trading strategies

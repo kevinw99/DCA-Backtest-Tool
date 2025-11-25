@@ -1,6 +1,7 @@
 {
   "name": "stock-trading-backend",
   "version": "1.0.0",
+  "copyright": "Copyright © 2025 Kevin Weng. All Rights Reserved.",
   "description": "Backend API for Stock Trading Dashboard",
   "main": "server.js",
   "scripts": {

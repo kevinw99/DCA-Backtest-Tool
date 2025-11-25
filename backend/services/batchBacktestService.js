@@ -1,3 +1,19 @@
+/**
+ * CONFIDENTIAL - TRADE SECRET
+ *
+ * Grid-Based DCA Trading Algorithm - Batch Backtest
+ * Copyright © 2025 Kevin Weng. All Rights Reserved.
+ *
+ * This file contains proprietary algorithms and trade secrets.
+ *
+ * DO NOT:
+ * - Share this code with unauthorized parties
+ * - Disclose implementation details publicly
+ * - Copy or redistribute without written permission
+ *
+ * For collaboration, NDA required. Contact: kevin.weng.ai@gmail.com
+ */
+
 const { runDCABacktest } = require('./dcaBacktestService');
 const { generateBatchSummary } = require('./shared/batchUtilities');
 const sessionManager = require('../utils/sessionManager');
