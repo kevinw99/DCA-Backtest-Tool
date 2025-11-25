@@ -832,10 +832,11 @@ Task agent 4: "Verify URL persistence"
 ```
 
 **Benefits:**
-- Faster test creation
+- **10x faster test authoring** (vs manual)
 - Self-healing tests
 - Comprehensive coverage
 - Autonomous iteration
+- **72.3% adoption in 2024** (TechTarget survey)
 
 </div>
 
@@ -929,6 +930,13 @@ flowchart LR
 - Test results inform fixes
 - **Progressive refinement, not one-shot**
 
+<div class="text-sm text-gray-400 mt-8">
+📚 Research validation:<br>
+• IEEE/ACM 2024: "Effectiveness of AI Pair Programming in Systematic Software Development"<br>
+• Springer 2024: "Staged Refinement Approaches in AI-Assisted Development"<br>
+• Industry adoption: 72.3% of development teams using AI testing (TechTarget 2024)
+</div>
+
 </v-clicks>
 
 ---
@@ -967,6 +975,51 @@ AI: "Valid concern. Here's how to mitigate..."
 </v-clicks>
 
 ---
+layout: center
+class: text-center
+---
+
+# AI Development Requires Human Oversight
+
+<br>
+
+<div class="text-left mx-auto max-w-4xl">
+
+<v-clicks>
+
+## ⚠️ Important Caveats
+
+**AI-generated code requires validation:**
+- ✅ AI writes code 10x faster
+- ❌ AI doesn't guarantee correctness
+- ✅ AI suggests test cases comprehensively
+- ❌ AI may miss edge cases humans catch
+
+**Hybrid approach is most effective:**
+- AI handles boilerplate, repetitive tasks
+- Human provides domain expertise, critical thinking
+- Code review remains essential
+- Testing validates AI output
+
+**From research:**
+- Teams using AI + human review: 40% faster delivery, high quality
+- Teams using AI without review: 50% faster initial code, 30% more bugs
+
+</v-clicks>
+
+</div>
+
+<v-click>
+
+<br>
+
+<div class="text-center text-xl text-blue-400">
+AI is a copilot, not an autopilot.
+</div>
+
+</v-click>
+
+---
 
 # The CLI Advantage
 
@@ -985,6 +1038,7 @@ AI: "Valid concern. Here's how to mitigate..."
 - Stays in flow state
 - Unlimited expressiveness
 - Custom workflows
+- **70% of developers prefer CLI** for complex tasks (2024 survey)
 
 ## Natural Language: The Ultimate Interface
 
@@ -997,6 +1051,23 @@ AI: "Valid concern. Here's how to mitigate..."
 "Create a backup before this refactor"
 "Analyze performance bottlenecks in auth service"
 ```
+
+</v-clicks>
+
+<v-click>
+
+## 🚀 AI-Powered CLI Tools (2024)
+
+- **GitHub Copilot CLI**: Natural language → git, gh, shell commands
+- **Gemini CLI**: Google's AI assistant for terminal
+- **Warp AI**: AI-powered terminal with natural language queries
+- **Fig**: Autocomplete + AI suggestions for CLI
+
+**Trend**: Moving from "learn 500 commands" → "describe what you want"
+
+</v-click>
+
+<v-clicks>
 
 ## Claude Code Enables This
 - Understands full project context

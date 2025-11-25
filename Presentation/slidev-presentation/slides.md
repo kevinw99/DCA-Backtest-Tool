@@ -119,15 +119,147 @@ The strategies shown involve significant risks including:<br>
 <strong>Always consult a qualified financial advisor</strong> before making investment decisions.
 </div>
 
+<div class="text-lg mb-4">
+<strong>Backtests exclude transaction costs, slippage, taxes, and other real-world frictions</strong> which typically reduce returns by 0.5-3% annually.
+</div>
+
+<div class="text-lg mb-4">
+Parameter optimization may result in overfitting to historical data. Substantial capital ($100,000+) recommended for portfolio strategies.
+</div>
+
 <div class="text-sm text-gray-400 mt-8">
 Past performance does not guarantee future results. Backtesting has inherent limitations and biases.
+</div>
+
+<div class="text-sm text-blue-400 mt-4">
+📄 <a href="../ORIGINALITY-ASSESSMENT.md" target="_blank">View Originality Assessment & Research Validation</a>
+</div>
+
+</v-clicks>
+
+---
+layout: center
+class: text-center
+---
+
+# 5: Limitations & Important Factors Not Considered
+
+<br>
+
+## ⚠️ Factors NOT Included in These Backtests
+
+<v-clicks>
+
+<div class="text-left mx-auto max-w-4xl">
+
+**Transaction Costs & Market Frictions:**
+- ❌ Commissions, exchange fees, spreads
+- ❌ Slippage (difference between expected and actual fill price)
+- ❌ Market impact (your orders moving the price)
+- ❌ Bid-ask spreads
+- ❌ Margin interest for short positions
+- ❌ Borrowing costs for hard-to-borrow stocks
+
+**Execution Challenges:**
+- ❌ Fill gaps (limit orders may not execute during gaps/fast moves)
+- ❌ Partial fills (may not get full position size)
+- ❌ Order rejection (broker/exchange may reject orders)
+
+**Tax & Compliance:**
+- ❌ Tax liabilities from high-frequency trading (short-term capital gains)
+- ❌ Wash sale rules
+- ❌ Pattern day trader restrictions
+
 </div>
 
 </v-clicks>
 
 ---
 
-# 5: Solution - Grid-Based DCA Framework
+# 5: Real-World Impact & Risks (continued)
+
+<br>
+
+<v-clicks>
+
+## 📉 Expected Performance Impact
+
+<div class="text-left mx-auto max-w-4xl">
+
+**Transaction costs typically reduce returns by 0.5-3% annually**
+- Low-frequency strategies (< 50 trades/year): ~0.5-1% impact
+- Medium-frequency (50-200 trades/year): ~1-2% impact
+- High-frequency (> 200 trades/year): ~2-3%+ impact
+
+**Tax impact can be even larger**
+- Short-term capital gains taxed at ordinary income rates (up to 37%)
+- vs. Long-term gains (15-20%)
+- High-frequency DCA generates mostly short-term gains
+
+</div>
+
+</v-clicks>
+
+<v-click>
+
+<br>
+
+## ⚠️ Overfitting Risk
+
+<div class="text-left mx-auto max-w-4xl">
+
+**Parameter optimization shown in demos may not work in live trading**
+- Optimizing 100+ parameter combinations risks "curve-fitting"
+- Great backtest results ≠ future performance
+- **Always use out-of-sample testing** before deploying real capital
+- Consider walk-forward analysis for robustness
+
+</div>
+
+</v-click>
+
+---
+
+# 5: Capital Requirements & Recommendations (continued)
+
+<br>
+
+<v-clicks>
+
+## 💰 Minimum Capital Recommendations
+
+<div class="text-left mx-auto max-w-4xl">
+
+**Single-Stock Strategies:**
+- Minimum: $10,000 (but benefits from scale)
+- Recommended: $25,000+ for effective grid spacing
+- Pattern Day Trader rule: $25,000 minimum if trading frequently
+
+**Portfolio Strategies (10+ stocks):**
+- Minimum: $100,000 for meaningful diversification
+- Recommended: $250,000+ for optimal capital allocation
+- Lower amounts spread too thin across positions
+
+</div>
+
+</v-clicks>
+
+<v-click>
+
+<br>
+
+## 🎯 Summary
+
+<div class="text-center text-xl text-yellow-400">
+These limitations don't invalidate the strategies—<br>
+they help you set realistic expectations and trade responsibly.
+</div>
+
+</v-click>
+
+---
+
+# 6: Solution - Grid-Based DCA Framework
 
 Deep Dive into Systematic DCA Strategies
 
@@ -818,10 +950,14 @@ Peak: $414, Bottom: $102
 
 | Metric | DCA Strategy | Buy & Hold |
 |--------|--------------|------------|
-| **Total Return** | +120% | +85% |
+| **Total Return** | +120%* | +85% |
 | **Max Drawdown** | -40% | -75% |
 
 **Key Insight:** DCA reduces risk while capturing upside ✅
+
+<div class="text-xs text-gray-400 mt-4">
+*Excludes transaction costs, commissions, slippage, and taxes. Results based on 2021-2024 period only. Past performance does not guarantee future results.
+</div>
 
 </v-click>
 
@@ -844,10 +980,14 @@ Finding Optimal Parameters for PLTR (2021-2024)
 
 | Configuration | Return | Max Drawdown |
 |---------------|--------|--------------|
-| **Top Performer:** 8% grid, 7% profit, momentum sell | +85% | -28% |
-| **Default Params:** 10% grid, 5% profit, momentum off | +40% | -45% |
+| **Top Performer:** 8% grid, 7% profit, momentum sell | +85%* | -28% |
+| **Default Params:** 10% grid, 5% profit, momentum off | +40%* | -45% |
 
-**Key Insight:** Parameter optimization can **double returns** while reducing risk 📈
+**Key Insight:** Parameter optimization can improve returns while reducing risk 📈†
+
+<div class="text-xs text-gray-400 mt-4">
+*Excludes transaction costs and slippage. †Parameter optimization risks overfitting to historical data—always use out-of-sample testing before deploying capital.
+</div>
 
 </v-click>
 
@@ -904,11 +1044,15 @@ Day 90: AAPL +30%
 
 | Metric | Result |
 |--------|--------|
-| **Combined Return** | +180% |
+| **Combined Return** | +180%* |
 | **Sharpe Ratio** | 1.8 (excellent) |
 | **Max Drawdown** | -25% (vs. -50% individual) |
 | **Capital Efficiency** | 72% (vs. 50% static) |
 | **Total Trades** | 450 (avg 45 per stock) |
+
+<div class="text-xs text-gray-400 mt-4">
+*Hypothetical portfolio results. Excludes transaction costs, slippage, and taxes. Actual results will vary based on market conditions.
+</div>
 
 ---
 
@@ -1168,9 +1312,17 @@ Making Every Dollar Work (Spec 40)
 
 # 20: Demo 5 - NVDA AI Boom
 
-*(Illustrative Example)*
+<div class="text-2xl text-red-400 font-bold mb-4">
+⚠️ ILLUSTRATIVE EXAMPLE ONLY ⚠️
+</div>
 
-**Note:** *This demo uses illustrative numbers to show strategy behavior. For actual backtest results, run the tool with your parameters.*
+<div class="text-lg text-yellow-400 mb-8">
+NOT ACTUAL BACKTEST RESULTS — Numbers shown to demonstrate strategy behavior
+</div>
+
+<div class="text-sm text-gray-400 mb-4">
+For actual backtest results, run the tool with your parameters and date range.
+</div>
 
 ## Scenario
 AI boom rally (2023-2024, $150 → $900 approximate range)
@@ -1993,10 +2145,14 @@ layout: two-cols
 
 | Metric | Vanilla DCA | Grid-Based DCA | Improvement |
 |--------|-------------|--------------|-------------|
-| **Max Drawdown** | 80% | <40% | 50% reduction ✅ |
-| **Win Rate** | 0% | 40-60% | Always losing → Profitable ✅ |
-| **Sharpe Ratio** | Negative | 1.0+ | Positive risk-adj returns ✅ |
-| **Capital Efficiency** | 30% | 70% | More time profitable ✅ |
+| **Max Drawdown** | 80% | <40%* | 50% reduction ✅ |
+| **Win Rate** | 0% | 40-60%* | Always losing → Profitable ✅ |
+| **Sharpe Ratio** | Negative | 1.0+* | Positive risk-adj returns ✅ |
+| **Capital Efficiency** | 30% | 70%* | More time profitable ✅ |
+
+<div class="text-xs text-gray-400 mt-4">
+*Excludes transaction costs, slippage, and taxes. Results vary by time period and market conditions.
+</div>
 
 <br>
 
