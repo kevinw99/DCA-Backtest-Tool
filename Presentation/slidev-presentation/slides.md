@@ -21,10 +21,16 @@ mdc: true
 
 Grid-Based Dollar Cost Averaging Trading for Volatile Stocks
 
-<div class="pt-12">
+<div class="pt-8">
   <span @click="$slidev.nav.next" class="px-2 py-1 rounded cursor-pointer" hover="bg-white bg-opacity-10">
     Press Space for next page <carbon:arrow-right class="inline"/>
   </span>
+</div>
+
+<div class="abs-br m-6 text-sm">
+  <a href="https://github.com/kevinw99/DCA-Backtest-Tool/blob/main/Presentation/ORIGINALITY-ASSESSMENT.md" target="_blank" class="text-blue-400 opacity-75 hover:opacity-100">
+    📄 Research Validation & Originality Assessment
+  </a>
 </div>
 
 ---

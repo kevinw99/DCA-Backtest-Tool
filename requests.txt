@@ -1,3 +1,175 @@
+please also access the originality of gird based DCA strategy. The notion of price spacing, not time interval, to do DCA investment! because traditional DCA means time averageing, but grid based means price averaging. is this original? has it been discussed in any articles, papers, or experts in the field of investment? please list the source if found.
+
+However my immeidaite request is to ask my manager whether I can invite developer audience to my next session. These developers are not from IM team, they are from other teams. Also The focus would be more on the technical aspect of the project development, rather than the financial aspect of the project. and how the tool (Claude code) and methodology (context engineering) /workflow (specification driven development) can be applied to software development project in our company, and how aI can help concreate tasks we are doing right now, developers or QA engineers alike.  so does it change your perspective?
+
+
+I have a differnet thought. I am wroking as a QA engineer, not a developer. But this project and the AI content can be a full blown software development project. So I think it is better to have developers in the audience, rather than QA engineers. Today I have a developer friend who was in the audience and he likes it. I have anotehr session coming up. I am thinking inviting other developers leads (3 more people ) Who I've worked closly. Even more, we are in the department of Invetment Management. I see this potentailly could be something that the company might be interetesd in. even thought "
+Also the philosophy of this project is not algin with EFE. EFE does not do market timing, it focus on long term investment and managing risk. It often underperform the market both short term and long term (or can you check online to see its performance) but provide retirement stability and income. This project is more on market timing and short term trading to beat the market, which is not aligned with EFE's philosophy.". First of I please draft me an email to ask for permission to invite developer audiences. 2. also justify to invite IM personel, or present this to the IM team? 3. how would this affect the non-compete scenario? i.e. I was making this project completely separate from my work at Edelman, but if I present to IM team, and if the company is interested in this project, then how it might present a different scenario? What do I do for my own interseet. is it even a good idea to keep presenting or just disclose enought then shut up?
+
+
+ now a legal question . I am employed at Edelman Financial Services as a software QA engineer. I am doing this project on my own time, using my own resources, and not using any Edelman property or resources. However, the project is related to financial services, which is Edelman's business. Do I need to inform Edelman about this project, or get their permission to proceed? Please advise on the legal and ethical considerations I should be aware of.
+
+Also the philosophy of this project is not algin with EFE. EFE does not do market timing, it focus on long term investment and managing risk. It often underperform the market both short term and long term (or can you check online to see its performance) but provide retirement stability and income. This project is more on market timing and short term trading to beat the market, which is not aligned with EFE's philosophy. There is no relation of EFE's knowledge or resources to this project.
+The fact that I;ve been doing this for 3 months and then I just did a presentation with my EFE team, for the purpose of sharing AI knowlege, does it count as "  Consider disclosing to your employer" in time, not after fact? or already conflict?
+
+
+
+cd frontend && npm install && REACT_APP_API_URL=$BACKEND_URL npm run build &&
+  cd ../Presentation/slidev-presentation && npm install && npm run build &&
+  cp -r dist ../../frontend/build/presentation &&
+  npm run build:methodology &&
+  cp -r dist ../../frontend/build/methodology
+
+
+cd frontend && npm install && REACT_APP_API_URL=$BACKEND_URL npm run build && cd   ../Presentation/slidev-presentation && npm install && npm run build && cp -r dist   ../../frontend/build/presentation && npm run build:methodology && cp -r dist   ../../frontend/build/methodology
+
+
+I like to change
+Slide 1: Title
+DCA Backtest Tool
+
+Enhanced Dollar Cost Averaging for Volatile Stocks
+
+=>
+Slide 1: Title
+
+Grid-Based Dollar Cost Averaging Trading for Volatile Stocks
+
+Slide 4: Solution - Enhanced DCA Framework
+=>
+Slide 4: Solution - Grid-Based DCA Framework
+
+Slide 5: Enhanced DCA Overview
+=>
+Slide 5: Grid-Based DCA Overview
+
+And replace all Enhanced DCA with Grid-Based DCA in the rest of the slides.
+
+
+
+I need you to help me to develop a separate presentation slide deck to focus on methodology, tehnicque, skills, workflow, and tools used in this project development.
+I will list some ideas below, please expand on them and develop a complete slide deck.
+1. context engineering
+1.1 specification driven development
+    PRP
+        PRP development:
+        .claude/commands/prp-commands/ where does this directory come from? is it built in claude code, I think it is from another project from
+https://github.com/Wirasm/PRPs-agentic-eng, please confirm.
+        built in claude commands : .claude/commands/rapid-development:
+
+1.2    specs/ directory
+        started from kiro, how the kiro IDE does it
+        what enhancements we made:
+            numbering
+
+1.3 - bug reporting and investigation
+    - claude skills example .claude/skills/bug-investigator, comprehensive-fixer
+
+1.4 - Testing
+    - claude skills example .claude/skills/backtest-tester
+
+2
+Other tools worth mentioning:
+Gemini CLI
+Codex (OpenAI)
+Grok code?
+
+Kiro IDE (Amazon)
+Antigravity IDE(Google)?
+
+Cursor
+GitHub Copilot
+
+3
+Evolving Technology
+PRPs : technique/workflow - > Built in Claude
+Specs : Kiro IDE -> Enhanced by us
+
+Can have individual flow.
+
+4 I want to describe a technique that is somewhat cascading(this may not be the best word, .can you find a better word from the belowing example?)
+A: devleopment
+- instead one shot prompt to get AI to do everything, we choose to have a specification first, then implement it, then test it, then bug report and fix it.
+- instead of writing the specification ourself, we use AI to help us to write the specification.
+
+can you draw two flow charts to illustrate the difference?
+1. Prompts only approach
+    - prompts engineering
+    - Vibe coding
+2. Context engineering approach
+    - ideas, original thoughts (Treat AI as your founding parter, if you are doing a startup, bounce ideas, AI can be your CTO co-founder)
+     - AI: specification - AI implementation - AI testing - AI
+
+B: Testing
+- instead of writing test cases ourself, we use AI to help us to write test cases.
+- instead of test case, we define a workflow to do testing, and use AI to help us to implement the workflow.
+- testing is no longer defined as test case, it is defined as workflow
+- again Natural language is the ultimate interface
+
+can you draw two flow charts to illustrate the difference?
+
+1. traditional test case approach
+    - test case engineering
+    - test case execution
+2. context engineering approach
+
+Why claude code?
+- It can access the whole project code base
+- has the whole project context
+- Versatile skills
+- extendable via custom skills
+- what makes the above workflow/technique possible
+
+5
+The CLI advantage
+UI is actually a clutch, not always the best way to interact with the system
+Natural language interface is the ultimate UI
+Do you need jira? or can it be re-developed from groud up?
+
+also i want you to check the opinion of the content, because these are my understadnging of AI, and they might not be accurate. please verify and correct where necessary. Can you validdate these ideas with other sources, such as articles, papers, or experts in the field of AI and software development? and then expand them!
+
+
+I want to you evelualte how original these ideas are specifally: if it has been discussed, then list the source:
+I:
+.  "1.3 - bug reporting and investigation
+         - claude skills example .claude/skills/bug-investigator, ",
+
+1.4 - Testing
+    - claude skills example .claude/skills/backtest-tester
+
+         using curl commands to report bugs and have AI investigate and fix them, to avoid human intervention as much as possible.
+
+     "
+II: the concept of cascading AI assistance(?) "
+4 I want to describe a technique that is somewhat cascading(this may not be the best word, .can you find a better word from the belowing example?)
+A: devleopment
+- instead one shot prompt to get AI to do everything, we choose to have a specification first, then implement it, then test it, then bug report and fix it.
+- instead of writing the specification ourself, we use AI to help us to write the specification, "
+- instead of asking AI to write the specification, we even use AI auto complete feature like from github copilot to help us to write the prompts to ask AI to write the specification.
+""
+Therefore there are 3 level of AI assistance in above flow compare to one-shot prompting.
+
+III:
+    "
+B: Testing
+- instead of writing test cases ourself, we use AI to help us to write test cases.
+- instead of test case, we define a workflow to do testing, and use AI to help us to implement the workflow.
+- testing is no longer defined as test case, it is defined as workflow
+- again Natural language is the ultimate interface
+"
+
+IV:
+"The CLI advantage
+ UI is actually a clutch, not always the best way to interact with the system
+ Natural language interface is the ultimate UI
+ Do you need jira? or can it be re-developed from groud up?
+"
+"
+- again Natural language is the ultimate interface
+"
+
+
+
 Can you apply the same beta process for sp500 stocks as well?
 1. select the stocks with beta > 1.5
 and give the the config file to run

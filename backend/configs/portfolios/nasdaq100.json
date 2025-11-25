@@ -73,6 +73,7 @@
   "capitalOptimization": {
     "enabled": true,
     "strategies": ["adaptive_lot_sizing", "cash_yield", "deferred_selling"],
+    "optimizedTotalCapital": true,
     "adaptiveLotSizing": {
       "cashReserveThreshold": 100000,
       "maxLotSizeMultiplier": 2.0,

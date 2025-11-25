@@ -112,6 +112,42 @@ export const CapitalOptimizationSection = ({
         )}
       </div>
 
+      {/* Optimized Total Capital (Spec 61) */}
+      <div className="strategy-group optimized-capital-group">
+        <label className="strategy-header">
+          <input
+            type="checkbox"
+            checked={parameters.optimizedTotalCapital || false}
+            onChange={(e) => handleChange('optimizedTotalCapital', e.target.checked)}
+          />
+          <strong>Auto-Discover Optimal Capital</strong>
+          <span className="help-text">
+            Run two scenarios: find minimum capital needed (100%) and compare with constrained (90%) capital
+          </span>
+        </label>
+
+        {parameters.optimizedTotalCapital && (
+          <div className="info-box" style={{
+            marginTop: '10px',
+            padding: '12px',
+            backgroundColor: '#e8f4fd',
+            borderRadius: '6px',
+            border: '1px solid #b3d7f5'
+          }}>
+            <p style={{ margin: '0 0 8px 0', fontWeight: '500', color: '#1565c0' }}>
+              Two scenarios will be generated:
+            </p>
+            <ul style={{ margin: 0, paddingLeft: '20px', color: '#333' }}>
+              <li><strong>Optimal (100%)</strong>: Exact capital needed for zero rejected orders</li>
+              <li><strong>Constrained (90%)</strong>: Shows performance with 10% less capital</li>
+            </ul>
+            <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#666' }}>
+              Total Capital setting above will be ignored - capital is auto-discovered.
+            </p>
+          </div>
+        )}
+      </div>
+
       {/* Adaptive Lot Sizing Strategy */}
       <div className="strategy-group">
         <label className="strategy-header">

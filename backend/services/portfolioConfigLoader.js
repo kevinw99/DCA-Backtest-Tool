@@ -93,6 +93,10 @@ function configToBacktestParams(config) {
     };
   });
 
+  // Spec 61: Extract optimizedTotalCapital from capitalOptimization
+  const capitalOptimization = config.capitalOptimization || { enabled: false };
+  const optimizedTotalCapital = capitalOptimization.optimizedTotalCapital || false;
+
   // Convert to format expected by portfolioBacktestService
   return {
     totalCapital: totalCapitalUsd,
@@ -104,7 +108,8 @@ function configToBacktestParams(config) {
     defaultParams: flattenedDefaults,  // Use flattened parameters
     stocks: stocksWithParams,
     indexTracking: config.indexTracking || { enabled: false },
-    capitalOptimization: config.capitalOptimization || { enabled: false }
+    capitalOptimization: capitalOptimization,
+    optimizedTotalCapital: optimizedTotalCapital  // Spec 61: Pass optimizedTotalCapital to backtest service
   };
 }
 

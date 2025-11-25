@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import PortfolioBacktestForm from './PortfolioBacktestForm';
 import PortfolioResults from './PortfolioResults';
+import OptimizedCapitalResults from './OptimizedCapitalResults';
 import { getDefaultStockSelection, getStockParameters } from '../utils/stockDefaults';
 import { getApiUrl } from '../config/api';
 import './PortfolioBacktestPage.css';
@@ -57,7 +58,9 @@ const PortfolioBacktestPage = () => {
         adaptiveLotIncreaseStep: 20,
         // Spec 45: Momentum-based trading parameters
         momentumBasedBuy: false,
-        momentumBasedSell: false
+        momentumBasedSell: false,
+        // Spec 61: Optimized Total Capital
+        optimizedTotalCapital: false
       },
       // Beta Scaling Parameters
       _betaScaling: {
@@ -314,7 +317,9 @@ const PortfolioBacktestPage = () => {
           adaptiveLotMaxMultiplier: paramsToUse.defaultParams.adaptiveLotMaxMultiplier || 2.0,
           adaptiveLotIncreaseStep: paramsToUse.defaultParams.adaptiveLotIncreaseStep || 20,
           // Beta Scaling Parameters
-          ...(paramsToUse._betaScaling && { _betaScaling: paramsToUse._betaScaling })
+          ...(paramsToUse._betaScaling && { _betaScaling: paramsToUse._betaScaling }),
+          // Spec 61: Optimized Total Capital
+          optimizedTotalCapital: paramsToUse.defaultParams.optimizedTotalCapital || false
         })
       });
 
@@ -389,7 +394,12 @@ const PortfolioBacktestPage = () => {
         )}
 
         {activeTab === 'results' && results && (
-          <PortfolioResults data={results} />
+          // Check if this is an optimized capital response (has scenarios)
+          results.scenarios ? (
+            <OptimizedCapitalResults data={results} />
+          ) : (
+            <PortfolioResults data={results} />
+          )
         )}
 
         {activeTab === 'results' && !results && (

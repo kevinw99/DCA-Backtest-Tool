@@ -47,7 +47,48 @@ class PortfolioState {
     this.totalRealizedPNL = 0;  // Sum of all realized profits/losses from trades
     this.totalCashYield = 0;    // Sum of all cash yield revenue
 
+    // Spec 61: Capital tracking for optimized capital discovery
+    this.capitalTracking = {
+      maxDeployed: 0,
+      maxDeployedDate: null,
+      totalDeployedDays: 0,
+      sumDeployed: 0
+    };
+
     this.config = config;
+  }
+
+  /**
+   * Spec 61: Track capital usage for optimized capital discovery
+   * Called once per day after all transactions are processed
+   */
+  trackCapitalUsage(date) {
+    const currentDeployed = this.deployedCapital;
+
+    if (currentDeployed > this.capitalTracking.maxDeployed) {
+      this.capitalTracking.maxDeployed = currentDeployed;
+      this.capitalTracking.maxDeployedDate = date;
+    }
+
+    this.capitalTracking.sumDeployed += currentDeployed;
+    this.capitalTracking.totalDeployedDays++;
+  }
+
+  /**
+   * Spec 61: Get capital analysis metrics
+   * @returns {Object} Capital analysis with peak, average, and utilization metrics
+   */
+  getCapitalAnalysis() {
+    const avgDeployed = this.capitalTracking.totalDeployedDays > 0
+      ? this.capitalTracking.sumDeployed / this.capitalTracking.totalDeployedDays
+      : 0;
+
+    return {
+      peakDeployedCapital: this.capitalTracking.maxDeployed,
+      peakCapitalDate: this.capitalTracking.maxDeployedDate,
+      averageDeployedCapital: avgDeployed,
+      capitalUtilization: this.totalCapital > 0 ? avgDeployed / this.totalCapital : 0
+    };
   }
 
   get availableCapital() {
@@ -277,6 +318,91 @@ function updateMarginMetrics(portfolio) {
  * @returns {Object} Portfolio backtest results
  */
 async function runPortfolioBacktest(config) {
+  // Spec 61: Optimized Capital Discovery Mode
+  // When enabled, runs TWO scenarios: 100% optimal capital and 90% constrained
+  const { optimizedTotalCapital = false, _isConstrainedRun = false } = config;
+
+  if (optimizedTotalCapital && !_isConstrainedRun) {
+    console.log('\n🔍 Spec 61: OPTIMIZED CAPITAL DISCOVERY MODE');
+    console.log('   Running discovery with unlimited capital to find optimal capital requirement...');
+
+    // === DISCOVERY RUN (100% Optimal) ===
+    const discoveryConfig = {
+      ...config,
+      totalCapital: Math.max(config.totalCapital || 1000000, 10000000), // Effectively unlimited (10M)
+      optimizedTotalCapital: false, // Prevent recursion
+      _isDiscoveryRun: true
+    };
+
+    const optimalResult = await runPortfolioBacktest(discoveryConfig);
+
+    // Extract peak capital from discovery run
+    const peakDeployedCapital = optimalResult.portfolioSummary?.peakDeployedCapital ||
+                                optimalResult._capitalAnalysis?.peakDeployedCapital || 0;
+    const peakCapitalDate = optimalResult._capitalAnalysis?.peakCapitalDate || null;
+
+    console.log(`\n✅ Spec 61: Optimal capital discovered: $${peakDeployedCapital.toLocaleString()}`);
+    console.log(`   Peak capital date: ${peakCapitalDate}`);
+
+    // Prepare optimal scenario result with correct capital base
+    const optimalScenario = {
+      ...optimalResult,
+      capitalAnalysis: {
+        mode: 'optimal',
+        optimizedCapital: peakDeployedCapital,
+        peakDeployedCapital: peakDeployedCapital,
+        peakCapitalDate: peakCapitalDate,
+        percentOfOptimal: 100,
+        rejectedOrderCount: optimalResult.rejectedOrders?.length || 0
+      }
+    };
+
+    // === CONSTRAINED RUN (90% of Optimal) ===
+    const constrainedCapital = Math.floor(peakDeployedCapital * 0.9);
+    console.log(`\n🎯 Spec 61: Running constrained scenario at 90% capital ($${constrainedCapital.toLocaleString()})...`);
+
+    const constrainedConfig = {
+      ...config,
+      totalCapital: constrainedCapital,
+      optimizedTotalCapital: false, // Prevent recursion
+      _isConstrainedRun: true
+    };
+
+    const constrainedResult = await runPortfolioBacktest(constrainedConfig);
+
+    // Prepare constrained scenario result
+    const constrainedScenario = {
+      ...constrainedResult,
+      capitalAnalysis: {
+        mode: 'constrained_90',
+        optimizedCapital: constrainedCapital,
+        peakDeployedCapital: constrainedResult._capitalAnalysis?.peakDeployedCapital || constrainedCapital,
+        peakCapitalDate: constrainedResult._capitalAnalysis?.peakCapitalDate,
+        percentOfOptimal: 90,
+        rejectedOrderCount: constrainedResult.rejectedOrders?.length || 0
+      }
+    };
+
+    console.log(`\n✅ Spec 61: Constrained scenario complete`);
+    console.log(`   Rejected orders: ${constrainedScenario.capitalAnalysis.rejectedOrderCount}`);
+
+    // Return both scenarios
+    return {
+      success: true,
+      data: {
+        capitalDiscovery: {
+          peakDeployedCapital: peakDeployedCapital,
+          peakCapitalDate: peakCapitalDate,
+          constrainedCapital: constrainedCapital
+        },
+        scenarios: {
+          optimal: optimalScenario,
+          constrained: constrainedScenario
+        }
+      }
+    };
+  }
+
   console.log('🎯 Starting Portfolio Backtest');
   console.log(`   Total Capital: $${config.totalCapital.toLocaleString()}`);
   console.log(`   Lot Size: $${config.lotSizeUsd.toLocaleString()}`);
@@ -649,6 +775,9 @@ async function runPortfolioBacktest(config) {
     // Validate capital constraints after every date
     portfolio.validateCapitalConstraints();
 
+    // Spec 61: Track capital usage for optimized capital discovery
+    portfolio.trackCapitalUsage(date);
+
     // Snapshot portfolio state - DAILY for accurate volatility calculation
     portfolio.valuationHistory.push(createSnapshot(portfolio, date));
 
@@ -803,6 +932,18 @@ async function runPortfolioBacktest(config) {
   } catch (error) {
     console.warn('[PortfolioBacktest] Beta grouping analysis failed:', error.message);
     // Continue without beta grouping - non-critical feature
+  }
+
+  // Spec 61: Add capital analysis for optimized capital discovery
+  const capitalAnalysis = portfolio.getCapitalAnalysis();
+  results._capitalAnalysis = capitalAnalysis;
+
+  // Also add peak deployed capital to portfolioSummary for easy access
+  if (results.portfolioSummary) {
+    results.portfolioSummary.peakDeployedCapital = capitalAnalysis.peakDeployedCapital;
+    results.portfolioSummary.peakCapitalDate = capitalAnalysis.peakCapitalDate;
+    results.portfolioSummary.averageDeployedCapital = capitalAnalysis.averageDeployedCapital;
+    results.portfolioSummary.capitalUtilization = capitalAnalysis.capitalUtilization;
   }
 
   return results;

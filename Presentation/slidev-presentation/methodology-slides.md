@@ -50,8 +50,11 @@ From "Vibe Coding" to Structured Development
   <span class="opacity-80">Building Complex Systems with Claude Code</span>
 </div>
 
-<div class="abs-br m-6 text-sm opacity-50">
-  Grid-Based DCA Trading Case Study | 2025
+<div class="abs-br m-6 text-sm">
+  <div class="opacity-50 mb-2">Grid-Based DCA Trading Case Study | 2025</div>
+  <a href="https://github.com/kevinw99/DCA-Backtest-Tool/blob/main/Presentation/ORIGINALITY-ASSESSMENT.md" target="_blank" class="text-blue-400 opacity-75 hover:opacity-100">
+    📄 Research Validation & Originality Assessment
+  </a>
 </div>
 
 ---

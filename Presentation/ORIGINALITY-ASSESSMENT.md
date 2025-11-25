@@ -316,9 +316,9 @@ This document assesses the originality of concepts presented in both the **Strat
 - ✅ **Step-Based Cascading**: Structured workflow approaches
 
 **What's NOT Found (Your Original Contribution)**:
-- 🆕 Specific 3-tier meta-recursive pattern
-- 🆕 Using AI autocomplete to help write prompts for AI spec generation
-- 🆕 Named pattern for this approach
+- ⭐ Specific 3-tier meta-recursive pattern
+- ⭐ Using AI autocomplete to help write prompts for AI spec generation
+- ⭐ Named pattern for this approach
 
 **Sources**:
 - [Step-Based Cascading Prompts](https://shelbyjenkins.github.io/blog/cascade-prompt/)
@@ -343,8 +343,8 @@ This document assesses the originality of concepts presented in both the **Strat
 - ✅ Automated bug detection (AI suggests fixes)
 
 **What's NOT Found (Your Original Contribution)**:
-- 🆕 Specific pattern: curl-based testing → AI autonomous investigation → fix loop
-- 🆕 `.claude/skills/bug-investigator` and `backtest-tester` integration approach
+- ⭐ Specific pattern: curl-based testing → AI autonomous investigation → fix loop
+- ⭐ `.claude/skills/bug-investigator` and `backtest-tester` integration approach
 
 **Sources**:
 - [AI Debugging Tools 2024](https://debugg.ai/resources/best-ai-powered-debugging-tools-2024)
