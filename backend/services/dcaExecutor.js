@@ -2158,6 +2158,11 @@ function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false
       const finalUnrealizedPNL = marketValue - capitalDeployed;
       const finalTotalPNL = realizedPNL + finalUnrealizedPNL;
 
+      // Calculate weighted average capital deployed (average of daily capital deployed)
+      const weightedAvgCapitalDeployed = dailyCapitalDeployed.length > 0
+        ? dailyCapitalDeployed.reduce((sum, val) => sum + val, 0) / dailyCapitalDeployed.length
+        : 0;
+
       return {
         summary: {
           symbol,
@@ -2170,6 +2175,9 @@ function createDCAExecutor(symbol, params, pricesWithIndicators, verbose = false
           totalReturn: marketValue + realizedPNL,
           returnPercent: maxCapitalDeployed > 0 ?
             (finalTotalPNL / maxCapitalDeployed) * 100 : 0,
+          returnPercentOnWeightedCapital: weightedAvgCapitalDeployed > 0 ?
+            (finalTotalPNL / weightedAvgCapitalDeployed) * 100 : 0,
+          weightedAvgCapitalDeployed,
           maxDrawdown,
           maxDrawdownPercent,
           maxCapitalDeployed,

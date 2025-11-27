@@ -1159,113 +1159,12 @@ const BacktestResults = ({ data, chartData: priceData, metadata }) => {
         <span>{summary.startDate} to {summary.endDate}</span>
       </div>
 
-      {/* Total Return Card */}
-      <div className="metric-card total-return-card">
-        <h4>Total Return</h4>
-        <div className={`metrics-grid ${getMetricClass(summary.totalReturnPercent)}`}>
-          {(() => {
-            // Get the final Total P&L % from price chart data (matches chart display)
-            if (chartData && chartData.length > 0) {
-              const finalDataPoint = chartData[chartData.length - 1];
-              const returnPercent = finalDataPoint.totalPNLPercent;
-
-              if (returnPercent !== null && returnPercent !== undefined) {
-                // Calculate annualized return (CAGR) based on backtest period
-                const startDate = new Date(summary.startDate || priceData?.backtestParameters?.startDate);
-                const endDate = new Date(summary.endDate || priceData?.backtestParameters?.endDate);
-                const years = (endDate - startDate) / (1000 * 60 * 60 * 24 * 365.25);
-
-                let cagr = null;
-                if (years > 0) {
-                  const finalValue = 1 + (returnPercent / 100);
-                  if (finalValue > 0) {
-                    cagr = Math.pow(finalValue, 1 / years) - 1;
-                  }
-                }
-
-                // Get average capital deployed from backend performance metrics
-                const avgCapital = summary.performanceMetrics?.avgDeployedCapital || 0;
-
-                return (
-                  <>
-                    <span className="metric-value">{formatCurrency(summary.totalReturn)}</span>
-                    <span className="metric-separator">|</span>
-                    <span className="metric-value">{formatPercent(returnPercent)}</span>
-                    <span className="metric-separator">|</span>
-                    <span className="metric-label">Avg Capital:</span>
-                    <span className="metric-value">{formatCurrency(avgCapital)}</span>
-                    {cagr !== null && (
-                      <>
-                        <span className="metric-separator">|</span>
-                        <span className="metric-label">CAGR:</span>
-                        <span className="metric-value">{(cagr * 100).toFixed(2)}%</span>
-                      </>
-                    )}
-                  </>
-                );
-              }
-            }
-
-            // Fallback to backend value if chart data not available
-            return (
-              <>
-                <span className="metric-value">{formatCurrency(summary.totalReturn)}</span>
-                <span className="metric-separator">|</span>
-                <span className="metric-value">{formatPercent(summary.totalReturnPercent)}</span>
-              </>
-            );
-          })()}
-        </div>
-      </div>
-
-      {/* Buy & Hold Card */}
+      {/* Performance Metrics Comparison - moved up to replace removed duplicate cards */}
       {holdResults && Object.keys(holdResults).length > 0 && (
-        <div className="metric-card buy-hold-card">
-          <h4>{summary.strategy === 'SHORT_DCA' ? 'Short & Hold' : 'Buy & Hold'}</h4>
-          <div className={`metrics-grid ${(holdResults.totalReturn || 0) > 0 ? 'positive' : 'negative'}`}>
-            {(() => {
-              // For Buy & Hold, use fixed capital (lotSizeUsd * maxLots)
-              const lotSizeUsd = priceData?.backtestParameters?.lotSizeUsd || summary?.lotSizeUsd || 10000;
-              const maxLots = priceData?.backtestParameters?.maxLots || summary?.maxLots || 10;
-              const fixedCapital = lotSizeUsd * maxLots;
-
-              // Calculate CAGR from total return % (same method as DCA for consistency)
-              const returnPercent = holdResults.totalReturnPercent;
-              let cagr = null;
-
-              if (returnPercent !== null && returnPercent !== undefined) {
-                const startDate = new Date(summary.startDate || priceData?.backtestParameters?.startDate);
-                const endDate = new Date(summary.endDate || priceData?.backtestParameters?.endDate);
-                const years = (endDate - startDate) / (1000 * 60 * 60 * 24 * 365.25);
-
-                if (years > 0) {
-                  const finalValue = 1 + (returnPercent / 100);
-                  if (finalValue > 0) {
-                    cagr = Math.pow(finalValue, 1 / years) - 1;
-                  }
-                }
-              }
-
-              return (
-                <>
-                  <span className="metric-value">{formatCurrency(holdResults.totalReturn)}</span>
-                  <span className="metric-separator">|</span>
-                  <span className="metric-value">{formatPercent(holdResults.totalReturnPercent)}</span>
-                  <span className="metric-separator">|</span>
-                  <span className="metric-label">Capital:</span>
-                  <span className="metric-value">{formatCurrency(fixedCapital)}</span>
-                  {cagr !== null && (
-                    <>
-                      <span className="metric-separator">|</span>
-                      <span className="metric-label">CAGR:</span>
-                      <span className="metric-value">{(cagr * 100).toFixed(2)}%</span>
-                    </>
-                  )}
-                </>
-              );
-            })()}
-          </div>
-        </div>
+        <ComparisonMetricsTable
+          dcaMetrics={summary}
+          buyAndHoldMetrics={holdResults}
+        />
       )}
 
       {/* Compact Metrics Section */}
@@ -1851,37 +1750,11 @@ const BacktestResults = ({ data, chartData: priceData, metadata }) => {
         </div>
       )}
 
-      {/* Performance Metrics Comparison */}
-      {summary.performanceMetrics && holdResults && (
-        <ComparisonMetricsTable
-          dcaMetrics={summary}
-          buyAndHoldMetrics={holdResults}
-        />
-      )}
-
       {/* Scenario Analysis */}
       {priceData?.scenarioAnalysis && (
         <ScenarioAnalysis scenarioAnalysis={priceData.scenarioAnalysis} />
       )}
 
-      {/* Strategy Summary */}
-      <div className="strategy-summary">
-        <h3>Strategy Summary</h3>
-        <div className="summary-content">
-          <p>
-            <strong>Investment Approach:</strong> Dollar Cost Averaging with technical analysis filters
-          </p>
-          <p>
-            <strong>Risk Management:</strong> Grid-based position sizing with stop-loss protection
-          </p>
-          <p>
-            <strong>Market Conditions:</strong> Adaptive entry based on volatility, RSI, and moving averages
-          </p>
-          <p>
-            <strong>Capital Efficiency:</strong> {summary.totalCost > 0 ? ((summary.totalCost / (summary.lotsHeld * 10000)) * 100).toFixed(1) : 0}% of maximum capital deployed
-          </p>
-        </div>
-      </div>
     </div>
   );
 };

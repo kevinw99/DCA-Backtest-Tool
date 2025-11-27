@@ -246,7 +246,7 @@ function AppContent() {
 
           const chartResult = await chartResponse.json();
           setChartData({ ...chartResult, backtestParameters: parameters });
-          setActiveTab('chart');
+          setActiveTab('results');
           setLoading(false);
         } else {
           // Standard backtest flow
@@ -298,7 +298,7 @@ function AppContent() {
           };
 
           setChartData(finalChartData);
-          setActiveTab('chart');
+          setActiveTab('results');
         }
       }
     } catch (err) {
@@ -442,7 +442,7 @@ function AppContent() {
         };
 
         setChartData(finalChartData);
-        setActiveTab('chart');
+        setActiveTab('results');
       }
     } catch (err) {
       console.error('Error in', isBatchMode ? 'batch optimization' : 'backtest', ':', err);
@@ -486,14 +486,6 @@ function AppContent() {
           Parameters
         </button>
         <button
-          className={`tab-button ${activeTab === 'chart' ? 'active' : ''}`}
-          onClick={() => setActiveTab('chart')}
-          disabled={!chartData || testMode === 'batch'}
-        >
-          <TrendingUp size={18} />
-          Chart & Analysis
-        </button>
-        <button
           className={`tab-button ${activeTab === 'results' ? 'active' : ''}`}
           onClick={() => setActiveTab('results')}
           disabled={!batchData && !backtestData}
@@ -526,12 +518,6 @@ function AppContent() {
               currentTestMode={testMode}
               setAppTestMode={setTestMode}
             />
-          </div>
-        )}
-
-        {activeTab === 'chart' && chartData && backtestData && testMode === 'single' && (
-          <div className="tab-content">
-            <BacktestResults data={backtestData} chartData={chartData} metadata={metadata} />
           </div>
         )}
 

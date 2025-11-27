@@ -76,12 +76,20 @@ const ComparisonMetricsTable = ({ dcaMetrics, buyAndHoldMetrics }) => {
           higherIsBetter: true
         },
         {
-          label: 'Total Return %',
+          label: `Total Return % (Max Capital: $${dcaMetrics?.performanceMetrics?.maxDeployedCapital?.toLocaleString('en-US', { maximumFractionDigits: 0 }) || 'N/A'})`,
           // Use returnOnMaxDeployedPercent to match the summary card display
           dcaValue: dcaMetrics?.performanceMetrics?.returnOnMaxDeployedPercent ? dcaMetrics.performanceMetrics.returnOnMaxDeployedPercent / 100 : null,
           bnhValue: buyAndHoldMetrics?.totalReturnPercent ? buyAndHoldMetrics.totalReturnPercent / 100 : null,
           type: 'percent',
           higherIsBetter: true
+        },
+        {
+          label: `Total Return % (Weighted Capital: $${dcaMetrics?.performanceMetrics?.avgDeployedCapital?.toLocaleString('en-US', { maximumFractionDigits: 0 }) || 'N/A'})`,
+          dcaValue: dcaMetrics?.performanceMetrics?.returnOnAvgDeployedPercent ? dcaMetrics.performanceMetrics.returnOnAvgDeployedPercent / 100 : null,
+          bnhValue: null, // B&H doesn't have variable capital deployment
+          type: 'percent',
+          higherIsBetter: true,
+          naForBnh: true
         },
         {
           label: 'CAGR',
@@ -134,43 +142,6 @@ const ComparisonMetricsTable = ({ dcaMetrics, buyAndHoldMetrics }) => {
           bnhValue: buyAndHoldMetrics?.avgDrawdownPercent ? buyAndHoldMetrics.avgDrawdownPercent / 100 : null,
           type: 'percent',
           higherIsBetter: false
-        }
-      ]
-    },
-    {
-      title: 'Trading Efficiency',
-      metrics: [
-        {
-          label: 'Win Rate',
-          dcaValue: dcaMetrics?.performanceMetrics?.winRate,
-          bnhValue: null, // N/A for Buy & Hold
-          type: 'percent',
-          higherIsBetter: true,
-          naForBnh: true
-        },
-        {
-          label: 'Profit Factor',
-          dcaValue: dcaMetrics?.performanceMetrics?.profitFactor,
-          bnhValue: null, // N/A for Buy & Hold
-          type: 'profitFactor',
-          higherIsBetter: true,
-          naForBnh: true
-        },
-        {
-          label: 'Expectancy',
-          dcaValue: dcaMetrics?.performanceMetrics?.expectancy,
-          bnhValue: null, // N/A for Buy & Hold
-          type: 'currency',
-          higherIsBetter: true,
-          naForBnh: true
-        },
-        {
-          label: 'Total Trades',
-          dcaValue: dcaMetrics?.performanceMetrics?.totalTrades,
-          bnhValue: null, // N/A for Buy & Hold
-          type: 'number',
-          higherIsBetter: null,
-          naForBnh: true
         }
       ]
     }

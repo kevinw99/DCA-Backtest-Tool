@@ -986,8 +986,9 @@ async function runDCABacktest(params, dayCallback = null) {
 
     // Calculate metrics
     const metrics = calculateMetrics(dailyPortfolioValues, dailyCapitalDeployed, transactionLog, pricesWithIndicators, enhancedTransactions);
-    const initialCapital = lotSizeUsd * maxLots;
-    const buyAndHoldResults = calculateBuyAndHold(pricesWithIndicators, initialCapital, metrics.avgCapitalDeployed);
+    // Use DCA's actual maxCapitalDeployed for fair comparison (not theoretical max of lotSizeUsd * maxLots)
+    const buyAndHoldCapital = maxCapitalDeployed > 0 ? maxCapitalDeployed : lotSizeUsd * maxLots;
+    const buyAndHoldResults = calculateBuyAndHold(pricesWithIndicators, buyAndHoldCapital, metrics.avgCapitalDeployed);
     const dcaFinalValue = totalCostOfHeldLots + realizedPNL + unrealizedPNL;
     // Compare P&L percentages: DCA return % - Buy & Hold return %
     // Example: if DCA = +15% and Buy & Hold = +10%, then outperformance = +15% - (+10%) = +5%
