@@ -333,87 +333,264 @@ function updateMarginMetrics(portfolio) {
  * @param {Array} config.stocks - Array of {symbol, params} objects
  * @returns {Object} Portfolio backtest results
  */
+
+/**
+ * Calculate ETF benchmark Buy & Hold performance
+ * Spec 67: ETF Benchmark Comparison
+ *
+ * @param {string} symbol - ETF symbol (e.g., "QQQ", "SPY")
+ * @param {number} totalCapital - Total capital to invest
+ * @param {string} startDate - Start date (YYYY-MM-DD)
+ * @param {string} endDate - End date (YYYY-MM-DD)
+ * @returns {Promise<Object|null>} ETF benchmark results or null if data unavailable
+ */
+async function calculateETFBenchmark(symbol, totalCapital, startDate, endDate) {
+  try {
+    // 1. Get or create Stock ID for ETF
+    let stock = await database.getStock(symbol);
+    if (!stock) {
+      console.log(`🆕 Creating new stock record for ETF benchmark: ${symbol}`);
+      try {
+        const stockDataService = require('./stockDataService');
+        const stockId = await database.createStock(symbol);
+        stock = await database.getStock(symbol);
+
+        // Fetch data for new ETF
+        console.log(`📡 Fetching initial data for ${symbol}...`);
+        await stockDataService.updateStockData(stock.id, symbol, {
+          updatePrices: true,
+          updateFundamentals: true,
+          updateCorporateActions: true
+        });
+        await database.updateStockTimestamp(stock.id);
+      } catch (fetchError) {
+        console.error(`❌ Failed to fetch data for ETF ${symbol}:`, fetchError.message);
+        return null;
+      }
+    }
+
+    // 2. Fetch ETF price data from database
+    const dailyPrices = await database.getDailyPricesWithCurrent(stock.id, symbol, startDate, endDate);
+
+    if (!dailyPrices || dailyPrices.length === 0) {
+      console.warn(`⚠️  No price data available for ETF benchmark: ${symbol}`);
+      return null;
+    }
+
+    // 3. Get start and end prices
+    const startPrice = parseFloat(dailyPrices[0].adjusted_close || dailyPrices[0].close);
+    const endPrice = parseFloat(dailyPrices[dailyPrices.length - 1].adjusted_close || dailyPrices[dailyPrices.length - 1].close);
+
+    // 3. Calculate shares purchased
+    const sharesPurchased = totalCapital / startPrice;
+
+    // 4. Calculate final value and returns
+    const finalValue = sharesPurchased * endPrice;
+    const totalReturn = ((finalValue - totalCapital) / totalCapital) * 100;
+
+    // 5. Calculate CAGR
+    const startDateObj = new Date(startDate);
+    const endDateObj = new Date(endDate);
+    const years = (endDateObj - startDateObj) / (365.25 * 24 * 60 * 60 * 1000);
+    const cagr = years > 0 ? (Math.pow(finalValue / totalCapital, 1 / years) - 1) * 100 : 0;
+
+    // 6. Calculate max drawdown
+    let peak = startPrice * sharesPurchased;
+    let maxDrawdown = 0;
+
+    for (const day of dailyPrices) {
+      const price = parseFloat(day.adjusted_close || day.close);
+      const value = sharesPurchased * price;
+
+      if (value > peak) {
+        peak = value;
+      }
+
+      const drawdown = ((value - peak) / peak) * 100;
+      if (drawdown < maxDrawdown) {
+        maxDrawdown = drawdown;
+      }
+    }
+
+    // 7. Build daily values array for chart
+    const dailyValues = dailyPrices.map(day => ({
+      date: day.date,
+      value: sharesPurchased * parseFloat(day.adjusted_close || day.close)
+    }));
+
+    return {
+      symbol,
+      startDate: dailyPrices[0].date,
+      endDate: dailyPrices[dailyPrices.length - 1].date,
+      startPrice,
+      endPrice,
+      sharesPurchased,
+      initialInvestment: totalCapital,
+      finalValue,
+      totalReturn,
+      cagr,
+      maxDrawdown,
+      dailyValues
+    };
+  } catch (error) {
+    console.error(`❌ Error calculating ETF benchmark for ${symbol}:`, error.message);
+    return null;
+  }
+}
+
 async function runPortfolioBacktest(config) {
-  // Spec 61: Optimized Capital Discovery Mode
-  // When enabled, runs TWO scenarios: 100% optimal capital and 90% constrained
-  const { optimizedTotalCapital = false, _isConstrainedRun = false } = config;
+  // Spec 61: Optimized Capital Discovery Mode (REVISED: Rerun Approach)
+  // When enabled, runs THREE scenarios with fresh backtests:
+  // 1. Discovery: $10M → find peak deployed capital
+  // 2. Optimal (100%): Fresh backtest with discovered capital
+  // 3. Constrained (90%): Fresh backtest with 90% of discovered capital
+  const { optimizedTotalCapital = false, _isOptimizedRun = false } = config;
 
-  if (optimizedTotalCapital && !_isConstrainedRun) {
-    console.log('\n🔍 Spec 61: OPTIMIZED CAPITAL DISCOVERY MODE');
-    console.log('   Running discovery with unlimited capital to find optimal capital requirement...');
+  if (optimizedTotalCapital && !_isOptimizedRun) {
+    console.log('\n🔍 Spec 61: OPTIMIZED CAPITAL DISCOVERY MODE (RERUN APPROACH)');
+    console.log('   Running discovery with $10M capital to find peak deployed capital...');
 
-    // === DISCOVERY RUN (100% Optimal) ===
+    // === STEP 1: DISCOVERY RUN ===
     const discoveryConfig = {
       ...config,
-      totalCapital: Math.max(config.totalCapital || 1000000, 10000000), // Effectively unlimited (10M)
-      optimizedTotalCapital: false, // Prevent recursion
-      _isDiscoveryRun: true
-    };
-
-    const optimalResult = await runPortfolioBacktest(discoveryConfig);
-
-    // Extract peak capital from discovery run
-    const peakDeployedCapital = optimalResult.portfolioSummary?.peakDeployedCapital ||
-                                optimalResult._capitalAnalysis?.peakDeployedCapital || 0;
-    const peakCapitalDate = optimalResult._capitalAnalysis?.peakCapitalDate || null;
-
-    console.log(`\n✅ Spec 61: Optimal capital discovered: $${peakDeployedCapital.toLocaleString()}`);
-    console.log(`   Peak capital date: ${peakCapitalDate}`);
-
-    // Prepare optimal scenario result with correct capital base
-    const optimalScenario = {
-      ...optimalResult,
-      capitalAnalysis: {
-        mode: 'optimal',
-        optimizedCapital: peakDeployedCapital,
-        peakDeployedCapital: peakDeployedCapital,
-        peakCapitalDate: peakCapitalDate,
-        percentOfOptimal: 100,
-        rejectedOrderCount: optimalResult.rejectedOrders?.length || 0
+      totalCapital: Math.max(config.totalCapital || 1000000, 10000000), // $10M for discovery
+      marginPercent: 0,  // Disable margin for clean capital analysis (Spec 61 bugfix)
+      _isOptimizedRun: true,  // Prevent recursion
+      capitalOptimization: {
+        ...config.capitalOptimization,
+        enabled: false  // Turn off adaptive strategies for consistent capital tracking
       }
     };
 
-    // === CONSTRAINED RUN (90% of Optimal) ===
-    const constrainedCapital = Math.floor(peakDeployedCapital * 0.9);
-    console.log(`\n🎯 Spec 61: Running constrained scenario at 90% capital ($${constrainedCapital.toLocaleString()})...`);
+    const discoveryResult = await runPortfolioBacktest(discoveryConfig);
 
+    // Extract peak capital from discovery run
+    const peakDeployedCapital = discoveryResult._capitalAnalysis?.peakDeployedCapital || 0;
+    const peakCapitalDate = discoveryResult._capitalAnalysis?.peakCapitalDate || null;
+    const initialCapital = discoveryConfig.totalCapital;
+
+    console.log(`\n✅ Spec 61: Peak deployed capital discovered: $${peakDeployedCapital.toLocaleString()}`);
+    console.log(`   Peak capital date: ${peakCapitalDate}`);
+    console.log(`   Initial capital: $${initialCapital.toLocaleString()}`);
+    console.log(`   Excess unused: $${(initialCapital - peakDeployedCapital).toLocaleString()}`);
+
+    // === STEP 2: OPTIMAL RUN (100%) ===
+    console.log(`\n📊 Spec 61: Running fresh backtest with optimal capital ($${peakDeployedCapital.toLocaleString()})...`);
+    const optimalConfig = {
+      ...config,
+      totalCapital: peakDeployedCapital,  // Use exactly the discovered capital
+      marginPercent: 0,  // Disable margin for clean capital analysis (Spec 61 bugfix)
+      _isOptimizedRun: true,
+      capitalOptimization: {
+        ...config.capitalOptimization,
+        enabled: false  // Same strategy as discovery
+      }
+    };
+
+    const optimalResult = await runPortfolioBacktest(optimalConfig);
+
+    console.log(`✅ Spec 61: Optimal scenario complete`);
+    console.log(`   Rejected orders: ${optimalResult.rejectedOrders?.length || 0}`);
+
+    // === STEP 3: CONSTRAINED RUN (90%) ===
+    const constrainedCapital = Math.floor(peakDeployedCapital * 0.9);
+
+    console.log(`\n🎯 Spec 61: Running fresh backtest with constrained capital ($${constrainedCapital.toLocaleString()})...`);
     const constrainedConfig = {
       ...config,
-      totalCapital: constrainedCapital,
-      optimizedTotalCapital: false, // Prevent recursion
-      _isConstrainedRun: true
+      totalCapital: constrainedCapital,  // 90% of discovered capital
+      marginPercent: 0,  // Disable margin for clean capital analysis (Spec 61 bugfix)
+      _isOptimizedRun: true,
+      capitalOptimization: {
+        ...config.capitalOptimization,
+        enabled: true  // Enable capital optimization in constrained scenario to test features like deferred selling
+      }
     };
 
     const constrainedResult = await runPortfolioBacktest(constrainedConfig);
 
-    // Prepare constrained scenario result
-    const constrainedScenario = {
-      ...constrainedResult,
-      capitalAnalysis: {
-        mode: 'constrained_90',
-        optimizedCapital: constrainedCapital,
-        peakDeployedCapital: constrainedResult._capitalAnalysis?.peakDeployedCapital || constrainedCapital,
-        peakCapitalDate: constrainedResult._capitalAnalysis?.peakCapitalDate,
-        percentOfOptimal: 90,
-        rejectedOrderCount: constrainedResult.rejectedOrders?.length || 0
+    console.log(`✅ Spec 61: Constrained 90% scenario complete`);
+    console.log(`   Rejected orders: ${constrainedResult.rejectedOrders?.length || 0}`);
+
+    // === STEP 4: CONSTRAINED RUN (80%) ===
+    const constrained80Capital = Math.floor(peakDeployedCapital * 0.8);
+
+    console.log(`\n🎯 Running backtest with 80% constrained capital ($${constrained80Capital.toLocaleString()})...`);
+    const constrained80Config = {
+      ...config,
+      totalCapital: constrained80Capital,
+      marginPercent: 0,
+      _isOptimizedRun: true,
+      capitalOptimization: {
+        ...config.capitalOptimization,
+        enabled: true
       }
     };
 
-    console.log(`\n✅ Spec 61: Constrained scenario complete`);
-    console.log(`   Rejected orders: ${constrainedScenario.capitalAnalysis.rejectedOrderCount}`);
+    const constrained80Result = await runPortfolioBacktest(constrained80Config);
 
-    // Return both scenarios
+    console.log(`✅ Constrained 80% scenario complete`);
+    console.log(`   Rejected orders: ${constrained80Result.rejectedOrders?.length || 0}`);
+
+    // === STEP 5: CONSTRAINED RUN (70%) ===
+    const constrained70Capital = Math.floor(peakDeployedCapital * 0.7);
+
+    console.log(`\n🎯 Running backtest with 70% constrained capital ($${constrained70Capital.toLocaleString()})...`);
+    const constrained70Config = {
+      ...config,
+      totalCapital: constrained70Capital,
+      marginPercent: 0,
+      _isOptimizedRun: true,
+      capitalOptimization: {
+        ...config.capitalOptimization,
+        enabled: true
+      }
+    };
+
+    const constrained70Result = await runPortfolioBacktest(constrained70Config);
+
+    console.log(`✅ Constrained 70% scenario complete`);
+    console.log(`   Rejected orders: ${constrained70Result.rejectedOrders?.length || 0}`);
+
+    // === RETURN ALL FIVE SCENARIOS ===
     return {
       success: true,
       data: {
         capitalDiscovery: {
+          initialCapital: initialCapital,
           peakDeployedCapital: peakDeployedCapital,
           peakCapitalDate: peakCapitalDate,
-          constrainedCapital: constrainedCapital
+          excessCapital: initialCapital - peakDeployedCapital,
+          constrainedCapital90: constrainedCapital,
+          constrainedCapital80: constrained80Capital,
+          constrainedCapital70: constrained70Capital
         },
         scenarios: {
-          optimal: optimalScenario,
-          constrained: constrainedScenario
+          discovery: {
+            ...discoveryResult,
+            scenarioType: 'discovery',
+            description: `Initial Capital: $${initialCapital.toLocaleString()} → Discovered: $${peakDeployedCapital.toLocaleString()}`
+          },
+          optimal: {
+            ...optimalResult,
+            scenarioType: 'optimal',
+            description: `Optimal Capital: $${peakDeployedCapital.toLocaleString()}`
+          },
+          constrained90: {
+            ...constrainedResult,
+            scenarioType: 'constrained90',
+            description: `Constrained Capital: $${constrainedCapital.toLocaleString()} (90% of optimal)`
+          },
+          constrained80: {
+            ...constrained80Result,
+            scenarioType: 'constrained80',
+            description: `Constrained Capital: $${constrained80Capital.toLocaleString()} (80% of optimal)`
+          },
+          constrained70: {
+            ...constrained70Result,
+            scenarioType: 'constrained70',
+            description: `Constrained Capital: $${constrained70Capital.toLocaleString()} (70% of optimal)`
+          }
         }
       }
     };
@@ -445,6 +622,83 @@ async function runPortfolioBacktest(config) {
   // Store capitalOptimization and indexTracking back in config for access by PortfolioState
   config.capitalOptimization = capitalOptimization;
   config.indexTracking = indexTracking;
+
+  // === SPEC 66: BETA RANGE FILTERING ===
+  const { minBeta, maxBeta } = config;
+
+  if (minBeta !== undefined || maxBeta !== undefined) {
+    console.log('\n🔍 SPEC 66: BETA RANGE FILTERING ENABLED');
+    console.log(`   Range: ${minBeta ?? 'any'} <= beta <= ${maxBeta ?? 'any'}`);
+    console.log(`   Stocks before filtering: ${config.stocks.length}`);
+
+    // Extract all symbols
+    const symbols = config.stocks.map(stockConfig =>
+      typeof stockConfig === 'string' ? stockConfig : stockConfig.symbol
+    );
+
+    // Fetch beta values from database
+    const betaMap = await database.getBetaForSymbols(symbols);
+
+    // Filter stocks based on beta range
+    const filteredStocks = [];
+    const excludedStocks = [];
+    let missingBetaCount = 0;
+
+    for (const stockConfig of config.stocks) {
+      const symbol = typeof stockConfig === 'string' ? stockConfig : stockConfig.symbol;
+      const beta = betaMap[symbol];
+
+      // Handle missing beta
+      if (beta === null || beta === undefined) {
+        console.log(`   ⚠️  ${symbol}: Missing beta value, excluded`);
+        excludedStocks.push({ symbol, reason: 'missing_beta' });
+        missingBetaCount++;
+        continue;
+      }
+
+      // Apply range filter
+      const passesMin = minBeta === undefined || beta >= minBeta;
+      const passesMax = maxBeta === undefined || beta <= maxBeta;
+
+      if (passesMin && passesMax) {
+        console.log(`   ✅ ${symbol}: beta=${beta.toFixed(3)}, included`);
+        filteredStocks.push(stockConfig);
+      } else {
+        console.log(`   ❌ ${symbol}: beta=${beta.toFixed(3)}, excluded (out of range)`);
+        excludedStocks.push({ symbol, beta, reason: 'out_of_range' });
+      }
+    }
+
+    console.log(`\n✅ SPEC 66: Beta filtering complete`);
+    console.log(`   Included: ${filteredStocks.length} stocks`);
+    console.log(`   Excluded: ${excludedStocks.length} stocks`);
+    console.log(`   Missing beta: ${missingBetaCount} stocks\n`);
+
+    // Validate at least one stock remains
+    if (filteredStocks.length === 0) {
+      throw new Error(
+        `Beta filtering excluded all stocks. ` +
+        `Range: ${minBeta ?? 'any'} <= beta <= ${maxBeta ?? 'any'}. ` +
+        `Please adjust beta range.`
+      );
+    }
+
+    // Update config with filtered stocks
+    config.stocks = filteredStocks;
+
+    // Store filtering metadata for results
+    config._betaFilterMetadata = {
+      enabled: true,
+      minBeta: minBeta ?? null,
+      maxBeta: maxBeta ?? null,
+      totalStocks: symbols.length,
+      includedStocks: filteredStocks.length,
+      excludedStocks: excludedStocks.length,
+      missingBetaCount,
+      includedSymbols: filteredStocks.map(s => typeof s === 'string' ? s : s.symbol),
+      excludedSymbols: excludedStocks.map(e => e.symbol)
+    };
+  }
 
   // 1. Initialize portfolio state
   const portfolio = new PortfolioState(config);
@@ -879,6 +1133,24 @@ async function runPortfolioBacktest(config) {
     results.comparison = buyAndHoldResults.comparison;
   }
 
+  // Spec 67: Calculate ETF benchmark if specified
+  if (config.benchmarkSymbol) {
+    console.log(`\n📊 Calculating ETF benchmark: ${config.benchmarkSymbol}`);
+    const etfBenchmark = await calculateETFBenchmark(
+      config.benchmarkSymbol,
+      config.totalCapital,
+      config.startDate,
+      config.endDate
+    );
+
+    if (etfBenchmark) {
+      console.log(`   ETF Final Value: $${etfBenchmark.finalValue.toLocaleString()}`);
+      console.log(`   ETF Total Return: ${etfBenchmark.totalReturn.toFixed(2)}%`);
+      console.log(`   ETF CAGR: ${etfBenchmark.cagr.toFixed(2)}%`);
+      results.etfBenchmark = etfBenchmark;
+    }
+  }
+
   // 8. Collect index tracking metrics
   let indexTrackingMetrics = null;
   if (indexTracker) {
@@ -911,6 +1183,11 @@ async function runPortfolioBacktest(config) {
   }
   if (capitalOptimizationMetrics) {
     results.capitalOptimization = capitalOptimizationMetrics;
+
+    // Add deferredSells count to portfolio summary for frontend display
+    if (capitalOptimizationMetrics.deferredSelling && results.portfolioSummary) {
+      results.portfolioSummary.deferredSells = capitalOptimizationMetrics.deferredSelling.events || 0;
+    }
   }
 
   // Spec 50: Add margin metrics to capital metrics
@@ -960,6 +1237,11 @@ async function runPortfolioBacktest(config) {
     results.portfolioSummary.peakCapitalDate = capitalAnalysis.peakCapitalDate;
     results.portfolioSummary.averageDeployedCapital = capitalAnalysis.averageDeployedCapital;
     results.portfolioSummary.capitalUtilization = capitalAnalysis.capitalUtilization;
+  }
+
+  // Spec 66: Add beta filter metadata to results
+  if (config._betaFilterMetadata) {
+    results.betaFilterMetadata = config._betaFilterMetadata;
   }
 
   return results;

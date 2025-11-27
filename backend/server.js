@@ -1716,7 +1716,10 @@ app.post('/api/portfolio-backtest', async (req, res) => {
       momentumBasedBuy,
       momentumBasedSell,
       // Spec 61: Optimized capital discovery
-      optimizedTotalCapital
+      optimizedTotalCapital,
+      // Spec 66: Beta range filtering
+      minBeta,
+      maxBeta
     } = req.body;
 
     // Validation
@@ -1751,6 +1754,37 @@ app.post('/api/portfolio-backtest', async (req, res) => {
         error: 'Missing date range',
         message: 'Both startDate and endDate are required'
       });
+    }
+
+    // Spec 66: Validate beta range parameters
+    if (minBeta !== undefined) {
+      if (typeof minBeta !== 'number' || minBeta < 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid minBeta',
+          message: 'minBeta must be a non-negative number'
+        });
+      }
+    }
+
+    if (maxBeta !== undefined) {
+      if (typeof maxBeta !== 'number' || maxBeta < 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid maxBeta',
+          message: 'maxBeta must be a non-negative number'
+        });
+      }
+    }
+
+    if (minBeta !== undefined && maxBeta !== undefined) {
+      if (minBeta > maxBeta) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid beta range',
+          message: 'minBeta must be less than or equal to maxBeta'
+        });
+      }
     }
 
     // Build defaultParams from top-level parameters if not provided
@@ -1821,7 +1855,7 @@ app.post('/api/portfolio-backtest', async (req, res) => {
         minCashToInvest: capitalOptimizationParams.cashYieldMinCash || defaultParamsCapitalOpt.cashYieldMinCash || Math.max(10000, totalCapital * 0.1)
       },
       deferredSelling: {
-        enabled: capitalOptimizationParams.enableDeferredSelling || defaultParamsCapitalOpt.enableDeferredSelling || false,
+        enabled: capitalOptimizationParams.enableDeferredSelling !== undefined ? capitalOptimizationParams.enableDeferredSelling : (defaultParamsCapitalOpt.enableDeferredSelling !== undefined ? defaultParamsCapitalOpt.enableDeferredSelling : true),
         cashAbundanceThreshold: capitalOptimizationParams.deferredSellingThreshold || defaultParamsCapitalOpt.deferredSellingThreshold || totalCapital * 0.3
       }
     };
@@ -1870,7 +1904,10 @@ app.post('/api/portfolio-backtest', async (req, res) => {
       capitalOptimization: capitalOptimizationConfig,
       betaScaling: betaScalingConfig,
       // Spec 61: Optimized capital discovery
-      optimizedTotalCapital: optimizedTotalCapital || false
+      optimizedTotalCapital: optimizedTotalCapital || false,
+      // Spec 66: Beta range filtering
+      ...(minBeta !== undefined && { minBeta }),
+      ...(maxBeta !== undefined && { maxBeta })
     };
 
     const results = await portfolioBacktestService.runPortfolioBacktest(config);
@@ -1949,12 +1986,41 @@ app.post('/api/backtest/portfolio/config', async (req, res) => {
     console.log(`✅ Config-based portfolio backtest complete:`);
     console.log(`   Portfolio: ${config.name}`);
     console.log(`   Stocks: ${config.stocks.length}`);
-    console.log(`   Final Value: $${results.portfolioSummary.finalPortfolioValue.toLocaleString()}`);
-    console.log(`   Total Return: ${results.portfolioSummary.totalReturnPercent?.toFixed(2) || 'N/A'}%`);
 
-    // Cache results for drill-down
+    // Handle different result structures (optimized vs normal)
+    if (results.scenarios) {
+      // Optimized capital mode - show optimal scenario stats
+      console.log(`   Mode: Optimized Capital (5 scenarios)`);
+      console.log(`   Optimal Value: $${results.scenarios.optimal.portfolioSummary.finalPortfolioValue.toLocaleString()}`);
+      console.log(`   Optimal Return: ${results.scenarios.optimal.portfolioSummary.totalReturnPercent?.toFixed(2) || 'N/A'}%`);
+    } else {
+      // Normal mode - single result
+      console.log(`   Final Value: $${results.portfolioSummary.finalPortfolioValue.toLocaleString()}`);
+      console.log(`   Total Return: ${results.portfolioSummary.totalReturnPercent?.toFixed(2) || 'N/A'}%`);
+    }
+
+    // Cache results for drill-down (only if portfolioRunId exists)
     const portfolioResultsCache = require('./services/portfolioResultsCache');
-    portfolioResultsCache.set(results.portfolioRunId, results);
+    if (results.portfolioRunId) {
+      portfolioResultsCache.set(results.portfolioRunId, results);
+    } else if (results.scenarios) {
+      // Optimized mode - cache each scenario separately
+      if (results.scenarios.discovery?.portfolioRunId) {
+        portfolioResultsCache.set(results.scenarios.discovery.portfolioRunId, results.scenarios.discovery);
+      }
+      if (results.scenarios.optimal?.portfolioRunId) {
+        portfolioResultsCache.set(results.scenarios.optimal.portfolioRunId, results.scenarios.optimal);
+      }
+      if (results.scenarios.constrained90?.portfolioRunId) {
+        portfolioResultsCache.set(results.scenarios.constrained90.portfolioRunId, results.scenarios.constrained90);
+      }
+      if (results.scenarios.constrained80?.portfolioRunId) {
+        portfolioResultsCache.set(results.scenarios.constrained80.portfolioRunId, results.scenarios.constrained80);
+      }
+      if (results.scenarios.constrained70?.portfolioRunId) {
+        portfolioResultsCache.set(results.scenarios.constrained70.portfolioRunId, results.scenarios.constrained70);
+      }
+    }
 
     res.json({
       success: true,
