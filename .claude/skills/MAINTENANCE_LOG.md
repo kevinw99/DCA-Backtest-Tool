@@ -2,6 +2,34 @@
 
 This log tracks all updates to Claude Code skills for the DCA Backtest Tool.
 
+## 2025-11-25 - User Simulation Debugging Skill Added
+
+**Skill Created**: `user-simulation-debugging` v1.0.0
+
+**Trigger**: Lessons learned from MCP server integration (Spec 64)
+
+**What Happened**:
+- Implemented complete MCP server for DCA Backtest Tool
+- Code looked correct but failed in practice due to:
+  - Error A: Config file in wrong location (`~/.config/claude-code/` vs `~/Library/Application Support/Claude/`)
+  - Error B: System Python instead of venv Python (`python3.11` vs venv path)
+- Both errors would have been caught by testing "as the user would"
+
+**Key Lesson**:
+> "For verifying a fix or new feature, always try running the steps as the user would manually do it, then identify gaps, and fix them."
+
+**Skill Features**:
+- 4-phase checklist for user simulation testing
+- Recursive debugging process (test → identify gaps → fix → repeat)
+- Real-world example from MCP server integration
+- Common gaps to look for (config, paths, environment, integration)
+- Anti-patterns to avoid
+- Integration with other skills (TDD, systematic-debugging, etc.)
+
+**Applicability**: Broad - applies to ALL bug fixes, features, configs, integrations, deployments
+
+**Total Skills**: 7
+
 ## 2025-10-26 - Initial Creation & Post-Spec 45/46 Update
 
 **Skills Created**: 6 total
@@ -84,6 +112,7 @@ This log tracks all updates to Claude Code skills for the DCA Backtest Tool.
 
 | Date | Skill | Version | Reason |
 |------|-------|---------|--------|
+| 2025-11-25 | user-simulation-debugging | - → 1.0.0 | Create skill from MCP server integration lessons |
 | 2025-10-26 | g01-parameter-adder | 1.0.0 → 1.1.0 | Add Spec 46 batch mode lessons |
 | 2025-10-26 | spec-generator | 1.0.0 → 1.1.0 | Emphasize G01 compliance and verification-first |
 | 2025-10-26 | All skills | - → 1.0.0 | Add version metadata |
