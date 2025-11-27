@@ -1,7 +1,7 @@
 {
   "name": "dca-backtest-presentation",
   "version": "1.0.0",
-  "description": "DCA Backtest Tool Presentation - Enhanced Trading Strategies",
+  "description": "Grid-Based DCA Trading Simulator Presentation - Adaptive Trading Strategies",
   "type": "module",
   "scripts": {
     "dev": "slidev",

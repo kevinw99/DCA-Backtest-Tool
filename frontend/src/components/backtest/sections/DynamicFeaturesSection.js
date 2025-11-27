@@ -43,7 +43,7 @@ export const DynamicFeaturesSection = ({
           <label>
             <input
               type="checkbox"
-              checked={parameters.enableDynamicGrid || false}
+              checked={parameters.enableDynamicGrid ?? false}
               onChange={(e) => handleChange('enableDynamicGrid', e.target.checked)}
             />
             Enable Dynamic Grid

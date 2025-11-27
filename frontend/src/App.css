@@ -187,6 +187,26 @@
   gap: 0.5rem;
 }
 
+/* Advanced Settings - Full width in grid */
+.advanced-settings-section {
+  grid-column: 1 / -1;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+.advanced-settings-toggle {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  border: none !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.advanced-settings-toggle:hover {
+  background: linear-gradient(135deg, #5a6fd6 0%, #6a4190 100%) !important;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
 .form-group label {
   font-weight: 600;
   color: #2d3748;
@@ -1343,7 +1363,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 1.5rem;
-  border: 2px solid #e2e8f0;
+  border: 2px solid #667eea;
   border-radius: 12px;
   background: white;
   cursor: pointer;
@@ -1377,15 +1397,15 @@
   opacity: 0.8;
 }
 
-/* Portfolio Link Button */
+/* Portfolio Link Button - consistent with other mode options */
 .mode-option.portfolio-link {
-  border-color: #48bb78;
+  /* Uses default border-color from .mode-option */
 }
 
 .mode-option.portfolio-link:hover {
-  border-color: #38a169;
-  box-shadow: 0 4px 12px rgba(72, 187, 120, 0.15);
-  background: #f0fff4;
+  /* Uses same hover style as other mode options */
+  border-color: #667eea;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
 }
 
 /* Responsive Design for 3-card layout */

@@ -1,6 +1,6 @@
 # Deployment Guide - Render.com
 
-This guide explains how to deploy the DCA Backtest Tool to Render.com.
+This guide explains how to deploy the Grid-Based DCA Trading Simulator to Render.com.
 
 ## Prerequisites
 

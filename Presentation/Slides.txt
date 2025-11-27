@@ -18,7 +18,7 @@ The vanilla version:
 - Benefits: Reduces the impact of volatility, lowers the average cost per share over time.
 - Example: Investing $500 every month in NVDA or TSLA.
 
-S3: Enhanced DCA Strategies
+S3: Adaptive DCA Strategies
 The enhanced version:
 - grid based DCA
 

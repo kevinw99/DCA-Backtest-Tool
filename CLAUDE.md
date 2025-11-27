@@ -333,6 +333,35 @@ curl http://localhost:3001/api/data | jq '.'
 curl -s http://localhost:3001/api/endpoint | jq '.data'
 ```
 
+### Chrome DevTools MCP (Automatic Browser Debugging)
+
+**When to use automatically**: Any frontend visual bug, JavaScript error, React state issue, or UI problem.
+
+**Prerequisites**: Chrome must be running with remote debugging enabled:
+```bash
+./scripts/launch-chrome-debug.sh http://localhost:3000
+```
+
+**Available MCP Tools** (use these automatically for frontend issues):
+- `mcp__chrome-devtools__list_tabs` - List open browser tabs
+- `mcp__chrome-devtools__navigate` - Navigate to a URL
+- `mcp__chrome-devtools__get_console_logs` - Get JS console output (errors, warnings)
+- `mcp__chrome-devtools__screenshot` - Capture page screenshots
+- `mcp__chrome-devtools__evaluate` - Execute JavaScript in the page
+- `mcp__chrome-devtools__get_page_content` - Get HTML content
+- `mcp__chrome-devtools__network_get_all_requests` - List all network requests
+- `mcp__chrome-devtools__network_get_response_body` - Get network response bodies
+
+**Automatic Investigation Workflow** (for frontend bugs):
+1. Check if Chrome debug port (9222) is available: `lsof -i :9222`
+2. If not, ask user to run: `./scripts/launch-chrome-debug.sh`
+3. Use `mcp__chrome-devtools__get_console_logs` to check for JS errors
+4. Use `mcp__chrome-devtools__network_get_all_requests` to verify API calls
+5. Use `mcp__chrome-devtools__screenshot` to capture visual state
+6. Use `mcp__chrome-devtools__evaluate` to inspect React state or DOM
+
+**See also**: `.claude/skills/frontend-debugging/SKILL.md` for detailed workflow
+
 ## Permissions
 
 Claude has permission to:

@@ -1,3 +1,78 @@
+close to the slide about AI as a CTO, add another slide to dispute some misleading impressions about AI at the other end of spectrum:
+You can build a whole software project within a short period of time.
+This might be true, but valualbe product requires a lot of original thinking. This project has some original ideas, both in investment strategy and software development methodology. These original ideas require human creativity, critical thinking, and domain knowledge, which AI currently cannot fully replicate. AI is a powerful tool to augment human capabilities, but it is not a substitute for human ingenuity and expertise.
+
+and please expand some more on this slide. also include the link to ORIGINALITY-ASSESSMENT.md in the slide notes for reference.
+
+in ORIGINALITY-ASSESSMENT.md , we talked about 3 levels of AI assistance:. Has that been reflected in the presentation slides? if not, please add a slide to reflect this idea.
+
+
+There is some subtlty how total return % is calculated for DCA. Currenlty we use maximum capital deployed to calculate total return %. Another way is to use weighed daily capital deployed to calculate total return %. Can you add this entry in the metric, just use (Weighed Daily Capital Deployed [actaul value] ) to distinguish it from the current one. Please implement this change.
+
+
+
+What I need you is that we made some terminology changes throught the project, like change Backtesting to Trading Simulation, Enhanced DCA to Grid-Based DCA, etc. I want to make sure all these terminology changes are reflected consistently throughout the project, including presentation slides, anything users facing. Please update the presentation slides to reflect these changes. you should be able to find the change details in the commit history. Please make sure all terminology changes are reflected consistently throughout the presentation slides. Thank you!
+Then search for other material that are User facing, like docs, readme, UI text, etc. and make sure all terminology changes are reflected consistently throughout the project. Thank you!
+
+
+2. can you review all config pages for differnet modes. And group those unused parameters together, and create a new section called "Advanced Settings" to hold those unused parameters. Default is to collaps that section but it is expandable. So that the main config page is less cluttered, and user can focus on the important parameters first. The advanced settings can be expanded or collapsed. e.g., "Enable Dynamic Grid Spacing" ""Square root-based grid that adapts to price level (default: enabled)" can be moved to advanced settings. Actaully '(default: enabled)' should be '(default: disabled)' or just remove it since other parameters do not have that. can you verify the default value for this.
+
+Please add this workflow/methodology evolution to the presentation:. This is a cash study of how the development methodology, workflow, tools, and techniques evolved during the project development.
+
+
+Debugging UI issues
+1. before: I see an error, or UI issue in the front-end UI. ask Claude code to help me to investigate and fix it.
+Can be frustrating to debug front-end issues, especially when there are many dependencies and complex interactions involved.
+Frequent scenarios: Report bug A, CC fix bug B, but introduce bug C, or bringk back bug A again. All any random combination. (meant to be funny here)
+2. Then: I want CC to see what I see, I automate playwright to capture the developer console log, screenshot, and feed them to CC. CC can keep running and , but quickly used up all context window and tokens, very expensive and inefficient.
+
+3. Now: with Chrome DevTools MCP,(please list what CC can do with this MCP in fixing UI issues. what is the new flow when there is a UI issue? on the UI, or in the console, or debug message?
+
+
+Wonderful! please setup everything for me!
+2. how to make CC use this MCP for any front-end related issue automatically?
+
+
+Can I build a chrome MCP server so that it can do these:
+1. if there is error like this, CC knows it and fix it:
+
+> Uncaught runtime errors:
+×
+ERROR
+Failed to fetch
+TypeError: Failed to fetch
+    at getTickerDefaults (http://localhost:3000/static/js/bundle.js:131227:26)
+    at loadDefaults
+(http://localhost:3000/main.8204378bd168a866e81f.hot-update.js:662:107)
+    at http://localhost:3000/main.8204378bd168a866e81f.hot-update.js:667:7
+    at commitHookEffectListMount
+(http://localhost:3000/static/js/bundle.js:51147:30)
+    at commitPassiveMountOnFiber
+(http://localhost:3000/static/js/bundle.js:52640:17)
+    at commitPassiveMountEffects_complete
+(http://localhost:3000/static/js/bundle.js:52612:13)
+    at commitPassiveMountEffects_begin
+(http://localhost:3000/static/js/bundle.js:52602:11)
+    at commitPassiveMountEffects
+(http://localhost:3000/static/js/bundle.js:52592:7)
+    at flushPassiveEffectsImpl
+(http://localhost:3000/static/js/bundle.js:54475:7)
+
+2. CC can query what is on the developer console, any waringg or error?
+3 CC can print debug message to the developer console, and trace the execution flow and fix front-end related issues.
+4. think about how this MCP should be deployed, as an browser extension, or built in claude code, or other ways?
+
+
+
+let;s change all reference of DCA Backtesting tool to "DCA Trading Simulation",
+  include in the code, and docs.   Is it a good idea?
+  The motivation is that Backtesting might imply past tense only, but the tool can be used for live trading simulation as well. So trading simulation is more general and accurate. Also backtesting is kind of mundane word, trading simulation sounds more exciting, and this project does have some orginal and innovative ideas. So it might be better to use a more exciting word to describe it. What do you think? Do yo uhave better suggestion than "trading simulation"?
+
+Actually only changes the part that the user sees, e.g., in the UI, docs, presentation, etc. No need to change the code base internallly.
+but html content need be changed.
+There is also "Portfolio Backtest" in the UI like on page http://localhost:3000/portfolio-backtest?config=sp500_beta_filtered&rerun=true , change it to "Portfolio Simulation".
+
+
 let's look at ORIGINALITY-ASSESSMENT.md,
 https://github.com/kevinw99/DCA-Backtest-Tool/blob/main/Presentation/ORIGINALITY-ASSESSMENT.md
 ""

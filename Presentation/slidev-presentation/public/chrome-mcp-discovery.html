@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Discovering Chrome DevTools MCP</title>
+  <style>
+    :root {
+      --bg: #1a1a2e;
+      --fg: #e2e8f0;
+      --green: #48bb78;
+      --cyan: #63b3ed;
+      --yellow: #ecc94b;
+      --red: #fc8181;
+      --purple: #b794f4;
+      --gray: #718096;
+      --blue: #4299e1;
+      --dim: #4a5568;
+    }
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      padding: 2rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: var(--cyan);
+      border-bottom: 1px solid var(--dim);
+      padding-bottom: 0.5rem;
+      font-size: 1.3rem;
+    }
+    h2 {
+      color: var(--purple);
+      font-size: 1.1rem;
+      margin-top: 1.5rem;
+    }
+    h3 {
+      color: var(--yellow);
+      font-size: 1rem;
+    }
+    .message-box {
+      border: 1px solid var(--dim);
+      border-radius: 8px;
+      margin: 1rem 0;
+      overflow: hidden;
+    }
+    .message-header {
+      background: #2d3748;
+      padding: 0.5rem 1rem;
+      border-bottom: 1px solid var(--dim);
+      font-weight: bold;
+    }
+    .message-header.user {
+      color: var(--blue);
+    }
+    .message-header.claude {
+      color: var(--purple);
+    }
+    .message-content {
+      padding: 1rem;
+    }
+    .bullet {
+      color: var(--purple);
+    }
+    .tool-call {
+      color: var(--cyan);
+      background: #1e3a2f;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      margin: 0.5rem 0;
+      display: block;
+    }
+    .tool-name {
+      color: var(--yellow);
+      font-weight: bold;
+    }
+    .mcp-tag {
+      color: var(--purple);
+    }
+    .query {
+      color: var(--gray);
+      font-style: italic;
+    }
+    .code-block {
+      background: #0d1117;
+      padding: 0.75rem 1rem;
+      border-radius: 4px;
+      margin: 0.5rem 0;
+      overflow-x: auto;
+    }
+    .error-block {
+      background: #2d1f1f;
+      border-left: 3px solid var(--red);
+      padding: 0.75rem 1rem;
+      margin: 0.5rem 0;
+      color: var(--red);
+      font-size: 12px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 12px;
+    }
+    th, td {
+      border: 1px solid var(--dim);
+      padding: 0.5rem;
+      text-align: left;
+    }
+    th {
+      background: #2d3748;
+      color: var(--cyan);
+    }
+    .success {
+      color: var(--green);
+      font-weight: bold;
+    }
+    .command {
+      color: var(--yellow);
+      background: #2d2d44;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+    }
+    ul, ol {
+      margin: 0.5rem 0;
+      padding-left: 1.5rem;
+    }
+    li {
+      margin: 0.25rem 0;
+    }
+    .back-link {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      background: var(--purple);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      text-decoration: none;
+      font-size: 12px;
+    }
+    .highlight {
+      background: #3d3d1a;
+      padding: 0.1rem 0.3rem;
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body>
+  <a href="javascript:history.back()" class="back-link">← Back to Slides</a>
+
+  <h1>Discovering Chrome DevTools MCP</h1>
+  <p>How I found out Google already built what I needed</p>
+
+  <div class="message-box">
+    <div class="message-header user">USER</div>
+    <div class="message-content">
+      <p>I want you to evaluate this. Do a deep research on this as it is non-trivial:</p>
+      <p>Can I build a chrome MCP server so that it can do these:</p>
+
+      <p><strong>1. if there is error like this, CC knows it and fix it:</strong></p>
+
+      <div class="error-block">
+> Uncaught runtime errors:
+×
+ERROR
+Failed to fetch
+TypeError: Failed to fetch
+    at getTickerDefaults (http://localhost:3000/static/js/bundle.js:131227:26)
+    at loadDefaults
+(http://localhost:3000/main.8204378bd168a866e81f.hot-update.js:662:107)
+    ...</div>
+
+      <p><strong>2.</strong> CC can query what is on the developer console, any warning or error?</p>
+      <p><strong>3.</strong> CC can print debug message to the developer console, and trace the execution flow and fix front-end related issues.</p>
+      <p><strong>4.</strong> think about how this MCP should be deployed, as an browser extension, or built in claude code, or other ways?</p>
+    </div>
+  </div>
+
+  <div class="message-box">
+    <div class="message-header claude">CLAUDE</div>
+    <div class="message-content">
+      <p><span class="bullet">⏺</span> This is an interesting and non-trivial question. Let me research the feasibility and architecture options.</p>
+
+      <div class="tool-call">
+        <span class="bullet">⏺</span> <span class="tool-name">WebSearch</span> <span class="mcp-tag">(MCP)</span>
+        <br>⎿ <span class="query">query: "Chrome DevTools Protocol MCP server browser debugging AI assistant 2024"</span>
+      </div>
+
+      <div class="tool-call">
+        <span class="bullet">⏺</span> <span class="tool-name">WebSearch</span> <span class="mcp-tag">(MCP)</span>
+        <br>⎿ <span class="query">query: "Playwright MCP server browser automation Claude Code 2025"</span>
+      </div>
+
+      <div class="tool-call">
+        <span class="bullet">⏺</span> <span class="tool-name">WebSearch</span> <span class="mcp-tag">(MCP)</span>
+        <br>⎿ <span class="query">query: "browser console errors MCP Model Context Protocol integration"</span>
+      </div>
+
+      <h2>Research Results: Browser MCP for Claude Code</h2>
+
+      <p><span class="success">Great news!</span> This already exists. Google released <strong>Chrome DevTools MCP</strong> in public preview that does exactly what you're asking for.</p>
+
+      <h3>1. Chrome DevTools MCP (Official from Google)</h3>
+
+      <p><strong>Capabilities:</strong></p>
+
+      <table>
+        <tr>
+          <th>Feature</th>
+          <th>Description</th>
+        </tr>
+        <tr>
+          <td>Console reading</td>
+          <td>Read browser console logs, errors, warnings</td>
+        </tr>
+        <tr>
+          <td>Error analysis</td>
+          <td>AI sees runtime errors and can trace them</td>
+        </tr>
+        <tr>
+          <td>JavaScript execution</td>
+          <td>Execute JS in browser context for debugging</td>
+        </tr>
+        <tr>
+          <td>Network inspection</td>
+          <td>Analyze requests, CORS errors, API failures</td>
+        </tr>
+        <tr>
+          <td>DOM inspection</td>
+          <td>Check page structure, CSS, layout</td>
+        </tr>
+        <tr>
+          <td>Screenshots</td>
+          <td>Visual verification of changes</td>
+        </tr>
+        <tr>
+          <td>Performance traces</td>
+          <td>Record and analyze performance data</td>
+        </tr>
+      </table>
+
+      <p><strong>Installation for Claude Code:</strong></p>
+      <div class="code-block">
+        <span class="command">claude mcp add chrome-devtools -- npx chrome-devtools-mcp@latest</span>
+      </div>
+
+      <h3>Answering Your Questions</h3>
+
+      <ol>
+        <li><strong>Can Claude Code see runtime errors like your example?</strong><br>
+        <span class="success">YES</span> - Chrome DevTools MCP reads console.error, uncaught exceptions, and network failures.</li>
+
+        <li><strong>Can Claude Code query developer console?</strong><br>
+        <span class="success">YES</span> - The MCP server exposes console.log, console.warn, console.error output</li>
+
+        <li><strong>Can Claude Code print debug messages?</strong><br>
+        <span class="success">YES</span> - Via JavaScript execution in browser context</li>
+
+        <li><strong>Deployment Architecture?</strong><br>
+        <span class="highlight">Recommended:</span> Use the official Chrome DevTools MCP (NPX package via MCP protocol)</li>
+      </ol>
+
+      <h3>Setup Instructions</h3>
+
+      <p><strong>Step 1: Install the MCP Server</strong></p>
+      <div class="code-block">
+        <span class="command">claude mcp add chrome-devtools -- npx chrome-devtools-mcp@latest</span>
+      </div>
+
+      <p><strong>Step 2: Launch Chrome with Remote Debugging</strong></p>
+      <div class="code-block">
+        <span class="command">./scripts/launch-chrome-debug.sh http://localhost:3000</span>
+      </div>
+
+      <p><strong>Step 3: Use in Claude Code</strong> - Just report frontend issues!</p>
+    </div>
+  </div>
+
+  <div class="message-box">
+    <div class="message-header claude">CLAUDE</div>
+    <div class="message-content">
+      <h2>Chrome DevTools MCP Setup Complete!</h2>
+
+      <p><strong>What was configured:</strong></p>
+
+      <ol>
+        <li><strong>MCP Server Added</strong> (<code>~/.claude.json</code>):
+          <br>- chrome-devtools MCP using <code>npx chrome-devtools-mcp@latest</code></li>
+
+        <li><strong>Skill Created</strong> (<code>.claude/skills/frontend-debugging/SKILL.md</code>):
+          <br>- Automatic workflow for frontend debugging
+          <br>- Documents all available MCP tools</li>
+
+        <li><strong>Helper Script</strong> (<code>scripts/launch-chrome-debug.sh</code>):
+          <br>- Launches Chrome with <code>--remote-debugging-port=9222</code></li>
+
+        <li><strong>CLAUDE.md Updated</strong>:
+          <br>- Added Chrome DevTools MCP section</li>
+      </ol>
+
+      <h3>How to use:</h3>
+
+      <p><strong>Step 1:</strong> Launch Chrome with debugging (one-time per session):</p>
+      <div class="code-block">
+        <span class="command">./scripts/launch-chrome-debug.sh http://localhost:3000</span>
+      </div>
+
+      <p><strong>Step 2:</strong> Report any frontend issue to Claude Code. It will automatically:</p>
+      <ul>
+        <li>Check console logs for JS errors</li>
+        <li>Inspect network requests</li>
+        <li>Take screenshots</li>
+        <li>Evaluate DOM/React state</li>
+      </ul>
+
+      <p><strong>Note:</strong> Restart Claude Code for the MCP to be available.</p>
+    </div>
+  </div>
+
+</body>
+</html>

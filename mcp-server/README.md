@@ -1,6 +1,6 @@
-# DCA Backtest Tool - MCP Server
+# Grid-Based DCA Trading Simulator - MCP Server
 
-**Model Context Protocol (MCP) Server** for the Grid-Based DCA Backtest Tool, enabling AI assistants to run backtests and analyze strategies via natural language.
+**Model Context Protocol (MCP) Server** for the Grid-Based DCA Trading Simulator, enabling AI assistants to run trading simulations and analyze strategies via natural language.
 
 ## Features
 
@@ -16,7 +16,7 @@
 2. **list_stocks** - List available stock tickers with pagination
 3. **get_stock_info** - Get detailed stock metadata and date ranges
 4. **calculate_beta** - Calculate beta coefficient vs S&P 500
-5. **run_dca_backtest** - Run single-stock DCA backtest
+5. **run_dca_simulation** - Run single-stock DCA trading simulation
 6. **run_portfolio_backtest** - Run multi-stock portfolio backtest
 7. **run_batch_optimization** - Optimize parameters across ranges
 8. **compare_strategies** - Compare multiple strategy configurations
@@ -381,7 +381,7 @@ ruff check .
 
 ## License
 
-MIT (same as DCA Backtest Tool)
+MIT (same as Grid-Based DCA Trading Simulator)
 
 ## Support
 

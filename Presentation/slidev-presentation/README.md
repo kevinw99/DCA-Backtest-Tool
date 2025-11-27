@@ -1,4 +1,4 @@
-# DCA Backtest Tool - Presentation
+# Grid-Based DCA Trading Simulator - Presentation
 
 Interactive presentation built with [Slidev](https://sli.dev/).
 

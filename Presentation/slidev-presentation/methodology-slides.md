@@ -11,6 +11,7 @@ drawings:
 transition: slide-left
 mdc: true
 css: unocss
+aspectRatio: '4/3'
 ---
 
 # Context Engineering with AI Coding Agents
@@ -1575,6 +1576,20 @@ Reference: https://github.com/kevinw99/DCA-Backtest-Tool/blob/main/Presentation/
 - Implement known patterns
 - Write CRUD operations
 - Create standard UI components
+
+## The Commoditization Problem
+
+**Example**: "Generate a landing page for my startup"
+
+```
+2020: Hire developer → $5,000, 2 weeks
+2023: Use Webflow/Squarespace → $500, 2 days
+2025: One-shot AI prompt → $0, 5 minutes
+```
+
+**The catch**: When *everyone* can generate websites instantly, **the website itself has zero value**.
+
+Value shifts entirely to: *What unique problem are you solving? What original insight do you have?*
 
 ## What AI Cannot Replace
 

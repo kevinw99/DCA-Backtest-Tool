@@ -1,4 +1,4 @@
-"""MCP Server for DCA Backtest Tool"""
+"""MCP Server for Grid-Based DCA Trading Simulator"""
 
 from fastmcp import FastMCP
 import httpx
@@ -13,7 +13,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Initialize FastMCP server
-mcp = FastMCP("DCA Backtest Tool")
+mcp = FastMCP("DCA Trading Simulator")
 
 # HTTP client for backend API
 http_client = httpx.AsyncClient(

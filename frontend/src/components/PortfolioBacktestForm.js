@@ -30,6 +30,9 @@ import './PortfolioBacktestForm.css';
 import './backtest/BacktestForm.css';
 
 const PortfolioBacktestForm = ({ parameters, onParametersChange, onSubmit, loading }) => {
+  // Advanced settings expand/collapse state
+  const [advancedSettingsExpanded, setAdvancedSettingsExpanded] = React.useState(false);
+
   // Merge parameters for validation (validator expects flat structure)
   const mergedParams = {
     ...parameters,
@@ -426,20 +429,53 @@ const PortfolioBacktestForm = ({ parameters, onParametersChange, onSubmit, loadi
         } : null}
       />
 
-      {/* Dynamic Features (NEW - Using Shared Component) */}
-      <DynamicFeaturesSection
-        parameters={sectionParams}
-        onParametersChange={handleDefaultParamChange}
-        validationErrors={errors}
-        showBatchRanges={false}
-      />
+      {/* Advanced Settings - Collapsible Section */}
+      <div style={{ marginTop: '20px', marginBottom: '20px' }}>
+        <button
+          type="button"
+          onClick={() => setAdvancedSettingsExpanded(!advancedSettingsExpanded)}
+          style={{
+            width: '100%',
+            padding: '12px 16px',
+            backgroundColor: '#f5f5f5',
+            border: '1px solid #ddd',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: '500',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            transition: 'background-color 0.2s'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#eaeaea'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+        >
+          <span>Advanced Settings</span>
+          <span style={{ transform: advancedSettingsExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s' }}>
+            ▼
+          </span>
+        </button>
 
-      {/* Adaptive Strategy (NEW - Using Shared Component) */}
-      <AdaptiveStrategySection
-        parameters={sectionParams}
-        onParametersChange={handleDefaultParamChange}
-        validationErrors={errors}
-      />
+        {advancedSettingsExpanded && (
+          <div style={{ marginTop: '15px' }}>
+            {/* Dynamic Features (NEW - Using Shared Component) */}
+            <DynamicFeaturesSection
+              parameters={sectionParams}
+              onParametersChange={handleDefaultParamChange}
+              validationErrors={errors}
+              showBatchRanges={false}
+            />
+
+            {/* Adaptive Strategy (NEW - Using Shared Component) */}
+            <AdaptiveStrategySection
+              parameters={sectionParams}
+              onParametersChange={handleDefaultParamChange}
+              validationErrors={errors}
+            />
+          </div>
+        )}
+      </div>
 
       {/* Capital Optimization (NEW - Using Shared Component) */}
       <CapitalOptimizationSection

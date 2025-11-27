@@ -2,7 +2,7 @@
 
 ## Overview
 
-This directory contains comprehensive guides for implementing and verifying features in the DCA Backtest Tool. These guides document systematic processes learned from real-world implementations.
+This directory contains comprehensive guides for implementing and verifying features in the Grid-Based DCA Trading Simulator. These guides document systematic processes learned from real-world implementations.
 
 ## Available Guides
 

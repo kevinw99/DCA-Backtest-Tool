@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This comprehensive guide documents the complete process for adding new parameters to the DCA Backtest Tool. It ensures parameters work correctly across the entire stack: backend logic, API, configuration, frontend UI, URL encoding, and testing - in ALL applicable modes (single, portfolio, batch).
+This comprehensive guide documents the complete process for adding new parameters to the Grid-Based DCA Trading Simulator. It ensures parameters work correctly across the entire stack: backend logic, API, configuration, frontend UI, URL encoding, and testing - in ALL applicable modes (single, portfolio, batch).
 
 ## Guide Structure
 

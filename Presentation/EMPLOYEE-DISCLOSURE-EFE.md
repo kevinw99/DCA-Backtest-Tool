@@ -15,7 +15,7 @@ I am disclosing a personal software project to ensure transparency and to reques
 
 ## Project Overview
 
-**Project Name**: DCA Backtest Tool
+**Project Name**: Grid-Based DCA Trading Simulator (Adaptive DCA Strategy Simulator)
 
 **Description**: A personal educational tool for backtesting Dollar Cost Averaging (DCA) investment strategies using historical stock data.
 

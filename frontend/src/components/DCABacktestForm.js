@@ -209,6 +209,9 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
   const [tickerDefaults, setTickerDefaults] = useState(null);
   const [feedbackMessage, setFeedbackMessage] = useState('');
 
+  // Advanced settings expand/collapse state
+  const [advancedSettingsExpanded, setAdvancedSettingsExpanded] = useState(false);
+
   // Helper function to calculate betaFactor based on scaling state
   const calculateBetaFactor = (betaValue, coefficientValue, enableScaling) => {
     // Validate inputs to prevent NaN
@@ -1959,19 +1962,50 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                   </span>
                 </div>
 
-                <div className="form-group checkbox-group">
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={parameters.enableDynamicGrid ?? true}
-                      onChange={(e) => handleChange('enableDynamicGrid', e.target.checked)}
-                    />
-                    Enable Dynamic Grid Spacing
-                  </label>
-                  <span className="form-help">
-                    Square root-based grid that adapts to price level (default: enabled)
-                  </span>
-                </div>
+                {/* Advanced Settings - Collapsible Section */}
+                <div className="advanced-settings-section" style={{ marginTop: '20px', marginBottom: '20px' }}>
+                  <button
+                    type="button"
+                    className="advanced-settings-toggle"
+                    onClick={() => setAdvancedSettingsExpanded(!advancedSettingsExpanded)}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      backgroundColor: '#f5f5f5',
+                      border: '1px solid #ddd',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#eaeaea'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+                  >
+                    <span>Advanced Settings</span>
+                    <span style={{ transform: advancedSettingsExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s' }}>
+                      ▼
+                    </span>
+                  </button>
+
+                  {advancedSettingsExpanded && (
+                    <div className="advanced-settings-content" style={{ marginTop: '15px', paddingLeft: '10px', borderLeft: '3px solid #e0e0e0' }}>
+                      <div className="form-group checkbox-group">
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={parameters.enableDynamicGrid ?? false}
+                            onChange={(e) => handleChange('enableDynamicGrid', e.target.checked)}
+                          />
+                          Enable Dynamic Grid Spacing
+                        </label>
+                        <span className="form-help">
+                          Square root-based grid that adapts to price level
+                        </span>
+                      </div>
 
                 {parameters.enableDynamicGrid !== false ? (
                   <>
@@ -2233,6 +2267,10 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
                     <strong>Market:</strong> Guarantees execution but may fill at unfavorable prices.
                   </small>
                 </div>
+                    </div>
+                  )}
+                </div>
+                {/* End of Advanced Settings */}
 
                 <div className="form-group">
                   <label htmlFor="trailingBuyActivationPercent">

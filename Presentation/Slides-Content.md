@@ -1,4 +1,4 @@
-# DCA Backtest Tool - Presentation Slides
+# Grid-Based DCA Trading Simulator - Presentation Slides
 
 ---
 
@@ -28,7 +28,7 @@
 
 ---
 
-## SLIDE 2: Solution - Enhanced DCA Framework
+## SLIDE 2: Solution - Adaptive DCA Framework
 
 ### Deep Dive into Systematic DCA Strategies for Volatile Stocks
 
@@ -49,7 +49,7 @@
 
 ---
 
-## SLIDE 3: Enhanced DCA Strategies
+## SLIDE 3: Adaptive DCA Strategies
 
 ### Beyond Vanilla DCA - Intelligent, Adaptive Strategies
 
@@ -390,9 +390,9 @@ Git Commit (structured history)
 
 ## APPENDIX: Key Comparisons
 
-### **Vanilla DCA vs. Enhanced DCA**
+### **Vanilla DCA vs. Adaptive DCA**
 
-| Feature | Vanilla DCA | Enhanced DCA |
+| Feature | Vanilla DCA | Adaptive DCA |
 |---------|------------|--------------|
 | **Grid Spacing** | Fixed 10% | Dynamic 3-20% (adaptive) |
 | **Profit Taking** | Fixed requirement | Incremental on uptrends |
@@ -414,9 +414,9 @@ Git Commit (structured history)
 
 ### **Real-World Results (TSLA 2021-2024 Backtest)**
 - **Vanilla DCA:** -28% return, 80% max drawdown
-- **Enhanced DCA (with momentum):** +120% return, 40% max drawdown
+- **Adaptive DCA (with momentum):** +120% return, 40% max drawdown
 - **Buy & Hold:** +85% return, 75% max drawdown
-- **Conclusion:** Enhanced DCA delivers superior risk-adjusted returns
+- **Conclusion:** Adaptive DCA delivers superior risk-adjusted returns
 
 ---
 

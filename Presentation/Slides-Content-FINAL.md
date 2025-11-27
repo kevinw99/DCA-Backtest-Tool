@@ -1,4 +1,4 @@
-# DCA Backtest Tool - Complete Presentation Content
+# Grid-Based DCA Trading Simulator - Complete Presentation Content
 
 *All slides in readable format - Updated with Disclaimer, Lots/Tranches, Demo 4 (Nasdaq 100) and Context Engineering*
 
@@ -6,9 +6,9 @@
 
 ## Slide 1: Title
 
-**DCA Backtest Tool**
+**Grid-Based DCA Trading Simulator**
 
-Enhanced Dollar Cost Averaging for Volatile Stocks
+Adaptive Dollar Cost Averaging for Volatile Stocks
 
 ---
 
@@ -58,7 +58,7 @@ This presentation is for **educational and research purposes only**.
 
 ---
 
-## Slide 4: Solution - Enhanced DCA Framework
+## Slide 4: Solution - Adaptive DCA Framework
 
 ### Deep Dive into Systematic DCA Strategies for Volatile Stocks
 
@@ -79,7 +79,7 @@ This presentation is for **educational and research purposes only**.
 
 ---
 
-## Slide 5: Enhanced DCA Overview
+## Slide 5: Adaptive DCA Overview
 
 ### Beyond Vanilla DCA - Intelligent, Adaptive Strategies
 
@@ -1337,9 +1337,9 @@ Reviewer Rejects? → Back to Implementation
 
 ## Slide 32: Appendix - Performance Comparisons
 
-### Vanilla DCA vs. Enhanced DCA
+### Vanilla DCA vs. Adaptive DCA
 
-| Feature | Vanilla DCA | Enhanced DCA |
+| Feature | Vanilla DCA | Adaptive DCA |
 |---------|------------|--------------|
 | **Grid Spacing** | Fixed 10% | Dynamic 3-20% (adaptive) |
 | **Profit Taking** | Fixed requirement | Incremental on uptrends |
@@ -1356,7 +1356,7 @@ Reviewer Rejects? → Back to Implementation
 
 ### Performance Improvements (Expected)
 
-| Metric | Vanilla DCA | Enhanced DCA | Improvement |
+| Metric | Vanilla DCA | Adaptive DCA | Improvement |
 |--------|-------------|--------------|-------------|
 | **Max Drawdown** | 80% | <40% | 50% reduction ✅ |
 | **Win Rate** | 0% | 40-60% | Always losing → Profitable ✅ |
@@ -1366,10 +1366,10 @@ Reviewer Rejects? → Back to Implementation
 ### Real-World Results (TSLA 2021-2024 Backtest)
 
 - **Vanilla DCA:** -28% return, 80% max drawdown ❌
-- **Enhanced DCA (with momentum):** +120% return, 40% max drawdown ✅
+- **Adaptive DCA (with momentum):** +120% return, 40% max drawdown ✅
 - **Buy & Hold:** +85% return, 75% max drawdown
 
-**Conclusion:** Enhanced DCA delivers superior risk-adjusted returns
+**Conclusion:** Adaptive DCA delivers superior risk-adjusted returns
 
 ---
 
@@ -1406,7 +1406,7 @@ Reviewer Rejects? → Back to Implementation
 
 ## Questions?
 
-**DCA Backtest Tool**
+**Grid-Based DCA Trading Simulator**
 
 Turning Volatility into Opportunity
 

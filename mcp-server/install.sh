@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "🚀 Installing DCA Backtest MCP Server..."
+echo "🚀 Installing DCA Trading Simulator MCP Server..."
 echo ""
 
 # Check Python version
