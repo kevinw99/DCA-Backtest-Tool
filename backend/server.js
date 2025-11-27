@@ -86,7 +86,7 @@ app.get('/api', (req, res) => {
   const frontendUrl = config.server.frontendUrl;
 
   const apiData = {
-    message: 'DCA Backtest API - Available Endpoints',
+    message: 'Grid-Based DCA Trading Simulator API',
     version: '1.0.0',
     endpoints: {
       health: {
@@ -125,7 +125,7 @@ app.get('/api', (req, res) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DCA Backtest API - Documentation</title>
+  <title>Grid-Based DCA Trading Simulator - API Documentation</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -261,7 +261,7 @@ app.get('/api', (req, res) => {
 <body>
   <div class="container">
     <div class="header">
-      <h1>DCA Backtest API</h1>
+      <h1>Grid-Based DCA Trading Simulator API</h1>
       <p class="version">Version ${apiData.version}</p>
     </div>
 
