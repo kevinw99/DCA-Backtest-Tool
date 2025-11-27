@@ -658,7 +658,7 @@ Session 3: *You re-explain...*
 | MCP Server | Capability |
 |------------|-----------|
 | **Render** | Check deploys, read logs, redeploy |
-| **DCA Backtest** | Run backtests, analyze strategies, optimize parameters |
+| **DCA Trading Simulator** | Run trading simulations, analyze strategies, optimize parameters |
 | **GitHub** | Create PRs, manage issues |
 
 ## What This Means
@@ -670,7 +670,7 @@ Both Claude Code and Copilot can now connect to custom MCP servers.
 
 ---
 
-# Project-Specific MCP: DCA Backtest Server
+# Project-Specific MCP: DCA Trading Simulator Server
 
 <v-clicks>
 
@@ -678,7 +678,7 @@ Both Claude Code and Copilot can now connect to custom MCP servers.
 
 | Tool | Capability |
 |------|------------|
-| `run_dca_backtest` | Run single-stock DCA backtest |
+| `run_dca_simulation` | Run single-stock DCA trading simulation |
 | `run_portfolio_backtest` | Multi-stock portfolio analysis |
 | `run_batch_optimization` | Test parameter combinations |
 | `compare_strategies` | Side-by-side strategy comparison |
@@ -1028,6 +1028,249 @@ Don't fix the symptom—trace to root cause, find similar issues, fix comprehens
 
 ---
 
+# Case Study: Evolution of UI Debugging
+
+A real story of methodology evolution during project development
+
+<v-clicks>
+
+## Phase 1: Manual Description Chaos 😅
+
+**Real Bug**: Portfolio charts (4 charts stacked vertically) had misaligned x-axes
+
+```
+What should happen:          What actually happened:
+Chart 1: |--Jan--|--Apr--|    Chart 1: |--Jan--|--Apr--|
+Chart 2: |--Jan--|--Apr--|    Chart 2: |---Feb---|---Jun---|
+Chart 3: |--Jan--|--Apr--|    Chart 3: |----Mar----|----Jul----|
+         ↑ aligned                     ↑ NOT aligned!
+```
+
+**4 Failed Solutions** (all described via text):
+1. ❌ Added `syncId` → Only synced tooltips, not axes
+2. ❌ Created `getSharedXAxisConfig()` → Charts preprocessed data differently
+3. ❌ Explicit `domain={sharedDomain}` → Recharts ignored it
+4. ❌ Set `type="category"` → Still not working
+
+**Root Cause**: Needed to include ALL data sources in `masterDates` array!
+
+</v-clicks>
+
+---
+
+# UI Debugging Evolution (cont.)
+
+<v-clicks>
+
+## Phase 2: Gemini CLI + Playwright 📸
+
+Customized **Gemini CLI** to add Playwright capability—AI could "see" the whole page:
+
+```bash
+# Gemini CLI with custom Playwright integration
+# Takes screenshot of entire page, captures console, feeds to AI
+
+$ gemini-cli debug-ui http://localhost:3000/portfolio
+→ Capturing full page screenshot...
+→ Capturing console logs...
+→ Capturing network requests...
+→ Analyzing with Gemini...
+```
+
+**Problems:**
+- Screenshots are token-expensive (quickly exhausted context window)
+- Very high cost per debug session
+- Gemini analyzes static snapshots, not live browser state
+- Had to re-capture for each iteration
+
+</v-clicks>
+
+---
+
+# UI Debugging Evolution (cont.)
+
+<v-clicks>
+
+## Phase 3: Chrome DevTools MCP 🎯
+
+Claude now has **direct browser control** via MCP:
+
+| Tool | Capability |
+|------|------------|
+| `get_console_logs` | Read JS errors, warnings in real-time |
+| `screenshot` | Capture current visual state |
+| `evaluate` | Run JS directly, inspect React state |
+| `network_get_all_requests` | See API calls, responses |
+| `navigate` | Go to problem page directly |
+| `click` / `type` | Interact with UI elements |
+
+</v-clicks>
+
+---
+
+# The New UI Debugging Flow
+
+```mermaid {scale: 0.75}
+flowchart LR
+    A[User: 'Button broken'] --> B[Claude: Check debug port]
+    B --> C[get_console_logs]
+    C --> D{JS Error?}
+    D -->|Yes| E[Trace error source]
+    D -->|No| F[network_get_all_requests]
+    F --> G{API Issue?}
+    G -->|Yes| H[Fix backend]
+    G -->|No| I[screenshot + evaluate]
+    I --> J[Inspect React state]
+    E --> K[Fix & Verify]
+    H --> K
+    J --> K
+
+    style C fill:#ccffcc
+    style F fill:#ccffcc
+    style I fill:#ccffcc
+```
+
+<v-click>
+
+**Key Benefit**: Claude sees what you see—no more "fix A, break B" loops!
+
+</v-click>
+
+---
+
+# UI Debugging: Before vs After
+
+**The Chart Alignment Bug with Different Approaches:**
+
+| Approach | Effort | Outcome |
+|----------|--------|---------|
+| **Manual description** | 4 failed attempts over multiple sessions | Finally fixed by luck |
+| **Gemini + Playwright** | $$$, context exhausted | Could see problem, expensive |
+| **Chrome DevTools MCP** | Direct inspection, low cost | See DOM, React state, iterate fast |
+
+<v-click>
+
+## Setup (One-time)
+```bash
+claude mcp add chrome-devtools -- npx chrome-devtools-mcp@latest
+# Restart Claude Code, then each session:
+./scripts/launch-chrome-debug.sh http://localhost:3000
+```
+
+</v-click>
+
+---
+
+# How I Discovered Chrome DevTools MCP
+
+<div class="text-sm">
+
+**The Question I Asked Claude:**
+
+> "Can I build a Chrome MCP server so Claude Code can see runtime errors like `TypeError: Failed to fetch` and fix them?"
+
+<v-click>
+
+**Claude's Research Process:**
+
+```
+⏺ WebSearch (MCP)
+  ⎿ query: "Chrome DevTools Protocol MCP server browser debugging AI 2024"
+  ⎿ query: "Playwright MCP server browser automation Claude Code 2025"
+  ⎿ query: "browser console errors MCP Model Context Protocol"
+```
+
+</v-click>
+
+<v-click>
+
+**The Answer:** Google already built it! **Chrome DevTools MCP** - official, in public preview.
+
+<a href="/chrome-mcp-discovery.html" target="_blank" class="text-blue-400 underline">📄 View Full Discovery Conversation →</a>
+
+</v-click>
+
+</div>
+
+---
+
+# Chrome MCP in Action: Real Session
+
+<div class="text-sm">
+
+**User**: "Check if Chrome DevTools MCP is working"
+
+```
+✓ mcp__chrome-devtools__navigate_page    → localhost:3000
+✓ mcp__chrome-devtools__take_screenshot  → Captured UI
+✓ mcp__chrome-devtools__take_snapshot    → Got accessibility tree
+✓ mcp__chrome-devtools__list_console_messages → Found 25 logs + 1 error
+```
+
+**Claude**: "Found one 404 error in console. What would you like to debug?"
+
+<a href="/chrome-mcp-session.html" target="_blank" class="text-blue-400 underline">📄 View Full Session Transcript →</a>
+
+</div>
+
+---
+
+# Chrome MCP Session (cont.) - Finding UI Issues
+
+<div class="text-sm">
+
+**User**: "The Portfolio tab has a confusing green border. Check Advanced Settings defaults."
+
+```ansi
+[33m→[0m [36mclick[0m("Advanced Settings") → Expanded dropdown
+[33m→[0m [36mevaluate_script[0m(scrollIntoView) → Scrolled to section
+[33m→[0m [36mtake_screenshot[0m → [32mCaptured expanded settings[0m
+[33m→[0m [36mevaluate_script[0m(window.scrollBy) → Scrolled through all options
+```
+
+**Claude's findings** (from actual DOM inspection):
+
+| Setting | Default | Setting | Default |
+|---------|---------|---------|---------|
+| Dynamic Grid Spacing | ❌ OFF | Normalize to Reference | ✅ ON |
+| Consecutive Buy Grid | ❌ OFF | Consecutive Sell Profit | ✅ ON |
+| Scenario Detection | ✅ ON | Momentum Buy/Sell | ❌ OFF |
+
+</div>
+
+---
+
+# Chrome MCP Session (cont.) - Root Cause Found
+
+<div class="text-sm">
+
+**Claude traces the green border to code:**
+
+```ansi
+[33m→[0m [36mSearch[0m("portfolio-link|mode-option", "*.css")
+[32m✓[0m Found in App.css:1381-1382
+```
+
+```css
+/* The culprit! */
+.mode-option.portfolio-link {
+  border-color: #48bb78;  /* Green = confusing */
+}
+```
+
+**Claude's analysis:**
+> "Green border intentionally marks it as navigation link (→ /portfolio-backtest),
+> but confusing because green typically means 'selected'. Options:
+> 1. Remove green border
+> 2. Use arrow icon instead
+> 3. Change to subtle blue"
+
+**Total time**: ~2 minutes from report to root cause + fix options
+
+</div>
+
+---
+
 # Multi-Agent Orchestration
 
 <v-clicks>
@@ -1230,6 +1473,53 @@ flowchart LR
 
 ---
 
+# Recursive AI Scaffolding: 3 Levels of Assistance
+
+<!--
+Reference: https://github.com/kevinw99/DCA-Backtest-Tool/blob/main/Presentation/ORIGINALITY-ASSESSMENT.md
+This is an ORIGINAL PATTERN - components exist, but this specific 3-tier recursive pattern is not documented in industry literature.
+-->
+
+<v-clicks>
+
+## The Concept: AI Helps AI Helps AI
+
+Instead of one-shot prompting, use **meta-recursive assistance** where each level scaffolds the next:
+
+```mermaid {scale: 0.7}
+flowchart LR
+    A[Human: Rough Idea] --> B[Level 1: Copilot]
+    B --> C["Refined Prompt"]
+    C --> D[Level 2: Claude]
+    D --> E["Spec Document"]
+    E --> F[Level 3: Claude]
+    F --> G["Implementation"]
+
+    style B fill:#e1f5ff
+    style D fill:#ccffcc
+    style F fill:#ffe4cc
+```
+
+## The 3 Levels
+
+| Level | AI Tool | Input | Output |
+|-------|---------|-------|--------|
+| **1** | GitHub Copilot | Rough idea, keywords | Polished prompt |
+| **2** | Claude | Polished prompt | Comprehensive spec |
+| **3** | Claude | Spec + codebase context | Production code |
+
+## Why This Matters
+
+- **Level 1** reduces prompt engineering effort (AI writes better prompts than most humans)
+- **Level 2** front-loads analysis (spec catches issues before coding)
+- **Level 3** has full context (spec + patterns + validation criteria)
+
+> Each layer improves quality for the next. The human provides direction; AI handles articulation.
+
+</v-clicks>
+
+---
+
 # AI as Your Co-Founder
 
 <v-clicks>
@@ -1260,6 +1550,71 @@ AI: "Here are 3 architectural approaches, let's discuss..."
 You: "Option 2 looks good, but concerned about Z"
 AI: "Valid concern. Here's how to mitigate..."
 ```
+
+</v-clicks>
+
+---
+
+# The Other Extreme: "AI Can Build Anything Fast"
+
+<!--
+Reference: https://github.com/kevinw99/DCA-Backtest-Tool/blob/main/Presentation/ORIGINALITY-ASSESSMENT.md
+-->
+
+<v-clicks>
+
+## The Misleading Narrative
+
+> "With AI, you can build a complete software product in days/weeks!"
+
+**Technically true, but...** Speed ≠ Value
+
+## What AI Can Do Fast
+
+- Generate boilerplate code
+- Implement known patterns
+- Write CRUD operations
+- Create standard UI components
+
+## What AI Cannot Replace
+
+| Human Capability | Why It Matters |
+|-----------------|----------------|
+| **Original Problem Definition** | Identifying *what* to build requires domain expertise |
+| **Novel Strategy Design** | Investment strategies in this project required creative thinking |
+| **Critical Evaluation** | Questioning assumptions, spotting logical flaws |
+| **Domain Knowledge Integration** | Connecting financial concepts with software architecture |
+
+</v-clicks>
+
+---
+
+# This Project's Original Contributions
+
+What human creativity brought to this project:
+
+<v-clicks>
+
+## Investment Strategy Innovations
+
+- **Dynamic Grid Spacing** - Adaptive approach based on price levels (not standard DCA)
+- **Momentum-Based Mode Switching** - "Buy strength, sell weakness" vs traditional "buy dips"
+- **Scenario Detection & Adaptation** - Real-time strategy adjustment based on market conditions
+- **Multi-Factor DCA Suitability Score** - Novel composite metric for stock selection
+
+## Development Methodology Innovations
+
+- **Context Engineering Framework** - Structured approach to AI-assisted development
+- **Spec-Driven Workflow** - Kiro-style specifications for persistent project knowledge
+- **Skills as Codified Expertise** - Reusable domain knowledge capture
+
+## The Key Insight
+
+> AI accelerates execution, but **original thinking** defines what's worth building.
+>
+> Without human creativity, you get fast implementation of mediocre ideas.
+
+<a href="https://github.com/kevinw99/DCA-Backtest-Tool/blob/main/Presentation/ORIGINALITY-ASSESSMENT.md" target="_blank" class="text-blue-400 text-sm">📄 See: Research Validation & Originality Assessment</a>
 
 </v-clicks>
 
