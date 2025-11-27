@@ -2234,3 +2234,13 @@ Turning Volatility into Opportunity
 <div class="text-sm text-gray-400">
 Built with Claude Code | Deployed on Render.com
 </div>
+
+<div class="pt-6 text-sm">
+
+**Resources**
+
+[Live Demo](https://dca-backtest-frontend.onrender.com) |
+[GitHub Repository](https://github.com/kevinw99/DCA-Backtest-Tool) |
+[Originality Assessment](https://github.com/kevinw99/DCA-Backtest-Tool/blob/main/Presentation/ORIGINALITY-ASSESSMENT.md)
+
+</div>

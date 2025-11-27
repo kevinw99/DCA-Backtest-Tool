@@ -1187,7 +1187,7 @@ claude mcp add chrome-devtools -- npx chrome-devtools-mcp@latest
 
 **The Answer:** Google already built it! **Chrome DevTools MCP** - official, in public preview.
 
-<a href="/chrome-mcp-discovery.html" target="_blank" class="text-blue-400 underline">📄 View Full Discovery Conversation →</a>
+<a href="https://dca-presentation.onrender.com/chrome-mcp-discovery.html" target="_blank" class="text-blue-400 underline">📄 View Full Discovery Conversation →</a>
 
 </v-click>
 
@@ -1210,7 +1210,7 @@ claude mcp add chrome-devtools -- npx chrome-devtools-mcp@latest
 
 **Claude**: "Found one 404 error in console. What would you like to debug?"
 
-<a href="/chrome-mcp-session.html" target="_blank" class="text-blue-400 underline">📄 View Full Session Transcript →</a>
+<a href="https://dca-presentation.onrender.com/chrome-mcp-session.html" target="_blank" class="text-blue-400 underline">📄 View Full Session Transcript →</a>
 
 </div>
 
@@ -1856,6 +1856,12 @@ class: text-center
 [Claude Code Documentation](https://docs.anthropic.com/claude-code)
 
 [Grid-Based DCA Trading Demo](https://dca-backtest-frontend.onrender.com)
+
+[Originality Assessment](https://github.com/kevinw99/DCA-Backtest-Tool/blob/main/Presentation/ORIGINALITY-ASSESSMENT.md)
+
+[Chrome MCP Discovery Transcript](https://dca-presentation.onrender.com/chrome-mcp-discovery.html)
+
+[Chrome MCP Session Transcript](https://dca-presentation.onrender.com/chrome-mcp-session.html)
 
 </div>
 
