@@ -48,6 +48,10 @@ test/results/*.txt
 # Generated data
 data/backtest-results/*.json
 
+# Backtest result files (large output files from testing)
+backtest-result/*.json
+backtest-result/*.mhtml
+
 # Root directory enforcement - no loose files except essentials
 # (See .file-rules.md for allowed root files)
 /*.sh
