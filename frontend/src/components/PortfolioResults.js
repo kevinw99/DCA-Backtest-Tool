@@ -39,7 +39,9 @@ const PortfolioResults = ({ data }) => {
     buyAndHoldSummary,
     comparison,
     skippedStocks,
-    betaGrouping
+    betaGrouping,
+    betaFilterMetadata,  // Spec 66: Beta range filtering metadata
+    etfBenchmark  // Spec 67: ETF benchmark data
   } = data;
 
   // Count skipped stocks
@@ -76,6 +78,74 @@ const PortfolioResults = ({ data }) => {
             <p className="banner-action">
               Click on the stock rows in the Stock Performance Breakdown below to view detailed error information and troubleshooting steps.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Spec 66: Beta Filter Summary */}
+      {betaFilterMetadata && betaFilterMetadata.enabled && (
+        <div className="beta-filter-summary" style={{
+          marginTop: '20px',
+          padding: '15px',
+          backgroundColor: '#e8f4fd',
+          borderRadius: '8px',
+          border: '1px solid #b3d9f2'
+        }}>
+          <div className="banner-header">
+            <span className="banner-icon">🔍</span>
+            <h3 className="banner-title">Beta Range Filter Applied</h3>
+          </div>
+          <div className="banner-content">
+            <p className="banner-message">
+              <strong>Range:</strong> {betaFilterMetadata.minBeta ?? 'any'} ≤ beta ≤ {betaFilterMetadata.maxBeta ?? 'any'}
+            </p>
+            <p className="banner-message">
+              <strong>Stocks:</strong> {betaFilterMetadata.includedStocks}/{betaFilterMetadata.totalStocks} included
+              ({betaFilterMetadata.excludedStocks} excluded)
+            </p>
+            {betaFilterMetadata.missingBetaCount > 0 && (
+              <p className="banner-message" style={{ color: '#856404', marginTop: '8px' }}>
+                ⚠️ {betaFilterMetadata.missingBetaCount} stocks excluded due to missing beta data
+              </p>
+            )}
+
+            <details style={{ marginTop: '12px' }}>
+              <summary style={{ cursor: 'pointer', fontWeight: '500' }}>
+                View Included Stocks ({betaFilterMetadata.includedSymbols?.length || 0})
+              </summary>
+              <ul style={{
+                marginTop: '8px',
+                paddingLeft: '20px',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))',
+                gap: '4px'
+              }}>
+                {betaFilterMetadata.includedSymbols?.map(symbol => (
+                  <li key={symbol} style={{ listStyle: 'none', padding: '2px' }}>
+                    <code>{symbol}</code>
+                  </li>
+                ))}
+              </ul>
+            </details>
+
+            <details style={{ marginTop: '8px' }}>
+              <summary style={{ cursor: 'pointer', fontWeight: '500' }}>
+                View Excluded Stocks ({betaFilterMetadata.excludedSymbols?.length || 0})
+              </summary>
+              <ul style={{
+                marginTop: '8px',
+                paddingLeft: '20px',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))',
+                gap: '4px'
+              }}>
+                {betaFilterMetadata.excludedSymbols?.map(symbol => (
+                  <li key={symbol} style={{ listStyle: 'none', padding: '2px' }}>
+                    <code>{symbol}</code>
+                  </li>
+                ))}
+              </ul>
+            </details>
           </div>
         </div>
       )}
@@ -141,6 +211,7 @@ const PortfolioResults = ({ data }) => {
           <PortfolioBuyAndHoldComparison
             comparison={comparison}
             buyAndHoldSummary={buyAndHoldSummary}
+            etfBenchmark={etfBenchmark}
           />
         </section>
       )}

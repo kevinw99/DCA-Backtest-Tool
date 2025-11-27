@@ -62,7 +62,10 @@ const AlignedChartsContainer = ({ chartData, stockResults }) => {
       title: 'Portfolio Value: DCA vs Buy & Hold',
       description: 'Compare the active DCA strategy against a passive Buy & Hold approach',
       dataKey: 'dcaVsBuyAndHold',
-      props: { data: chartData.dcaVsBuyAndHold }
+      props: {
+        data: chartData.dcaVsBuyAndHold,
+        etfBenchmark: chartData.etfBenchmark  // Spec 67: Pass ETF benchmark
+      }
     },
     {
       id: 'composition',

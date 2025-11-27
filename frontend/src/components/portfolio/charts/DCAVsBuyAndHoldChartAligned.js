@@ -23,10 +23,11 @@ import {
   CHART_HEIGHTS
 } from '../../charts/SharedChartConfig';
 
-const DCAVsBuyAndHoldChartAligned = ({ data, isLastChart, sharedDomain, sharedTicks }) => {
+const DCAVsBuyAndHoldChartAligned = ({ data, isLastChart, sharedDomain, sharedTicks, etfBenchmark }) => {
   const [visibleLines, setVisibleLines] = useState({
     dca: true,
-    buyAndHold: true
+    buyAndHold: true,
+    etf: true  // Spec 67: ETF benchmark visibility
   });
 
   const toggleLine = (line) => {
@@ -36,6 +37,9 @@ const DCAVsBuyAndHoldChartAligned = ({ data, isLastChart, sharedDomain, sharedTi
   if (!data || data.length === 0) {
     return <div className="chart-empty">No comparison data available</div>;
   }
+
+  // Spec 67: Check if ETF data is available
+  const hasETF = etfBenchmark && data.some(d => d.etfValue != null);
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload) return null;
@@ -76,6 +80,18 @@ const DCAVsBuyAndHoldChartAligned = ({ data, isLastChart, sharedDomain, sharedTi
           <span className="legend-color" style={{ backgroundColor: '#10b981' }}></span>
           Buy & Hold
         </label>
+        {/* Spec 67: ETF Benchmark Toggle */}
+        {hasETF && (
+          <label className={!visibleLines.etf ? 'disabled' : ''}>
+            <input
+              type="checkbox"
+              checked={visibleLines.etf}
+              onChange={() => toggleLine('etf')}
+            />
+            <span className="legend-color" style={{ backgroundColor: '#ff7300' }}></span>
+            {etfBenchmark.symbol} Benchmark
+          </label>
+        )}
       </div>
 
       <ResponsiveContainer width="100%" height={CHART_HEIGHTS.standard}>
@@ -113,6 +129,20 @@ const DCAVsBuyAndHoldChartAligned = ({ data, isLastChart, sharedDomain, sharedTi
               connectNulls={true}
             />
           )}
+
+          {/* Spec 67: ETF Benchmark Line */}
+          {hasETF && visibleLines.etf && (
+            <Line
+              type="monotone"
+              dataKey="etfValue"
+              stroke="#ff7300"
+              name={`${etfBenchmark.symbol} Benchmark`}
+              strokeWidth={2}
+              strokeDasharray="10 5"
+              dot={false}
+              connectNulls={true}
+            />
+          )}
         </LineChart>
       </ResponsiveContainer>
     </div>
@@ -123,9 +153,14 @@ DCAVsBuyAndHoldChartAligned.propTypes = {
   data: PropTypes.arrayOf(PropTypes.shape({
     date: PropTypes.string.isRequired,
     dcaValue: PropTypes.number,
-    buyAndHoldValue: PropTypes.number
+    buyAndHoldValue: PropTypes.number,
+    etfValue: PropTypes.number  // Spec 67: ETF benchmark value
   })).isRequired,
-  isLastChart: PropTypes.bool.isRequired
+  isLastChart: PropTypes.bool.isRequired,
+  etfBenchmark: PropTypes.shape({  // Spec 67: ETF benchmark data
+    symbol: PropTypes.string,
+    dailyValues: PropTypes.array
+  })
 };
 
 export default DCAVsBuyAndHoldChartAligned;

@@ -837,6 +837,43 @@ class Database {
     });
   }
 
+  /**
+   * Spec 66: Fetch beta values for multiple symbols
+   * @param {string[]} symbols - Array of stock symbols
+   * @returns {Promise<Object>} Map of symbol to beta value (null if missing)
+   */
+  async getBetaForSymbols(symbols) {
+    if (!symbols || symbols.length === 0) {
+      return {};
+    }
+
+    return new Promise((resolve, reject) => {
+      const placeholders = symbols.map(() => '?').join(',');
+      const query = `
+        SELECT s.symbol, sb.beta
+        FROM stocks s
+        LEFT JOIN stock_beta sb ON s.id = sb.stock_id
+        WHERE s.symbol IN (${placeholders})
+      `;
+
+      this.db.all(query, symbols, (err, rows) => {
+        if (err) {
+          console.error('Error fetching beta values:', err.message);
+          reject(err);
+          return;
+        }
+
+        // Convert to map: { symbol: beta }
+        const betaMap = {};
+        rows.forEach(row => {
+          betaMap[row.symbol] = row.beta || null;
+        });
+
+        resolve(betaMap);
+      });
+    });
+  }
+
   close() {
     this.db.close((err) => {
       if (err) {

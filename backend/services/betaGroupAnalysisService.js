@@ -203,8 +203,9 @@ class BetaGroupAnalysisService {
     const avgBeta = betas.reduce((sum, b) => sum + b, 0) / Math.max(betas.length, 1);
     const sortedBetas = [...betas].sort((a, b) => a - b);
     const medianBeta = sortedBetas[Math.floor(sortedBetas.length / 2)] || 0;
-    const minBeta = Math.min(...betas, 0);
-    const maxBeta = Math.max(...betas, 0);
+    // Use actual min/max of included stocks (not forced to include 0)
+    const minBeta = betas.length > 0 ? Math.min(...betas) : 0;
+    const maxBeta = betas.length > 0 ? Math.max(...betas) : 0;
 
     // Use generic helper for group comparison
     const groupStats = calculateSummaryStatistics(stocksWithBeta, groups);

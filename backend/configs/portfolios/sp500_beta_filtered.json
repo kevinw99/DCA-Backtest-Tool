@@ -1,11 +1,12 @@
 {
-  "name": "S&P 500",
-  "description": "Portfolio backtest for S&P 500 component stocks with survival bias elimination",
+  "name": "S&P 500 - High Beta (≥1.5)",
+  "description": "Portfolio backtest for high-beta S&P 500 stocks (beta >= 1.5) with SPY benchmark",
   "benchmarkSymbol": "SPY",
   "totalCapitalUsd": 10000000,
   "marginPercent": 20,
   "startDate": "2021-09-02",
   "endDate": "2025-10-30",
+  "minBeta": 1.5,
   "globalDefaults": {
     "basic": {
       "lotSizeUsd": 10000,

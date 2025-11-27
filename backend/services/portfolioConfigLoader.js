@@ -109,7 +109,12 @@ function configToBacktestParams(config) {
     stocks: stocksWithParams,
     indexTracking: config.indexTracking || { enabled: false },
     capitalOptimization: capitalOptimization,
-    optimizedTotalCapital: optimizedTotalCapital  // Spec 61: Pass optimizedTotalCapital to backtest service
+    optimizedTotalCapital: optimizedTotalCapital,  // Spec 61: Pass optimizedTotalCapital to backtest service
+    // Spec 66: Beta range filtering (optional)
+    ...(config.minBeta !== undefined && { minBeta: config.minBeta }),
+    ...(config.maxBeta !== undefined && { maxBeta: config.maxBeta }),
+    // Spec 67: ETF benchmark (optional)
+    ...(config.benchmarkSymbol && { benchmarkSymbol: config.benchmarkSymbol })
   };
 }
 
@@ -221,6 +226,35 @@ function validateConfig(config) {
   // Validate capitalOptimization if present
   if (config.capitalOptimization) {
     validateCapitalOptimization(config.capitalOptimization);
+  }
+
+  // Spec 66: Validate beta range filtering if present
+  if (config.minBeta !== undefined) {
+    if (typeof config.minBeta !== 'number' || config.minBeta < 0) {
+      throw new Error('Field "minBeta" must be a non-negative number');
+    }
+  }
+
+  if (config.maxBeta !== undefined) {
+    if (typeof config.maxBeta !== 'number' || config.maxBeta < 0) {
+      throw new Error('Field "maxBeta" must be a non-negative number');
+    }
+  }
+
+  if (config.minBeta !== undefined && config.maxBeta !== undefined) {
+    if (config.minBeta > config.maxBeta) {
+      throw new Error('Field "minBeta" must be less than or equal to "maxBeta"');
+    }
+  }
+
+  // Spec 67: Validate benchmarkSymbol if present
+  if (config.benchmarkSymbol !== undefined) {
+    if (typeof config.benchmarkSymbol !== 'string' || config.benchmarkSymbol.trim().length === 0) {
+      throw new Error('Field "benchmarkSymbol" must be a non-empty string');
+    }
+    if (!/^[A-Z0-9.-]+$/.test(config.benchmarkSymbol)) {
+      throw new Error(`Invalid benchmark symbol: "${config.benchmarkSymbol}" (must be uppercase letters, numbers, dots, or hyphens)`);
+    }
   }
 }
 

@@ -104,6 +104,8 @@ function calculatePortfolioSummary(portfolio, config) {
 
     // Efficiency metrics
     winRate: calculateWinRate(portfolio),
+    winningTrades: countWinningTrades(portfolio),
+    losingTrades: countLosingTrades(portfolio),
     avgWin: calculateAvgWin(portfolio),
     avgLoss: calculateAvgLoss(portfolio),
     profitFactor: calculateProfitFactor(portfolio)
@@ -452,6 +454,40 @@ function calculateWinRate(portfolio) {
   }
 
   return total > 0 ? (wins / total) * 100 : 0;
+}
+
+/**
+ * Count winning trades (SELLs with profit)
+ */
+function countWinningTrades(portfolio) {
+  let wins = 0;
+
+  for (const stock of portfolio.stocks.values()) {
+    for (const transaction of stock.transactions) {
+      if (transaction.type.includes('SELL') && transaction.realizedPNLFromTrade > 0) {
+        wins++;
+      }
+    }
+  }
+
+  return wins;
+}
+
+/**
+ * Count losing trades (SELLs with loss)
+ */
+function countLosingTrades(portfolio) {
+  let losses = 0;
+
+  for (const stock of portfolio.stocks.values()) {
+    for (const transaction of stock.transactions) {
+      if (transaction.type.includes('SELL') && transaction.realizedPNLFromTrade < 0) {
+        losses++;
+      }
+    }
+  }
+
+  return losses;
 }
 
 /**

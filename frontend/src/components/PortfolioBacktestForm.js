@@ -293,6 +293,82 @@ const PortfolioBacktestForm = ({ parameters, onParametersChange, onSubmit, loadi
         )}
       </section>
 
+      {/* Spec 66: Beta Range Filter */}
+      <section className="backtest-section beta-filter-section">
+        <div className="section-header">
+          <h3>
+            <TrendingUp size={20} />
+            <span className="title">Beta Range Filter (Optional)</span>
+          </h3>
+        </div>
+        <div className="section-content">
+          <p className="hint">
+            Filter portfolio stocks by beta (volatility relative to market).
+            Leave blank for no filtering.
+          </p>
+          <div className="parameter-grid">
+            <div className="parameter-group">
+              <label>
+                Min Beta
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={parameters.minBeta !== undefined ? parameters.minBeta : ''}
+                  onChange={(e) => onParametersChange({
+                    ...parameters,
+                    minBeta: e.target.value === '' ? undefined : parseFloat(e.target.value)
+                  })}
+                  placeholder="e.g., 1.5"
+                  disabled={loading}
+                />
+              </label>
+              <span className="hint-text">Include stocks with beta ≥ this value</span>
+            </div>
+
+            <div className="parameter-group">
+              <label>
+                Max Beta
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={parameters.maxBeta !== undefined ? parameters.maxBeta : ''}
+                  onChange={(e) => onParametersChange({
+                    ...parameters,
+                    maxBeta: e.target.value === '' ? undefined : parseFloat(e.target.value)
+                  })}
+                  placeholder="e.g., 2.5"
+                  disabled={loading}
+                />
+              </label>
+              <span className="hint-text">Include stocks with beta ≤ this value</span>
+            </div>
+          </div>
+
+          {/* Validation warning for invalid range */}
+          {parameters.minBeta !== undefined && parameters.maxBeta !== undefined &&
+           parameters.minBeta > parameters.maxBeta && (
+            <div className="error-message" style={{ marginTop: '10px' }}>
+              ⚠️ Min Beta must be less than or equal to Max Beta
+            </div>
+          )}
+
+          {/* Info message when filters are active */}
+          {(parameters.minBeta !== undefined || parameters.maxBeta !== undefined) && (
+            <div className="info-message" style={{ marginTop: '10px' }}>
+              ℹ️ Active filter: {
+                parameters.minBeta !== undefined && parameters.maxBeta !== undefined
+                  ? `${parameters.minBeta} ≤ beta ≤ ${parameters.maxBeta}`
+                  : parameters.minBeta !== undefined
+                  ? `beta ≥ ${parameters.minBeta}`
+                  : `beta ≤ ${parameters.maxBeta}`
+              }
+            </div>
+          )}
+        </div>
+      </section>
+
       {/* Basic Parameters (Using Shared Component) */}
       <BasicParametersSection
         parameters={sectionParams}

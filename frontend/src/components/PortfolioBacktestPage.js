@@ -50,7 +50,7 @@ const PortfolioBacktestPage = () => {
         enableCashYield: false,
         cashYieldAnnualPercent: 4.5,
         cashYieldMinCash: 50000,
-        enableDeferredSelling: false,
+        enableDeferredSelling: true,
         deferredSellingThreshold: 150000,
         enableAdaptiveLotSizing: false,
         adaptiveLotCashThreshold: 100000,
@@ -67,7 +67,10 @@ const PortfolioBacktestPage = () => {
         enabled: false,
         coefficient: 1.0,
         beta: undefined
-      }
+      },
+      // Spec 66: Beta Range Filtering
+      minBeta: undefined,
+      maxBeta: undefined
     };
   });
 
@@ -319,7 +322,10 @@ const PortfolioBacktestPage = () => {
           // Beta Scaling Parameters
           ...(paramsToUse._betaScaling && { _betaScaling: paramsToUse._betaScaling }),
           // Spec 61: Optimized Total Capital
-          optimizedTotalCapital: paramsToUse.defaultParams.optimizedTotalCapital || false
+          optimizedTotalCapital: paramsToUse.defaultParams.optimizedTotalCapital || false,
+          // Spec 66: Beta Range Filtering
+          ...(paramsToUse.minBeta !== undefined && { minBeta: paramsToUse.minBeta }),
+          ...(paramsToUse.maxBeta !== undefined && { maxBeta: paramsToUse.maxBeta })
         })
       });
 

@@ -93,14 +93,16 @@ export function preprocessPortfolioChartData(portfolioData) {
     capitalUtilizationTimeSeries,
     portfolioCompositionTimeSeries,
     stockResults,
-    buyAndHoldSummary
+    buyAndHoldSummary,
+    etfBenchmark  // Spec 67: ETF benchmark data
   } = portfolioData;
 
   // Generate master dates from all available time series
   const allTimeSeries = [
     capitalUtilizationTimeSeries,
     portfolioCompositionTimeSeries,
-    buyAndHoldSummary?.dailyValues
+    buyAndHoldSummary?.dailyValues,
+    etfBenchmark?.dailyValues  // Spec 67: Include ETF dates
   ].filter(Boolean);
 
   // Also include dates from stock price data
@@ -114,10 +116,11 @@ export function preprocessPortfolioChartData(portfolioData) {
 
   const masterDates = generateMasterDates(allTimeSeries);
 
-  // Align DCA vs Buy & Hold data
+  // Align DCA vs Buy & Hold data (Spec 67: includes ETF benchmark)
   const dcaVsBuyAndHold = alignDCAVsBuyAndHoldData(
     capitalUtilizationTimeSeries,
     buyAndHoldSummary?.dailyValues,
+    etfBenchmark,  // Spec 67: Pass ETF benchmark
     masterDates
   );
 
@@ -135,20 +138,23 @@ export function preprocessPortfolioChartData(portfolioData) {
     dcaVsBuyAndHold,
     composition,
     normalizedPrices,
-    capitalUtilization
+    capitalUtilization,
+    etfBenchmark  // Spec 67: Return ETF benchmark for chart component
   };
 }
 
 /**
- * Aligns DCA and Buy & Hold data together
+ * Aligns DCA, Buy & Hold, and ETF benchmark data together
+ * Spec 67: Added ETF benchmark support
  */
-function alignDCAVsBuyAndHoldData(dcaTimeSeries, buyAndHoldTimeSeries, masterDates) {
+function alignDCAVsBuyAndHoldData(dcaTimeSeries, buyAndHoldTimeSeries, etfBenchmark, masterDates) {
   if (!dcaTimeSeries || !buyAndHoldTimeSeries) {
-    return masterDates.map(date => ({ date, dcaValue: null, buyAndHoldValue: null }));
+    return masterDates.map(date => ({ date, dcaValue: null, buyAndHoldValue: null, etfValue: null }));
   }
 
   const dcaMap = new Map();
   const bhMap = new Map();
+  const etfMap = new Map();
 
   dcaTimeSeries.forEach(point => {
     dcaMap.set(point.date, point.portfolioValue);
@@ -158,10 +164,18 @@ function alignDCAVsBuyAndHoldData(dcaTimeSeries, buyAndHoldTimeSeries, masterDat
     bhMap.set(point.date, point.portfolioValue);
   });
 
+  // Spec 67: Map ETF benchmark values
+  if (etfBenchmark && etfBenchmark.dailyValues) {
+    etfBenchmark.dailyValues.forEach(point => {
+      etfMap.set(point.date, point.value);
+    });
+  }
+
   return masterDates.map(date => ({
     date,
     dcaValue: dcaMap.get(date) || null,
-    buyAndHoldValue: bhMap.get(date) || null
+    buyAndHoldValue: bhMap.get(date) || null,
+    etfValue: etfMap.get(date) || null  // Spec 67: ETF benchmark value
   }));
 }
 

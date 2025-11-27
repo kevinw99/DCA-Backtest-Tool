@@ -1,19 +1,23 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 
-const DCAVsBuyAndHoldChart = ({ dcaTimeSeries, buyAndHoldTimeSeries }) => {
+const DCAVsBuyAndHoldChart = ({ dcaTimeSeries, buyAndHoldTimeSeries, etfBenchmark }) => {
+  const [showETF, setShowETF] = useState(true);
+
   if (!dcaTimeSeries || !buyAndHoldTimeSeries) return null;
 
-  // Merge the two time series by date
+  // Merge the time series by date
   const mergedData = dcaTimeSeries.map(dcaPoint => {
     const bhPoint = buyAndHoldTimeSeries.find(bh => bh.date === dcaPoint.date);
+    const etfPoint = etfBenchmark?.dailyValues?.find(etf => etf.date === dcaPoint.date);
     return {
       date: dcaPoint.date,
       dcaValue: dcaPoint.portfolioValue,
-      buyAndHoldValue: bhPoint?.portfolioValue || null
+      buyAndHoldValue: bhPoint?.portfolioValue || null,
+      etfValue: etfPoint?.value || null  // Spec 67: Add ETF benchmark value
     };
   });
 
@@ -38,7 +42,19 @@ const DCAVsBuyAndHoldChart = ({ dcaTimeSeries, buyAndHoldTimeSeries }) => {
 
   return (
     <div className="dca-vs-buyandhold-chart">
-      <h3>Portfolio Value Over Time: DCA vs Buy & Hold</h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+        <h3>Portfolio Value Over Time: DCA vs Buy & Hold{etfBenchmark ? ` vs ${etfBenchmark.symbol}` : ''}</h3>
+        {etfBenchmark && (
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px' }}>
+            <input
+              type="checkbox"
+              checked={showETF}
+              onChange={(e) => setShowETF(e.target.checked)}
+            />
+            <span>Show {etfBenchmark.symbol} Benchmark</span>
+          </label>
+        )}
+      </div>
       <ResponsiveContainer width="100%" height={400}>
         <LineChart data={mergedData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" />
@@ -74,6 +90,18 @@ const DCAVsBuyAndHoldChart = ({ dcaTimeSeries, buyAndHoldTimeSeries }) => {
             strokeDasharray="5 5"
             dot={false}
           />
+          {/* Spec 67: ETF Benchmark Line */}
+          {etfBenchmark && showETF && (
+            <Line
+              type="monotone"
+              dataKey="etfValue"
+              stroke="#ff7300"
+              name={`${etfBenchmark.symbol} Benchmark`}
+              strokeWidth={2}
+              strokeDasharray="10 5"
+              dot={false}
+            />
+          )}
         </LineChart>
       </ResponsiveContainer>
     </div>
