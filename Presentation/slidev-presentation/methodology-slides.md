@@ -13,6 +13,8 @@ mdc: true
 css: unocss
 ---
 
+# Context Engineering with AI Coding Agents
+
 <style>
 /* Larger fonts for better readability - skip cover slide */
 .slidev-layout:not(.cover) {
@@ -40,9 +42,6 @@ css: unocss
   font-size: 0.95em;
 }
 </style>
----
-
-# Context Engineering with AI Coding Agents
 
 From "Vibe Coding" to Structured Development
 
@@ -580,6 +579,293 @@ flowchart LR
 | **Kiro IDE** | IDE | Spec-driven, steering | AWS-focused |
 | **Gemini CLI** | CLI | Google models, web search | Newer ecosystem |
 | **Codex** | API/CLI | OpenAI ecosystem | Less agentic |
+
+---
+
+# Claude Code vs GitHub Copilot Agent: Key Differences
+
+Both are **agentic** - both can edit files, run commands, and iterate. So what's different?
+
+<v-clicks>
+
+## Shared Capabilities (2025)
+- ✅ Direct file editing
+- ✅ Multi-file changes
+- ✅ Run terminal commands
+- ✅ Iterative problem solving
+- ✅ **MCP support** (both now support Model Context Protocol)
+
+## Claude Code's Unique Advantages
+| Feature | Copilot Agent | Claude Code |
+|---------|---------------|-------------|
+| **Persistent context** | Session-only | CLAUDE.md persists |
+| **Custom skills** | None | Extensible skill system |
+| **Parallel agents** | No | Task tool spawns subagents |
+| **Workflow commands** | Basic | Custom slash commands |
+| **Spec integration** | No | .kiro/specs/ structure |
+
+</v-clicks>
+
+---
+
+# Difference 1: Persistent Project Context
+
+<v-clicks>
+
+## The Problem: Session Memory Loss
+
+Both agents can edit files, but **Copilot forgets between sessions**:
+
+```
+Session 1: "Use tabs, Jest for testing, follow /src/services patterns"
+Session 2: *Agent forgets everything*
+Session 3: *You re-explain...*
+```
+
+## Claude Code's Solution: CLAUDE.md
+
+```markdown
+# Project Instructions
+- Use tabs for indentation
+- Jest for testing
+- Follow existing patterns in /src/services
+- Run `npm test` before suggesting done
+```
+
+**Loaded automatically every session**
+
+## Impact
+- No re-explaining conventions
+- Consistent behavior across sessions
+- Project-specific rules enforced
+
+</v-clicks>
+
+---
+
+# Both Support MCP (Model Context Protocol)
+
+<v-clicks>
+
+## MCP: Now Available in Both Tools
+
+**Model Context Protocol** - Anthropic's open standard, now adopted widely:
+- **Claude Code**: MCP support since launch
+- **GitHub Copilot**: MCP GA in VS Code (July 2025), JetBrains/Eclipse/Xcode (Aug 2025)
+
+## This Project's MCP Servers (Work with Both)
+
+| MCP Server | Capability |
+|------------|-----------|
+| **Render** | Check deploys, read logs, redeploy |
+| **DCA Backtest** | Run backtests, analyze strategies, optimize parameters |
+| **GitHub** | Create PRs, manage issues |
+
+## What This Means
+
+Both Claude Code and Copilot can now connect to custom MCP servers.
+**MCP is no longer a differentiator** - it's a shared capability.
+
+</v-clicks>
+
+---
+
+# Project-Specific MCP: DCA Backtest Server
+
+<v-clicks>
+
+## Custom MCP with 10+ Tools
+
+| Tool | Capability |
+|------|------------|
+| `run_dca_backtest` | Run single-stock DCA backtest |
+| `run_portfolio_backtest` | Multi-stock portfolio analysis |
+| `run_batch_optimization` | Test parameter combinations |
+| `compare_strategies` | Side-by-side strategy comparison |
+| `get_dca_suitability_score` | Score stock for DCA suitability |
+| `calculate_beta` | Beta coefficient vs S&P 500 |
+
+## Natural Language → Backtest (Both Tools)
+
+```
+You: "Backtest NVDA with 15% grid and 5% profit target from 2020-2024"
+AI: *calls run_dca_backtest MCP tool*
+AI: "Results: 127% return, 42% max drawdown, Sharpe 1.2"
+```
+
+**Note**: This works in both Claude Code and Copilot with MCP configured
+
+</v-clicks>
+
+---
+
+# Difference 3: Custom Skills System
+
+<v-clicks>
+
+## Domain Expertise That Persists
+
+```
+.claude/skills/
+├── bug-investigator/SKILL.md
+├── spec-generator/SKILL.md
+├── g01-parameter-adder/SKILL.md
+└── backtest-tester/SKILL.md
+```
+
+## What Skills Capture
+
+- **Workflows**: Step-by-step procedures
+- **Patterns**: Code conventions to follow
+- **Checklists**: Required validation steps
+- **Domain knowledge**: Project-specific expertise
+
+## Example: Adding a Parameter
+
+```
+Skill: g01-parameter-adder
+✓ Add to backend service
+✓ Add to frontend form
+✓ Add to URL parameters
+✓ Add to batch endpoint
+✓ Add to portfolio service
+✓ Update documentation
+```
+
+**Copilot**: No skill system, workflows stay in your head
+
+</v-clicks>
+
+---
+
+# Difference 4: Parallel Subagents
+
+<v-clicks>
+
+## Claude Code's Task Tool
+
+Spawn multiple agents working in parallel:
+
+```
+Main Agent: "Investigate performance issue"
+
+├── Subagent 1: Analyze backend services
+├── Subagent 2: Check frontend bundle size
+├── Subagent 3: Review database queries
+└── Subagent 4: Examine network requests
+
+→ Results synthesized by main agent
+```
+
+## Why This Matters
+
+- **4x faster** information gathering
+- Each agent has full capabilities
+- Complex investigations become tractable
+- Results combined intelligently
+
+## Copilot Agent
+
+- Single-threaded execution only
+- Cannot parallelize work
+- Must investigate sequentially
+
+</v-clicks>
+
+---
+
+# Difference 5: Structured Workflows
+
+<v-clicks>
+
+## Slash Commands for Complex Operations
+
+```
+.claude/commands/
+├── development/
+│   └── smart-commit.md
+├── prp-commands/
+│   ├── prp-story-create.md
+│   └── prp-story-execute.md
+└── code-quality/
+    └── review-general.md
+```
+
+## Example: Feature Development
+
+```bash
+/prp-story-create Add user authentication
+```
+
+**Triggers multi-phase workflow:**
+1. Analyze requirements
+2. Search codebase for patterns
+3. Generate spec document
+4. Create implementation plan
+5. Define validation steps
+
+## Copilot Agent
+
+- No custom command system
+- Manual workflow coordination
+
+</v-clicks>
+
+---
+
+# Difference 6: Spec-Driven Development
+
+<v-clicks>
+
+## Claude Code: Structured Specifications
+
+```
+.kiro/specs/
+├── 01_algo-performance-calculation/
+│   ├── requirements.md
+│   ├── design.md
+│   └── tasks.md
+├── 22_trailing-stop-order-type/
+└── 60_metrics-standardization/
+```
+
+## Benefits
+
+- **Persistent documentation** of decisions
+- **Traceable** feature history
+- **Validation criteria** built-in
+- Agent references specs when implementing
+
+## Copilot Agent
+
+- No spec integration
+- No persistent feature documentation
+- Context limited to current session
+
+</v-clicks>
+
+---
+
+# Summary: Copilot Agent vs Claude Code
+
+Both are agentic, both support MCP. The remaining differences:
+
+| Feature | Copilot Agent     | Claude Code |
+|---------|-------------------|-------------|
+| **Project memory** | Session-only      | CLAUDE.md persists |
+| **MCP support** | ✅ Yes (July 2025) | ✅ Yes (Feb 2025) |
+| **Custom skills** | No                | Extensible system |
+| **Parallel agents** | No                | Task subagents |
+| **Workflow commands** | Basic             | Custom slash commands |
+| **Spec integration** | No                | .kiro/specs/ |
+
+<v-click>
+
+## The Core Insight
+
+> Both are agentic with MCP. Claude Code adds **persistent context, custom skills, and structured workflows**.
+
+</v-click>
 
 ---
 
