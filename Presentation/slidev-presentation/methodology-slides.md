@@ -1515,7 +1515,9 @@ flowchart LR
 - **Level 2** front-loads analysis (spec catches issues before coding)
 - **Level 3** has full context (spec + patterns + validation criteria)
 
-> Each layer improves quality for the next. The human provides direction; AI handles articulation.
+<div class="text-sm text-gray-400 mt-4">
+Each layer improves quality for the next. The human provides direction; AI handles articulation.
+</div>
 
 </v-clicks>
 

@@ -952,7 +952,7 @@ Peak: $414, Bottom: $102
 
 **Key Insight:** DCA reduces risk while capturing upside ✅
 
-<div class="text-xs text-gray-400 mt-4">
+<div class="text-sm text-gray-400 mt-4">
 *Excludes transaction costs, commissions, slippage, and taxes. Results based on 2021-2024 period only. Past performance does not guarantee future results.
 </div>
 
@@ -982,7 +982,7 @@ Finding Optimal Parameters for PLTR (2021-2024)
 
 **Key Insight:** Parameter optimization can improve returns while reducing risk 📈†
 
-<div class="text-xs text-gray-400 mt-4">
+<div class="text-sm text-gray-400 mt-4">
 *Excludes transaction costs and slippage. †Parameter optimization risks overfitting to historical data—always use out-of-sample testing before deploying capital.
 </div>
 
@@ -1047,7 +1047,7 @@ Day 90: AAPL +30%
 | **Capital Efficiency** | 72% (vs. 50% static) |
 | **Total Trades** | 450 (avg 45 per stock) |
 
-<div class="text-xs text-gray-400 mt-4">
+<div class="text-sm text-gray-400 mt-4">
 *Hypothetical portfolio results. Excludes transaction costs, slippage, and taxes. Actual results will vary based on market conditions.
 </div>
 
@@ -2006,28 +2006,21 @@ Reviewer Rejects? → Back to Implementation
 
 # 29: The ROI of Proper Testing
 
-<br>
-
 <v-clicks>
 
-**Upfront Cost:**
-- +20% development time for TDD
+## The Trade-off
 
-**Long-Term Savings:**
-- -70% bug-fixing time
-
-**Net Result:**
-- 30% faster delivery of stable features
+| Investment | Return |
+|-----------|--------|
+| +20% development time for TDD | -70% bug-fixing time |
+| Net result | **30% faster** delivery of stable features |
 
 </v-clicks>
 
 <v-click>
 
-<br>
-
 ## Commitment for Next Phase
 
-✅ **Phase 2 Development:**
 1. TDD mandatory for all new strategies
 2. Code reviewer skill runs before every commit
 3. Integration test suite for all API endpoints
@@ -2147,7 +2140,7 @@ layout: two-cols
 | **Sharpe Ratio** | Negative | 1.0+* | Positive risk-adj returns ✅ |
 | **Capital Efficiency** | 30% | 70%* | More time profitable ✅ |
 
-<div class="text-xs text-gray-400 mt-4">
+<div class="text-sm text-gray-400 mt-4">
 *Excludes transaction costs, slippage, and taxes. Results vary by time period and market conditions.
 </div>
 
