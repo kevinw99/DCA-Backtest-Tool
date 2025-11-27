@@ -70,9 +70,15 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
   });
 
   const [batchMode, setBatchMode] = useState(() => {
-    // Initialize batch mode from localStorage or default to false
-    const savedBatchMode = localStorage.getItem('dca-batch-mode');
-    return savedBatchMode === 'true';
+    // Priority: URL params > localStorage > default to false (single mode)
+    if (urlParams?.mode === 'batch') {
+      return true;
+    } else if (urlParams?.mode === 'single') {
+      return false;
+    }
+    // If no URL mode parameter, default to single mode (false)
+    // This ensures clean URLs like /backtest/long/NVDA always start in single mode
+    return false;
   });
 
   const [batchParameters, setBatchParameters] = useState(() => {
@@ -1450,7 +1456,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
       <div className="form-section">
         <h2 className="section-title">
           <Settings size={24} />
-          Testing Mode
+          Simulation Mode
         </h2>
         <div className="mode-selection">
           <label className={`mode-option ${!batchMode ? 'active' : ''}`}>
@@ -1460,8 +1466,7 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
               onChange={() => setBatchMode(false)}
             />
             <Target size={20} />
-            <span>Single Backtest</span>
-            <p>Test one parameter combination</p>
+            <span>Single Stock</span>
           </label>
           <label className={`mode-option ${batchMode ? 'active' : ''}`}>
             <input
@@ -1470,8 +1475,8 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
               onChange={() => setBatchMode(true)}
             />
             <Zap size={20} />
-            <span>Batch Optimization</span>
-            <p>Test multiple parameter combinations to find optimal settings</p>
+            <span>Batch</span>
+            <p>Simulate multiple parameter combinations to find optimal settings</p>
           </label>
           <button
             type="button"
@@ -1479,8 +1484,8 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
             onClick={() => navigate('/portfolio-backtest')}
           >
             <Layers size={20} />
-            <span>Portfolio Backtest</span>
-            <p>Test strategy across multiple stocks with shared capital</p>
+            <span>Portfolio</span>
+            <p>Simulate strategy across multiple stocks with shared capital</p>
           </button>
         </div>
       </div>
@@ -3270,8 +3275,8 @@ const DCABacktestForm = ({ onSubmit, loading, urlParams, currentTestMode, setApp
             <>
               {batchMode ? <Zap size={20} /> : <Play size={20} />}
               {strategyMode === 'short' ?
-                (batchMode ? 'Run Short Batch Optimization' : 'Run Short DCA Backtest') :
-                (batchMode ? 'Run Batch Optimization' : 'Run DCA Backtest')
+                (batchMode ? 'Run Short Batch Simulation' : 'Run Short DCA Simulation') :
+                (batchMode ? 'Run Batch Simulation' : 'Run DCA Simulation')
               }
             </>
           )}

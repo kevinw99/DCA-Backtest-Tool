@@ -43,7 +43,7 @@ const DCAVsBuyAndHoldChart = ({ dcaTimeSeries, buyAndHoldTimeSeries, etfBenchmar
   return (
     <div className="dca-vs-buyandhold-chart">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-        <h3>Portfolio Value Over Time: DCA vs Buy & Hold{etfBenchmark ? ` vs ${etfBenchmark.symbol}` : ''}</h3>
+        <h3>Portfolio Value Over Time: Adaptive DCA vs Buy & Hold{etfBenchmark ? ` vs ${etfBenchmark.symbol}` : ''}</h3>
         {etfBenchmark && (
           <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px' }}>
             <input

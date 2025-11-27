@@ -458,9 +458,9 @@ function AppContent() {
         <div className="header-content">
           <h1>
             <TrendingUp className="header-icon" />
-            DCA Backtesting Platform
+            Adaptive DCA Strategy Simulator
           </h1>
-          <p>Analyze Dollar Cost Averaging strategies with technical indicators</p>
+          <p>Advanced Dollar Cost Averaging simulation with dynamic strategy optimization</p>
           <a
             href="/presentation/"
             target="_blank"

@@ -59,8 +59,8 @@ const AlignedChartsContainer = ({ chartData, stockResults }) => {
     {
       id: 'dcaVsBuyAndHold',
       component: DCAVsBuyAndHoldChartAligned,
-      title: 'Portfolio Value: DCA vs Buy & Hold',
-      description: 'Compare the active DCA strategy against a passive Buy & Hold approach',
+      title: 'Portfolio Value: Adaptive DCA vs Buy & Hold',
+      description: 'Compare the adaptive DCA strategy against a passive Buy & Hold approach',
       dataKey: 'dcaVsBuyAndHold',
       props: {
         data: chartData.dcaVsBuyAndHold,

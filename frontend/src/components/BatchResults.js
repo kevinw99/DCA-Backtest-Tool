@@ -820,7 +820,7 @@ const BatchResults = ({ data }) => {
       <div className="results-header">
         <h2>
           <Trophy size={24} />
-          Batch Optimization Results
+          Batch Simulation Results
         </h2>
         <div className="execution-stats">
           <span>✅ {successfulRuns} successful</span>

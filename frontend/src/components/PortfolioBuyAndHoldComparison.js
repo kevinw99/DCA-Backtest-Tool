@@ -29,7 +29,7 @@ const PortfolioBuyAndHoldComparison = ({ comparison, buyAndHoldSummary }) => {
 
   return (
     <div className="buy-hold-comparison">
-      <h3>DCA vs Buy & Hold Comparison</h3>
+      <h3>Adaptive DCA vs Buy & Hold Comparison</h3>
 
       {/* Overall Performance */}
       <div className="comparison-summary">

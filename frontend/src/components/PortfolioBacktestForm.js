@@ -457,7 +457,7 @@ const PortfolioBacktestForm = ({ parameters, onParametersChange, onSubmit, loadi
         </button>
         <button type="submit" className="btn-submit" disabled={loading || !isValid}>
           <Play size={18} />
-          {loading ? 'Running Backtest...' : 'Run Portfolio Backtest'}
+          {loading ? 'Running Simulation...' : 'Run Portfolio Simulation'}
         </button>
       </div>
     </form>

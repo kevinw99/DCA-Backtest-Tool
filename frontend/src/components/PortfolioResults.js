@@ -203,9 +203,9 @@ const PortfolioResults = ({ data }) => {
       {comparison && buyAndHoldSummary && (
         <section className="buy-hold-comparison-section">
           <div className="section-header">
-            <h3>📊 DCA vs Buy & Hold Comparison</h3>
+            <h3>📊 Adaptive DCA vs Buy & Hold Comparison</h3>
             <p className="section-description">
-              Compare the active DCA strategy against a passive Buy & Hold approach with equal capital allocation
+              Compare the adaptive DCA strategy against a passive Buy & Hold approach with equal capital allocation
             </p>
           </div>
           <PortfolioBuyAndHoldComparison
@@ -270,7 +270,7 @@ const PortfolioResults = ({ data }) => {
 
       <section className="rejected-orders-section">
         <div className="section-header">
-          <h3>⚠️ Rejected Orders Analysis</h3>
+          <h3>⚠️ Rejected Orders (Capital Constraints)</h3>
           <p className="section-description">
             Buy orders that couldn't be executed due to insufficient capital
           </p>

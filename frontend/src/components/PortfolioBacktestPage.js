@@ -358,9 +358,9 @@ const PortfolioBacktestPage = () => {
   return (
     <div className="portfolio-backtest-page">
       <header className="page-header">
-        <h1>📊 Portfolio Backtest</h1>
+        <h1>📊 Portfolio Simulation</h1>
         <p className="page-subtitle">
-          Test your DCA strategy across multiple stocks with shared capital constraints
+          Simulate adaptive DCA strategies across multiple stocks with shared capital constraints
         </p>
       </header>
 

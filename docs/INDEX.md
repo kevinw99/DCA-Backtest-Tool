@@ -1,4 +1,4 @@
-# DCA Backtest Tool - Documentation Index
+# Adaptive DCA Strategy Simulator - Documentation Index
 
 This index provides a comprehensive view of all project documentation organized by category.
 
