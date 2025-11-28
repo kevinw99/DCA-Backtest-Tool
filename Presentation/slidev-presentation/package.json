@@ -5,11 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "slidev",
-    "build": "slidev build --base /presentation/ && cp public/*.html dist/presentation/",
+    "build": "slidev build --base /presentation/ && cp public/*.html dist/",
     "export": "slidev export",
     "start": "npx serve dist",
     "dev:methodology": "slidev methodology-slides.md",
-    "build:methodology": "slidev build methodology-slides.md --base /methodology/ && cp public/*.html dist/methodology/",
+    "build:methodology": "slidev build methodology-slides.md --base /methodology/ && cp public/*.html dist/",
     "export:methodology": "slidev export methodology-slides.md"
   },
   "keywords": [
