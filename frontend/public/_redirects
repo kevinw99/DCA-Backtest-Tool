@@ -7,8 +7,8 @@
 # Serve presentation HTML files (chrome-mcp transcripts, etc.)
 /presentation/*.html  /presentation/:splat.html  200
 
-# All other presentation routes go to Slidev SPA
-/presentation/*  /presentation/index.html  200
+# All other presentation routes go to Slidev SPA (force rewrite)
+/presentation/*  /presentation/index.html  200!
 
 # Redirect /methodology to /methodology/ (add trailing slash)
 /methodology  /methodology/  301
@@ -16,8 +16,8 @@
 # Serve methodology static assets first (files that exist)
 /methodology/assets/*  /methodology/assets/:splat  200
 
-# All other methodology routes go to Slidev SPA
-/methodology/*  /methodology/index.html  200
+# All other methodology routes go to Slidev SPA (force rewrite)
+/methodology/*  /methodology/index.html  200!
 
 # All other routes go to React app (SPA fallback)
 /*  /index.html  200
