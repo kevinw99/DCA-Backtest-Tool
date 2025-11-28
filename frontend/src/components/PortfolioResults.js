@@ -41,7 +41,8 @@ const PortfolioResults = ({ data }) => {
     skippedStocks,
     betaGrouping,
     betaFilterMetadata,  // Spec 66: Beta range filtering metadata
-    etfBenchmark  // Spec 67: ETF benchmark data
+    etfBenchmark,  // Spec 67: ETF benchmark data
+    _requestBody  // Actual API request body for accurate curl command generation
   } = data;
 
   // Count skipped stocks
@@ -151,7 +152,7 @@ const PortfolioResults = ({ data }) => {
       )}
 
       {/* Backend API Test Command */}
-      {parameters && (
+      {(parameters || _requestBody) && (
         <div className="api-url-section" style={{ marginTop: '20px', padding: '15px', backgroundColor: '#f5f5f5', borderRadius: '8px', border: '1px solid #ddd' }}>
           <h3 style={{ marginTop: 0, marginBottom: '10px', fontSize: '16px' }}>Backend API Test Command</h3>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -159,9 +160,10 @@ const PortfolioResults = ({ data }) => {
               type="text"
               readOnly
               value={(() => {
-                // Generate curl command for testing the backend API
-                const jsonBody = JSON.stringify(parameters, null, 2);
-                return `curl -X POST ${getApiUrl('/api/portfolio-backtest')} -H "Content-Type: application/json" -d '${jsonBody.replace(/\n/g, ' ')}'`;
+                // Use _requestBody if available (exact request sent to API), fallback to parameters
+                const bodyToUse = _requestBody || parameters;
+                const jsonBody = JSON.stringify(bodyToUse);
+                return `curl -X POST ${getApiUrl('/api/portfolio-backtest')} -H "Content-Type: application/json" -d '${jsonBody}'`;
               })()}
               style={{
                 flex: 1,
@@ -176,8 +178,10 @@ const PortfolioResults = ({ data }) => {
             />
             <button
               onClick={() => {
-                const jsonBody = JSON.stringify(parameters, null, 2);
-                const curlCommand = `curl -X POST ${getApiUrl('/api/portfolio-backtest')} -H "Content-Type: application/json" -d '${jsonBody.replace(/\n/g, ' ')}'`;
+                // Use _requestBody if available (exact request sent to API), fallback to parameters
+                const bodyToUse = _requestBody || parameters;
+                const jsonBody = JSON.stringify(bodyToUse);
+                const curlCommand = `curl -X POST ${getApiUrl('/api/portfolio-backtest')} -H "Content-Type: application/json" -d '${jsonBody}'`;
                 navigator.clipboard.writeText(curlCommand);
                 alert('Curl command copied to clipboard!');
               }}

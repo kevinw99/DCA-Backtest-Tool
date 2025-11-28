@@ -280,53 +280,56 @@ const PortfolioBacktestPage = () => {
 
       console.log('📋 Stocks with specific parameters:', stocksWithParams);
 
+      // Build request body (store it for curl command generation in results)
+      const requestBody = {
+        totalCapital: paramsToUse.totalCapital,
+        startDate: paramsToUse.startDate,
+        endDate: paramsToUse.endDate,
+        lotSizeUsd: paramsToUse.lotSizeUsd,
+        maxLotsPerStock: paramsToUse.maxLotsPerStock,
+        defaultParams: {
+          gridIntervalPercent: paramsToUse.defaultParams.gridIntervalPercent / 100,
+          profitRequirement: paramsToUse.defaultParams.profitRequirement / 100,
+          stopLossPercent: (paramsToUse.defaultParams.stopLossPercent || 30) / 100,
+          trailingBuyActivationPercent: (paramsToUse.defaultParams.trailingBuyActivationPercent || 10) / 100,
+          trailingBuyReboundPercent: (paramsToUse.defaultParams.trailingBuyReboundPercent || 5) / 100,
+          trailingSellActivationPercent: (paramsToUse.defaultParams.trailingSellActivationPercent || 20) / 100,
+          trailingSellPullbackPercent: (paramsToUse.defaultParams.trailingSellPullbackPercent || 10) / 100,
+          enableConsecutiveIncrementalBuyGrid: paramsToUse.defaultParams.enableConsecutiveIncrementalBuyGrid || false,
+          gridConsecutiveIncrement: (paramsToUse.defaultParams.gridConsecutiveIncrement || 5) / 100,
+          enableConsecutiveIncrementalSellProfit: paramsToUse.defaultParams.enableConsecutiveIncrementalSellProfit || false,
+          // Dynamic Grid Parameters - always send to override backend defaults
+          enableDynamicGrid: paramsToUse.defaultParams.enableDynamicGrid !== undefined ? paramsToUse.defaultParams.enableDynamicGrid : false,
+          normalizeToReference: paramsToUse.defaultParams.normalizeToReference !== undefined ? paramsToUse.defaultParams.normalizeToReference : false,
+          dynamicGridMultiplier: paramsToUse.defaultParams.dynamicGridMultiplier || 1.0,
+          // Spec 45/48: Momentum-based trading parameters
+          momentumBasedBuy: paramsToUse.defaultParams.momentumBasedBuy || false,
+          momentumBasedSell: paramsToUse.defaultParams.momentumBasedSell || false
+        },
+        stocks: stocksWithParams, // Send stocks with their specific parameters
+        // Capital Optimization Parameters (top-level as expected by backend)
+        enableCashYield: paramsToUse.defaultParams.enableCashYield || false,
+        cashYieldAnnualPercent: paramsToUse.defaultParams.cashYieldAnnualPercent || 4.5,
+        cashYieldMinCash: paramsToUse.defaultParams.cashYieldMinCash || 50000,
+        enableDeferredSelling: paramsToUse.defaultParams.enableDeferredSelling || false,
+        deferredSellingThreshold: paramsToUse.defaultParams.deferredSellingThreshold || 150000,
+        enableAdaptiveLotSizing: paramsToUse.defaultParams.enableAdaptiveLotSizing || false,
+        adaptiveLotCashThreshold: paramsToUse.defaultParams.adaptiveLotCashThreshold || 100000,
+        adaptiveLotMaxMultiplier: paramsToUse.defaultParams.adaptiveLotMaxMultiplier || 2.0,
+        adaptiveLotIncreaseStep: paramsToUse.defaultParams.adaptiveLotIncreaseStep || 20,
+        // Beta Scaling Parameters
+        ...(paramsToUse._betaScaling && { _betaScaling: paramsToUse._betaScaling }),
+        // Spec 61: Optimized Total Capital
+        optimizedTotalCapital: paramsToUse.defaultParams.optimizedTotalCapital || false,
+        // Spec 66: Beta Range Filtering
+        ...(paramsToUse.minBeta !== undefined && { minBeta: paramsToUse.minBeta }),
+        ...(paramsToUse.maxBeta !== undefined && { maxBeta: paramsToUse.maxBeta })
+      };
+
       const response = await fetch(getApiUrl('/api/portfolio-backtest'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          totalCapital: paramsToUse.totalCapital,
-          startDate: paramsToUse.startDate,
-          endDate: paramsToUse.endDate,
-          lotSizeUsd: paramsToUse.lotSizeUsd,
-          maxLotsPerStock: paramsToUse.maxLotsPerStock,
-          defaultParams: {
-            gridIntervalPercent: paramsToUse.defaultParams.gridIntervalPercent / 100,
-            profitRequirement: paramsToUse.defaultParams.profitRequirement / 100,
-            stopLossPercent: (paramsToUse.defaultParams.stopLossPercent || 30) / 100,
-            trailingBuyActivationPercent: (paramsToUse.defaultParams.trailingBuyActivationPercent || 10) / 100,
-            trailingBuyReboundPercent: (paramsToUse.defaultParams.trailingBuyReboundPercent || 5) / 100,
-            trailingSellActivationPercent: (paramsToUse.defaultParams.trailingSellActivationPercent || 20) / 100,
-            trailingSellPullbackPercent: (paramsToUse.defaultParams.trailingSellPullbackPercent || 10) / 100,
-            enableConsecutiveIncrementalBuyGrid: paramsToUse.defaultParams.enableConsecutiveIncrementalBuyGrid || false,
-            gridConsecutiveIncrement: (paramsToUse.defaultParams.gridConsecutiveIncrement || 5) / 100,
-            enableConsecutiveIncrementalSellProfit: paramsToUse.defaultParams.enableConsecutiveIncrementalSellProfit || false,
-            // Dynamic Grid Parameters - always send to override backend defaults
-            enableDynamicGrid: paramsToUse.defaultParams.enableDynamicGrid !== undefined ? paramsToUse.defaultParams.enableDynamicGrid : false,
-            normalizeToReference: paramsToUse.defaultParams.normalizeToReference !== undefined ? paramsToUse.defaultParams.normalizeToReference : false,
-            dynamicGridMultiplier: paramsToUse.defaultParams.dynamicGridMultiplier || 1.0,
-            // Spec 45/48: Momentum-based trading parameters
-            momentumBasedBuy: paramsToUse.defaultParams.momentumBasedBuy || false,
-            momentumBasedSell: paramsToUse.defaultParams.momentumBasedSell || false
-          },
-          stocks: stocksWithParams, // Send stocks with their specific parameters
-          // Capital Optimization Parameters (top-level as expected by backend)
-          enableCashYield: paramsToUse.defaultParams.enableCashYield || false,
-          cashYieldAnnualPercent: paramsToUse.defaultParams.cashYieldAnnualPercent || 4.5,
-          cashYieldMinCash: paramsToUse.defaultParams.cashYieldMinCash || 50000,
-          enableDeferredSelling: paramsToUse.defaultParams.enableDeferredSelling || false,
-          deferredSellingThreshold: paramsToUse.defaultParams.deferredSellingThreshold || 150000,
-          enableAdaptiveLotSizing: paramsToUse.defaultParams.enableAdaptiveLotSizing || false,
-          adaptiveLotCashThreshold: paramsToUse.defaultParams.adaptiveLotCashThreshold || 100000,
-          adaptiveLotMaxMultiplier: paramsToUse.defaultParams.adaptiveLotMaxMultiplier || 2.0,
-          adaptiveLotIncreaseStep: paramsToUse.defaultParams.adaptiveLotIncreaseStep || 20,
-          // Beta Scaling Parameters
-          ...(paramsToUse._betaScaling && { _betaScaling: paramsToUse._betaScaling }),
-          // Spec 61: Optimized Total Capital
-          optimizedTotalCapital: paramsToUse.defaultParams.optimizedTotalCapital || false,
-          // Spec 66: Beta Range Filtering
-          ...(paramsToUse.minBeta !== undefined && { minBeta: paramsToUse.minBeta }),
-          ...(paramsToUse.maxBeta !== undefined && { maxBeta: paramsToUse.maxBeta })
-        })
+        body: JSON.stringify(requestBody)
       });
 
       const data = await response.json();
@@ -336,7 +339,8 @@ const PortfolioBacktestPage = () => {
       }
 
       console.log('✅ Portfolio backtest completed:', data.data);
-      setResults(data.data);
+      // Include the actual request body for accurate curl command generation
+      setResults({ ...data.data, _requestBody: requestBody });
       setActiveTab('results');
 
     } catch (err) {
