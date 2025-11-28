@@ -59,6 +59,47 @@ From "Vibe Coding" to Structured Development
 
 ---
 layout: default
+class: text-center
+---
+
+# Important Notice
+
+<br>
+
+<div class="text-2xl text-yellow-400 font-bold mb-6">
+🔬 Research & Experimental Content 🔬
+</div>
+
+<v-clicks>
+
+<div class="text-xl mb-6">
+All contents are in <strong>research and experimental stage only</strong>.
+</div>
+
+<div class="text-lg mb-6">
+Results may contain <strong>errors</strong>, <strong>unvalidated assumptions</strong>, or <strong>bugs</strong>.
+</div>
+
+<div class="text-lg mb-6 px-8">
+This presentation serves as a <strong>discussion medium for AI-assisted software development methodology and workflow</strong> — not for financial advice or recommendation.
+</div>
+
+<div class="text-lg mb-4 px-8">
+The trading domain is used as a case study to demonstrate context engineering techniques. Any backtesting results shown are for illustrative purposes only and should not be used for actual trading decisions.
+</div>
+
+<div class="text-lg mb-4 px-8">
+<strong>Focus Areas:</strong> Claude Code workflows • Spec-driven development • Multi-agent orchestration • Iterative refinement patterns
+</div>
+
+</v-clicks>
+
+<div class="text-sm text-gray-400 mt-8">
+The methodology insights are the primary value; the trading application is secondary.
+</div>
+
+---
+layout: default
 ---
 
 # The Evolution of AI-Assisted Development
