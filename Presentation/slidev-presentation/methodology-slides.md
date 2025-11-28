@@ -302,6 +302,14 @@ flowchart TD
 
 </v-click>
 
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-900/30 rounded text-sm">
+<strong>Workflow Evolution:</strong> This structure evolved from PRP (Product Requirement Prompts) for Claude Code → adapted to Kiro IDE specs → back to Claude Code, retaining Kiro's directory structure and naming conventions. A hybrid of both approaches.
+</div>
+
+</v-click>
+
 ---
 
 # Anatomy of a Specification
@@ -494,7 +502,6 @@ Claude can **directly access** real-world systems during development:
 - **Render** - Deployment platform
 - **GitHub** - Repository and PR management
 - **PostgreSQL** - Database queries
-- **Yahoo Finance** - Live stock data
 
 </v-clicks>
 
@@ -588,11 +595,6 @@ flowchart LR
 # Other MCP Integrations
 
 <v-clicks>
-
-## Yahoo Finance MCP
-- Live stock prices and beta values
-- Historical data on-demand
-- No API rate limit management
 
 ## GitHub MCP
 - Search repository history
