@@ -302,13 +302,46 @@ flowchart TD
 
 </v-click>
 
-<v-click>
+---
+layout: default
+class: text-center
+---
 
-<div class="mt-4 p-3 bg-blue-900/30 rounded text-sm">
-<strong>Workflow Evolution:</strong> This structure evolved from PRP (Product Requirement Prompts) for Claude Code → adapted to Kiro IDE specs → back to Claude Code, retaining Kiro's directory structure and naming conventions. A hybrid of both approaches.
+# Workflow Evolution: A Hybrid Approach
+
+<br>
+
+<div class="text-xl mb-8">
+How the <strong>.kiro/specs/</strong> structure came to be
 </div>
 
-</v-click>
+<v-clicks>
+
+<div class="text-lg mb-6 text-left px-12">
+<strong>1. PRP for Claude Code</strong> — Started with Product Requirement Prompts, a structured way to communicate requirements to AI coding agents
+</div>
+
+<div class="text-lg mb-6 text-left px-12">
+<strong>2. Adapted to Kiro IDE</strong> — When Kiro IDE emerged, migrated the workflow to use its native specs structure with requirements.md, design.md, and tasks.md
+</div>
+
+<div class="text-lg mb-6 text-left px-12">
+<strong>3. Back to Claude Code</strong> — Returned to Claude Code but retained Kiro's directory structure (.kiro/specs/) and file conventions (requirements.md, design.md, tasks.md)
+</div>
+
+<div class="text-lg mb-6 text-left px-12">
+<strong>4. Custom Enhancement</strong> — Added numbered directory convention (01_, 02_...) for sequential ordering and self-documenting project history
+</div>
+
+<div class="text-lg mb-6 text-left px-12">
+<strong>5. Hybrid Result</strong> — Combines PRP's context-rich prompting + Kiro's file structure + custom numbered organization
+</div>
+
+</v-clicks>
+
+<div class="mt-8 text-base text-gray-300">
+This evolution demonstrates how AI development workflows can cross-pollinate between tools.
+</div>
 
 ---
 
