@@ -129,12 +129,100 @@
   gap: 12px;
 }
 
+/* Checkbox Item - Override App.css for backtest forms */
+.backtest-section .checkbox-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  cursor: default;
+}
+
+.backtest-section .checkbox-item label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  color: #555;
+  font-size: 0.95em;
+}
+
+.backtest-section .checkbox-item input[type="checkbox"] {
+  cursor: pointer;
+}
+
+/* Checkbox Description */
+.checkbox-description {
+  font-size: 0.85em;
+  color: #666;
+  margin-left: 24px;
+  line-height: 1.4;
+}
+
+/* Nested Control - Expanded parameters */
+.nested-control {
+  margin-top: 12px;
+  margin-left: 24px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+  width: calc(100% - 24px);
+}
+
+.nested-control .parameter-input {
+  margin-bottom: 12px;
+}
+
+.nested-control .parameter-input:last-child {
+  margin-bottom: 0;
+}
+
+/* Info Box */
+.info-box {
+  background-color: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.info-box p {
+  margin: 0 0 8px 0;
+  color: #555;
+  font-size: 0.9em;
+}
+
+.info-box ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.info-box li {
+  margin-bottom: 4px;
+  color: #555;
+  font-size: 0.9em;
+}
+
+.info-box .note {
+  font-style: italic;
+  color: #666;
+  margin-top: 8px;
+  margin-bottom: 0;
+}
+
 .checkbox-group label {
   display: flex;
   align-items: flex-start;
   gap: 8px;
   cursor: pointer;
-  font-weight: normal;
+  font-weight: 500;
+  color: #555;
+  font-size: 0.95em;
 }
 
 .checkbox-group input[type="checkbox"] {
@@ -606,6 +694,8 @@
   gap: 8px;
   cursor: pointer;
   font-weight: 500;
+  color: #555;
+  font-size: 0.95em;
   margin-bottom: 5px;
 }
 

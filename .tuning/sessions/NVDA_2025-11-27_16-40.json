@@ -1,0 +1,165 @@
+{
+  "sessionId": "NVDA_2025-11-27_16-40",
+  "symbol": "NVDA",
+  "dateRange": {
+    "start": "2021-09-01",
+    "end": "2025-11-27"
+  },
+  "objective": "maximize_cagr",
+  "status": "converged",
+  "baseline": {
+    "params": {
+      "lotSizeUsd": 10000,
+      "maxLots": 10,
+      "maxLotsToSell": 1,
+      "gridIntervalPercent": 0.10,
+      "profitRequirement": 0.10,
+      "trailingBuyActivationPercent": 0.10,
+      "trailingBuyReboundPercent": 0.05,
+      "trailingSellActivationPercent": 0.20,
+      "trailingSellPullbackPercent": 0.10
+    },
+    "metrics": {
+      "cagr": 51.22,
+      "totalReturn": 465.73,
+      "sharpe": 1.21,
+      "sortino": 1.79,
+      "maxDrawdown": 33.51,
+      "winRate": 100,
+      "totalTrades": 7,
+      "capitalUtilization": 54.29
+    }
+  },
+  "bestSoFar": {
+    "params": {
+      "lotSizeUsd": 10000,
+      "maxLots": 10,
+      "maxLotsToSell": 1,
+      "gridIntervalPercent": 0.07,
+      "profitRequirement": 0.10,
+      "trailingBuyActivationPercent": 0.10,
+      "trailingBuyReboundPercent": 0.05,
+      "trailingSellActivationPercent": 0.25,
+      "trailingSellPullbackPercent": 0.15
+    },
+    "metrics": {
+      "cagr": 70.91,
+      "totalReturn": 844.84,
+      "sharpe": 1.37,
+      "maxDrawdown": 34.90,
+      "totalTrades": 3
+    },
+    "foundAtIteration": 4,
+    "improvementFromBaseline": "+38.5%"
+  },
+  "buyAndHoldComparison": {
+    "bhCagr": 63.64,
+    "bhTotalReturn": 705.22,
+    "bhSharpe": 1.11,
+    "bhMaxDrawdown": 66.34,
+    "dcaOutperformsCagr": true,
+    "dcaOutperformsRisk": true,
+    "cagrAdvantage": "+7.27%",
+    "drawdownAdvantage": "-31.44%"
+  },
+  "iterations": [
+    {
+      "id": 1,
+      "tier": 1,
+      "param": "gridIntervalPercent",
+      "hypothesis": "NVDA is high-beta. Tighter grid (5-8%) may capture more dips.",
+      "experiments": [
+        {"gridIntervalPercent": 0.05, "cagr": 63.18},
+        {"gridIntervalPercent": 0.06, "cagr": 66.00},
+        {"gridIntervalPercent": 0.07, "cagr": 67.19},
+        {"gridIntervalPercent": 0.08, "cagr": 65.68},
+        {"gridIntervalPercent": 0.10, "cagr": 51.22},
+        {"gridIntervalPercent": 0.12, "cagr": 49.03},
+        {"gridIntervalPercent": 0.15, "cagr": 44.28},
+        {"gridIntervalPercent": 0.20, "cagr": 30.60}
+      ],
+      "bestInIteration": {"gridIntervalPercent": 0.07, "cagr": 67.19},
+      "conclusion": "7% grid optimal. CAGR +31.2% from baseline."
+    },
+    {
+      "id": 2,
+      "tier": 1,
+      "param": "profitRequirement",
+      "hypothesis": "Test if lower/higher profit targets improve turnover.",
+      "experiments": [
+        {"profitRequirement": 0.05, "cagr": 65.89},
+        {"profitRequirement": 0.08, "cagr": 65.89},
+        {"profitRequirement": 0.10, "cagr": 67.19},
+        {"profitRequirement": 0.12, "cagr": 66.04},
+        {"profitRequirement": 0.15, "cagr": 66.04},
+        {"profitRequirement": 0.20, "cagr": 66.04}
+      ],
+      "bestInIteration": {"profitRequirement": 0.10, "cagr": 67.19},
+      "conclusion": "10% profit remains optimal. Trailing sell dominates sell behavior."
+    },
+    {
+      "id": 3,
+      "tier": 2,
+      "param": "trailingSellActivationPercent",
+      "hypothesis": "Higher activation lets winners run longer for growth stock.",
+      "experiments": [
+        {"trailingSellActivationPercent": 0.10, "cagr": 68.51},
+        {"trailingSellActivationPercent": 0.15, "cagr": 67.19},
+        {"trailingSellActivationPercent": 0.20, "cagr": 67.19},
+        {"trailingSellActivationPercent": 0.25, "cagr": 69.43},
+        {"trailingSellActivationPercent": 0.30, "cagr": 69.43}
+      ],
+      "bestInIteration": {"trailingSellActivationPercent": 0.25, "cagr": 69.43},
+      "conclusion": "25% trailing sell activation optimal. Lets winners run."
+    },
+    {
+      "id": 4,
+      "tier": 2,
+      "param": "trailingSellPullbackPercent",
+      "hypothesis": "Wider pullback avoids premature sells on volatility.",
+      "experiments": [
+        {"trailingSellPullbackPercent": 0.05, "cagr": 65.58},
+        {"trailingSellPullbackPercent": 0.08, "cagr": 69.35},
+        {"trailingSellPullbackPercent": 0.10, "cagr": 69.43},
+        {"trailingSellPullbackPercent": 0.12, "cagr": 70.68},
+        {"trailingSellPullbackPercent": 0.15, "cagr": 70.91},
+        {"trailingSellPullbackPercent": 0.18, "cagr": 67.69},
+        {"trailingSellPullbackPercent": 0.20, "cagr": 69.80}
+      ],
+      "bestInIteration": {"trailingSellPullbackPercent": 0.15, "cagr": 70.91},
+      "conclusion": "15% pullback optimal. CAGR +38.5% from baseline!"
+    },
+    {
+      "id": 5,
+      "tier": 2,
+      "param": "trailingBuyActivationPercent",
+      "hypothesis": "Test if different buy activation improves entries.",
+      "experiments": [
+        {"trailingBuyActivationPercent": 0.05, "cagr": 64.75},
+        {"trailingBuyActivationPercent": 0.08, "cagr": 64.53},
+        {"trailingBuyActivationPercent": 0.10, "cagr": 70.91},
+        {"trailingBuyActivationPercent": 0.12, "cagr": 70.15},
+        {"trailingBuyActivationPercent": 0.15, "cagr": 66.54},
+        {"trailingBuyActivationPercent": 0.20, "cagr": 56.27}
+      ],
+      "bestInIteration": {"trailingBuyActivationPercent": 0.10, "cagr": 70.91},
+      "conclusion": "10% trailing buy remains optimal. No change."
+    },
+    {
+      "id": 6,
+      "tier": 2,
+      "param": "trailingBuyReboundPercent",
+      "hypothesis": "Test different rebound sensitivity.",
+      "experiments": [
+        {"trailingBuyReboundPercent": 0.03, "cagr": 70.47},
+        {"trailingBuyReboundPercent": 0.05, "cagr": 70.91},
+        {"trailingBuyReboundPercent": 0.08, "cagr": 63.47},
+        {"trailingBuyReboundPercent": 0.10, "cagr": 56.63}
+      ],
+      "bestInIteration": {"trailingBuyReboundPercent": 0.05, "cagr": 70.91},
+      "conclusion": "5% rebound remains optimal. No change. CONVERGED."
+    }
+  ],
+  "convergenceHistory": [51.22, 67.19, 67.19, 69.43, 70.91, 70.91, 70.91],
+  "convergenceReason": "No improvement for 3 consecutive iterations on Tier 2 params"
+}

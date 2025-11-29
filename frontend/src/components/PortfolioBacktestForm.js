@@ -305,47 +305,45 @@ const PortfolioBacktestForm = ({ parameters, onParametersChange, onSubmit, loadi
           </h3>
         </div>
         <div className="section-content">
-          <p className="hint">
+          <p className="hint" style={{ marginBottom: '15px' }}>
             Filter portfolio stocks by beta (volatility relative to market).
             Leave blank for no filtering.
           </p>
           <div className="parameter-grid">
-            <div className="parameter-group">
-              <label>
-                Min Beta
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  value={parameters.minBeta !== undefined ? parameters.minBeta : ''}
-                  onChange={(e) => onParametersChange({
-                    ...parameters,
-                    minBeta: e.target.value === '' ? undefined : parseFloat(e.target.value)
-                  })}
-                  placeholder="e.g., 1.5"
-                  disabled={loading}
-                />
-              </label>
-              <span className="hint-text">Include stocks with beta ≥ this value</span>
+            <div className="parameter-input">
+              <label htmlFor="minBeta">Min Beta</label>
+              <input
+                id="minBeta"
+                type="number"
+                step="0.1"
+                min="0"
+                value={parameters.minBeta !== undefined ? parameters.minBeta : ''}
+                onChange={(e) => onParametersChange({
+                  ...parameters,
+                  minBeta: e.target.value === '' ? undefined : parseFloat(e.target.value)
+                })}
+                placeholder="e.g., 1.5"
+                disabled={loading}
+              />
+              <span className="help-text">Include stocks with beta ≥ this value</span>
             </div>
 
-            <div className="parameter-group">
-              <label>
-                Max Beta
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  value={parameters.maxBeta !== undefined ? parameters.maxBeta : ''}
-                  onChange={(e) => onParametersChange({
-                    ...parameters,
-                    maxBeta: e.target.value === '' ? undefined : parseFloat(e.target.value)
-                  })}
-                  placeholder="e.g., 2.5"
-                  disabled={loading}
-                />
-              </label>
-              <span className="hint-text">Include stocks with beta ≤ this value</span>
+            <div className="parameter-input">
+              <label htmlFor="maxBeta">Max Beta</label>
+              <input
+                id="maxBeta"
+                type="number"
+                step="0.1"
+                min="0"
+                value={parameters.maxBeta !== undefined ? parameters.maxBeta : ''}
+                onChange={(e) => onParametersChange({
+                  ...parameters,
+                  maxBeta: e.target.value === '' ? undefined : parseFloat(e.target.value)
+                })}
+                placeholder="e.g., 2.5"
+                disabled={loading}
+              />
+              <span className="help-text">Include stocks with beta ≤ this value</span>
             </div>
           </div>
 
@@ -419,6 +417,7 @@ const PortfolioBacktestForm = ({ parameters, onParametersChange, onSubmit, loadi
         validationErrors={errors}
         showTrailingStops={true}
         showOrderType={false}  // Portfolio mode doesn't need order type selection yet
+        showMomentumTrading={false}  // Momentum trading is in Advanced Settings for portfolio
         displayAdjustedParameters={displayAdjustedInfo?.parameters}
         betaScalingInfo={displayAdjustedInfo ? {
           enabled: enableBetaScaling,
@@ -429,10 +428,19 @@ const PortfolioBacktestForm = ({ parameters, onParametersChange, onSubmit, loadi
         } : null}
       />
 
+      {/* Capital Optimization (Using Shared Component) - Outside Advanced Settings */}
+      <CapitalOptimizationSection
+        totalCapital={parameters.totalCapital}
+        parameters={sectionParams}
+        onParametersChange={handleDefaultParamChange}
+        validationErrors={errors}
+      />
+
       {/* Advanced Settings - Collapsible Section */}
-      <div style={{ marginTop: '20px', marginBottom: '20px' }}>
+      <div className="advanced-settings-section" style={{ marginTop: '20px', marginBottom: '20px' }}>
         <button
           type="button"
+          className="advanced-settings-toggle"
           onClick={() => setAdvancedSettingsExpanded(!advancedSettingsExpanded)}
           style={{
             width: '100%',
@@ -458,8 +466,45 @@ const PortfolioBacktestForm = ({ parameters, onParametersChange, onSubmit, loadi
         </button>
 
         {advancedSettingsExpanded && (
-          <div style={{ marginTop: '15px' }}>
-            {/* Dynamic Features (NEW - Using Shared Component) */}
+          <div className="advanced-settings-content" style={{ marginTop: '15px', paddingLeft: '10px', borderLeft: '3px solid #e0e0e0' }}>
+            {/* Momentum Trading Mode (Spec 45) */}
+            <section className="backtest-section momentum-trading">
+              <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>Momentum Trading Mode (Spec 45)</h4>
+              <div className="checkbox-group" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <label htmlFor="portfolio-momentumBasedBuy" aria-label="Enable Momentum-Based Buy" style={{ display: 'flex', alignItems: 'start', cursor: 'pointer' }}>
+                  <input
+                    id="portfolio-momentumBasedBuy"
+                    type="checkbox"
+                    checked={sectionParams.momentumBasedBuy || false}
+                    onChange={(e) => handleDefaultParamChange({ momentumBasedBuy: e.target.checked })}
+                    style={{ marginRight: '8px', marginTop: '2px' }}
+                  />
+                  <span style={{ display: 'flex', flexDirection: 'column' }}>
+                    <strong>Enable Momentum-Based Buy</strong>
+                    <span style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                      Buy on strength: 0% activation, P/L &gt; 0 required (except first buy). Overrides trailingBuyActivationPercent.
+                    </span>
+                  </span>
+                </label>
+                <label htmlFor="portfolio-momentumBasedSell" aria-label="Enable Momentum-Based Sell" style={{ display: 'flex', alignItems: 'start', cursor: 'pointer' }}>
+                  <input
+                    id="portfolio-momentumBasedSell"
+                    type="checkbox"
+                    checked={sectionParams.momentumBasedSell || false}
+                    onChange={(e) => handleDefaultParamChange({ momentumBasedSell: e.target.checked })}
+                    style={{ marginRight: '8px', marginTop: '2px' }}
+                  />
+                  <span style={{ display: 'flex', flexDirection: 'column' }}>
+                    <strong>Enable Momentum-Based Sell</strong>
+                    <span style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                      Sell on weakness: 0% activation, fast exit on momentum reversal. Overrides trailingSellActivationPercent.
+                    </span>
+                  </span>
+                </label>
+              </div>
+            </section>
+
+            {/* Dynamic Features (Using Shared Component) */}
             <DynamicFeaturesSection
               parameters={sectionParams}
               onParametersChange={handleDefaultParamChange}
@@ -467,7 +512,7 @@ const PortfolioBacktestForm = ({ parameters, onParametersChange, onSubmit, loadi
               showBatchRanges={false}
             />
 
-            {/* Adaptive Strategy (NEW - Using Shared Component) */}
+            {/* Adaptive Strategy (Using Shared Component) */}
             <AdaptiveStrategySection
               parameters={sectionParams}
               onParametersChange={handleDefaultParamChange}
@@ -476,14 +521,6 @@ const PortfolioBacktestForm = ({ parameters, onParametersChange, onSubmit, loadi
           </div>
         )}
       </div>
-
-      {/* Capital Optimization (NEW - Using Shared Component) */}
-      <CapitalOptimizationSection
-        totalCapital={parameters.totalCapital}
-        parameters={sectionParams}
-        onParametersChange={handleDefaultParamChange}
-        validationErrors={errors}
-      />
 
       {/* Form Actions */}
       <div className="form-actions">

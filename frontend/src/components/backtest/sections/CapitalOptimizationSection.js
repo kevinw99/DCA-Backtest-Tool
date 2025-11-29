@@ -45,157 +45,153 @@ export const CapitalOptimizationSection = ({
         subtitle="Maximize returns on idle cash"
       />
 
-      {/* Cash Yield Strategy */}
-      <div className="strategy-group">
-        <label className="strategy-header">
-          <input
-            type="checkbox"
-            checked={parameters.enableCashYield || false}
-            onChange={(e) => handleChange('enableCashYield', e.target.checked)}
-          />
-          <strong>Cash Yield Strategy</strong>
-          <span className="help-text">Earn money market returns (4-5% annual) on idle cash reserves</span>
-        </label>
-
-        {parameters.enableCashYield && (
-          <div className="parameter-grid strategy-params">
-            <ParameterInput
-              label="Annual Yield %"
-              value={parameters.cashYieldAnnualPercent || 4.5}
-              onChange={(val) => handleChange('cashYieldAnnualPercent', val)}
-              type="number"
-              step="0.1"
-              min="0"
-              max="10"
-              helpText="Expected annual return on cash (e.g., money market fund)"
-              error={getError('cashYieldAnnualPercent')}
+      <div className="checkbox-grid">
+        {/* Cash Yield Strategy */}
+        <div className="checkbox-item">
+          <label>
+            <input
+              type="checkbox"
+              checked={parameters.enableCashYield || false}
+              onChange={(e) => handleChange('enableCashYield', e.target.checked)}
             />
-            <ParameterInput
-              label="Minimum Cash to Invest ($)"
-              value={parameters.cashYieldMinCash || defaultCashYieldMinimum}
-              onChange={(val) => handleChange('cashYieldMinCash', val)}
-              type="number"
-              step="1000"
-              min="0"
-              helpText="Only invest cash above this threshold"
-              error={getError('cashYieldMinCash')}
+            Cash Yield Strategy
+          </label>
+          <span className="checkbox-description">Earn money market returns (4-5% annual) on idle cash reserves</span>
+
+          {parameters.enableCashYield && (
+            <div className="nested-control">
+              <ParameterInput
+                label="Annual Yield %"
+                value={parameters.cashYieldAnnualPercent || 4.5}
+                onChange={(val) => handleChange('cashYieldAnnualPercent', val)}
+                type="number"
+                step="0.1"
+                min="0"
+                max="10"
+                helpText="Expected annual return on cash (e.g., money market fund)"
+                error={getError('cashYieldAnnualPercent')}
+              />
+              <ParameterInput
+                label="Minimum Cash to Invest ($)"
+                value={parameters.cashYieldMinCash || defaultCashYieldMinimum}
+                onChange={(val) => handleChange('cashYieldMinCash', val)}
+                type="number"
+                step="1000"
+                min="0"
+                helpText="Only invest cash above this threshold"
+                error={getError('cashYieldMinCash')}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Deferred Selling Strategy */}
+        <div className="checkbox-item">
+          <label>
+            <input
+              type="checkbox"
+              checked={parameters.enableDeferredSelling || false}
+              onChange={(e) => handleChange('enableDeferredSelling', e.target.checked)}
             />
-          </div>
-        )}
-      </div>
+            Deferred Selling Strategy
+          </label>
+          <span className="checkbox-description">Skip profit-taking sells when cash reserves are high - let winners run!</span>
 
-      {/* Deferred Selling Strategy */}
-      <div className="strategy-group">
-        <label className="strategy-header">
-          <input
-            type="checkbox"
-            checked={parameters.enableDeferredSelling || false}
-            onChange={(e) => handleChange('enableDeferredSelling', e.target.checked)}
-          />
-          <strong>Deferred Selling Strategy</strong>
-          <span className="help-text">Skip profit-taking sells when cash reserves are high - let winners run!</span>
-        </label>
+          {parameters.enableDeferredSelling && (
+            <div className="nested-control">
+              <ParameterInput
+                label="Cash Abundance Threshold ($)"
+                value={parameters.deferredSellingThreshold || defaultDeferredSellingThreshold}
+                onChange={(val) => handleChange('deferredSellingThreshold', val)}
+                type="number"
+                step="10000"
+                min="0"
+                helpText={`Skip sells when cash exceeds this amount (default: ${(defaultDeferredSellingThreshold).toLocaleString()} = 5x lot size)`}
+                error={getError('deferredSellingThreshold')}
+              />
+            </div>
+          )}
+        </div>
 
-        {parameters.enableDeferredSelling && (
-          <div className="parameter-grid strategy-params">
-            <ParameterInput
-              label="Cash Abundance Threshold ($)"
-              value={parameters.deferredSellingThreshold || defaultDeferredSellingThreshold}
-              onChange={(val) => handleChange('deferredSellingThreshold', val)}
-              type="number"
-              step="10000"
-              min="0"
-              helpText={`Skip sells when cash exceeds this amount (default: ${(defaultDeferredSellingThreshold).toLocaleString()} = 5x lot size)`}
-              error={getError('deferredSellingThreshold')}
+        {/* Optimized Total Capital (Spec 61) */}
+        <div className="checkbox-item">
+          <label>
+            <input
+              type="checkbox"
+              checked={parameters.optimizedTotalCapital || false}
+              onChange={(e) => handleChange('optimizedTotalCapital', e.target.checked)}
             />
-          </div>
-        )}
-      </div>
-
-      {/* Optimized Total Capital (Spec 61) */}
-      <div className="strategy-group optimized-capital-group">
-        <label className="strategy-header">
-          <input
-            type="checkbox"
-            checked={parameters.optimizedTotalCapital || false}
-            onChange={(e) => handleChange('optimizedTotalCapital', e.target.checked)}
-          />
-          <strong>Auto-Discover Optimal Capital</strong>
-          <span className="help-text">
-            Run two scenarios: find minimum capital needed (100%) and compare with constrained (90%) capital
+            Auto-Discover Optimal Capital
+          </label>
+          <span className="checkbox-description">
+            Run multiple scenarios: find minimum capital needed (100%) and compare with constrained levels (90%, 80%, 70%)
           </span>
-        </label>
 
-        {parameters.optimizedTotalCapital && (
-          <div className="info-box" style={{
-            marginTop: '10px',
-            padding: '12px',
-            backgroundColor: '#e8f4fd',
-            borderRadius: '6px',
-            border: '1px solid #b3d7f5'
-          }}>
-            <p style={{ margin: '0 0 8px 0', fontWeight: '500', color: '#1565c0' }}>
-              Two scenarios will be generated:
-            </p>
-            <ul style={{ margin: 0, paddingLeft: '20px', color: '#333' }}>
-              <li><strong>Optimal (100%)</strong>: Exact capital needed for zero rejected orders</li>
-              <li><strong>Constrained (90%)</strong>: Shows performance with 10% less capital</li>
-            </ul>
-            <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#666' }}>
-              Total Capital setting above will be ignored - capital is auto-discovered.
-            </p>
-          </div>
-        )}
-      </div>
+          {parameters.optimizedTotalCapital && (
+            <div className="nested-control info-box">
+              <p>Four scenarios will be generated:</p>
+              <ul>
+                <li><strong>Optimal (100%)</strong>: Exact capital needed for zero rejected orders</li>
+                <li><strong>Constrained (90%)</strong>: Performance with 10% less capital</li>
+                <li><strong>Constrained (80%)</strong>: Performance with 20% less capital</li>
+                <li><strong>Constrained (70%)</strong>: Performance with 30% less capital</li>
+              </ul>
+              <p className="note">
+                Total Capital setting above will be ignored - capital is auto-discovered.
+              </p>
+            </div>
+          )}
+        </div>
 
-      {/* Adaptive Lot Sizing Strategy */}
-      <div className="strategy-group">
-        <label className="strategy-header">
-          <input
-            type="checkbox"
-            checked={parameters.enableAdaptiveLotSizing || false}
-            onChange={(e) => handleChange('enableAdaptiveLotSizing', e.target.checked)}
-          />
-          <strong>Adaptive Lot Sizing</strong>
-          <span className="help-text">Increase lot sizes when excess cash is available</span>
-        </label>
+        {/* Adaptive Lot Sizing Strategy */}
+        <div className="checkbox-item">
+          <label>
+            <input
+              type="checkbox"
+              checked={parameters.enableAdaptiveLotSizing || false}
+              onChange={(e) => handleChange('enableAdaptiveLotSizing', e.target.checked)}
+            />
+            Adaptive Lot Sizing
+          </label>
+          <span className="checkbox-description">Increase lot sizes when excess cash is available</span>
 
-        {parameters.enableAdaptiveLotSizing && (
-          <div className="parameter-grid strategy-params">
-            <ParameterInput
-              label="Cash Reserve Threshold ($)"
-              value={parameters.adaptiveLotCashThreshold || defaultAdaptiveLotThreshold}
-              onChange={(val) => handleChange('adaptiveLotCashThreshold', val)}
-              type="number"
-              step="10000"
-              min="0"
-              helpText="Start increasing lot sizes when cash exceeds this"
-              error={getError('adaptiveLotCashThreshold')}
-            />
-            <ParameterInput
-              label="Max Lot Size Multiplier"
-              value={parameters.adaptiveLotMaxMultiplier || 2.0}
-              onChange={(val) => handleChange('adaptiveLotMaxMultiplier', val)}
-              type="number"
-              step="0.1"
-              min="1"
-              max="5"
-              helpText="Maximum factor to increase lot sizes (e.g., 2x = double)"
-              error={getError('adaptiveLotMaxMultiplier')}
-            />
-            <ParameterInput
-              label="Increase Step %"
-              value={parameters.adaptiveLotIncreaseStep || 20}
-              onChange={(val) => handleChange('adaptiveLotIncreaseStep', val)}
-              type="number"
-              step="5"
-              min="0"
-              max="100"
-              helpText="Percentage increase per threshold of excess cash"
-              error={getError('adaptiveLotIncreaseStep')}
-            />
-          </div>
-        )}
+          {parameters.enableAdaptiveLotSizing && (
+            <div className="nested-control">
+              <ParameterInput
+                label="Cash Reserve Threshold ($)"
+                value={parameters.adaptiveLotCashThreshold || defaultAdaptiveLotThreshold}
+                onChange={(val) => handleChange('adaptiveLotCashThreshold', val)}
+                type="number"
+                step="10000"
+                min="0"
+                helpText="Start increasing lot sizes when cash exceeds this"
+                error={getError('adaptiveLotCashThreshold')}
+              />
+              <ParameterInput
+                label="Max Lot Size Multiplier"
+                value={parameters.adaptiveLotMaxMultiplier || 2.0}
+                onChange={(val) => handleChange('adaptiveLotMaxMultiplier', val)}
+                type="number"
+                step="0.1"
+                min="1"
+                max="5"
+                helpText="Maximum factor to increase lot sizes (e.g., 2x = double)"
+                error={getError('adaptiveLotMaxMultiplier')}
+              />
+              <ParameterInput
+                label="Increase Step %"
+                value={parameters.adaptiveLotIncreaseStep || 20}
+                onChange={(val) => handleChange('adaptiveLotIncreaseStep', val)}
+                type="number"
+                step="5"
+                min="0"
+                max="100"
+                helpText="Percentage increase per threshold of excess cash"
+                error={getError('adaptiveLotIncreaseStep')}
+              />
+            </div>
+          )}
+        </div>
       </div>
     </section>
   );

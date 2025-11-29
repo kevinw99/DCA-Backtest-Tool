@@ -20,7 +20,6 @@ export const PercentageSlider = ({
       <label>
         {label}
         {showValue && <span className="slider-value">{valueFormatter(value)}</span>}
-        {helpText && <span className="help-text">{helpText}</span>}
       </label>
       <input
         type="range"
@@ -34,6 +33,7 @@ export const PercentageSlider = ({
         <span>{min}</span>
         <span>{max}</span>
       </div>
+      {helpText && <span className="help-text">{helpText}</span>}
     </div>
   );
 };

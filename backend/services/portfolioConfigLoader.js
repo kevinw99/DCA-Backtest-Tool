@@ -93,9 +93,9 @@ function configToBacktestParams(config) {
     };
   });
 
-  // Spec 61: Extract optimizedTotalCapital from capitalOptimization
+  // Spec 61: Extract optimizedTotalCapital from capitalOptimization (default: true for portfolio mode)
   const capitalOptimization = config.capitalOptimization || { enabled: false };
-  const optimizedTotalCapital = capitalOptimization.optimizedTotalCapital || false;
+  const optimizedTotalCapital = capitalOptimization.optimizedTotalCapital ?? true;
 
   // Convert to format expected by portfolioBacktestService
   return {

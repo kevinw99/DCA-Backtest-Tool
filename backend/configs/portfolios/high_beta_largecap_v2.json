@@ -1,0 +1,99 @@
+{
+  "name": "High Beta Large Cap v2 (>$20B, Beta>1.5, Non-Mag7)",
+  "description": "Portfolio of large-cap stocks (market cap > $20B) with high beta (> 1.5), excluding Magnificent 7",
+  "totalCapitalUsd": 1000000,
+  "startDate": "2021-01-01",
+  "endDate": "current",
+  "globalDefaults": {
+    "basic": {
+      "lotSizeUsd": 10000,
+      "strategyMode": "long"
+    },
+    "longStrategy": {
+      "maxLots": 10,
+      "maxLotsToSell": 1,
+      "gridIntervalPercent": 5,
+      "profitRequirement": 10,
+      "trailingBuyActivationPercent": 5,
+      "trailingBuyReboundPercent": 2.5,
+      "trailingSellActivationPercent": 15,
+      "trailingSellPullbackPercent": 7.5,
+      "momentumBasedBuy": false,
+      "momentumBasedSell": false
+    },
+    "shortStrategy": {
+      "maxShorts": 6,
+      "maxShortsToCovers": 3,
+      "gridIntervalPercent": 10,
+      "profitRequirement": 10,
+      "trailingShortActivationPercent": 25,
+      "trailingShortPullbackPercent": 15,
+      "trailingCoverActivationPercent": 20,
+      "trailingCoverReboundPercent": 10,
+      "stopLoss": {
+        "hardStopLossPercent": 30,
+        "portfolioStopLossPercent": 25,
+        "cascadeStopLossPercent": 35
+      }
+    },
+    "beta": {
+      "enableBetaScaling": true,
+      "coefficient": 1.0,
+      "isManualBetaOverride": false
+    },
+    "dynamicFeatures": {
+      "enableDynamicGrid": false,
+      "dynamicGridMultiplier": 1,
+      "enableConsecutiveIncrementalBuyGrid": false,
+      "gridConsecutiveIncrement": 5,
+      "enableConsecutiveIncrementalSellProfit": false,
+      "enableScenarioDetection": false,
+      "normalizeToReference": false
+    },
+    "adaptiveStrategy": {
+      "enableAdaptiveStrategy": false,
+      "adaptationCheckIntervalDays": 30,
+      "adaptationRollingWindowDays": 90,
+      "minDataDaysBeforeAdaptation": 90,
+      "confidenceThreshold": 0.7
+    }
+  },
+  "stocks": [
+    "AMD",
+    "NFLX",
+    "ORCL",
+    "MU",
+    "SHOP",
+    "PLTR",
+    "ARM",
+    "AMAT",
+    "LRCX",
+    "MRVL"
+  ],
+  "stockSpecificOverrides": {},
+  "capitalOptimization": {
+    "enabled": true,
+    "optimizedTotalCapital": true,
+    "strategies": ["deferred_selling"],
+    "deferredSelling": {
+      "enabled": true,
+      "cashAbundanceThreshold": 50000
+    }
+  },
+  "notes": {
+    "selectionCriteria": "Market Cap > $20B, Beta > 1.5, Excluding Mag 7",
+    "screeningSource": "Yahoo Finance beta values via API",
+    "stockBetas": {
+      "AMD": 1.913,
+      "NFLX": 1.593,
+      "ORCL": 1.531,
+      "MU": 1.567,
+      "SHOP": 2.592,
+      "PLTR": 2.592,
+      "ARM": 4.121,
+      "AMAT": 1.814,
+      "LRCX": 1.841,
+      "MRVL": 1.940
+    }
+  }
+}

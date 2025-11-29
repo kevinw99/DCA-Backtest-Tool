@@ -15,8 +15,9 @@ This makes it difficult to:
 ## User Requirements
 
 ### REQ-1: Optimized Capital Mode Parameter
-- Add a new boolean parameter `optimizedTotalCapital` (default: `false`)
+- Add a new boolean parameter `optimizedTotalCapital` (default: `true` for portfolio mode)
 - When `true`, the engine automatically calculates the optimal total capital
+- Default changed to `true` as of Nov 2025 - auto-discovery is the preferred behavior for portfolio backtests
 
 ### REQ-2: Auto-Calculate Optimal Capital
 - Run an initial simulation to track the maximum deployed capital at any point
@@ -91,7 +92,7 @@ This makes it difficult to:
 1. When `optimizedTotalCapital: true`, the backtest results in zero rejected orders
 2. Buy & Hold comparison uses identical capital to DCA
 3. Capital utilization metrics are accurate and included in response
-4. Backward compatible - default behavior unchanged when parameter is `false`
+4. Default is `true` for portfolio mode - explicitly set to `false` to disable
 5. Performance acceptable (max 2x runtime for optimized mode vs standard mode)
 
 ## Out of Scope

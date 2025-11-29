@@ -1,10 +1,9 @@
 import React, { useMemo } from 'react';
-import PortfolioSummaryCard from './PortfolioSummaryCard';
+import PortfolioComparisonSummary from './PortfolioComparisonSummary';
 import StockPerformanceTable from './StockPerformanceTable';
 import RejectedOrdersTable from './RejectedOrdersTable';
 import DeferredSellsTable from './DeferredSellsTable';
 import DailyTradesView from './DailyTradesView';
-import PortfolioBuyAndHoldComparison from './PortfolioBuyAndHoldComparison';
 import AlignedChartsContainer from './portfolio/AlignedChartsContainer';
 import BetaGroupAnalysis from './backtest/BetaGroupAnalysis';
 import { preprocessPortfolioChartData } from '../services/chartDataProcessor';
@@ -51,7 +50,14 @@ const PortfolioResults = ({ data }) => {
 
   return (
     <div className="portfolio-results">
-      <PortfolioSummaryCard summary={portfolioSummary} comparison={comparison} />
+      {/* Spec 69: Consolidated Portfolio Summary with Comparison Table */}
+      <PortfolioComparisonSummary
+        portfolioSummary={portfolioSummary}
+        comparison={comparison}
+        buyAndHoldSummary={buyAndHoldSummary}
+        stockCount={stockResults?.length || 0}
+        deferredSellsCount={deferredSells?.length || 0}
+      />
 
       {/* Skipped Stocks Warning Banner */}
       {hasSkippedStocks && (
@@ -204,21 +210,8 @@ const PortfolioResults = ({ data }) => {
         </div>
       )}
 
-      {comparison && buyAndHoldSummary && (
-        <section className="buy-hold-comparison-section">
-          <div className="section-header">
-            <h3>📊 Adaptive DCA vs Buy & Hold Comparison</h3>
-            <p className="section-description">
-              Compare the adaptive DCA strategy against a passive Buy & Hold approach with equal capital allocation
-            </p>
-          </div>
-          <PortfolioBuyAndHoldComparison
-            comparison={comparison}
-            buyAndHoldSummary={buyAndHoldSummary}
-            etfBenchmark={etfBenchmark}
-          />
-        </section>
-      )}
+      {/* Spec 69: Removed separate PortfolioBuyAndHoldComparison section
+          Now consolidated into PortfolioComparisonSummary above */}
 
       {/* Beta Group Analysis Section */}
       {betaGrouping && (

@@ -33,7 +33,6 @@ export const ParameterInput = ({
         {label}
         {required && <span className="required">*</span>}
         {betaAdjusted && <span className="beta-indicator" title="Beta-adjusted value"> β</span>}
-        {helpText && <span className="help-text">{helpText}</span>}
       </label>
       <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
         <input
@@ -66,6 +65,7 @@ export const ParameterInput = ({
           </span>
         )}
       </div>
+      {helpText && <span className="help-text">{helpText}</span>}
       {error && <span className="error-message">{error}</span>}
     </div>
   );

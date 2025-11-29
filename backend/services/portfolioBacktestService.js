@@ -444,7 +444,8 @@ async function runPortfolioBacktest(config) {
   // 1. Discovery: $10M → find peak deployed capital
   // 2. Optimal (100%): Fresh backtest with discovered capital
   // 3. Constrained (90%): Fresh backtest with 90% of discovered capital
-  const { optimizedTotalCapital = false, _isOptimizedRun = false } = config;
+  // Spec 61: Default to true for portfolio mode (auto-discover optimal capital)
+  const { optimizedTotalCapital = true, _isOptimizedRun = false } = config;
 
   if (optimizedTotalCapital && !_isOptimizedRun) {
     console.log('\n🔍 Spec 61: OPTIMIZED CAPITAL DISCOVERY MODE (RERUN APPROACH)');

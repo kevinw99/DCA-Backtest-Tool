@@ -28,7 +28,7 @@ const PortfolioBacktestPage = () => {
       totalCapital: 500000,
       lotSizeUsd: 10000,
       maxLotsPerStock: 10,
-      startDate: '2024-01-01',
+      startDate: '2021-01-01',
       endDate: new Date().toISOString().split('T')[0],
       stocks: getDefaultStockSelection(), // Gets 10 stocks (5 with specific defaults + 5 without)
       defaultParams: {
@@ -51,7 +51,7 @@ const PortfolioBacktestPage = () => {
         cashYieldAnnualPercent: 4.5,
         cashYieldMinCash: 50000,
         enableDeferredSelling: true,
-        deferredSellingThreshold: 150000,
+        deferredSellingThreshold: 50000,  // 5x lotSize (10000)
         enableAdaptiveLotSizing: false,
         adaptiveLotCashThreshold: 100000,
         adaptiveLotMaxMultiplier: 2.0,
@@ -59,8 +59,8 @@ const PortfolioBacktestPage = () => {
         // Spec 45: Momentum-based trading parameters
         momentumBasedBuy: false,
         momentumBasedSell: false,
-        // Spec 61: Optimized Total Capital
-        optimizedTotalCapital: false
+        // Spec 61: Optimized Total Capital (default: true for portfolio mode)
+        optimizedTotalCapital: true
       },
       // Beta Scaling Parameters
       _betaScaling: {
@@ -103,7 +103,7 @@ const PortfolioBacktestPage = () => {
         totalCapital: parseFloat(searchParams.get('totalCapital')) || 500000,
         lotSizeUsd: parseFloat(searchParams.get('lotSize')) || 10000,
         maxLotsPerStock: parseInt(searchParams.get('maxLots')) || 10,
-        startDate: searchParams.get('startDate') || '2024-01-01',
+        startDate: searchParams.get('startDate') || '2021-01-01',
         endDate: searchParams.get('endDate') || new Date().toISOString().split('T')[0],
         defaultParams: {
           gridIntervalPercent: parseFloat(searchParams.get('gridInterval')) || 10,
@@ -319,8 +319,8 @@ const PortfolioBacktestPage = () => {
         adaptiveLotIncreaseStep: paramsToUse.defaultParams.adaptiveLotIncreaseStep || 20,
         // Beta Scaling Parameters
         ...(paramsToUse._betaScaling && { _betaScaling: paramsToUse._betaScaling }),
-        // Spec 61: Optimized Total Capital
-        optimizedTotalCapital: paramsToUse.defaultParams.optimizedTotalCapital || false,
+        // Spec 61: Optimized Total Capital (default: true for portfolio mode)
+        optimizedTotalCapital: paramsToUse.defaultParams.optimizedTotalCapital ?? true,
         // Spec 66: Beta Range Filtering
         ...(paramsToUse.minBeta !== undefined && { minBeta: paramsToUse.minBeta }),
         ...(paramsToUse.maxBeta !== undefined && { maxBeta: paramsToUse.maxBeta })

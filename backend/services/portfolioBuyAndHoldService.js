@@ -311,6 +311,12 @@ function generateComparisonMetrics(dcaPortfolio, buyAndHoldMetrics, buyAndHoldSt
       difference: dcaSummary.totalReturn - buyAndHoldMetrics.totalReturn,
       advantage: dcaSummary.totalReturn >= buyAndHoldMetrics.totalReturn ? 'DCA' : 'BUY_AND_HOLD'
     },
+    totalReturnPercent: {
+      dca: dcaSummary.totalReturnPercent,
+      buyAndHold: buyAndHoldMetrics.totalReturnPercent,
+      difference: dcaSummary.totalReturnPercent - buyAndHoldMetrics.totalReturnPercent,
+      advantage: dcaSummary.totalReturnPercent >= buyAndHoldMetrics.totalReturnPercent ? 'DCA' : 'BUY_AND_HOLD'
+    },
     cagr: {
       dca: dcaSummary.cagr,
       buyAndHold: buyAndHoldMetrics.cagr,

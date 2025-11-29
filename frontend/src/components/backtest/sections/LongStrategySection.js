@@ -17,6 +17,7 @@ export const LongStrategySection = ({
   validationErrors = [],
   showTrailingStops = true,
   showOrderType = true,
+  showMomentumTrading = true,
   className = '',
   displayAdjustedParameters, // Scaled parameter values
   betaScalingInfo // { enabled, betaSymbol, beta, betaFactor, mode }
@@ -145,43 +146,45 @@ export const LongStrategySection = ({
       </div>
 
       {/* Spec 45: Momentum-Based Trading */}
-      <div className="momentum-controls" style={{ marginTop: '20px' }}>
-        <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>Momentum Trading Mode (Spec 45)</h4>
+      {showMomentumTrading && (
+        <div className="momentum-controls" style={{ marginTop: '20px' }}>
+          <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>Momentum Trading Mode (Spec 45)</h4>
 
-        <div className="checkbox-group" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <label htmlFor="momentumBasedBuy" aria-label="Enable Momentum-Based Buy" style={{ display: 'flex', alignItems: 'start', cursor: 'pointer' }}>
-            <input
-              id="momentumBasedBuy"
-              type="checkbox"
-              checked={parameters.momentumBasedBuy || false}
-              onChange={(e) => handleChange('momentumBasedBuy', e.target.checked)}
-              style={{ marginRight: '8px', marginTop: '2px' }}
-            />
-            <span style={{ display: 'flex', flexDirection: 'column' }}>
-              <strong>Enable Momentum-Based Buy</strong>
-              <span style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-                Buy on strength: 0% activation (immediate consideration), P/L &gt; 0 required (except first buy), unlimited lots (capital-limited only). Overrides trailingBuyActivationPercent.
+          <div className="checkbox-group" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <label htmlFor="momentumBasedBuy" aria-label="Enable Momentum-Based Buy" style={{ display: 'flex', alignItems: 'start', cursor: 'pointer' }}>
+              <input
+                id="momentumBasedBuy"
+                type="checkbox"
+                checked={parameters.momentumBasedBuy || false}
+                onChange={(e) => handleChange('momentumBasedBuy', e.target.checked)}
+                style={{ marginRight: '8px', marginTop: '2px' }}
+              />
+              <span style={{ display: 'flex', flexDirection: 'column' }}>
+                <strong>Enable Momentum-Based Buy</strong>
+                <span style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                  Buy on strength: 0% activation (immediate consideration), P/L &gt; 0 required (except first buy), unlimited lots (capital-limited only). Overrides trailingBuyActivationPercent.
+                </span>
               </span>
-            </span>
-          </label>
+            </label>
 
-          <label htmlFor="momentumBasedSell" aria-label="Enable Momentum-Based Sell" style={{ display: 'flex', alignItems: 'start', cursor: 'pointer' }}>
-            <input
-              id="momentumBasedSell"
-              type="checkbox"
-              checked={parameters.momentumBasedSell || false}
-              onChange={(e) => handleChange('momentumBasedSell', e.target.checked)}
-              style={{ marginRight: '8px', marginTop: '2px' }}
-            />
-            <span style={{ display: 'flex', flexDirection: 'column' }}>
-              <strong>Enable Momentum-Based Sell</strong>
-              <span style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-                Sell on weakness: 0% activation (immediate consideration), fast exit on momentum reversal. Overrides trailingSellActivationPercent. Still requires profitRequirement.
+            <label htmlFor="momentumBasedSell" aria-label="Enable Momentum-Based Sell" style={{ display: 'flex', alignItems: 'start', cursor: 'pointer' }}>
+              <input
+                id="momentumBasedSell"
+                type="checkbox"
+                checked={parameters.momentumBasedSell || false}
+                onChange={(e) => handleChange('momentumBasedSell', e.target.checked)}
+                style={{ marginRight: '8px', marginTop: '2px' }}
+              />
+              <span style={{ display: 'flex', flexDirection: 'column' }}>
+                <strong>Enable Momentum-Based Sell</strong>
+                <span style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                  Sell on weakness: 0% activation (immediate consideration), fast exit on momentum reversal. Overrides trailingSellActivationPercent. Still requires profitRequirement.
+                </span>
               </span>
-            </span>
-          </label>
+            </label>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Order Type Toggle */}
       {showOrderType && (

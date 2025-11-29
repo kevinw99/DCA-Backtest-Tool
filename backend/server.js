@@ -1856,7 +1856,8 @@ app.post('/api/portfolio-backtest', async (req, res) => {
       },
       deferredSelling: {
         enabled: capitalOptimizationParams.enableDeferredSelling !== undefined ? capitalOptimizationParams.enableDeferredSelling : (defaultParamsCapitalOpt.enableDeferredSelling !== undefined ? defaultParamsCapitalOpt.enableDeferredSelling : true),
-        cashAbundanceThreshold: capitalOptimizationParams.deferredSellingThreshold || defaultParamsCapitalOpt.deferredSellingThreshold || totalCapital * 0.3
+        // Default: 5x lot size (user request) - was totalCapital * 0.3 which was too high
+        cashAbundanceThreshold: capitalOptimizationParams.deferredSellingThreshold || defaultParamsCapitalOpt.deferredSellingThreshold || (lotSizeUsd * 5)
       }
     };
 
@@ -1903,8 +1904,8 @@ app.post('/api/portfolio-backtest', async (req, res) => {
       stocks,
       capitalOptimization: capitalOptimizationConfig,
       betaScaling: betaScalingConfig,
-      // Spec 61: Optimized capital discovery
-      optimizedTotalCapital: optimizedTotalCapital || false,
+      // Spec 61: Optimized capital discovery (default: true for portfolio mode)
+      optimizedTotalCapital: optimizedTotalCapital ?? true,
       // Spec 66: Beta range filtering
       ...(minBeta !== undefined && { minBeta }),
       ...(maxBeta !== undefined && { maxBeta })

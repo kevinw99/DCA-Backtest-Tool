@@ -1,0 +1,80 @@
+{
+  "name": "Magnificent 7 - Beta Scaled Converged Params",
+  "description": "Mag 7 portfolio with universally converged beta-scaled parameters from tuning sessions",
+  "totalCapitalUsd": 700000,
+  "startDate": "2021-01-01",
+  "endDate": "current",
+  "globalDefaults": {
+    "basic": {
+      "lotSizeUsd": 10000,
+      "strategyMode": "long"
+    },
+    "longStrategy": {
+      "maxLots": 10,
+      "maxLotsToSell": 1,
+      "gridIntervalPercent": 3.4,
+      "profitRequirement": 10,
+      "trailingBuyActivationPercent": 4.4,
+      "trailingBuyReboundPercent": 2.2,
+      "trailingSellActivationPercent": 12.1,
+      "trailingSellPullbackPercent": 7.3,
+      "momentumBasedBuy": false,
+      "momentumBasedSell": false
+    },
+    "shortStrategy": {
+      "maxShorts": 6,
+      "maxShortsToCovers": 3,
+      "gridIntervalPercent": 10,
+      "profitRequirement": 10,
+      "trailingShortActivationPercent": 25,
+      "trailingShortPullbackPercent": 15,
+      "trailingCoverActivationPercent": 20,
+      "trailingCoverReboundPercent": 10,
+      "stopLoss": {
+        "hardStopLossPercent": 30,
+        "portfolioStopLossPercent": 25,
+        "cascadeStopLossPercent": 35
+      }
+    },
+    "beta": {
+      "enableBetaScaling": true,
+      "coefficient": 1.0,
+      "isManualBetaOverride": false
+    },
+    "dynamicFeatures": {
+      "enableDynamicGrid": false,
+      "dynamicGridMultiplier": 1,
+      "enableConsecutiveIncrementalBuyGrid": false,
+      "gridConsecutiveIncrement": 5,
+      "enableConsecutiveIncrementalSellProfit": false,
+      "enableScenarioDetection": false,
+      "normalizeToReference": false
+    },
+    "adaptiveStrategy": {
+      "enableAdaptiveStrategy": false,
+      "adaptationCheckIntervalDays": 30,
+      "adaptationRollingWindowDays": 90,
+      "minDataDaysBeforeAdaptation": 90,
+      "confidenceThreshold": 0.7
+    }
+  },
+  "stocks": [
+    "NVDA",
+    "AAPL",
+    "MSFT",
+    "GOOGL",
+    "AMZN",
+    "META",
+    "TSLA"
+  ],
+  "stockSpecificOverrides": {},
+  "capitalOptimization": {
+    "enabled": true,
+    "optimizedTotalCapital": true,
+    "strategies": ["deferred_selling"],
+    "deferredSelling": {
+      "enabled": true,
+      "cashAbundanceThreshold": 50000
+    }
+  }
+}
