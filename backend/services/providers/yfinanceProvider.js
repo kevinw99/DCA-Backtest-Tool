@@ -18,7 +18,7 @@ import sys
 
 try:
     ticker = yf.Ticker("${symbol}")
-    hist = ticker.history(period="5y")  # Get 5 years of data
+    hist = ticker.history(period="max")  # Get maximum available history
 
     prices = []
     for date, row in hist.iterrows():
