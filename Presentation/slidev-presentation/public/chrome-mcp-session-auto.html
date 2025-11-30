@@ -96,10 +96,10 @@
   </style>
 </head>
 <body>
-<div class="user-input">&gt; ok I have the chrome devtools MCP installed. can you open the URL of the feature you just implemented and we can debug?</div>
+<div class="user-input"><strong>USER PROMPT:</strong> &gt; ok I have the chrome devtools MCP installed. can you open the URL of the feature you just implemented and we can debug?</div>
 <div class="result">  ⎿  <span class="interrupted">Interrupted · What should Claude do instead?</span></div>
 <div></div>
-<div class="user-input">&gt; continue</div>
+<div class="user-input"><strong>USER PROMPT:</strong> &gt; continue</div>
 <div></div>
 <div class="claude"><span class="bullet">⏺</span> I'll check what's currently open in Chrome DevTools and navigate to the frontend to debug. Let me first list the open pages.</div>
 <div class="result">  ⎿  <span class="result-header"># list_pages response</span></div>
@@ -135,7 +135,7 @@
 <div>     Showing 1-25 of 25 (Page 1 of 1).</div>
 <div>     … +34 lines (ctrl+o to expand)</div>
 <div></div>
-<div class="user-input">&gt; do you see the chrome MCP</div>
+<div class="user-input"><strong>USER PROMPT:</strong> &gt; do you see the chrome MCP</div>
 <div></div>
 <div class="claude"><span class="bullet">⏺</span> Yes! The Chrome DevTools MCP is working. I just used it to:</div>
 <div></div>
@@ -172,7 +172,7 @@
 <div></div>
 <div>  The MCP connection is working. What would you like to debug?</div>
 <div></div>
-<div class="user-input">&gt; 1. &quot;Simulation Mode&quot;, the third one &quot;Portfolio&quot; tab somehow is highlighted with green border, that is confusing. 2. the placement of &quot;Advanced Setting&quot; drop down is questionable. It should be more prominent, stand out, not mixed in the middle of other params. 3. Is &quot;Enable Dynamic Grid Spacing&quot; enabled by default, that is what the UI shows. 4. there are other setting shows enabled under the drop down, please check the default.</div>
+<div class="user-input"><strong>USER PROMPT:</strong> &gt; 1. &quot;Simulation Mode&quot;, the third one &quot;Portfolio&quot; tab somehow is highlighted with green border, that is confusing. 2. the placement of &quot;Advanced Setting&quot; drop down is questionable. It should be more prominent, stand out, not mixed in the middle of other params. 3. Is &quot;Enable Dynamic Grid Spacing&quot; enabled by default, that is what the UI shows. 4. there are other setting shows enabled under the drop down, please check the default.</div>
 <div></div>
 <div class="claude"><span class="bullet">⏺</span> <span class="tool-call">chrome-devtools - <span class="tool-name">take_screenshot</span> <span class="mcp-tag">(MCP)</span></span><span class="param">(fullPage: true)</span></div>
 <div class="result">  ⎿ <span class="result-header"># take_screenshot response</span></div>
@@ -309,7 +309,7 @@
 <div></div>
 <div>  Which approach would you prefer? Or would you like me to just remove the green border to make it consistent with &quot;Batch&quot;?</div>
 <div></div>
-<div class="user-input">&gt; 1</div>
+<div class="user-input"><strong>USER PROMPT:</strong> &gt; 1</div>
 <div></div>
 <div class="claude"><span class="bullet">⏺</span> <span class="search">Read</span>(frontend/src/App.css)</div>
 <div class="result">  ⎿  Read 25 lines</div>
@@ -392,7 +392,7 @@
 <div class="claude"><span class="bullet">⏺</span> <span class="search">Search</span>(pattern: &quot;advanced-settings&quot;, path: &quot;frontend/src/App.css&quot;, output_mode: &quot;content&quot;)</div>
 <div class="result">  ⎿  Found 0 lines</div>
 <div></div>
-<div class="user-input">&gt; &quot;Options to fix the Portfolio border:</div>
+<div class="user-input"><strong>USER PROMPT:</strong> &gt; &quot;Options to fix the Portfolio border:</div>
 <div>  1. Remove the green border - Make it match other unselected options (gray border)</div>
 <div>  2. Use a different indicator - e.g., an arrow icon or &quot;→&quot; to show it's a link</div>
 <div>  3. Change to a subtle blue/purple - Match the theme but indicate it's special&quot;</div>

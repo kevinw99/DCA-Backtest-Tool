@@ -37,6 +37,16 @@ for (const line of lines) {
 
     if (!startCapture) continue;
 
+    // Capture queue-operation (enqueue) as user prompts - these are messages typed while Claude is working
+    if (obj.type === 'queue-operation' && obj.operation === 'enqueue' && obj.content) {
+      const content = obj.content.trim();
+      if (content) {
+        messages.push({ role: 'user', content: content, timestamp: obj.timestamp });
+        conversationStarted = true;
+      }
+    }
+
+    // Capture regular user messages
     if (obj.type === 'user' && obj.message?.content) {
       const content = typeof obj.message.content === 'string'
         ? obj.message.content
@@ -202,7 +212,7 @@ let html = `<!DOCTYPE html>
 
 for (const msg of messages) {
   const timestamp = msg.timestamp ? new Date(msg.timestamp).toLocaleString() : '';
-  const roleLabel = msg.role === 'user' ? 'USER' : 'CLAUDE';
+  const roleLabel = msg.role === 'user' ? 'USER PROMPT' : 'CLAUDE';
 
   html += `  <div class="message-box">
     <div class="message-header ${msg.role}">
