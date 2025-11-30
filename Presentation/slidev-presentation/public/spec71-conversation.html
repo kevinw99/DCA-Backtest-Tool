@@ -161,15 +161,20 @@
   <div class="message-box">
     <div class="message-header user">USER</div>
     <div class="message-content">
-      <p>Please develop a spec for integrating the DCA Backtest Simulator with IBKR API for live trading.</p>
-      <p>Key requirements:</p>
-      <ul>
-        <li>TWS connection management</li>
-        <li>Pending orders with manual transmit</li>
-        <li>Comprehensive logging</li>
-        <li>Web-based UI initially</li>
-        <li>Error handling</li>
-      </ul>
+      <p>please develop a spec:</p>
+      <p>I need to integrate this simulator with IBKR API to do live trading based on the simulation results. Here are the requirements:</p>
+      <ol>
+        <li>The simulator should be able to connect to IBKR API using proper authentication.</li>
+        <li>It should be able to fetch real-time stock prices and account information from IBKR.</li>
+        <li>Based on the simulation results, it should be able to place buy and sell orders through IBKR API.</li>
+        <li>as a precaution, can it place a pending order first, so it appears on the TWS, then user can click 'Transmit' to send the order to market. this way user can have final control before the order is actually sent to market.</li>
+        <li>The user will use TWS, the API might need to connect to TWS or IB Gateway, please consider this in the design.</li>
+        <li>The simulator should log all API interactions for auditing and debugging purposes.</li>
+        <li>It should handle order confirmations, rejections, and errors gracefully.</li>
+        <li>consider what should be the UI? should it be a command line tool, or web based UI, if web based UI, do you create new page, or extend existing page?</li>
+        <li>consider a huristic aproach, in the beginning we need more UI to see how it works, including lots of details why an order is placed, what condition it met? also if there is no active order, then what conditional order it could have, similar to the current feature we alrady have (can you look up what spec it is so it is clear) then once it matures, we can rely on command line tool for more automated trading and management, maintenance.</li>
+      </ol>
+      <p>Any other features you think is necessary for live trading integration with IBKR API?</p>
     </div>
   </div>
 
