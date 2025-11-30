@@ -397,6 +397,98 @@ THEN order is CANCELLED
 
 ---
 
+# Case Study: Spec 71 - IBKR API Integration
+
+How a complex spec evolved through human-AI collaboration
+
+<v-clicks>
+
+## The Initial Request
+> "Integrate DCA simulator with Interactive Brokers API for live trading"
+
+## What Emerged Through Discussion
+
+| Discussion Point | Key Discovery |
+|-----------------|---------------|
+| "Is manual/auto configurable?" | → Three transmission modes designed |
+| "What about naming?" | → Unified platform with mode switching |
+| **"Who is source of truth?"** | → **Critical gap: lot tracking vs aggregate positions** |
+| "What about existing positions?" | → Strategy Calibration (backfill) system |
+
+## The Critical Moment
+
+User asked: "Who holds the source of truth for positions?"
+
+This single question exposed that IBKR provides **aggregate data** but our DCA engine needs **lot-level detail**—leading to an entirely new phase (2B) with 10 additional tasks.
+
+</v-clicks>
+
+<a href="https://dca-presentation.onrender.com/spec71-conversation.html" target="_blank" class="text-blue-400 text-sm">📄 View Full Conversation Transcript →</a>
+
+---
+
+# Spec 71: The Files Created
+
+<div class="grid grid-cols-3 gap-2 text-xs">
+
+<div>
+
+### requirements.md
+```
+REQ-1: Connection Management
+REQ-2: Real-Time Price Feeds
+REQ-3: Position Sync + Lot Tracking
+REQ-4: Order Transmission Modes
+REQ-5: Signal Evaluation Engine
+REQ-6: Order Placement
+REQ-7: Comprehensive Logging
+REQ-8: Web UI with Mode Distinction
+REQ-9: Error Handling
+```
+
+</div>
+
+<div>
+
+### design.md
+- Platform architecture
+- Dual source of truth model
+- Strategy Calibration algorithm
+- Database schema (lots, positions)
+- API endpoints
+- Reconciliation service
+
+</div>
+
+<div>
+
+### tasks.md
+```
+Phase 1:  5 tasks (Connection)
+Phase 2:  7 tasks (Market Data)
+Phase 2B: 10 tasks (Lot Tracking) ⭐
+Phase 3:  5 tasks (Signals)
+Phase 4:  5 tasks (Orders)
+Phase 5:  4 tasks (Logging)
+Phase 6:  4 tasks (Dashboard)
+Phase 7:  3 tasks (Errors)
+Phase 8:  4 tasks (Testing)
+─────────────────────
+Total:   47 tasks
+```
+
+</div>
+
+</div>
+
+<v-click>
+
+**GitHub:** [.kiro/specs/71_ibkr-api-integration/](https://github.com/kevinw99/DCA-Backtest-Tool/tree/main/.kiro/specs/71_ibkr-api-integration)
+
+</v-click>
+
+---
+
 # PRPs: Product Requirement Prompts
 
 <v-clicks>
@@ -1938,6 +2030,8 @@ class: text-center
 [Chrome MCP Discovery Transcript](https://dca-presentation.onrender.com/chrome-mcp-discovery.html)
 
 [Chrome MCP Session Transcript](https://dca-presentation.onrender.com/chrome-mcp-session.html)
+
+[Spec 71 Development Conversation](https://dca-presentation.onrender.com/spec71-conversation.html)
 
 </div>
 
