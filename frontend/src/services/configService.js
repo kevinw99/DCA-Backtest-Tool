@@ -66,12 +66,12 @@ export const fetchBacktestDefaults = async () => {
           longStrategy: {
             maxLots: 10,
             maxLotsToSell: 1,
-            gridIntervalPercent: 10,
+            gridIntervalPercent: 5,
             profitRequirement: 10,
-            trailingBuyActivationPercent: 10,
-            trailingBuyReboundPercent: 5,
-            trailingSellActivationPercent: 20,
-            trailingSellPullbackPercent: 10
+            trailingBuyActivationPercent: 5,
+            trailingBuyReboundPercent: 2.5,
+            trailingSellActivationPercent: 15,
+            trailingSellPullbackPercent: 7.5
           },
           shortStrategy: {
             maxShorts: 6,
@@ -141,12 +141,12 @@ export const getConfigSync = () => {
         longStrategy: {
           maxLots: 10,
           maxLotsToSell: 1,
-          gridIntervalPercent: 10,
+          gridIntervalPercent: 5,
           profitRequirement: 10,
-          trailingBuyActivationPercent: 10,
-          trailingBuyReboundPercent: 5,
-          trailingSellActivationPercent: 20,
-          trailingSellPullbackPercent: 10
+          trailingBuyActivationPercent: 5,
+          trailingBuyReboundPercent: 2.5,
+          trailingSellActivationPercent: 15,
+          trailingSellPullbackPercent: 7.5
         },
         shortStrategy: {
           maxShorts: 6,

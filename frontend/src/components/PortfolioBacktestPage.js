@@ -32,13 +32,13 @@ const PortfolioBacktestPage = () => {
       endDate: new Date().toISOString().split('T')[0],
       stocks: getDefaultStockSelection(), // Gets 10 stocks (5 with specific defaults + 5 without)
       defaultParams: {
-        gridIntervalPercent: 10,
+        gridIntervalPercent: 5,
         profitRequirement: 10,
         stopLossPercent: 30,
-        trailingBuyActivationPercent: 10,
-        trailingBuyReboundPercent: 5,
-        trailingSellActivationPercent: 20,
-        trailingSellPullbackPercent: 10,
+        trailingBuyActivationPercent: 5,
+        trailingBuyReboundPercent: 2.5,
+        trailingSellActivationPercent: 15,
+        trailingSellPullbackPercent: 7.5,
         enableConsecutiveIncrementalBuyGrid: false,
         gridConsecutiveIncrement: 5,
         enableConsecutiveIncrementalSellProfit: false,
