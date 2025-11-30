@@ -423,7 +423,7 @@ This single question exposed that IBKR provides **aggregate data** but our DCA e
 
 </v-clicks>
 
-<a href="https://dca-presentation.onrender.com/spec71-conversation.html" target="_blank" class="text-blue-400 text-sm">📄 View Summarized Transcript →</a> | <a href="https://dca-presentation.onrender.com/spec71-conversation_verbatim.html" target="_blank" class="text-orange-400 text-sm">📜 View Verbatim Log (180 messages) →</a>
+<a href="https://dca-presentation.onrender.com/spec71-conversation.html" target="_blank" class="text-blue-400 text-sm">📄 View Summarized Transcript →</a> | <a href="https://dca-presentation.onrender.com/spec71-conversation_verbatim.html" target="_blank" class="text-orange-400 text-sm">📜 View Verbatim Log (214 messages) →</a>
 
 ---
 
